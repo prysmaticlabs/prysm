@@ -2,11 +2,15 @@ package util
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -108,7 +112,6 @@ func GenerateFullBlockElectra(
 	for i := uint64(0); i < numToGen; i++ {
 		newTransactions[i] = bytesutil.Uint64ToBytesLittleEndian(i)
 	}
-	newWithdrawals := make([]*v1.Withdrawal, 0)
 
 	random, err := helpers.RandaoMix(bState, time.CurrentEpoch(bState))
 	if err != nil {
@@ -126,25 +129,59 @@ func GenerateFullBlockElectra(
 		return nil, err
 	}
 
+	newWithdrawals := make([]*v1.Withdrawal, 0)
+	if conf.NumWithdrawals > 0 {
+		newWithdrawals, err = generateWithdrawals(bState, privs, numToGen)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d withdrawals:", numToGen)
+		}
+	}
+
+	depositRequests := make([]*v1.DepositRequest, 0)
+	if conf.NumDepositRequests > 0 {
+		depositRequests, err = generateDepositRequests(bState, privs, conf.NumDepositRequests)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d deposit requests:", conf.NumDepositRequests)
+		}
+	}
+
+	withdrawalRequests := make([]*v1.WithdrawalRequest, 0)
+	if conf.NumWithdrawalRequests > 0 {
+		withdrawalRequests, err = generateWithdrawalRequests(bState, privs, conf.NumWithdrawalRequests)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d withdrawal requests:", conf.NumWithdrawalRequests)
+		}
+	}
+
+	consolidationRequests := make([]*v1.ConsolidationRequest, 0)
+	if conf.NumConsolidationRequests > 0 {
+		consolidationRequests, err = generateConsolidationRequests(bState, privs, conf.NumConsolidationRequests)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d consolidation requests:", conf.NumConsolidationRequests)
+		}
+	}
 	parentExecution, err := stCopy.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
 	}
 	blockHash := indexToHash(uint64(slot))
-	newExecutionPayloadCapella := &v1.ExecutionPayloadElectra{
-		ParentHash:    parentExecution.BlockHash(),
-		FeeRecipient:  make([]byte, 20),
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		ReceiptsRoot:  params.BeaconConfig().ZeroHash[:],
-		LogsBloom:     make([]byte, 256),
-		PrevRandao:    random,
-		BlockNumber:   uint64(slot),
-		ExtraData:     params.BeaconConfig().ZeroHash[:],
-		BaseFeePerGas: params.BeaconConfig().ZeroHash[:],
-		BlockHash:     blockHash[:],
-		Timestamp:     uint64(timestamp.Unix()),
-		Transactions:  newTransactions,
-		Withdrawals:   newWithdrawals,
+	newExecutionPayloadElectra := &v1.ExecutionPayloadElectra{
+		ParentHash:            parentExecution.BlockHash(),
+		FeeRecipient:          make([]byte, 20),
+		StateRoot:             params.BeaconConfig().ZeroHash[:],
+		ReceiptsRoot:          params.BeaconConfig().ZeroHash[:],
+		LogsBloom:             make([]byte, 256),
+		PrevRandao:            random,
+		BlockNumber:           uint64(slot),
+		ExtraData:             params.BeaconConfig().ZeroHash[:],
+		BaseFeePerGas:         params.BeaconConfig().ZeroHash[:],
+		BlockHash:             blockHash[:],
+		Timestamp:             uint64(timestamp.Unix()),
+		Transactions:          newTransactions,
+		Withdrawals:           newWithdrawals,
+		DepositRequests:       depositRequests,
+		WithdrawalRequests:    withdrawalRequests,
+		ConsolidationRequests: consolidationRequests,
 	}
 	var syncCommitteeBits []byte
 	currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
@@ -208,7 +245,7 @@ func GenerateFullBlockElectra(
 			Deposits:              newDeposits,
 			Graffiti:              make([]byte, fieldparams.RootLength),
 			SyncAggregate:         newSyncAggregate,
-			ExecutionPayload:      newExecutionPayloadCapella,
+			ExecutionPayload:      newExecutionPayloadElectra,
 			BlsToExecutionChanges: changes,
 		},
 	}
@@ -220,4 +257,133 @@ func GenerateFullBlockElectra(
 	}
 
 	return &ethpb.SignedBeaconBlockElectra{Block: block, Signature: signature.Marshal()}, nil
+}
+
+func generateWithdrawalRequests(
+	bState state.BeaconState,
+	privs []bls.SecretKey,
+	numRequests uint64,
+) ([]*v1.WithdrawalRequest, error) {
+	withdrawalRequests := make([]*v1.WithdrawalRequest, numRequests)
+	for i := uint64(0); i < numRequests; i++ {
+		valIndex, err := randValIndex(bState)
+		if err != nil {
+			return nil, err
+		}
+		// Get a random index
+		nBig, err := rand.Int(rand.Reader, big.NewInt(60000))
+		if err != nil {
+			return nil, err
+		}
+		amount := nBig.Uint64() // random amount created
+		bal, err := bState.BalanceAtIndex(valIndex)
+		if err != nil {
+			return nil, err
+		}
+		amounts := []uint64{
+			amount, // some smaller amount
+			bal,    // the entire balance
+		}
+		// Get a random index
+		nBig, err = rand.Int(rand.Reader, big.NewInt(int64(len(amounts))))
+		if err != nil {
+			return nil, err
+		}
+		randomIndex := nBig.Uint64()
+		withdrawalRequests[i] = &v1.WithdrawalRequest{
+			ValidatorPubkey: privs[valIndex].PublicKey().Marshal(),
+			SourceAddress:   make([]byte, common.AddressLength),
+			Amount:          amounts[randomIndex],
+		}
+	}
+	return withdrawalRequests, nil
+}
+
+func generateDepositRequests(
+	bState state.BeaconState,
+	privs []bls.SecretKey,
+	numRequests uint64,
+) ([]*v1.DepositRequest, error) {
+	depositRequests := make([]*v1.DepositRequest, numRequests)
+	for i := uint64(0); i < numRequests; i++ {
+		valIndex, err := randValIndex(bState)
+		if err != nil {
+			return nil, err
+		}
+		// Get a random index
+		nBig, err := rand.Int(rand.Reader, big.NewInt(60000))
+		if err != nil {
+			return nil, err
+		}
+		amount := nBig.Uint64() // random amount created
+		prefixes := []byte{params.BeaconConfig().CompoundingWithdrawalPrefixByte, 0, params.BeaconConfig().BLSWithdrawalPrefixByte}
+		withdrawalCred := make([]byte, 32)
+		// Get a random index
+		nBig, err = rand.Int(rand.Reader, big.NewInt(int64(len(prefixes))))
+		if err != nil {
+			return nil, err
+		}
+		randPrefixIndex := nBig.Uint64()
+		withdrawalCred[0] = prefixes[randPrefixIndex]
+
+		depositMessage := &ethpb.DepositMessage{
+			PublicKey:             privs[valIndex].PublicKey().Marshal(),
+			Amount:                amount,
+			WithdrawalCredentials: withdrawalCred,
+		}
+		domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		sr, err := signing.ComputeSigningRoot(depositMessage, domain)
+		if err != nil {
+			return nil, err
+		}
+		sig := privs[i].Sign(sr[:])
+		depositRequests[i] = &v1.DepositRequest{
+			Pubkey:                depositMessage.PublicKey,
+			Index:                 uint64(valIndex),
+			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+			Amount:                depositMessage.Amount,
+			Signature:             sig.Marshal(),
+		}
+	}
+	return depositRequests, nil
+}
+
+func generateConsolidationRequests(
+	bState state.BeaconState,
+	privs []bls.SecretKey,
+	numRequests uint64,
+) ([]*v1.ConsolidationRequest, error) {
+	consolidationRequests := make([]*v1.ConsolidationRequest, numRequests)
+	for i := uint64(0); i < numRequests; i++ {
+		valIndex, err := randValIndex(bState)
+		if err != nil {
+			return nil, err
+		}
+		valIndex2, err := randValIndex(bState)
+		if err != nil {
+			return nil, err
+		}
+		source, err := randomAddress()
+		if err != nil {
+			return nil, err
+		}
+		consolidationRequests[i] = &v1.ConsolidationRequest{
+			TargetPubkey:  privs[valIndex2].PublicKey().Marshal(),
+			SourceAddress: source.Bytes(),
+			SourcePubkey:  privs[valIndex].PublicKey().Marshal(),
+		}
+	}
+	return consolidationRequests, nil
+}
+
+func randomAddress() (common.Address, error) {
+	b := make([]byte, 20)
+	_, err := rand.Read(b)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return common.BytesToAddress(b), nil
 }
