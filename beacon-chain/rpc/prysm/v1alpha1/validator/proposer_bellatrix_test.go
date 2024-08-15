@@ -900,6 +900,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 					},
 				}),
 			)
+			tc.mock.Cfg = &builderTest.Config{BeaconDB: vs.BeaconDB}
 			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
 			require.NoError(t, err)
 			bid, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)

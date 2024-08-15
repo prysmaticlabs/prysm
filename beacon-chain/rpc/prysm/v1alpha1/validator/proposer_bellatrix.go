@@ -242,12 +242,13 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
-	reg, err := vs.BeaconDB.RegistrationByValidatorID(ctx, idx)
+	reg, err := vs.BlockBuilder.RegistrationByValidatorID(ctx, idx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get validator registration")
-	}
-	if reg.GasLimit != header.GasLimit() {
-		return nil, fmt.Errorf("incorrect header gas limit %d != %d", reg.GasLimit, header.GasLimit())
+		log.WithError(err).Warn("Proposer: failed to get registration by validator ID, could not check gas limit")
+	} else {
+		if reg.GasLimit != header.GasLimit() {
+			return nil, fmt.Errorf("incorrect header gas limit %d != %d", reg.GasLimit, header.GasLimit())
+		}
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
