@@ -1057,7 +1057,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 
 			if tt.wantErr {
 				require.NotNil(t, err, "Expected an error but got none")
-				require.ErrorContains(t, "beacon block root unknown", err, "Expected error message not found")
+				require.ErrorIs(t, err, ErrNilNode, "Expected ErrNilNode")
 			} else {
 				require.NoError(t, err)
 				node := s.nodeByRoot[bytesutil.ToBytes32(tt.payloadAttestation.Data.BeaconBlockRoot)]
@@ -1104,6 +1104,24 @@ func TestStore_UpdatePayloadBoosts(t *testing.T) {
 			},
 			expectedWithholdBoost: [32]byte{4, 5, 6},
 			expectedWithholdFull:  true,
+		},
+		{
+			name: "Reveal boost with early return",
+			setupNode: func(n *Node) {
+				n.root = [32]byte{1, 2, 3}
+				n.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
+				for i := 0; i < int(params.BeaconConfig().PayloadTimelyThreshold)+1; i++ {
+					n.ptcVote[i] = primitives.PAYLOAD_PRESENT
+				}
+				// Set up conditions for withhold boost, which should not be applied due to early return
+				n.parent = &Node{root: [32]byte{4, 5, 6}, payloadHash: [32]byte{7, 8, 9}}
+				for i := int(params.BeaconConfig().PayloadTimelyThreshold) + 1; i < fieldparams.PTCSize; i++ {
+					n.ptcVote[i] = primitives.PAYLOAD_WITHHELD
+				}
+			},
+			expectedRevealBoost:   [32]byte{1, 2, 3},
+			expectedWithholdBoost: [32]byte{}, // Should remain zero due to early return
+			expectedWithholdFull:  false,      // Should remain false due to early return
 		},
 	}
 

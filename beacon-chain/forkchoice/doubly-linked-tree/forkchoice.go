@@ -735,8 +735,8 @@ func (s *Store) updateVotesOnPayloadAttestation(
 
 	// Check if the block exists in the store
 	node, ok := s.nodeByRoot[blockRoot]
-	if !ok {
-		return errors.New("beacon block root unknown")
+	if !ok || node == nil {
+		return ErrNilNode
 	}
 
 	// Update the PTC votes based on the attestation
@@ -770,8 +770,9 @@ func (s *Store) updatePayloadBoosts(node *Node) {
 	// update the payload reveal boost root
 	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
 		s.payloadRevealBoostRoot = node.root
+		return
 	}
-	// If the number of PRESENT votes exceeds the threshold,
+	// If the number of WITHHELD votes exceeds the threshold,
 	// update the payload reveal boost root
 	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
 		if node.parent != nil {
