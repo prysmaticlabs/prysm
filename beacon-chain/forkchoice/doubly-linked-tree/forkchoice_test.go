@@ -933,17 +933,9 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
 			expectedPTCVotes: func() []primitives.PTCStatus {
-				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := range votes {
-					votes[i] = primitives.PAYLOAD_PRESENT
-				}
-				return votes
+				return makeVotes(fieldparams.PTCSize, primitives.PAYLOAD_PRESENT)
 			}(),
-			expectedBoosts: func(s *Store) bool {
-				return s.payloadRevealBoostRoot == [32]byte{} &&
-					s.payloadWithholdBoostRoot == [32]byte{} &&
-					!s.payloadWithholdBoostFull
-			},
+			expectedBoosts: noBoosts,
 		},
 		{
 			name: "Update PTC votes - all withheld",
@@ -959,17 +951,9 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
 			expectedPTCVotes: func() []primitives.PTCStatus {
-				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := range votes {
-					votes[i] = primitives.PAYLOAD_WITHHELD
-				}
-				return votes
+				return makeVotes(fieldparams.PTCSize, primitives.PAYLOAD_WITHHELD)
 			}(),
-			expectedBoosts: func(s *Store) bool {
-				return s.payloadRevealBoostRoot == [32]byte{} &&
-					s.payloadWithholdBoostRoot == [32]byte{} &&
-					!s.payloadWithholdBoostFull
-			},
+			expectedBoosts: noBoosts,
 		},
 		{
 			name: "Update PTC votes - partial attestation",
@@ -997,11 +981,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				}
 				return votes
 			}(),
-			expectedBoosts: func(s *Store) bool {
-				return s.payloadRevealBoostRoot == [32]byte{} &&
-					s.payloadWithholdBoostRoot == [32]byte{} &&
-					!s.payloadWithholdBoostFull
-			},
+			expectedBoosts: noBoosts,
 		},
 		{
 			name: "Update PTC votes - no change for already set votes",
@@ -1033,11 +1013,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				}
 				return votes
 			}(),
-			expectedBoosts: func(s *Store) bool {
-				return s.payloadRevealBoostRoot == [32]byte{} &&
-					s.payloadWithholdBoostRoot == [32]byte{} &&
-					!s.payloadWithholdBoostFull
-			},
+			expectedBoosts: noBoosts,
 		},
 	}
 
@@ -1051,7 +1027,6 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			err := s.updateVotesOnPayloadAttestation(tt.payloadAttestation)
 
 			if tt.wantErr {
-				require.NotNil(t, err, "Expected an error but got none")
 				require.ErrorIs(t, err, ErrNilNode, "Expected ErrNilNode")
 			} else {
 				require.NoError(t, err)
@@ -1061,6 +1036,20 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func makeVotes(count int, status primitives.PTCStatus) []primitives.PTCStatus {
+	votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
+	for i := 0; i < count; i++ {
+		votes[i] = status
+	}
+	return votes
+}
+
+func noBoosts(s *Store) bool {
+	return s.payloadRevealBoostRoot == [32]byte{} &&
+		s.payloadWithholdBoostRoot == [32]byte{} &&
+		!s.payloadWithholdBoostFull
 }
 
 func TestStore_UpdatePayloadBoosts(t *testing.T) {
