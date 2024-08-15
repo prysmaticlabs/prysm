@@ -1,5 +1,7 @@
 package structs
 
+import ssz "github.com/prysmaticlabs/fastssz"
+
 type LightClientBootstrapResponse struct {
 	Version string                `json:"version"`
 	Data    *LightClientBootstrap `json:"data"`
@@ -24,6 +26,8 @@ type LightClientUpdate struct {
 type LightClientUpdateWithVersion struct {
 	Version string             `json:"version"`
 	Data    *LightClientUpdate `json:"data"`
+	ssz.Marshaler
+	ssz.Unmarshaler
 }
 
 type LightClientUpdatesByRangeResponse struct {

@@ -285,7 +285,16 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
-
+	// Check if the client requests SSZ format
+	if httputil.RespondWithSsz(req) {
+		sszData, err := response.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal light client finality update into SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.WriteSsz(w, sszData, "light_client_finality_update.ssz")
+		return
+	}
 	httputil.WriteJson(w, response)
 }
 

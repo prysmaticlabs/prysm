@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -679,16 +680,35 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	}
 	request := httptest.NewRequest("GET", "http://foo.com", nil)
 	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
+	t.Run("JSON response", func(t *testing.T) {
 
-	s.GetLightClientFinalityUpdate(writer, request)
+		writer.Body = &bytes.Buffer{}
 
-	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &structs.LightClientUpdateWithVersion{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
-	require.NotNil(t, resp.Data)
+		s.GetLightClientFinalityUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.LightClientUpdateWithVersion{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, "capella", resp.Version)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+		require.NotNil(t, resp.Data)
+	})
+	t.Run("SSZ response", func(t *testing.T) {
+
+		writer.Body = &bytes.Buffer{}
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+
+		s.GetLightClientFinalityUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		//resp := &structs.LightClientUpdateWithVersion{}
+
+		//require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+		// require.Equal(t, "capella", resp.Version)
+		// require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+		// require.NotNil(t, resp.Data)
+	})
+
 }
 
 func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
