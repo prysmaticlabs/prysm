@@ -748,23 +748,6 @@ func (s *Store) updateVotesOnPayloadAttestation(
 		}
 	}
 
-	if isFromBlock {
-		currentSlot := slots.CurrentSlot(s.genesisTime)
-		// Only process if the attestation is for the previous slot
-		if data.Slot+1 != currentSlot {
-			return nil
-		}
-		// Only process if we're still in the early part of the slot
-		// This check ensures we only boost timely attestations
-		timeIntoSlot, err := slots.SecondsSinceSlotStart(currentSlot, s.genesisTime, uint64(time.Now().Unix()))
-		if err != nil {
-			log.WithError(err).Error("could not compute seconds since slot start")
-		}
-		if timeIntoSlot < params.BeaconConfig().SecondsPerSlot/params.BeaconConfig().IntervalsPerSlot {
-			s.updatePayloadBoosts(node)
-		}
-	}
-
 	return nil
 }
 

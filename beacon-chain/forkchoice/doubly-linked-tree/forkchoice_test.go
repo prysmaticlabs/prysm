@@ -921,7 +921,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Update PTC votes - not from block",
+			name: "Update PTC votes - all present",
 			setupStore: func(s *Store) {
 				root := [32]byte{1, 2, 3}
 				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
@@ -948,17 +948,15 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			},
 		},
 		{
-			name: "Update PTC votes and boosts - from block, early",
+			name: "Update PTC votes - all withheld",
 			setupStore: func(s *Store) {
-				root := [32]byte{1, 2, 3}
+				root := [32]byte{4, 5, 6}
 				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
-				s.genesisTime = uint64(time.Now().Unix()) - 1200
 			},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
-					Slot:            99,
-					BeaconBlockRoot: []byte{1, 2, 3},
-					PayloadStatus:   primitives.PAYLOAD_PRESENT,
+					BeaconBlockRoot: []byte{4, 5, 6},
+					PayloadStatus:   primitives.PAYLOAD_WITHHELD,
 				},
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
@@ -966,36 +964,77 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
 				for i := range votes {
-					votes[i] = primitives.PAYLOAD_PRESENT
+					votes[i] = primitives.PAYLOAD_WITHHELD
 				}
 				return votes
 			}(),
 			expectedBoosts: func(s *Store) bool {
-				return s.payloadRevealBoostRoot == [32]byte{1, 2, 3} &&
+				return s.payloadRevealBoostRoot == [32]byte{} &&
 					s.payloadWithholdBoostRoot == [32]byte{} &&
 					!s.payloadWithholdBoostFull
 			},
 		},
 		{
-			name: "Update PTC votes but not boosts - from block, late",
+			name: "Update PTC votes - partial attestation",
 			setupStore: func(s *Store) {
-				root := [32]byte{1, 2, 3}
+				root := [32]byte{7, 8, 9}
 				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
-				s.genesisTime = uint64(time.Now().Unix()) - params.BeaconConfig().SecondsPerSlot + 1
 			},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
-					Slot:            0,
-					BeaconBlockRoot: []byte{1, 2, 3},
+					BeaconBlockRoot: []byte{7, 8, 9},
 					PayloadStatus:   primitives.PAYLOAD_PRESENT,
 				},
-				AggregationBits: setAllBits(bitfield.NewBitvector512()),
+				AggregationBits: func() bitfield.Bitvector512 {
+					bits := bitfield.NewBitvector512()
+					for i := 0; i < fieldparams.PTCSize/2; i++ {
+						bits.SetBitAt(uint64(i), true)
+					}
+					return bits
+				}(),
 			},
 			isFromBlock: true,
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := range votes {
+				for i := 0; i < fieldparams.PTCSize/2; i++ {
 					votes[i] = primitives.PAYLOAD_PRESENT
+				}
+				return votes
+			}(),
+			expectedBoosts: func(s *Store) bool {
+				return s.payloadRevealBoostRoot == [32]byte{} &&
+					s.payloadWithholdBoostRoot == [32]byte{} &&
+					!s.payloadWithholdBoostFull
+			},
+		},
+		{
+			name: "Update PTC votes - no change for already set votes",
+			setupStore: func(s *Store) {
+				root := [32]byte{10, 11, 12}
+				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
+				for i := range votes {
+					if i%2 == 0 {
+						votes[i] = primitives.PAYLOAD_PRESENT
+					}
+				}
+				s.nodeByRoot[root] = &Node{root: root, ptcVote: votes}
+			},
+			payloadAttestation: &ethpb.PayloadAttestation{
+				Data: &ethpb.PayloadAttestationData{
+					BeaconBlockRoot: []byte{10, 11, 12},
+					PayloadStatus:   primitives.PAYLOAD_WITHHELD,
+				},
+				AggregationBits: setAllBits(bitfield.NewBitvector512()),
+			},
+			isFromBlock: false,
+			expectedPTCVotes: func() []primitives.PTCStatus {
+				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
+				for i := range votes {
+					if i%2 == 0 {
+						votes[i] = primitives.PAYLOAD_PRESENT
+					} else {
+						votes[i] = primitives.PAYLOAD_WITHHELD
+					}
 				}
 				return votes
 			}(),
