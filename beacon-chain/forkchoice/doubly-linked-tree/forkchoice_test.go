@@ -905,7 +905,6 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 		name               string
 		setupStore         func(*Store)
 		payloadAttestation *ethpb.PayloadAttestation
-		isFromBlock        bool
 		wantErr            bool
 		expectedPTCVotes   []primitives.PTCStatus
 		expectedBoosts     func(*Store) bool
@@ -933,7 +932,6 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				},
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
-			isFromBlock: false,
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
 				for i := range votes {
@@ -960,7 +958,6 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				},
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
-			isFromBlock: true,
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
 				for i := range votes {
@@ -993,7 +990,6 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 					return bits
 				}(),
 			},
-			isFromBlock: true,
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
 				for i := 0; i < fieldparams.PTCSize/2; i++ {
@@ -1026,7 +1022,6 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				},
 				AggregationBits: setAllBits(bitfield.NewBitvector512()),
 			},
-			isFromBlock: false,
 			expectedPTCVotes: func() []primitives.PTCStatus {
 				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
 				for i := range votes {
@@ -1053,7 +1048,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			}
 			tt.setupStore(s)
 
-			err := s.updateVotesOnPayloadAttestation(tt.payloadAttestation, tt.isFromBlock)
+			err := s.updateVotesOnPayloadAttestation(tt.payloadAttestation)
 
 			if tt.wantErr {
 				require.NotNil(t, err, "Expected an error but got none")

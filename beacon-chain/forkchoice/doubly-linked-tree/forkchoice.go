@@ -727,8 +727,7 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 // the Payload Timeliness Committee (PTC) votes for the corresponding block.
 // It may update payload boost roots based on the attestation data.
 func (s *Store) updateVotesOnPayloadAttestation(
-	payloadAttestation *ethpb.PayloadAttestation,
-	isFromBlock bool) error {
+	payloadAttestation *ethpb.PayloadAttestation) error {
 	// Extract the attestation data and convert the beacon block root to a 32-byte array
 	data := payloadAttestation.Data
 	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
