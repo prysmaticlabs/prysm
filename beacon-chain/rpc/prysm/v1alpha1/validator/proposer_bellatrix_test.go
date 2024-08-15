@@ -891,16 +891,15 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			vs := &Server{BeaconDB: dbTest.SetupDB(t), BlockBuilder: tc.mock, HeadFetcher: tc.fetcher, TimeFetcher: &blockchainTest.ChainService{
 				Genesis: genesis,
 			}}
-			require.NoError(
-				t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []*ethpb.ValidatorRegistrationV1{
-					{
-						GasLimit:     0,
-						FeeRecipient: make([]byte, 20),
-						Pubkey:       make([]byte, 48),
-					},
-				}),
-			)
-			tc.mock.Cfg = &builderTest.Config{BeaconDB: vs.BeaconDB}
+			regCache := cache.NewRegistrationCache()
+			regCache.UpdateIndexToRegisteredMap(context.Background(), map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{
+				0: {
+					GasLimit:     0,
+					FeeRecipient: make([]byte, 20),
+					Pubkey:       make([]byte, 48),
+				},
+			})
+			tc.mock.RegistrationCache = regCache
 			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
 			require.NoError(t, err)
 			bid, err := vs.getPayloadHeaderFromBuilder(context.Background(), hb.Block().Slot(), 0)
