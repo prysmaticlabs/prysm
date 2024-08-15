@@ -779,7 +779,6 @@ func (p *Builder) retrievePendingBlockDeneb() (*v1.ExecutionPayloadDenebWithValu
 }
 
 func (p *Builder) retrievePendingBlockElectra() (*v1.ExecutionPayloadElectraWithValueAndBlobsBundle, error) {
-	// TODO: update based on electra ExecutionPayloadEnvelope
 	result := &engine.ExecutionPayloadEnvelope{}
 	if p.currId == nil {
 		return nil, errors.New("no payload id is cached")
@@ -893,6 +892,23 @@ func executableDataToBlock(params engine.ExecutableData, prevBeaconRoot []byte) 
 		h := gethTypes.DeriveSha(gethTypes.Withdrawals(params.Withdrawals), trie.NewStackTrie(nil))
 		withdrawalsRoot = &h
 	}
+
+	requests := make([]*gethTypes.Request, 0)
+	if params.Deposits != nil {
+		for _, req := range params.Deposits {
+			requests = append(requests, gethTypes.NewRequest(req))
+		}
+	}
+	if params.WithdrawalRequests != nil {
+		for _, req := range params.WithdrawalRequests {
+			requests = append(requests, gethTypes.NewRequest(req))
+		}
+	}
+	if params.ConsolidationRequests != nil {
+		for _, req := range params.ConsolidationRequests {
+			requests = append(requests, gethTypes.NewRequest(req))
+		}
+	}
 	header := &gethTypes.Header{
 		ParentHash:      params.ParentHash,
 		UncleHash:       gethTypes.EmptyUncleHash,
@@ -917,7 +933,13 @@ func executableDataToBlock(params engine.ExecutableData, prevBeaconRoot []byte) 
 		pRoot := common.Hash(prevBeaconRoot)
 		header.ParentBeaconRoot = &pRoot
 	}
-	block := gethTypes.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(params.Withdrawals)
+	body := gethTypes.Body{
+		Transactions: txs,
+		Uncles:       nil,
+		Withdrawals:  params.Withdrawals,
+		Requests:     requests,
+	}
+	block := gethTypes.NewBlockWithHeader(header).WithBody(body)
 	return block, nil
 }
 
