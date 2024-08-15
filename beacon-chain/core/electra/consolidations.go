@@ -49,7 +49,7 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 		return errors.New("nil state")
 	}
 
-	currentEpoch := slots.ToEpoch(st.Slot())
+	nextEpoch := slots.ToEpoch(st.Slot()) + 1
 
 	var nextPendingConsolidation uint64
 	pendingConsolidations, err := st.PendingConsolidations()
@@ -66,7 +66,7 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 			nextPendingConsolidation++
 			continue
 		}
-		if sourceValidator.WithdrawableEpoch > currentEpoch {
+		if sourceValidator.WithdrawableEpoch > nextEpoch {
 			break
 		}
 
