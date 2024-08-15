@@ -785,7 +785,13 @@ func executableDataToBlock(params engine.ExecutableData, prevBeaconRoot []byte) 
 		pRoot := common.Hash(prevBeaconRoot)
 		header.ParentBeaconRoot = &pRoot
 	}
-	block := gethTypes.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(params.Withdrawals)
+	// TODO: update requests with requests for electra
+	body := gethTypes.Body{
+		Transactions: txs,
+		Uncles:       nil,
+		Withdrawals:  params.Withdrawals,
+	}
+	block := gethTypes.NewBlockWithHeader(header).WithBody(body)
 	return block, nil
 }
 

@@ -385,7 +385,49 @@ load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_d
 
 gometalinter_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_repository(
+    name = "com_github_cockroachdb_fifo",
+    importpath = "github.com/cockroachdb/fifo",
+    sum = "h1:giXvy4KSc/6g/esnpM7Geqxka4WSqI1SZc7sMJFd3y4=",
+    version = "v0.0.0-20240606204812-0bbfbd93a7ce",
+)
+
+go_repository(
+    name = "com_github_donovanhide_eventsource",
+    importpath = "github.com/donovanhide/eventsource",
+    sum = "h1:C7t6eeMaEQVy6e8CarIhscYQlNmw5e3G36y7l7Y21Ao=",
+    version = "v0.0.0-20210830082556-c59027999da0",
+)
+
+go_repository(
+    name = "com_github_ethereum_go_verkle",
+    importpath = "github.com/ethereum/go-verkle",
+    sum = "h1:KrE8I4reeVvf7C1tm8elRjj4BdscTYzz/WAbYyf/JI4=",
+    version = "v0.1.1-0.20240306133620-7d920df305f0",
+)
+
+go_repository(
+    name = "com_github_karalabe_hid",
+    importpath = "github.com/karalabe/hid",
+    sum = "h1:msKODTL1m0wigztaqILOtla9HeW1ciscYG4xjLtvk5I=",
+    version = "v1.0.1-0.20240306101548-573246063e52",
+)
+
+go_repository(
+    name = "com_github_protolambda_zrnt",
+    importpath = "github.com/protolambda/zrnt",
+    sum = "h1:KZ48T+3UhsPXNdtE/5QEvGc9DGjUaRI17nJaoznoIaM=",
+    version = "v0.32.2",
+)
+
+go_repository(
+    name = "com_github_protolambda_ztyp",
+    importpath = "github.com/protolambda/ztyp",
+    sum = "h1:rVcL3vBu9W/aV646zF6caLS/dyn9BN8NYiuJzicLNyY=",
+    version = "v0.2.2",
+)
 
 gazelle_dependencies()
 
