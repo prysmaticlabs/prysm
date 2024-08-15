@@ -39,7 +39,7 @@ func (v *validator) signExecutionPayloadEnvelope(ctx context.Context, p *enginev
 		SigningSlot:     currentSlot,
 	}
 
-	// Sign the payload attestation data
+	// Sign the execution payload envelope.
 	m, err := v.Keymanager()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get key manager")
