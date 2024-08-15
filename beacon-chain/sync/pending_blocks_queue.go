@@ -159,8 +159,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 // startInnerSpan starts a new tracing span for an inner loop and returns the new context and span.
 func startInnerSpan(ctx context.Context, slot primitives.Slot) (context.Context, *trace.Span) {
-	ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop") // lint:ignore spancheck -- span is handled separately
-	span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))       // lint:ignore uintcast -- This conversion is OK for tracing.
+	ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
+	span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 	return ctx, span
 }
 
