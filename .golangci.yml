@@ -6,7 +6,7 @@ run:
     - proto
     - tools/analyzers
   timeout: 10m
-  go: '1.22.3'
+  go: '1.22.4'
 
 linters:
   enable-all: true
@@ -73,6 +73,7 @@ linters:
     - promlinter
     - protogetter
     - revive
+    - spancheck
     - staticcheck
     - stylecheck
     - tagalign
