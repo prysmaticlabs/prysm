@@ -1429,6 +1429,7 @@ func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra) (interf
 }
 
 var _ interfaces.ExecutionData = &executionPayloadElectra{}
+var _ interfaces.ExecutionDataElectra = &executionPayloadElectra{}
 
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadElectra) IsNil() bool {

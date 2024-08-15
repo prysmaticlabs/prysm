@@ -497,7 +497,7 @@ func ExecutionPayloadResponseFromData(ed interfaces.ExecutionData, bundle *v1.Bl
 		ver = version.String(version.Electra)
 		payloadStruct, err := FromProtoElectra(pbStruct)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert a Deneb ExecutionPayload to an API response")
+			return nil, errors.Wrap(err, "failed to convert a Electra ExecutionPayload to an API response")
 		}
 		data = &ExecutionPayloadElectraAndBlobsBundle{
 			ExecutionPayload: &payloadStruct,
