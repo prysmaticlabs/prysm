@@ -58,7 +58,6 @@ linters:
     - lll
     - maintidx
     - makezero
-    - mnd
     - musttag
     - nakedret
     - nestif
