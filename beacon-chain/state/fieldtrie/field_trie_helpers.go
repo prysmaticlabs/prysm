@@ -1,6 +1,7 @@
 package fieldtrie
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -9,6 +10,8 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -327,4 +330,30 @@ func handleBalanceMVSlice(mv multi_value_slice.MultiValueSliceComposite[uint64],
 		return roots, nil
 	}
 	return [][32]byte{}, nil
+}
+
+func PayloadProof(ctx context.Context, payload interfaces.ExecutionData, block *blocks.BeaconBlock) ([][]byte, error) {
+	i := block.Body()
+	blockBody := i.(*blocks.BeaconBlockBody)
+
+	fieldRoots, err := blocks.ComputeBlockBodyFieldRoots(ctx, blockBody)
+	if err != nil {
+		return nil, err
+	}
+
+	fieldRootsTrie := stateutil.Merkleize(fieldRoots)
+	proof := ProofFromMerkleLayers(fieldRootsTrie, types.LatestExecutionPayloadHeader.RealPosition()) //
+
+	blockBodyRoot, err := blockBody.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	blockRoots := append(fieldRoots, blockBodyRoot[:])
+	blockRootsTrie := stateutil.Merkleize(blockRoots)
+	blockRootProof := ProofFromMerkleLayers(blockRootsTrie, len(blockRoots)-1) // Assuming the block body root is the last element
+
+	combinedProof := append(proof, blockRootProof...)
+
+	return combinedProof, nil
 }
