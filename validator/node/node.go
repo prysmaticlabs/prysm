@@ -121,20 +121,20 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
 		}
 		log.Info("Enabling web portal to manage the validator client")
-		if err := validatorClient.initializeForWeb(cliCtx, router); err != nil {
+		if err := validatorClient.initializeForWeb(cliCtx, router.Router); err != nil {
 			return nil, err
 		}
 		return validatorClient, nil
 	}
 
-	if err := validatorClient.initializeFromCLI(cliCtx, router); err != nil {
+	if err := validatorClient.initializeFromCLI(cliCtx, router.Router); err != nil {
 		return nil, err
 	}
 
 	return validatorClient, nil
 }
 
-func newRouter(cliCtx *cli.Context) *http.ServeMux {
+func newRouter(cliCtx *cli.Context) *middleware.NormalizeQueryValuesHandler {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
@@ -142,11 +142,8 @@ func newRouter(cliCtx *cli.Context) *http.ServeMux {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := http.NewServeMux()
-	chain := middleware.MiddlewareChain(middleware.NormalizeQueryValuesHandler, middleware.CorsHandler(allowedOrigins))
-	for _, url := range allowedOrigins {
-		r.Handle(url, chain(r))
-	}
-	return r
+	wrappedmux := middleware.NewNormalizeQueryValuesHandler(middleware.NewCorsHandler(r, allowedOrigins), nil)
+	return wrappedmux
 }
 
 // Start every service in the validator client.

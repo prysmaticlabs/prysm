@@ -9,18 +9,39 @@ import (
 )
 
 // NormalizeQueryValuesHandler normalizes an input query of "key=value1,value2,value3" to "key=value1&key=value2&key=value3"
-func NormalizeQueryValuesHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
-		NormalizeQueryValues(query)
-		r.URL.RawQuery = query.Encode()
-
-		next.ServeHTTP(w, r)
-	})
+type NormalizeQueryValuesHandler struct {
+	Handler http.Handler
+	Router  *http.ServeMux
 }
 
 // CorsHandler sets the cors settings on api endpoints
-func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
+type CorsHandler struct {
+	handler      http.Handler
+	allowOrigins []string
+}
+
+//ServeHTTP handles the request by passing it to the real handler
+func (n *NormalizeQueryValuesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	NormalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+	n.Handler.ServeHTTP(w, r)
+}
+
+//NewNormalizeQueryValuesHandler constructs a new Logger middleware handler
+func NewNormalizeQueryValuesHandler(handlerToWrap http.Handler, mux *http.ServeMux) *NormalizeQueryValuesHandler {
+	if mux == nil {
+		mux = http.NewServeMux()
+	}
+	return &NormalizeQueryValuesHandler{handlerToWrap, mux}
+}
+
+//ServeHTTP handles the request by passing it to the real handler
+func (n *CorsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	n.handler.ServeHTTP(w, r)
+}
+
+func NewCorsHandler(handlerToWrap http.Handler, allowOrigins []string) *CorsHandler {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   allowOrigins,
 		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
@@ -28,10 +49,8 @@ func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
 		MaxAge:           600,
 		AllowedHeaders:   []string{"*"},
 	})
-
-	return func(next http.Handler) http.Handler {
-		return c.Handler(next)
-	}
+	c.Handler(handlerToWrap)
+	return &CorsHandler{handlerToWrap, allowOrigins}
 }
 
 // ContentTypeHandler checks request for the appropriate media types otherwise returning a http.StatusUnsupportedMediaType error
@@ -109,17 +128,5 @@ func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.H
 
 			next.ServeHTTP(w, r)
 		})
-	}
-}
-
-// m is a middleware type
-type m func(http.Handler) http.Handler
-
-func MiddlewareChain(middlewares ...m) m {
-	return func(handler http.Handler) http.Handler {
-		for i := len(middlewares) - 1; i >= 0; i-- {
-			handler = middlewares[i](handler)
-		}
-		return handler
 	}
 }

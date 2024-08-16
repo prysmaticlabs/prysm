@@ -15,7 +15,7 @@ func TestNormalizeQueryValuesHandler(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	handler := NormalizeQueryValuesHandler(nextHandler)
+	handler := NewNormalizeQueryValuesHandler(nextHandler, nil)
 
 	tests := []struct {
 		name          string

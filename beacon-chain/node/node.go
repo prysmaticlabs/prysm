@@ -398,7 +398,7 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 	}
 }
 
-func newRouter(cliCtx *cli.Context) *http.ServeMux {
+func newRouter(cliCtx *cli.Context) *middleware.NormalizeQueryValuesHandler {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
@@ -406,11 +406,8 @@ func newRouter(cliCtx *cli.Context) *http.ServeMux {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := http.NewServeMux()
-	chain := middleware.MiddlewareChain(middleware.NormalizeQueryValuesHandler, middleware.CorsHandler(allowedOrigins))
-	for _, url := range allowedOrigins {
-		r.Handle(url, chain(r))
-	}
-	return r
+	handler := middleware.NewNormalizeQueryValuesHandler(middleware.NewCorsHandler(r, allowedOrigins), nil)
+	return handler
 }
 
 // StateFeed implements statefeed.Notifier.
@@ -919,7 +916,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func (b *BeaconNode) registerRPCService(router *http.ServeMux) error {
+func (b *BeaconNode) registerRPCService(router *middleware.NormalizeQueryValuesHandler) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -1013,7 +1010,7 @@ func (b *BeaconNode) registerRPCService(router *http.ServeMux) error {
 		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
 		MaxMsgSize:                    maxMsgSize,
 		BlockBuilder:                  b.fetchBuilderService(),
-		Router:                        router,
+		Router:                        router.Router,
 		ClockWaiter:                   b.clockWaiter,
 		BlobStorage:                   b.BlobStorage,
 		TrackedValidatorsCache:        b.trackedValidatorsCache,
@@ -1046,13 +1043,13 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
+func (b *BeaconNode) registerHTTPService(router *middleware.NormalizeQueryValuesHandler) error {
 	host := b.cliCtx.String(flags.HTTPServerHost.Name)
 	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
 	address := net.JoinHostPort(host, strconv.Itoa(port))
 	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	opts := []httprest.Option{
-		httprest.WithRouter(router),
+		httprest.WithRouter(router.Router),
 		httprest.WithHTTPAddr(address),
 		httprest.WithTimeout(uint64(timeout)),
 	}

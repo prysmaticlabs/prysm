@@ -22,7 +22,7 @@ type httpHandler func(
 type config struct {
 	httpAddr string
 	handler  httpHandler
-	router   *http.ServeMux
+	router   http.Handler
 	timeout  time.Duration
 }
 

@@ -28,7 +28,7 @@ func TestServer_StartStop(t *testing.T) {
 	portStr := fmt.Sprintf("%d", port) // Convert port to string
 	host := ctx.String(flags.HTTPServerHost.Name)
 	address := net.JoinHostPort(host, portStr)
-
+	handler := http.NewServeMux()
 	opts := []Option{
 		WithHTTPAddr(address),
 		WithMuxHandler(func(
@@ -37,7 +37,7 @@ func TestServer_StartStop(t *testing.T) {
 			_ *http.Request,
 		) {
 		}),
-		WithRouter(http.NewServeMux()),
+		WithRouter(handler),
 	}
 
 	g, err := New(context.Background(), opts...)

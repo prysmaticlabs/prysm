@@ -985,7 +985,7 @@ func (s *Service) prysmBeaconEndpoints(
 		{
 			template: "/prysm/v1/beacon/chain_head",
 			name:     namespace + ".GetChainHead",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetChainHead,
@@ -1079,7 +1079,7 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 	return []endpoint{
 		{
 			template: "/prysm/validators/performance",
-			name:     namespace + ".GetValidatorPerformance",
+			name:     namespace + ".GetPerformance",
 			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
@@ -1088,8 +1088,8 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 			methods: []string{http.MethodPost},
 		},
 		{
-			template: "/prysm/v1/validators/performance"
-      name:     namespace + ".GetPerformance",
+			template: "/prysm/v1/validators/performance",
+			name:     namespace + ".GetPerformance",
 			middleware: []func(http.Handler) http.Handler{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
@@ -1100,7 +1100,7 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 		{
 			template: "/prysm/v1/validators/participation",
 			name:     namespace + ".GetParticipation",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetParticipation,
@@ -1109,7 +1109,7 @@ func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *cor
 		{
 			template: "/prysm/v1/validators/active_set_changes",
 			name:     namespace + ".GetActiveSetChanges",
-			middleware: []mux.MiddlewareFunc{
+			middleware: []func(http.Handler) http.Handler{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetActiveSetChanges,
