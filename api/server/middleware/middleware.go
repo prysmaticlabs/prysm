@@ -20,7 +20,7 @@ type CorsHandler struct {
 	allowOrigins []string
 }
 
-//ServeHTTP handles the request by passing it to the real handler
+// ServeHTTP handles the request by passing it to the real handler
 func (n *NormalizeQueryValuesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	NormalizeQueryValues(query)
@@ -28,7 +28,7 @@ func (n *NormalizeQueryValuesHandler) ServeHTTP(w http.ResponseWriter, r *http.R
 	n.Handler.ServeHTTP(w, r)
 }
 
-//NewNormalizeQueryValuesHandler constructs a new Logger middleware handler
+// NewNormalizeQueryValuesHandler constructs a new Logger middleware handler
 func NewNormalizeQueryValuesHandler(handlerToWrap http.Handler, mux *http.ServeMux) *NormalizeQueryValuesHandler {
 	if mux == nil {
 		mux = http.NewServeMux()
@@ -36,7 +36,7 @@ func NewNormalizeQueryValuesHandler(handlerToWrap http.Handler, mux *http.ServeM
 	return &NormalizeQueryValuesHandler{handlerToWrap, mux}
 }
 
-//ServeHTTP handles the request by passing it to the real handler
+// ServeHTTP handles the request by passing it to the real handler
 func (n *CorsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	n.handler.ServeHTTP(w, r)
 }
