@@ -308,7 +308,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	wg.Wait()
 	if err := <-errChan; err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not propose block: %v", err)
 	}
 
 	return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
