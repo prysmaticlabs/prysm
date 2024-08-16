@@ -19,11 +19,15 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
+	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen/mock"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -227,11 +231,11 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconState.SetBlockRoots(br))
 	att2.Data.Target.Root = rt[:]
 	att2.Data.BeaconBlockRoot = newRt[:]
-	err = beaconState.AppendPreviousEpochAttestations(&eth.PendingAttestation{
+	err = beaconState.AppendPreviousEpochAttestations(&ethpb.PendingAttestation{
 		Data: att1.Data, AggregationBits: bf, InclusionDelay: 1,
 	})
 	require.NoError(t, err)
-	err = beaconState.AppendCurrentEpochAttestations(&eth.PendingAttestation{
+	err = beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{
 		Data: att2.Data, AggregationBits: bf, InclusionDelay: 1,
 	})
 	require.NoError(t, err)
@@ -657,4 +661,212 @@ func TestServer_GetIndividualVotes_CapellaEndOfEpoch(t *testing.T) {
 		},
 	}
 	assert.DeepEqual(t, want, resp, "Unexpected response")
+}
+
+// ensures that if any of the checkpoints are zero-valued, an error will be generated without genesis being present
+func TestServer_GetChainHead_NoGenesis(t *testing.T) {
+	db := dbTest.SetupDB(t)
+
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, s.SetSlot(1))
+
+	genBlock := util.NewBeaconBlock()
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
+	util.SaveBlock(t, context.Background(), db, genBlock)
+	gRoot, err := genBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cases := []struct {
+		name       string
+		zeroSetter func(val *ethpb.Checkpoint) error
+	}{
+		{
+			name:       "zero-value prev justified",
+			zeroSetter: s.SetPreviousJustifiedCheckpoint,
+		},
+		{
+			name:       "zero-value current justified",
+			zeroSetter: s.SetCurrentJustifiedCheckpoint,
+		},
+		{
+			name:       "zero-value finalized",
+			zeroSetter: s.SetFinalizedCheckpoint,
+		},
+	}
+	finalized := &ethpb.Checkpoint{Epoch: 1, Root: gRoot[:]}
+	prevJustified := &ethpb.Checkpoint{Epoch: 2, Root: gRoot[:]}
+	justified := &ethpb.Checkpoint{Epoch: 3, Root: gRoot[:]}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.NoError(t, s.SetPreviousJustifiedCheckpoint(prevJustified))
+			require.NoError(t, s.SetCurrentJustifiedCheckpoint(justified))
+			require.NoError(t, s.SetFinalizedCheckpoint(finalized))
+			require.NoError(t, c.zeroSetter(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}))
+		})
+		wsb, err := blocks.NewSignedBeaconBlock(genBlock)
+		require.NoError(t, err)
+		s := &Server{
+			CoreService: &core.Service{
+				BeaconDB:    db,
+				HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
+				FinalizedFetcher: &chainMock.ChainService{
+					FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+					CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+					PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint(),
+				},
+				OptimisticModeFetcher: &chainMock.ChainService{},
+			},
+		}
+		url := "http://example.com"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetChainHead(writer, request)
+		require.Equal(t, http.StatusInternalServerError, writer.Code)
+		require.StringContains(t, "could not get genesis block", writer.Body.String())
+	}
+}
+
+func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
+	db := dbTest.SetupDB(t)
+
+	bs, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, bs.SetSlot(1))
+	require.NoError(t, bs.SetPreviousJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 3, Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}))
+	require.NoError(t, bs.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
+	require.NoError(t, bs.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}))
+
+	genBlock := util.NewBeaconBlock()
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
+	util.SaveBlock(t, context.Background(), db, genBlock)
+	gRoot, err := genBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
+
+	wsb, err := blocks.NewSignedBeaconBlock(genBlock)
+	require.NoError(t, err)
+
+	s := &Server{
+		CoreService: &core.Service{
+			BeaconDB:    db,
+			HeadFetcher: &chainMock.ChainService{Block: wsb, State: bs},
+			FinalizedFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:         bs.FinalizedCheckpoint(),
+				CurrentJustifiedCheckPoint:  bs.CurrentJustifiedCheckpoint(),
+				PreviousJustifiedCheckPoint: bs.PreviousJustifiedCheckpoint()},
+			OptimisticModeFetcher: &chainMock.ChainService{},
+		},
+	}
+
+	url := "http://example.com"
+	request := httptest.NewRequest(http.MethodGet, url, nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetChainHead(writer, request)
+	require.Equal(t, http.StatusInternalServerError, writer.Code)
+	require.StringContains(t, "ould not get finalized block", writer.Body.String())
+}
+
+func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
+	s := &Server{
+		CoreService: &core.Service{
+			HeadFetcher:           &chainMock.ChainService{Block: nil},
+			OptimisticModeFetcher: &chainMock.ChainService{},
+		},
+	}
+	url := "http://example.com"
+	request := httptest.NewRequest(http.MethodGet, url, nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetChainHead(writer, request)
+	require.Equal(t, http.StatusNotFound, writer.Code)
+	require.StringContains(t, "head block of chain was nil", writer.Body.String())
+}
+
+func TestServer_GetChainHead(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+
+	db := dbTest.SetupDB(t)
+	genBlock := util.NewBeaconBlock()
+	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
+	util.SaveBlock(t, context.Background(), db, genBlock)
+	gRoot, err := genBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
+
+	finalizedBlock := util.NewBeaconBlock()
+	finalizedBlock.Block.Slot = 1
+	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
+	util.SaveBlock(t, context.Background(), db, finalizedBlock)
+	fRoot, err := finalizedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	justifiedBlock := util.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 2
+	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
+	util.SaveBlock(t, context.Background(), db, justifiedBlock)
+	jRoot, err := justifiedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	prevJustifiedBlock := util.NewBeaconBlock()
+	prevJustifiedBlock.Block.Slot = 3
+	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
+	util.SaveBlock(t, context.Background(), db, prevJustifiedBlock)
+	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+		Slot:                        1,
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	})
+	require.NoError(t, err)
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot, err = slots.EpochStart(st.PreviousJustifiedCheckpoint().Epoch)
+	require.NoError(t, err)
+	b.Block.Slot++
+	wsb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	s := &Server{
+		CoreService: &core.Service{
+			BeaconDB:              db,
+			HeadFetcher:           &chainMock.ChainService{Block: wsb, State: st},
+			OptimisticModeFetcher: &chainMock.ChainService{},
+			FinalizedFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:         st.FinalizedCheckpoint(),
+				CurrentJustifiedCheckPoint:  st.CurrentJustifiedCheckpoint(),
+				PreviousJustifiedCheckPoint: st.PreviousJustifiedCheckpoint()},
+		},
+	}
+
+	url := "http://example.com"
+	request := httptest.NewRequest(http.MethodGet, url, nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetChainHead(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+
+	var ch *structs.ChainHead
+	err = json.NewDecoder(writer.Body).Decode(&ch)
+	require.NoError(t, err)
+
+	assert.Equal(t, "3", ch.PreviousJustifiedEpoch, "Unexpected PreviousJustifiedEpoch")
+	assert.Equal(t, "2", ch.JustifiedEpoch, "Unexpected JustifiedEpoch")
+	assert.Equal(t, "1", ch.FinalizedEpoch, "Unexpected FinalizedEpoch")
+	assert.Equal(t, "24", ch.PreviousJustifiedSlot, "Unexpected PreviousJustifiedSlot")
+	assert.Equal(t, "16", ch.JustifiedSlot, "Unexpected JustifiedSlot")
+	assert.Equal(t, "8", ch.FinalizedSlot, "Unexpected FinalizedSlot")
+	assert.DeepEqual(t, hexutil.Encode(pjRoot[:]), ch.PreviousJustifiedBlockRoot, "Unexpected PreviousJustifiedBlockRoot")
+	assert.DeepEqual(t, hexutil.Encode(jRoot[:]), ch.JustifiedBlockRoot, "Unexpected JustifiedBlockRoot")
+	assert.DeepEqual(t, hexutil.Encode(fRoot[:]), ch.FinalizedBlockRoot, "Unexpected FinalizedBlockRoot")
+	assert.Equal(t, false, ch.OptimisticStatus)
 }

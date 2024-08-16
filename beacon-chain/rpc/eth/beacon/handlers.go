@@ -116,9 +116,11 @@ func (s *Server) getBlockV2Ssz(w http.ResponseWriter, blk interfaces.ReadOnlySig
 	result, err := s.getBlockResponseBodySsz(blk)
 	if err != nil {
 		httputil.HandleError(w, "Could not get signed beacon block: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if result == nil {
 		httputil.HandleError(w, fmt.Sprintf("Unknown block type %T", blk), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set(api.VersionHeader, version.String(blk.Version()))
 	httputil.WriteSsz(w, result, "beacon_block.ssz")
@@ -149,6 +151,11 @@ func (s *Server) getBlockV2Json(ctx context.Context, w http.ResponseWriter, blk 
 	result, err := s.getBlockResponseBodyJson(ctx, blk)
 	if err != nil {
 		httputil.HandleError(w, "Error processing request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if result == nil {
+		httputil.HandleError(w, fmt.Sprintf("Unknown block type %T", blk), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set(api.VersionHeader, result.Version)
 	httputil.WriteJson(w, result)

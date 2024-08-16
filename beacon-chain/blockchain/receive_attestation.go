@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -190,13 +191,26 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 		}
 
 		if err := s.receiveAttestationNoPubsub(ctx, a, disparity); err != nil {
-			log.WithFields(logrus.Fields{
-				"slot":             a.GetData().Slot,
-				"committeeIndex":   a.GetData().CommitteeIndex,
-				"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().BeaconBlockRoot)),
-				"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().Target.Root)),
-				"aggregationCount": a.GetAggregationBits().Count(),
-			}).WithError(err).Warn("Could not process attestation for fork choice")
+			var fields logrus.Fields
+			if a.Version() >= version.Electra {
+				fields = logrus.Fields{
+					"slot":             a.GetData().Slot,
+					"committeeCount":   a.CommitteeBitsVal().Count(),
+					"committeeIndices": a.CommitteeBitsVal().BitIndices(),
+					"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().BeaconBlockRoot)),
+					"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().Target.Root)),
+					"aggregatedCount":  a.GetAggregationBits().Count(),
+				}
+			} else {
+				fields = logrus.Fields{
+					"slot":            a.GetData().Slot,
+					"committeeIndex":  a.GetData().CommitteeIndex,
+					"beaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().BeaconBlockRoot)),
+					"targetRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(a.GetData().Target.Root)),
+					"aggregatedCount": a.GetAggregationBits().Count(),
+				}
+			}
+			log.WithFields(fields).WithError(err).Warn("Could not process attestation for fork choice")
 		}
 	}
 }

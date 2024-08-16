@@ -154,3 +154,32 @@ func (s *Server) GetIndividualVotes(w http.ResponseWriter, r *http.Request) {
 	}
 	httputil.WriteJson(w, response)
 }
+
+// GetChainHead retrieves information about the head of the beacon chain from
+// the view of the beacon chain node.
+func (s *Server) GetChainHead(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetChainHead")
+	defer span.End()
+
+	ch, rpcError := s.CoreService.ChainHead(ctx)
+	if rpcError != nil {
+		httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+		return
+	}
+	response := &structs.ChainHead{
+		HeadSlot:                   fmt.Sprintf("%d", ch.HeadSlot),
+		HeadEpoch:                  fmt.Sprintf("%d", ch.HeadEpoch),
+		HeadBlockRoot:              hexutil.Encode(ch.HeadBlockRoot),
+		FinalizedSlot:              fmt.Sprintf("%d", ch.FinalizedSlot),
+		FinalizedEpoch:             fmt.Sprintf("%d", ch.FinalizedEpoch),
+		FinalizedBlockRoot:         hexutil.Encode(ch.FinalizedBlockRoot),
+		JustifiedSlot:              fmt.Sprintf("%d", ch.JustifiedSlot),
+		JustifiedEpoch:             fmt.Sprintf("%d", ch.JustifiedEpoch),
+		JustifiedBlockRoot:         hexutil.Encode(ch.JustifiedBlockRoot),
+		PreviousJustifiedSlot:      fmt.Sprintf("%d", ch.PreviousJustifiedSlot),
+		PreviousJustifiedEpoch:     fmt.Sprintf("%d", ch.PreviousJustifiedEpoch),
+		PreviousJustifiedBlockRoot: hexutil.Encode(ch.PreviousJustifiedBlockRoot),
+		OptimisticStatus:           ch.OptimisticStatus,
+	}
+	httputil.WriteJson(w, response)
+}

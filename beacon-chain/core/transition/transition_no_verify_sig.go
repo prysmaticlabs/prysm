@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -328,18 +327,16 @@ func ProcessBlockForStateRoot(
 		if err != nil {
 			return nil, err
 		}
-		if blk.IsBlinded() {
-			state, err = b.ProcessPayloadHeader(state, executionData)
-		} else {
-			state, err = b.ProcessPayload(state, executionData)
+		if state.Version() >= version.Capella {
+			state, err = b.ProcessWithdrawals(state, executionData)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process withdrawals")
+			}
 		}
+		state, err = b.ProcessPayload(state, blk.Body())
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process execution data")
 		}
-	}
-
-	if err := VerifyBlobCommitmentCount(blk); err != nil {
-		return nil, err
 	}
 
 	randaoReveal := signed.Block().Body().RandaoReveal()
@@ -375,20 +372,6 @@ func ProcessBlockForStateRoot(
 	}
 
 	return state, nil
-}
-
-func VerifyBlobCommitmentCount(blk interfaces.ReadOnlyBeaconBlock) error {
-	if blk.Version() < version.Deneb {
-		return nil
-	}
-	kzgs, err := blk.Body().BlobKzgCommitments()
-	if err != nil {
-		return err
-	}
-	if len(kzgs) > field_params.MaxBlobsPerBlock {
-		return fmt.Errorf("too many kzg commitments in block: %d", len(kzgs))
-	}
-	return nil
 }
 
 // This calls altair block operations.

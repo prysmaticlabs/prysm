@@ -216,6 +216,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 	rewardFetcher := &rewards.BlockRewardService{Replayer: ch, DB: s.cfg.BeaconDB}
 	coreService := &core.Service{
+		BeaconDB:              s.cfg.BeaconDB,
 		HeadFetcher:           s.cfg.HeadFetcher,
 		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
 		SyncChecker:           s.cfg.SyncService,
@@ -226,6 +227,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		StateGen:              s.cfg.StateGen,
 		P2P:                   s.cfg.Broadcaster,
 		FinalizedFetcher:      s.cfg.FinalizationFetcher,
+		ReplayerBuilder:       ch,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 	}
 	validatorServer := &validatorv1alpha1.Server{
