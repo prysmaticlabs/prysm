@@ -403,7 +403,12 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		helpers.ClearCache()
 
 		require.NoError(t, state.SetSlot(tt.stateSlot))
-		err := helpers.VerifyAttestationBitfieldLengths(context.Background(), state, tt.attestation)
+		att := tt.attestation
+		// Verify attesting indices are correct.
+		committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, att.GetData().Slot, att.GetData().CommitteeIndex)
+		require.NoError(t, err)
+		require.NotNil(t, committee)
+		err = helpers.VerifyBitfieldLength(att.GetAggregationBits(), uint64(len(committee)))
 		if tt.verificationFailure {
 			assert.NotNil(t, err, "Verification succeeded when it was supposed to fail")
 		} else {
