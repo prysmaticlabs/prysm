@@ -342,7 +342,7 @@ func PayloadProof(ctx context.Context, payload interfaces.ExecutionData, block *
 	}
 
 	fieldRootsTrie := stateutil.Merkleize(fieldRoots)
-	proof := ProofFromMerkleLayers(fieldRootsTrie, types.LatestExecutionPayloadHeader.RealPosition()) //
+	proof := ProofFromMerkleLayers(fieldRootsTrie, types.LatestExecutionPayloadHeader.RealPosition())
 
 	blockBodyRoot, err := blockBody.HashTreeRoot()
 	if err != nil {
@@ -351,7 +351,7 @@ func PayloadProof(ctx context.Context, payload interfaces.ExecutionData, block *
 
 	blockRoots := append(fieldRoots, blockBodyRoot[:])
 	blockRootsTrie := stateutil.Merkleize(blockRoots)
-	blockRootProof := ProofFromMerkleLayers(blockRootsTrie, len(blockRoots)-1) // Assuming the block body root is the last element
+	blockRootProof := ProofFromMerkleLayers(blockRootsTrie, len(blockRoots)-1)
 
 	combinedProof := append(proof, blockRootProof...)
 
