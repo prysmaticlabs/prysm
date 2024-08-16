@@ -347,11 +347,11 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 
 // handleUnblindedBlock processes unblinded beacon blocks.
 func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
-	dbBlockContents := req.GetDeneb()
-	if dbBlockContents == nil {
+	rawBlobs, proofs := blobsAndProofs(req)
+	if len(rawBlobs) == 0 {
 		return nil, nil
 	}
-	return BuildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+	return BuildBlobSidecars(block, rawBlobs, proofs)
 }
 
 // broadcastReceiveBlock broadcasts a block and handles its reception.
@@ -501,4 +501,17 @@ func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.S
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func blobsAndProofs(req *ethpb.GenericSignedBeaconBlock) ([][]byte, [][]byte) {
+	switch {
+	case req.GetDeneb() != nil:
+		dbBlockContents := req.GetDeneb()
+		return dbBlockContents.Blobs, dbBlockContents.KzgProofs
+	case req.GetElectra() != nil:
+		dbBlockContents := req.GetElectra()
+		return dbBlockContents.Blobs, dbBlockContents.KzgProofs
+	default:
+		return nil, nil
+	}
 }
