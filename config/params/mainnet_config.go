@@ -278,7 +278,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Values related to electra
 	MaxRequestDataColumnSidecars:          16384,
-	DataColumnSidecarSubnetCount:          32,
+	DataColumnSidecarSubnetCount:          128,
 	MinPerEpochChurnLimitElectra:          128_000_000_000,
 	MaxPerEpochActivationExitChurnLimit:   256_000_000_000,
 	MaxEffectiveBalanceElectra:            2048_000_000_000,
@@ -297,7 +297,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// PeerDAS
 	SamplesPerSlot:                        8,
-	CustodyRequirement:                    1,
+	CustodyRequirement:                    4,
 	MinEpochsForDataColumnSidecarsRequest: 4096,
 	NumberOfColumns:                       128,
 	MaxCellsInExtendedMatrix:              768,
