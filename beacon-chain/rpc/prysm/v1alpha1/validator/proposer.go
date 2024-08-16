@@ -347,10 +347,7 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 
 // handleUnblindedBlock processes unblinded beacon blocks.
 func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
-	rawBlobs, proofs, err := blobsAndProofs(req)
-	if err != nil {
-		return nil, err
-	}
+	rawBlobs, proofs := blobsAndProofs(req)
 	if len(rawBlobs) == 0 {
 		return nil, nil
 	}
@@ -506,15 +503,15 @@ func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.S
 	return &emptypb.Empty{}, nil
 }
 
-func blobsAndProofs(req *ethpb.GenericSignedBeaconBlock) ([][]byte, [][]byte, error) {
+func blobsAndProofs(req *ethpb.GenericSignedBeaconBlock) ([][]byte, [][]byte) {
 	switch {
 	case req.GetDeneb() != nil:
 		dbBlockContents := req.GetDeneb()
-		return dbBlockContents.Blobs, dbBlockContents.KzgProofs, nil
+		return dbBlockContents.Blobs, dbBlockContents.KzgProofs
 	case req.GetElectra() != nil:
 		dbBlockContents := req.GetElectra()
-		return dbBlockContents.Blobs, dbBlockContents.KzgProofs, nil
+		return dbBlockContents.Blobs, dbBlockContents.KzgProofs
 	default:
-		return nil, nil, errors.Errorf("Unknown request type provided: %T", req)
+		return nil, nil
 	}
 }

@@ -880,33 +880,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			err: "blob KZG commitments don't match number of blobs or KZG proofs",
 		},
 		{
-			name: "electra block no blob",
-			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-				sb := &ethpb.SignedBeaconBlockContentsElectra{
-					Block: &ethpb.SignedBeaconBlockElectra{
-						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
-					},
-				}
-				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
-				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
-			},
-		},
-		{
-			name: "electra block some blob",
-			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-
-				sb := &ethpb.SignedBeaconBlockContentsElectra{
-					Block: &ethpb.SignedBeaconBlockElectra{
-						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
-					},
-					KzgProofs: [][]byte{{0x01}, {0x02}, {0x03}},
-					Blobs:     [][]byte{{0x01}, {0x02}, {0x03}},
-				}
-				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
-				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
-			},
-		},
-		{
 			name: "blind deneb block some blobs",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBlindedBeaconBlockDeneb()
@@ -942,6 +915,57 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			},
 			useBuilder: true,
 			err:        "unblind sidecars failed: commitment value doesn't match block",
+		},
+		{
+			name: "electra block no blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{Slot: 5, ParentRoot: parent[:], Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{})},
+					},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
+		},
+		{
+			name: "electra block some blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{
+							Slot: 5, ParentRoot: parent[:],
+							Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{
+								BlobKzgCommitments: [][]byte{bytesutil.PadTo([]byte("kc"), 48), bytesutil.PadTo([]byte("kc1"), 48), bytesutil.PadTo([]byte("kc2"), 48)},
+							}),
+						},
+					},
+					KzgProofs: [][]byte{{0x01}, {0x02}, {0x03}},
+					Blobs:     [][]byte{{0x01}, {0x02}, {0x03}},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
+		},
+		{
+			name: "electra block some blob (kzg and blob count mismatch)",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				sb := &ethpb.SignedBeaconBlockContentsElectra{
+					Block: &ethpb.SignedBeaconBlockElectra{
+						Block: &ethpb.BeaconBlockElectra{
+							Slot: 5, ParentRoot: parent[:],
+							Body: util.HydrateBeaconBlockBodyElectra(&ethpb.BeaconBlockBodyElectra{
+								BlobKzgCommitments: [][]byte{bytesutil.PadTo([]byte("kc"), 48), bytesutil.PadTo([]byte("kc1"), 48)},
+							}),
+						},
+					},
+					KzgProofs: [][]byte{{0x01}, {0x02}, {0x03}},
+					Blobs:     [][]byte{{0x01}, {0x02}, {0x03}},
+				}
+				blk := &ethpb.GenericSignedBeaconBlock_Electra{Electra: sb}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk, IsBlinded: false}
+			},
+			err: "blob KZG commitments don't match number of blobs or KZG proofs",
 		},
 	}
 
@@ -3099,8 +3123,7 @@ func TestProposer_ElectraBlobsAndProofs(t *testing.T) {
 	electraContents.Blobs = make([][]byte, 10)
 
 	genBlock := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Electra{Electra: electraContents}}
-	blobs, proofs, err := blobsAndProofs(genBlock)
-	require.NoError(t, err)
+	blobs, proofs := blobsAndProofs(genBlock)
 	require.Equal(t, 10, len(blobs))
 	require.Equal(t, 10, len(proofs))
 }
