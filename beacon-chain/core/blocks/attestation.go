@@ -110,25 +110,7 @@ func VerifyAttestationNoVerifySignature(
 
 	var indexedAtt ethpb.IndexedAtt
 
-	if att.Version() < version.Electra {
-		if uint64(att.GetData().CommitteeIndex) >= c {
-			return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
-		}
-
-		if err = helpers.VerifyAttestationBitfieldLengths(ctx, beaconState, att); err != nil {
-			return errors.Wrap(err, "could not verify attestation bitfields")
-		}
-
-		// Verify attesting indices are correct.
-		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committee)
-		if err != nil {
-			return err
-		}
-	} else {
+	if att.Version() >= version.Electra {
 		if att.GetData().CommitteeIndex != 0 {
 			return errors.New("committee index must be 0 post-Electra")
 		}
@@ -151,6 +133,29 @@ func VerifyAttestationNoVerifySignature(
 			return fmt.Errorf("aggregation bits count %d is different than participant count %d", att.GetAggregationBits().Len(), participantsCount)
 		}
 		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committees...)
+		if err != nil {
+			return err
+		}
+	} else {
+		if uint64(att.GetData().CommitteeIndex) >= c {
+			return fmt.Errorf("committee index %d >= committee count %d", att.GetData().CommitteeIndex, c)
+		}
+
+		// Verify attesting indices are correct.
+		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, att.GetData().Slot, att.GetData().CommitteeIndex)
+		if err != nil {
+			return err
+		}
+
+		if committee == nil {
+			return errors.New("no committee exist for this attestation")
+		}
+
+		if err := helpers.VerifyBitfieldLength(att.GetAggregationBits(), uint64(len(committee))); err != nil {
+			return errors.Wrap(err, "failed to verify aggregation bitfield")
+		}
+
+		indexedAtt, err = attestation.ConvertToIndexed(ctx, att, committee)
 		if err != nil {
 			return err
 		}
