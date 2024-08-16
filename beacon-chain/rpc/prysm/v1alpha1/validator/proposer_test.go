@@ -3123,7 +3123,8 @@ func TestProposer_ElectraBlobsAndProofs(t *testing.T) {
 	electraContents.Blobs = make([][]byte, 10)
 
 	genBlock := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Electra{Electra: electraContents}}
-	blobs, proofs := blobsAndProofs(genBlock)
+	blobs, proofs, err := blobsAndProofs(genBlock)
+	require.NoError(t, err)
 	require.Equal(t, 10, len(blobs))
 	require.Equal(t, 10, len(proofs))
 }
