@@ -140,9 +140,8 @@ func New(opts ...Option) (*Builder, error) {
 	if err != nil {
 		return nil, err
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/", p)
 	router := http.NewServeMux()
+	router.Handle("/", p)
 	router.HandleFunc(statusPath, func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})
@@ -151,7 +150,7 @@ func New(opts ...Option) (*Builder, error) {
 	router.HandleFunc(blindedPath, p.handleBlindedBlock)
 	addr := net.JoinHostPort(p.cfg.builderHost, strconv.Itoa(p.cfg.builderPort))
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           router,
 		Addr:              addr,
 		ReadHeaderTimeout: time.Second,
 	}
