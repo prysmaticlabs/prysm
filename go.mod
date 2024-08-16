@@ -6,8 +6,8 @@ toolchain go1.22.4
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
-	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20240209103030-ec53fa766bf8
-	github.com/MariusVanDerWijden/tx-fuzz v1.3.3-0.20240227085032-f70dd7c85c97
+	github.com/MariusVanDerWijden/FuzzyVM v0.0.0-20240516070431-7828990cad7d
+	github.com/MariusVanDerWijden/tx-fuzz v1.3.3-0.20240521060658-cbe8f24a510a
 	github.com/aristanetworks/goarista v0.0.0-20200805130819-fd197cf57d96
 	github.com/bazelbuild/rules_go v0.23.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
@@ -17,8 +17,8 @@ require (
 	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v1.14.8
-	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
+	github.com/ethereum/go-ethereum v1.14.3
+	github.com/fjl/memsize v0.0.2
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-yaml/yaml v2.1.0+incompatible
@@ -26,7 +26,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/gddo v0.0.0-20200528160355-8d077c1d8f4c
 	github.com/golang/protobuf v1.5.4
-	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
+	github.com/golang/snappy v0.0.5-0.20231225225746-43d5d4cd4e0e
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.4.0
@@ -79,7 +79,7 @@ require (
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
 	github.com/trailofbits/go-mutexasserts v0.0.0-20230328101604-8cdbc5f3d279
 	github.com/tyler-smith/go-bip39 v1.1.0
-	github.com/urfave/cli/v2 v2.26.0
+	github.com/urfave/cli/v2 v2.27.1
 	github.com/uudashr/gocognit v1.0.5
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
@@ -117,6 +117,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
+	github.com/cockroachdb/fifo v0.0.0-20240606204812-0bbfbd93a7ce // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v1.1.1 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
@@ -125,6 +126,7 @@ require (
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/crate-crypto/go-ipa v0.0.0-20231025140028-3c0104f4b233 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
@@ -138,6 +140,7 @@ require (
 	github.com/ferranbt/fastssz v0.1.2 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
+	github.com/gballet/go-verkle v0.1.1-0.20231031103413-a67434b50f46 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -155,7 +158,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/holiman/billy v0.0.0-20240216141850-2abb0c79d3c4 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/goevmlab v0.0.0-20231201084119-c73b3c97929c // indirect
+	github.com/holiman/goevmlab v0.0.0-20240515165425-8414a52dc9d4 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
 	github.com/influxdata/influxdb1-client v0.0.0-20220302092344-a9ab5670611c // indirect
