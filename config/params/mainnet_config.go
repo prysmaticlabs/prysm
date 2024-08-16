@@ -242,7 +242,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EpochsPerSyncCommitteePeriod: 256,
 
 	// Updated penalty values.
-	InactivityPenaltyQuotientAltair:         3 * 1 << 24, //50331648
+	InactivityPenaltyQuotientAltair:         3 * 1 << 24, // 50331648
 	MinSlashingPenaltyQuotientAltair:        64,
 	ProportionalSlashingMultiplierAltair:    2,
 	MinSlashingPenaltyQuotientBellatrix:     32,
