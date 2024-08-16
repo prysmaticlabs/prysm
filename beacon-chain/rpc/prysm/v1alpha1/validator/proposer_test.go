@@ -3092,3 +3092,14 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 		require.LogsContain(t, hook, "late block attempted reorg failed")
 	})
 }
+
+func TestProposer_ElectraBlobsAndProofs(t *testing.T) {
+	electraContents := &ethpb.SignedBeaconBlockContentsElectra{Block: &ethpb.SignedBeaconBlockElectra{}}
+	electraContents.KzgProofs = make([][]byte, 10)
+	electraContents.Blobs = make([][]byte, 10)
+
+	genBlock := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Electra{Electra: electraContents}}
+	blobs, proofs := blobsAndProofs(genBlock)
+	require.Equal(t, 10, len(blobs))
+	require.Equal(t, 10, len(proofs))
+}
