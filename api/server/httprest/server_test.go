@@ -57,6 +57,7 @@ func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(&app, set, nil)
 
+	handler := http.NewServeMux()
 	port := ctx.Int(flags.HTTPServerPort.Name)
 	portStr := fmt.Sprintf("%d", port) // Convert port to string
 	host := ctx.String(flags.HTTPServerHost.Name)
@@ -64,7 +65,7 @@ func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 
 	opts := []Option{
 		WithHTTPAddr(address),
-		WithRouter(http.NewServeMux()),
+		WithRouter(handler),
 	}
 
 	g, err := New(context.Background(), opts...)

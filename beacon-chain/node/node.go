@@ -18,7 +18,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"

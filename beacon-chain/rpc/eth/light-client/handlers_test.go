@@ -60,7 +60,6 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
-
 	request := httptest.NewRequest("GET", "http://foo.com/", nil)
 	request.SetPathValue("block_root", hexutil.Encode(r[:]))
 	writer := httptest.NewRecorder()

@@ -183,7 +183,6 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-
 	valId := r.PathValue("validator_id")
 	if valId == "" {
 		httputil.HandleError(w, "validator_id is required in URL params", http.StatusBadRequest)
