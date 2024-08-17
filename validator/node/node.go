@@ -141,8 +141,8 @@ func newRouter(cliCtx *cli.Context) *middleware.NormalizeQueryValuesHandler {
 	} else {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
-	r := http.NewServeMux()
-	wrappedmux := middleware.NewNormalizeQueryValuesHandler(middleware.NewCorsHandler(r, allowedOrigins), nil)
+	mux := http.NewServeMux()
+	wrappedmux := middleware.NewNormalizeQueryValuesHandler(middleware.NewCorsHandler(mux, allowedOrigins), nil)
 	return wrappedmux
 }
 

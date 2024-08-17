@@ -2111,7 +2111,6 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
 		request.SetPathValue("epoch", strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10))
-		request.SetPathValue("epoch", strconv.FormatUint(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod), 10))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2131,7 +2130,6 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		_, err := body.WriteString("[\"1\"]")
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
-		request.SetPathValue("epoch", "0")
 		request.SetPathValue("epoch", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}

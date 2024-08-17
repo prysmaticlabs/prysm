@@ -140,17 +140,17 @@ func New(opts ...Option) (*Builder, error) {
 	if err != nil {
 		return nil, err
 	}
-	router := http.NewServeMux()
-	router.Handle("/", p)
-	router.HandleFunc(statusPath, func(writer http.ResponseWriter, request *http.Request) {
+	mux := http.NewServeMux()
+	mux.Handle("/", p)
+	mux.HandleFunc(statusPath, func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})
-	router.HandleFunc(registerPath, p.registerValidators)
-	router.HandleFunc(headerPath, p.handleHeaderRequest)
-	router.HandleFunc(blindedPath, p.handleBlindedBlock)
+	mux.HandleFunc(registerPath, p.registerValidators)
+	mux.HandleFunc(headerPath, p.handleHeaderRequest)
+	mux.HandleFunc(blindedPath, p.handleBlindedBlock)
 	addr := net.JoinHostPort(p.cfg.builderHost, strconv.Itoa(p.cfg.builderPort))
 	srv := &http.Server{
-		Handler:           router,
+		Handler:           mux,
 		Addr:              addr,
 		ReadHeaderTimeout: time.Second,
 	}
@@ -160,7 +160,7 @@ func New(opts ...Option) (*Builder, error) {
 	p.valLock.Lock()
 	p.validatorMap = map[string]*eth.ValidatorRegistrationV1{}
 	p.valLock.Unlock()
-	p.mux = router
+	p.mux = mux
 	return p, nil
 }
 

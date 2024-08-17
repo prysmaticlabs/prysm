@@ -58,7 +58,6 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
@@ -206,7 +205,6 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return

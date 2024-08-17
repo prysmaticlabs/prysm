@@ -709,7 +709,6 @@ func TestGetValidator(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validators/{validator_id}", nil)
-		request.SetPathValue("state_id", "head")
 		request.SetPathValue("validator_id", "1")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}

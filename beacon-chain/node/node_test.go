@@ -120,7 +120,6 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	numValidators := uint64(1)
 	hook := logTest.NewGlobal()
 	app := cli.App{}
-	t.Log("here")
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
