@@ -19,7 +19,6 @@ func TestStore_LightclientUpdate_CanSaveRetrieve(t *testing.T) {
 		SyncAggregate:           nil,
 		SignatureSlot:           7,
 	}
-	require.NotNil(t, update, "update is nil")
 
 	period := uint64(1)
 	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
