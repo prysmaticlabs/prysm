@@ -172,3 +172,44 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 
 	return fieldRoots, nil
 }
+
+func ComputeBeaconBlockFieldRoots(ctx context.Context, block *BeaconBlock) ([][]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasher")
+	defer span.End()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	if block == nil {
+		return nil, errNilBlock
+	}
+
+	var fieldRoots [][]byte
+	fieldRoots = make([][]byte, 5)
+	for i := range fieldRoots {
+		fieldRoots[i] = make([]byte, 32)
+	}
+
+	// Slot
+	slotRoot := ssz.Uint64Root(uint64(block.slot))
+	copy(fieldRoots[0], slotRoot[:])
+
+	// Proposer Index
+	proposerRoot := ssz.Uint64Root(uint64(block.proposerIndex))
+	copy(fieldRoots[1], proposerRoot[:])
+
+	// Parent Root
+	copy(fieldRoots[2], block.parentRoot[:])
+
+	// State Root
+	copy(fieldRoots[3], block.stateRoot[:])
+
+	// block body Root
+	blockBodyRoot, err := block.body.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[4], blockBodyRoot[:])
+
+	return fieldRoots, nil
+}
