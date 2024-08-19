@@ -336,24 +336,23 @@ func PayloadProof(ctx context.Context, payload interfaces.ExecutionData, block *
 	i := block.Body()
 	blockBody := i.(*blocks.BeaconBlockBody)
 
-	fieldRoots, err := blocks.ComputeBlockBodyFieldRoots(ctx, blockBody)
+	blockBodyFieldRoots, err := blocks.ComputeBlockBodyFieldRoots(ctx, blockBody)
 	if err != nil {
 		return nil, err
 	}
 
-	fieldRootsTrie := stateutil.Merkleize(fieldRoots)
-	proof := ProofFromMerkleLayers(fieldRootsTrie, types.LatestExecutionPayloadHeader.RealPosition())
+	blockBodyFieldRootsTrie := stateutil.Merkleize(blockBodyFieldRoots)
+	blockBodyProof := ProofFromMerkleLayers(blockBodyFieldRootsTrie, 9)
 
-	blockBodyRoot, err := blockBody.HashTreeRoot()
+	beaconBlockFieldRoots, err := blocks.ComputeBeaconBlockFieldRoots(ctx, block)
 	if err != nil {
 		return nil, err
 	}
 
-	blockRoots := append(fieldRoots, blockBodyRoot[:])
-	blockRootsTrie := stateutil.Merkleize(blockRoots)
-	blockRootProof := ProofFromMerkleLayers(blockRootsTrie, len(blockRoots)-1)
+	beaconBlockFieldRootsTrie := stateutil.Merkleize(beaconBlockFieldRoots)
+	beaconBlockProof := ProofFromMerkleLayers(beaconBlockFieldRootsTrie, 4)
 
-	combinedProof := append(proof, blockRootProof...)
+	finalProof := append(blockBodyProof, beaconBlockProof...)
 
-	return combinedProof, nil
+	return finalProof, nil
 }
