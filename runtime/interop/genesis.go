@@ -172,7 +172,7 @@ func GethTestnetGenesis(genesisTime uint64, cfg *clparams.BeaconChainConfig) *co
 		Nonce:      0, // overridden for authorized signer votes in clique, so we should leave it empty?
 		Timestamp:  genesisTime,
 		ExtraData:  extra,
-		GasLimit:   cfg.DefaultBuilderGasLimit, // shift 1 back from the max, just in case
+		GasLimit:   cfg.DefaultBuilderGasLimit,
 		Difficulty: common.HexToHash(defaultDifficulty).Big(),
 		Mixhash:    common.HexToHash(defaultMixhash),
 		Coinbase:   common.HexToAddress(defaultCoinbase),
