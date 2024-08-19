@@ -368,7 +368,7 @@ func TestStore_LightClientUpdate_PartialUpdates(t *testing.T) {
 	}
 }
 
-func TestStore_LightClientUpdate_MissingPeriods(t *testing.T) {
+func TestStore_LightClientUpdate_MissingPeriods_SimpleData(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	updates := []*ethpbv2.LightClientUpdateWithVersion{
@@ -464,7 +464,7 @@ func TestStore_LightClientUpdate_EmptyDB(t *testing.T) {
 	require.IsNil(t, retrievedUpdates)
 }
 
-func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd(t *testing.T) {
+func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd_SimpleData(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
@@ -509,15 +509,9 @@ func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd(t *testing.T) {
 
 }
 
-func TestStore_LightClientUpdate_FullTest(t *testing.T) {
+func setupLightClientTestDB(t *testing.T) (*Store, context.Context) {
 	db := setupDB(t)
 	ctx := context.Background()
-
-	// Retrieve the updates - should fail because the db is empty
-	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 100)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "no light client updates in the database")
-	require.IsNil(t, retrievedUpdates)
 
 	for i := 10; i < 101; i++ { // 10 to 100
 		update := &ethpbv2.LightClientUpdateWithVersion{
@@ -553,44 +547,80 @@ func TestStore_LightClientUpdate_FullTest(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	return db, ctx
+}
+
+func TestStore_LightClientUpdate_MissingPeriodsInTheMiddleDistributed(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
+
 	// Retrieve the updates - should fail because of missing periods in the middle
-	retrievedUpdates, err = db.LightClientUpdates(ctx, 1, 300)
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 300)
 	require.NotNil(t, err)
 	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
 	require.IsNil(t, retrievedUpdates)
+}
+
+func TestStore_LightClientUpdate_RetrieveValidRangeFromStart(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
 
 	// retrieve 1 to 100 - should work because all periods are present after the firstPeriodInDB > startPeriod
-	retrievedUpdates, err = db.LightClientUpdates(ctx, 1, 100)
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 100)
 	require.NoError(t, err)
 	require.Equal(t, 91, len(retrievedUpdates))
 	for i := 10; i < 101; i++ {
 		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[i-10].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
+}
+
+func TestStore_LightClientUpdate_RetrieveValidRangeInTheMiddle(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
 
 	// retrieve 110 to 200 - should work because all periods are present
-	retrievedUpdates, err = db.LightClientUpdates(ctx, 110, 200)
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 110, 200)
 	require.NoError(t, err)
 	require.Equal(t, 91, len(retrievedUpdates))
 	for i := 110; i < 201; i++ {
 		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[i-110].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
+}
+
+func TestStore_LightClientUpdate_MissingPeriodInTheMiddleConcentrated(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
 
 	// retrieve 100 to 200 - should fail because of missing periods in the middle
-	retrievedUpdates, err = db.LightClientUpdates(ctx, 100, 200)
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 100, 200)
 	require.NotNil(t, err)
 	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
 	require.IsNil(t, retrievedUpdates)
+}
+
+func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
 
 	// retrieve 10 to 109 - should fail because of missing periods at the end
-	retrievedUpdates, err = db.LightClientUpdates(ctx, 10, 109)
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 10, 109)
 	require.NotNil(t, err)
 	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
 	require.IsNil(t, retrievedUpdates)
+}
+
+func TestStore_LightClientUpdate_MissingPeriodsAtTheBeginning(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
 
 	// retrieve 105 to 200 - should fail because of missing periods at the beginning
-	retrievedUpdates, err = db.LightClientUpdates(ctx, 105, 200)
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 105, 200)
 	require.NotNil(t, err)
 	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
+	require.IsNil(t, retrievedUpdates)
+}
+
+func TestStore_LightClientUpdate_StartPeriodGreaterThanLastPeriod(t *testing.T) {
+	db, ctx := setupLightClientTestDB(t)
+
+	// retrieve 300 to 400 - should fail because of startPeriod > lastPeriodInDB
+	retrievedUpdates, err := db.LightClientUpdates(ctx, 300, 400)
+	require.NotNil(t, err)
+	require.Equal(t, err.Error(), "no light client updates in this range")
 	require.IsNil(t, retrievedUpdates)
 
 }
