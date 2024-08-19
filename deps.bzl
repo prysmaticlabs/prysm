@@ -645,8 +645,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_crate_crypto_go_ipa",
         importpath = "github.com/crate-crypto/go-ipa",
-        sum = "h1:d28BXYi+wUpz1KBmiF9bWrjEMacUEREV6MBi2ODnrfQ=",
-        version = "v0.0.0-20231025140028-3c0104f4b233",
+        sum = "h1:uQYC5Z1mdLRPrZhHjHxufI8+2UG/i25QG92j0Er9p6I=",
+        version = "v0.0.0-20240223125850-b1e8a79f509c",
     )
     go_repository(
         name = "com_github_crate_crypto_go_kzg_4844",
@@ -879,8 +879,14 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
-        sum = "h1:5zvnAqLtnCZrU9uod1JCvHWJbPMURzYFHfc2eHz4PHA=",
-        version = "v1.14.3",
+        sum = "h1:NgOWvXS+lauK+zFukEvi85UmmsS/OkV0N23UZ1VTIig=",
+        version = "v1.14.8",
+    )
+    go_repository(
+        name = "com_github_ethereum_go_verkle",
+        importpath = "github.com/ethereum/go-verkle",
+        sum = "h1:KrE8I4reeVvf7C1tm8elRjj4BdscTYzz/WAbYyf/JI4=",
+        version = "v0.1.1-0.20240306133620-7d920df305f0",
     )
     go_repository(
         name = "com_github_evanphx_json_patch",
@@ -909,8 +915,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
-        sum = "h1:Dky6dXlngF6Qjc+EfDipAkE83N5I5DE68bY6O0VLNPk=",
-        version = "v0.1.2",
+        sum = "h1:ZI+z3JH05h4kgmFXdHuR1aWYsgrg7o+Fw7/NCzM16Mo=",
+        version = "v0.1.3",
     )
     go_repository(
         name = "com_github_fjl_gencodec",
@@ -921,8 +927,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_fjl_memsize",
         importpath = "github.com/fjl/memsize",
-        sum = "h1:27txuSD9or+NZlnOWdKUxeBzTAUkWCVh+4Gf2dWFOzA=",
-        version = "v0.0.2",
+        sum = "h1:FtmdgXiUlNeRsoNMFlKLDt+S+6hbjVMEW6RGQ7aUf7c=",
+        version = "v0.0.0-20190710130421-bcb5799ab5e5",
     )
     go_repository(
         name = "com_github_flosch_pongo2_v4",
@@ -1661,8 +1667,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:wCMygKUQhmcQAjlk2Gquzq6dLmyMv2kF+llRspoRgrk=",
-        version = "v0.0.0-20210917013441-d37c07cfda4e",
+        sum = "h1:9eeW3EA4epCb7FIHt2luENpAW69MvKGL5jieHlBiP+w=",
+        version = "v1.31.0",
     )
     go_repository(
         name = "com_github_holiman_billy",
@@ -1923,12 +1929,6 @@ def prysm_deps():
         importpath = "github.com/karalabe/hid",
         sum = "h1:msKODTL1m0wigztaqILOtla9HeW1ciscYG4xjLtvk5I=",
         version = "v1.0.1-0.20240306101548-573246063e52",
-    )
-    go_repository(
-        name = "com_github_karalabe_usb",
-        importpath = "github.com/karalabe/usb",
-        sum = "h1:AqsttAyEyIEsNz5WLRwuRwjiT5CMDUfLk6cFJDVPebs=",
-        version = "v0.0.3-0.20230711191512-61db3e06439c",
     )
     go_repository(
         name = "com_github_kataras_blocks",
@@ -2400,8 +2400,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_mitchellh_mapstructure",
         importpath = "github.com/mitchellh/mapstructure",
-        sum = "h1:CpVNEelQCZBooIPDn+AR3NpivK/TIKU8bDxdASFVQag=",
-        version = "v1.4.1",
+        sum = "h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=",
+        version = "v1.5.0",
     )
     go_repository(
         name = "com_github_mitchellh_pointerstructure",
@@ -3558,6 +3558,12 @@ def prysm_deps():
         version = "v1.2.7",
     )
     go_repository(
+        name = "com_github_umbracle_gohashtree",
+        importpath = "github.com/umbracle/gohashtree",
+        sum = "h1:CQh33pStIp/E30b7TxDlXfM0145bn2e8boI30IxAhTg=",
+        version = "v0.0.2-alpha.0.20230207094856-5b775a815c10",
+    )
+    go_repository(
         name = "com_github_urfave_cli",
         importpath = "github.com/urfave/cli",
         sum = "h1:gsqYFH8bb9ekPA12kRo0hfjngWQjkJPlN9R0N78BoUo=",
@@ -3638,8 +3644,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_wealdtech_go_bytesutil",
         importpath = "github.com/wealdtech/go-bytesutil",
-        sum = "h1:ocEg3Ke2GkZ4vQw5lp46rmO+pfqCCTgq35gqOy8JKVc=",
-        version = "v1.1.1",
+        sum = "h1:TjuRzcG5KaPwaR5JB7L/OgJqMQWvlrblA1n0GfcXFSY=",
+        version = "v1.2.1",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_types_v2",
@@ -3647,14 +3653,14 @@ def prysm_deps():
             "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
         ],
         importpath = "github.com/wealdtech/go-eth2-types/v2",
-        sum = "h1:tiA6T88M6XQIbrV5Zz53l1G5HtRERcxQfmET225V4Ls=",
-        version = "v2.5.2",
+        sum = "h1:b5aXlNBLKgjAg/Fft9VvGlqAUCQMP5LzYhlHRrr4yPg=",
+        version = "v2.8.2",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_util",
         importpath = "github.com/wealdtech/go-eth2-util",
-        sum = "h1:2INPeOR35x5LdFFpSzyw954WzTD+DFyHe3yKlJnG5As=",
-        version = "v1.6.3",
+        sum = "h1:gq+JMrnadifyKadUr75wmfP7+usiqMu9t3VVoob5Dvo=",
+        version = "v1.8.2",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
