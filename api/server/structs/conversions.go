@@ -340,6 +340,42 @@ func (a *AggregateAttestationAndProof) ToConsensus() (*eth.AggregateAttestationA
 	}, nil
 }
 
+func (s *SignedAggregateAttestationAndProofElectra) ToConsensus() (*eth.SignedAggregateAttestationAndProofElectra, error) {
+	msg, err := s.Message.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Message")
+	}
+	sig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+
+	return &eth.SignedAggregateAttestationAndProofElectra{
+		Message:   msg,
+		Signature: sig,
+	}, nil
+}
+
+func (a *AggregateAttestationAndProofElectra) ToConsensus() (*eth.AggregateAttestationAndProofElectra, error) {
+	aggIndex, err := strconv.ParseUint(a.AggregatorIndex, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "AggregatorIndex")
+	}
+	agg, err := a.Aggregate.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Aggregate")
+	}
+	proof, err := bytesutil.DecodeHexWithLength(a.SelectionProof, 96)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SelectionProof")
+	}
+	return &eth.AggregateAttestationAndProofElectra{
+		AggregatorIndex: primitives.ValidatorIndex(aggIndex),
+		Aggregate:       agg,
+		SelectionProof:  proof,
+	}, nil
+}
+
 func (a *Attestation) ToConsensus() (*eth.Attestation, error) {
 	aggBits, err := hexutil.Decode(a.AggregationBits)
 	if err != nil {
@@ -366,6 +402,41 @@ func AttFromConsensus(a *eth.Attestation) *Attestation {
 		AggregationBits: hexutil.Encode(a.AggregationBits),
 		Data:            AttDataFromConsensus(a.Data),
 		Signature:       hexutil.Encode(a.Signature),
+	}
+}
+
+func (a *AttestationElectra) ToConsensus() (*eth.AttestationElectra, error) {
+	aggBits, err := hexutil.Decode(a.AggregationBits)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "AggregationBits")
+	}
+	data, err := a.Data.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Data")
+	}
+	sig, err := bytesutil.DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	committeeBits, err := hexutil.Decode(a.CommitteeBits)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "CommitteeBits")
+	}
+
+	return &eth.AttestationElectra{
+		AggregationBits: aggBits,
+		Data:            data,
+		Signature:       sig,
+		CommitteeBits:   committeeBits,
+	}, nil
+}
+
+func AttElectraFromConsensus(a *eth.AttestationElectra) *AttestationElectra {
+	return &AttestationElectra{
+		AggregationBits: hexutil.Encode(a.AggregationBits),
+		Data:            AttDataFromConsensus(a.Data),
+		Signature:       hexutil.Encode(a.Signature),
+		CommitteeBits:   hexutil.Encode(a.CommitteeBits),
 	}
 }
 
@@ -623,6 +694,18 @@ func (s *AttesterSlashing) ToConsensus() (*eth.AttesterSlashing, error) {
 	return &eth.AttesterSlashing{Attestation_1: att1, Attestation_2: att2}, nil
 }
 
+func (s *AttesterSlashingElectra) ToConsensus() (*eth.AttesterSlashingElectra, error) {
+	att1, err := s.Attestation1.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Attestation1")
+	}
+	att2, err := s.Attestation2.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Attestation2")
+	}
+	return &eth.AttesterSlashingElectra{Attestation_1: att1, Attestation_2: att2}, nil
+}
+
 func (a *IndexedAttestation) ToConsensus() (*eth.IndexedAttestation, error) {
 	indices := make([]uint64, len(a.AttestingIndices))
 	var err error
@@ -648,6 +731,31 @@ func (a *IndexedAttestation) ToConsensus() (*eth.IndexedAttestation, error) {
 	}, nil
 }
 
+func (a *IndexedAttestationElectra) ToConsensus() (*eth.IndexedAttestationElectra, error) {
+	indices := make([]uint64, len(a.AttestingIndices))
+	var err error
+	for i, ix := range a.AttestingIndices {
+		indices[i], err = strconv.ParseUint(ix, 10, 64)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("AttestingIndices[%d]", i))
+		}
+	}
+	data, err := a.Data.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Data")
+	}
+	sig, err := bytesutil.DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+
+	return &eth.IndexedAttestationElectra{
+		AttestingIndices: indices,
+		Data:             data,
+		Signature:        sig,
+	}, nil
+}
+
 func WithdrawalsFromConsensus(ws []*enginev1.Withdrawal) []*Withdrawal {
 	result := make([]*Withdrawal, len(ws))
 	for i, w := range ws {
@@ -663,6 +771,126 @@ func WithdrawalFromConsensus(w *enginev1.Withdrawal) *Withdrawal {
 		ExecutionAddress: hexutil.Encode(w.Address),
 		Amount:           fmt.Sprintf("%d", w.Amount),
 	}
+}
+
+func WithdrawalRequestsFromConsensus(ws []*enginev1.WithdrawalRequest) []*WithdrawalRequest {
+	result := make([]*WithdrawalRequest, len(ws))
+	for i, w := range ws {
+		result[i] = WithdrawalRequestFromConsensus(w)
+	}
+	return result
+}
+
+func WithdrawalRequestFromConsensus(w *enginev1.WithdrawalRequest) *WithdrawalRequest {
+	return &WithdrawalRequest{
+		SourceAddress:   hexutil.Encode(w.SourceAddress),
+		ValidatorPubkey: hexutil.Encode(w.ValidatorPubkey),
+		Amount:          fmt.Sprintf("%d", w.Amount),
+	}
+}
+
+func (w *WithdrawalRequest) ToConsensus() (*enginev1.WithdrawalRequest, error) {
+	src, err := bytesutil.DecodeHexWithLength(w.SourceAddress, common.AddressLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SourceAddress")
+	}
+	pubkey, err := bytesutil.DecodeHexWithLength(w.ValidatorPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "ValidatorPubkey")
+	}
+	amount, err := strconv.ParseUint(w.Amount, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Amount")
+	}
+	return &enginev1.WithdrawalRequest{
+		SourceAddress:   src,
+		ValidatorPubkey: pubkey,
+		Amount:          amount,
+	}, nil
+}
+
+func ConsolidationRequestsFromConsensus(cs []*enginev1.ConsolidationRequest) []*ConsolidationRequest {
+	result := make([]*ConsolidationRequest, len(cs))
+	for i, c := range cs {
+		result[i] = ConsolidationRequestFromConsensus(c)
+	}
+	return result
+}
+
+func ConsolidationRequestFromConsensus(c *enginev1.ConsolidationRequest) *ConsolidationRequest {
+	return &ConsolidationRequest{
+		SourceAddress: hexutil.Encode(c.SourceAddress),
+		SourcePubkey:  hexutil.Encode(c.SourcePubkey),
+		TargetPubkey:  hexutil.Encode(c.TargetPubkey),
+	}
+}
+
+func (c *ConsolidationRequest) ToConsensus() (*enginev1.ConsolidationRequest, error) {
+	srcAddress, err := bytesutil.DecodeHexWithLength(c.SourceAddress, common.AddressLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SourceAddress")
+	}
+	srcPubkey, err := bytesutil.DecodeHexWithLength(c.SourcePubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "SourcePubkey")
+	}
+	targetPubkey, err := bytesutil.DecodeHexWithLength(c.TargetPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "TargetPubkey")
+	}
+	return &enginev1.ConsolidationRequest{
+		SourceAddress: srcAddress,
+		SourcePubkey:  srcPubkey,
+		TargetPubkey:  targetPubkey,
+	}, nil
+}
+
+func DepositRequestsFromConsensus(ds []*enginev1.DepositRequest) []*DepositRequest {
+	result := make([]*DepositRequest, len(ds))
+	for i, d := range ds {
+		result[i] = DepositRequestFromConsensus(d)
+	}
+	return result
+}
+
+func DepositRequestFromConsensus(d *enginev1.DepositRequest) *DepositRequest {
+	return &DepositRequest{
+		Pubkey:                hexutil.Encode(d.Pubkey),
+		WithdrawalCredentials: hexutil.Encode(d.WithdrawalCredentials),
+		Amount:                fmt.Sprintf("%d", d.Amount),
+		Signature:             hexutil.Encode(d.Signature),
+		Index:                 fmt.Sprintf("%d", d.Index),
+	}
+}
+
+func (d *DepositRequest) ToConsensus() (*enginev1.DepositRequest, error) {
+	pubkey, err := bytesutil.DecodeHexWithLength(d.Pubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Pubkey")
+	}
+	withdrawalCredentials, err := bytesutil.DecodeHexWithLength(d.WithdrawalCredentials, fieldparams.RootLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "WithdrawalCredentials")
+	}
+	amount, err := strconv.ParseUint(d.Amount, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Amount")
+	}
+	sig, err := bytesutil.DecodeHexWithLength(d.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	index, err := strconv.ParseUint(d.Index, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Index")
+	}
+	return &enginev1.DepositRequest{
+		Pubkey:                pubkey,
+		WithdrawalCredentials: withdrawalCredentials,
+		Amount:                amount,
+		Signature:             sig,
+		Index:                 index,
+	}, nil
 }
 
 func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlashing, error) {
@@ -930,6 +1158,138 @@ func AttesterSlashingFromConsensus(src *eth.AttesterSlashing) *AttesterSlashing 
 	}
 }
 
+func AttesterSlashingsElectraToConsensus(src []*AttesterSlashingElectra) ([]*eth.AttesterSlashingElectra, error) {
+	if src == nil {
+		return nil, errNilValue
+	}
+	err := slice.VerifyMaxLength(src, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	attesterSlashings := make([]*eth.AttesterSlashingElectra, len(src))
+	for i, s := range src {
+		if s == nil {
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d]", i))
+		}
+		if s.Attestation1 == nil {
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].Attestation1", i))
+		}
+		if s.Attestation2 == nil {
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].Attestation2", i))
+		}
+
+		a1Sig, err := bytesutil.DecodeHexWithLength(s.Attestation1.Signature, fieldparams.BLSSignatureLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.Signature", i))
+		}
+		err = slice.VerifyMaxLength(s.Attestation1.AttestingIndices, 2048)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices", i))
+		}
+		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
+		for j, ix := range s.Attestation1.AttestingIndices {
+			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
+			if err != nil {
+				return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices[%d]", i, j))
+			}
+			a1AttestingIndices[j] = attestingIndex
+		}
+		a1Data, err := s.Attestation1.Data.ToConsensus()
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.Data", i))
+		}
+		a2Sig, err := bytesutil.DecodeHexWithLength(s.Attestation2.Signature, fieldparams.BLSSignatureLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.Signature", i))
+		}
+		err = slice.VerifyMaxLength(s.Attestation2.AttestingIndices, 2048)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices", i))
+		}
+		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
+		for j, ix := range s.Attestation2.AttestingIndices {
+			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
+			if err != nil {
+				return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices[%d]", i, j))
+			}
+			a2AttestingIndices[j] = attestingIndex
+		}
+		a2Data, err := s.Attestation2.Data.ToConsensus()
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.Data", i))
+		}
+		attesterSlashings[i] = &eth.AttesterSlashingElectra{
+			Attestation_1: &eth.IndexedAttestationElectra{
+				AttestingIndices: a1AttestingIndices,
+				Data:             a1Data,
+				Signature:        a1Sig,
+			},
+			Attestation_2: &eth.IndexedAttestationElectra{
+				AttestingIndices: a2AttestingIndices,
+				Data:             a2Data,
+				Signature:        a2Sig,
+			},
+		}
+	}
+	return attesterSlashings, nil
+}
+
+func AttesterSlashingsElectraFromConsensus(src []*eth.AttesterSlashingElectra) []*AttesterSlashingElectra {
+	attesterSlashings := make([]*AttesterSlashingElectra, len(src))
+	for i, s := range src {
+		attesterSlashings[i] = AttesterSlashingElectraFromConsensus(s)
+	}
+	return attesterSlashings
+}
+
+func AttesterSlashingElectraFromConsensus(src *eth.AttesterSlashingElectra) *AttesterSlashingElectra {
+	a1AttestingIndices := make([]string, len(src.Attestation_1.AttestingIndices))
+	for j, ix := range src.Attestation_1.AttestingIndices {
+		a1AttestingIndices[j] = fmt.Sprintf("%d", ix)
+	}
+	a2AttestingIndices := make([]string, len(src.Attestation_2.AttestingIndices))
+	for j, ix := range src.Attestation_2.AttestingIndices {
+		a2AttestingIndices[j] = fmt.Sprintf("%d", ix)
+	}
+	return &AttesterSlashingElectra{
+		Attestation1: &IndexedAttestationElectra{
+			AttestingIndices: a1AttestingIndices,
+			Data: &AttestationData{
+				Slot:            fmt.Sprintf("%d", src.Attestation_1.Data.Slot),
+				CommitteeIndex:  fmt.Sprintf("%d", src.Attestation_1.Data.CommitteeIndex),
+				BeaconBlockRoot: hexutil.Encode(src.Attestation_1.Data.BeaconBlockRoot),
+				Source: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_1.Data.Source.Epoch),
+					Root:  hexutil.Encode(src.Attestation_1.Data.Source.Root),
+				},
+				Target: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_1.Data.Target.Epoch),
+					Root:  hexutil.Encode(src.Attestation_1.Data.Target.Root),
+				},
+			},
+			Signature: hexutil.Encode(src.Attestation_1.Signature),
+		},
+		Attestation2: &IndexedAttestationElectra{
+			AttestingIndices: a2AttestingIndices,
+			Data: &AttestationData{
+				Slot:            fmt.Sprintf("%d", src.Attestation_2.Data.Slot),
+				CommitteeIndex:  fmt.Sprintf("%d", src.Attestation_2.Data.CommitteeIndex),
+				BeaconBlockRoot: hexutil.Encode(src.Attestation_2.Data.BeaconBlockRoot),
+				Source: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_2.Data.Source.Epoch),
+					Root:  hexutil.Encode(src.Attestation_2.Data.Source.Root),
+				},
+				Target: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_2.Data.Target.Epoch),
+					Root:  hexutil.Encode(src.Attestation_2.Data.Target.Root),
+				},
+			},
+			Signature: hexutil.Encode(src.Attestation_2.Signature),
+		},
+	}
+}
+
 func AttsToConsensus(src []*Attestation) ([]*eth.Attestation, error) {
 	if src == nil {
 		return nil, errNilValue
@@ -953,6 +1313,33 @@ func AttsFromConsensus(src []*eth.Attestation) []*Attestation {
 	atts := make([]*Attestation, len(src))
 	for i, a := range src {
 		atts[i] = AttFromConsensus(a)
+	}
+	return atts
+}
+
+func AttsElectraToConsensus(src []*AttestationElectra) ([]*eth.AttestationElectra, error) {
+	if src == nil {
+		return nil, errNilValue
+	}
+	err := slice.VerifyMaxLength(src, 8)
+	if err != nil {
+		return nil, err
+	}
+
+	atts := make([]*eth.AttestationElectra, len(src))
+	for i, a := range src {
+		atts[i], err = a.ToConsensus()
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d]", i))
+		}
+	}
+	return atts, nil
+}
+
+func AttsElectraFromConsensus(src []*eth.AttestationElectra) []*AttestationElectra {
+	atts := make([]*AttestationElectra, len(src))
+	for i, a := range src {
+		atts[i] = AttElectraFromConsensus(a)
 	}
 	return atts
 }
@@ -1086,4 +1473,38 @@ func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
 		ExecutionBlockHash:   hexutil.Encode(ds.ExecutionHash),
 		ExecutionBlockHeight: fmt.Sprintf("%d", ds.ExecutionDepth),
 	}
+}
+
+func PendingBalanceDepositsFromConsensus(ds []*eth.PendingBalanceDeposit) []*PendingBalanceDeposit {
+	deposits := make([]*PendingBalanceDeposit, len(ds))
+	for i, d := range ds {
+		deposits[i] = &PendingBalanceDeposit{
+			Index:  fmt.Sprintf("%d", d.Index),
+			Amount: fmt.Sprintf("%d", d.Amount),
+		}
+	}
+	return deposits
+}
+
+func PendingPartialWithdrawalsFromConsensus(ws []*eth.PendingPartialWithdrawal) []*PendingPartialWithdrawal {
+	withdrawals := make([]*PendingPartialWithdrawal, len(ws))
+	for i, w := range ws {
+		withdrawals[i] = &PendingPartialWithdrawal{
+			Index:             fmt.Sprintf("%d", w.Index),
+			Amount:            fmt.Sprintf("%d", w.Amount),
+			WithdrawableEpoch: fmt.Sprintf("%d", w.WithdrawableEpoch),
+		}
+	}
+	return withdrawals
+}
+
+func PendingConsolidationsFromConsensus(cs []*eth.PendingConsolidation) []*PendingConsolidation {
+	consolidations := make([]*PendingConsolidation, len(cs))
+	for i, c := range cs {
+		consolidations[i] = &PendingConsolidation{
+			SourceIndex: fmt.Sprintf("%d", c.SourceIndex),
+			TargetIndex: fmt.Sprintf("%d", c.TargetIndex),
+		}
+	}
+	return consolidations
 }
