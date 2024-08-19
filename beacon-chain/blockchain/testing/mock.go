@@ -634,3 +634,23 @@ func (c *ChainService) ReceiveBlob(_ context.Context, b blocks.VerifiedROBlob) e
 func (c *ChainService) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) ([32]byte, error) {
 	return c.TargetRoot, nil
 }
+
+// HashInForkchoice mocks the same method in the chain service
+func (c *ChainService) HashInForkchoice(i [32]byte) bool {
+	return false
+}
+
+// HeadValidatorAtIndex mocks the same method in the chain service
+func (c *ChainService) HeadValidatorAtIndex(ctx context.Context, index primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	return nil, nil
+}
+
+// HeadGenesisRoot mocks the same method in the chain service
+func (c *ChainService) HeadGenesisRoot() [32]byte {
+	return [32]byte{}
+}
+
+// HeadBalanceAtIndex mocks the same method in the chain service
+func (c *ChainService) HeadBalanceAtIndex(ctx context.Context, index primitives.ValidatorIndex) (uint64, error) {
+	return 0, nil
+}
