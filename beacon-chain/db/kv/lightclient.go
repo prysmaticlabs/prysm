@@ -36,12 +36,66 @@ func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod u
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(lightClientUpdatesBucket)
 		c := bkt.Cursor()
+
+		// first available period in DB
+		firstPeriodInDB, _ := c.First()
+		if firstPeriodInDB == nil {
+			updates = nil
+			return fmt.Errorf("no light client updates in the database")
+		}
+		// last available period in DB
+		lastPeriodInDB, _ := c.Last()
+
+		// first available period in the requested range
+		firstPeriodInRange, _ := c.Seek(bytesutil.Uint64ToBytesBigEndian(startPeriod))
+		if firstPeriodInRange == nil {
+			updates = nil
+			return fmt.Errorf("no light client updates in this range")
+		}
+		// last available period in the requested range
+		lastPeriodInRange, _ := c.Seek(bytesutil.Uint64ToBytesBigEndian(endPeriod))
+		if lastPeriodInRange == nil {
+			lastPeriodInRange = lastPeriodInDB
+		} else if binary.BigEndian.Uint64(lastPeriodInRange) > endPeriod {
+			lastPeriodInRange, _ = c.Prev()
+		}
+
+		// check for missing periods at the beginning of the range
+		if binary.BigEndian.Uint64(firstPeriodInRange) > startPeriod && startPeriod > binary.BigEndian.Uint64(firstPeriodInDB) {
+			updates = nil
+			return fmt.Errorf("missing light client updates for some periods in this range")
+		}
+
+		// check for missing periods at the end of the range
+		if binary.BigEndian.Uint64(lastPeriodInRange) < endPeriod && endPeriod < binary.BigEndian.Uint64(lastPeriodInDB) {
+			updates = nil
+			return fmt.Errorf("missing light client updates for some periods in this range")
+		}
+
+		// check for missing periods in the middle of the range - need to go through all periods in the range
+		expectedStartPeriod := binary.BigEndian.Uint64(firstPeriodInRange)
+		expectedEndPeriod := binary.BigEndian.Uint64(lastPeriodInRange)
+
+		expectedPeriod := expectedStartPeriod
 		for k, v := c.Seek(bytesutil.Uint64ToBytesBigEndian(startPeriod)); k != nil && binary.BigEndian.Uint64(k) <= endPeriod; k, v = c.Next() {
+			// check if there was a gap by matching the current period with the expected period
+			currentPeriod := binary.BigEndian.Uint64(k)
+			if currentPeriod != expectedPeriod {
+				updates = nil
+				return fmt.Errorf("missing light client updates for some periods in this range")
+			}
+
 			var update ethpbv2.LightClientUpdateWithVersion
 			if err := decode(ctx, v, &update); err != nil {
 				return err
 			}
+			expectedPeriod++
 			updates = append(updates, &update)
+		}
+		// check if the last period in the range is the expected end period and if all updates were found
+		if expectedPeriod-1 != expectedEndPeriod || len(updates) != int(expectedEndPeriod-expectedStartPeriod+1) {
+			updates = nil
+			return fmt.Errorf("missing light client updates for some periods in this range")
 		}
 		return nil
 	})
