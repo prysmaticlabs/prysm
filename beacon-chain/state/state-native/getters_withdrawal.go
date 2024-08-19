@@ -183,6 +183,15 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	return withdrawals, partialWithdrawalsCount, nil
 }
 
+func (b *BeaconState) PendingPartialWithdrawals() ([]*ethpb.PendingPartialWithdrawal, error) {
+	if b.version < version.Electra {
+		return nil, errNotSupported("PendingPartialWithdrawals", b.version)
+	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	return b.pendingPartialWithdrawalsVal(), nil
+}
+
 func (b *BeaconState) pendingPartialWithdrawalsVal() []*ethpb.PendingPartialWithdrawal {
 	return ethpb.CopySlice(b.pendingPartialWithdrawals)
 }
