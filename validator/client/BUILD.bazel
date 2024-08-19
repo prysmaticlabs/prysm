@@ -16,6 +16,7 @@ go_library(
         "sync_committee.go",
         "validator.go",
         "wait_for_activation.go",
+        "focil.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/client",
     visibility = [

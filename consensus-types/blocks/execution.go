@@ -1419,6 +1419,11 @@ type executionPayloadElectra struct {
 	p *enginev1.ExecutionPayloadElectra
 }
 
+// InclusionList implements interfaces.ExecutionDataElectra.
+func (e *executionPayloadElectra) InclusionList() *enginev1.InclusionList {
+	panic("not implemented")
+}
+
 // WrappedExecutionPayloadElectra is a constructor which wraps a protobuf execution payload into an interface.
 func WrappedExecutionPayloadElectra(p *enginev1.ExecutionPayloadElectra) (interfaces.ExecutionData, error) {
 	w := executionPayloadElectra{p: p}

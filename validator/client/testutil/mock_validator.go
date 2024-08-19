@@ -65,6 +65,16 @@ type FakeValidator struct {
 	BlockProposed                     chan interface{}
 }
 
+func (fv *FakeValidator) ProposeLocalInclusionList(ctx context.Context, slot primitives.Slot, pubKey [48]byte) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (fv *FakeValidator) EvaluateAggregatedInclusionList(ctx context.Context, slot primitives.Slot, pubKey [48]byte) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true

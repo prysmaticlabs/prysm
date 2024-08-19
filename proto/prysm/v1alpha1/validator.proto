@@ -137,6 +137,7 @@ service BeaconNodeValidator {
         };
     }
 
+
     // Sends the newly signed beacon block to beacon node.
     //
     // The validator sends the newly signed beacon block to the beacon node so the beacon block can
@@ -572,6 +573,18 @@ message DutiesResponse {
 
         // The number of committees in the duty's slot.
         uint64 committees_at_slot = 9;
+
+        repeated uint64 focil_committee = 10 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
+
+        repeated uint64 focil_attestors = 11 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
+
+        uint64 focil_committee_index = 12 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.CommitteeIndex"];
+
+        uint64 focil_attestor_index = 13 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.CommitteeIndex"];
+
+        repeated uint64 focil_committee_slots = 14 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+
+        repeated uint64 focil_attestor_slots = 15 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
     }
 }
 
