@@ -184,8 +184,7 @@ func ComputeBeaconBlockFieldRoots(ctx context.Context, block *BeaconBlock) ([][]
 		return nil, errNilBlock
 	}
 
-	var fieldRoots [][]byte
-	fieldRoots = make([][]byte, 5)
+	fieldRoots := make([][]byte, 5)
 	for i := range fieldRoots {
 		fieldRoots[i] = make([]byte, 32)
 	}
