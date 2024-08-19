@@ -44,7 +44,7 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 
-	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend.Client())
 	require.NoError(t, err)
 	testAcc.Backend.Commit()
 
@@ -141,7 +141,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 	testAcc.Backend.Commit()
-	block, err := testAcc.Backend.BlockByNumber(context.Background(), big.NewInt(0))
+	block, err := testAcc.Backend.Client().BlockByNumber(context.Background(), big.NewInt(0))
 	assert.NoError(t, err)
 
 	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
@@ -201,6 +201,7 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 }
 
 func TestService_BlockNumberByTimestamp(t *testing.T) {
+	ctx := context.Background()
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
@@ -220,8 +221,8 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		testAcc.Backend.Commit()
 	}
-	ctx := context.Background()
-	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
+
+	hd, err := testAcc.Backend.Client().HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
@@ -253,7 +254,7 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 	ctx := context.Background()
-	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
+	hd, err := testAcc.Backend.Client().HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	// Use extremely small deadline to illustrate that context deadlines are respected.
@@ -291,7 +292,7 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 	ctx := context.Background()
-	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
+	hd, err := testAcc.Backend.Client().HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	// Use extremely small deadline to illustrate that context deadlines are respected.
