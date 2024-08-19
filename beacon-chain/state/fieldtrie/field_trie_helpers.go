@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -332,7 +331,7 @@ func handleBalanceMVSlice(mv multi_value_slice.MultiValueSliceComposite[uint64],
 	return [][32]byte{}, nil
 }
 
-func PayloadProof(ctx context.Context, payload interfaces.ExecutionData, block *blocks.BeaconBlock) ([][]byte, error) {
+func PayloadProof(ctx context.Context, block *blocks.BeaconBlock) ([][]byte, error) {
 	i := block.Body()
 	blockBody, ok := i.(*blocks.BeaconBlockBody)
 	if !ok {
