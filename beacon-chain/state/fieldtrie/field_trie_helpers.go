@@ -334,7 +334,10 @@ func handleBalanceMVSlice(mv multi_value_slice.MultiValueSliceComposite[uint64],
 
 func PayloadProof(ctx context.Context, payload interfaces.ExecutionData, block *blocks.BeaconBlock) ([][]byte, error) {
 	i := block.Body()
-	blockBody := i.(*blocks.BeaconBlockBody)
+	blockBody, ok := i.(*blocks.BeaconBlockBody)
+	if ok != true {
+		return nil, errors.New("failed to cast block body")
+	}
 
 	blockBodyFieldRoots, err := blocks.ComputeBlockBodyFieldRoots(ctx, blockBody)
 	if err != nil {
