@@ -12,6 +12,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -204,6 +205,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := dbutil.SetupDB(t)
 	testAcc, err := mock.Setup()
+
 	require.NoError(t, err, "Unable to set up simulated backend")
 	server, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
@@ -217,7 +219,13 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
-
+	// simulated backend sets eth1 block
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig().Copy()
+	conf.SecondsPerETH1Block = 1
+	params.OverrideBeaconConfig(conf)
+	initialHead, err := testAcc.Backend.Client().HeaderByNumber(ctx, nil)
+	require.NoError(t, err)
 	for i := 0; i < 200; i++ {
 		testAcc.Backend.Commit()
 	}
@@ -226,7 +234,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
-	blk, err := web3Service.BlockByTimestamp(ctx, 1000 /* time */)
+	blk, err := web3Service.BlockByTimestamp(ctx, initialHead.Time+100 /* time */)
 	require.NoError(t, err)
 	if blk.Number.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")

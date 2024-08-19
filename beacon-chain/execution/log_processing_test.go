@@ -411,7 +411,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	web3Service.latestEth1Data.BlockTime = block.Time()
 	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = 0
-	bConfig.SecondsPerETH1Block = 10
+	bConfig.SecondsPerETH1Block = 1
 	params.OverrideBeaconConfig(bConfig)
 	nConfig := params.BeaconNetworkConfig()
 	nConfig.ContractDeploymentBlock = 0

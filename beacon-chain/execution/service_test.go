@@ -205,10 +205,9 @@ func TestFollowBlock_OK(t *testing.T) {
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 
 	// simulated backend sets eth1 block
-	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
 	conf := params.BeaconConfig().Copy()
-	conf.SecondsPerETH1Block = 10
+	conf.SecondsPerETH1Block = 1
 	params.OverrideBeaconConfig(conf)
 
 	web3Service = setDefaultMocks(web3Service)
