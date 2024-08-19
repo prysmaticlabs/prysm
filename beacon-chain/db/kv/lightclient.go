@@ -24,6 +24,29 @@ func (s *Store) SaveLightClientUpdate(ctx context.Context, period uint64, update
 	})
 }
 
+func getFirstAndLastPeriodInDB(c *bolt.Cursor) (uint64, uint64, error) {
+	firstPeriod, _ := c.First()
+	lastPeriod, _ := c.Last()
+	if firstPeriod == nil || lastPeriod == nil {
+		return 0, 0, fmt.Errorf("no light client updates in the database")
+	}
+	return binary.BigEndian.Uint64(firstPeriod), binary.BigEndian.Uint64(lastPeriod), nil
+}
+
+func getFirstAndLastPeriodInRequestedRange(c *bolt.Cursor, startPeriod, endPeriod uint64) (uint64, uint64, error) {
+	firstPeriodInRange, _ := c.Seek(bytesutil.Uint64ToBytesBigEndian(startPeriod))
+	if firstPeriodInRange == nil {
+		return 0, 0, fmt.Errorf("no light client updates in this range")
+	}
+	lastPeriodInRange, _ := c.Seek(bytesutil.Uint64ToBytesBigEndian(endPeriod))
+	if lastPeriodInRange == nil {
+		lastPeriodInRange, _ = c.Last()
+	} else if binary.BigEndian.Uint64(lastPeriodInRange) > endPeriod {
+		lastPeriodInRange, _ = c.Prev()
+	}
+	return binary.BigEndian.Uint64(firstPeriodInRange), binary.BigEndian.Uint64(lastPeriodInRange), nil
+}
+
 func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod uint64) ([]*ethpbv2.LightClientUpdateWithVersion, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.LightClientUpdates")
 	defer span.End()
@@ -37,51 +60,37 @@ func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod u
 		bkt := tx.Bucket(lightClientUpdatesBucket)
 		c := bkt.Cursor()
 
-		// first available period in DB
-		firstPeriodInDB, _ := c.First()
-		if firstPeriodInDB == nil {
-			updates = nil
-			return fmt.Errorf("no light client updates in the database")
+		// get first and last available periods in the database
+		firstPeriodInDB, lastPeriodInDB, err := getFirstAndLastPeriodInDB(c)
+		if err != nil {
+			return err
 		}
-		// last available period in DB
-		lastPeriodInDB, _ := c.Last()
 
-		// first available period in the requested range
-		firstPeriodInRange, _ := c.Seek(bytesutil.Uint64ToBytesBigEndian(startPeriod))
-		if firstPeriodInRange == nil {
-			updates = nil
-			return fmt.Errorf("no light client updates in this range")
-		}
-		// last available period in the requested range
-		lastPeriodInRange, _ := c.Seek(bytesutil.Uint64ToBytesBigEndian(endPeriod))
-		if lastPeriodInRange == nil {
-			lastPeriodInRange = lastPeriodInDB
-		} else if binary.BigEndian.Uint64(lastPeriodInRange) > endPeriod {
-			lastPeriodInRange, _ = c.Prev()
+		// get first and last available periods in the requested range
+		firstPeriodInRange, lastPeriodInRange, err := getFirstAndLastPeriodInRequestedRange(c, startPeriod, endPeriod)
+		if err != nil {
+			return err
 		}
 
 		// check for missing periods at the beginning of the range
-		if binary.BigEndian.Uint64(firstPeriodInRange) > startPeriod && startPeriod > binary.BigEndian.Uint64(firstPeriodInDB) {
-			updates = nil
+		if firstPeriodInRange > startPeriod && startPeriod > firstPeriodInDB {
 			return fmt.Errorf("missing light client updates for some periods in this range")
 		}
 
 		// check for missing periods at the end of the range
-		if binary.BigEndian.Uint64(lastPeriodInRange) < endPeriod && endPeriod < binary.BigEndian.Uint64(lastPeriodInDB) {
-			updates = nil
+		if lastPeriodInRange < endPeriod && endPeriod < lastPeriodInDB {
 			return fmt.Errorf("missing light client updates for some periods in this range")
 		}
 
 		// check for missing periods in the middle of the range - need to go through all periods in the range
-		expectedStartPeriod := binary.BigEndian.Uint64(firstPeriodInRange)
-		expectedEndPeriod := binary.BigEndian.Uint64(lastPeriodInRange)
+		expectedStartPeriod := firstPeriodInRange
+		expectedEndPeriod := lastPeriodInRange
 
 		expectedPeriod := expectedStartPeriod
 		for k, v := c.Seek(bytesutil.Uint64ToBytesBigEndian(startPeriod)); k != nil && binary.BigEndian.Uint64(k) <= endPeriod; k, v = c.Next() {
 			// check if there was a gap by matching the current period with the expected period
 			currentPeriod := binary.BigEndian.Uint64(k)
 			if currentPeriod != expectedPeriod {
-				updates = nil
 				return fmt.Errorf("missing light client updates for some periods in this range")
 			}
 
@@ -89,16 +98,20 @@ func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod u
 			if err := decode(ctx, v, &update); err != nil {
 				return err
 			}
-			expectedPeriod++
 			updates = append(updates, &update)
+			expectedPeriod++
 		}
+
 		// check if the last period in the range is the expected end period and if all updates were found
 		if expectedPeriod-1 != expectedEndPeriod || len(updates) != int(expectedEndPeriod-expectedStartPeriod+1) {
-			updates = nil
 			return fmt.Errorf("missing light client updates for some periods in this range")
 		}
 		return nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
 	return updates, err
 }
 
