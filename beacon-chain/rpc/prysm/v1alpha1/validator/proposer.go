@@ -289,7 +289,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if block.IsBlinded() {
 		block, blobSidecars, dataColumnSideCars, err = vs.handleBlindedBlock(ctx, block, isPeerDASEnabled)
 	} else if block.Version() >= version.Deneb {
-		blobSidecars, dataColumnSideCars, err = handleUnblidedBlock(block, req, isPeerDASEnabled)
+		blobSidecars, dataColumnSideCars, err = vs.handleUnblindedBlock(block, req, isPeerDASEnabled)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%s: %v", "handle block failed", err)
@@ -372,21 +372,21 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 	return copiedBlock, blobSidecars, nil, nil
 }
 
-func (vs *Server) blobSidecarsFromUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock, isPeerDASEnabled bool) ([]*ethpb.BlobSidecar, []*ethpb.DataColumnSidecar, error) {
 	rawBlobs, proofs, err := blobsAndProofs(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if isPeerDASEnabled {
 		// Convert blobs from slices to array.
-		blobs := make([]cKzg4844.Blob, 0, len(rawBlobs))
+		blobs := make([]kzg.Blob, 0, len(rawBlobs))
 		for _, blob := range rawBlobs {
-			if len(blob) != cKzg4844.BytesPerBlob {
-				return nil, nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", cKzg4844.BytesPerBlob, len(blob))
+			if len(blob) != kzg.BytesPerBlob {
+				return nil, nil, errors.Errorf("invalid blob size. expected %d bytes, got %d bytes", kzg.BytesPerBlob, len(blob))
 			}
 
-			blobs = append(blobs, cKzg4844.Blob(blob))
+			blobs = append(blobs, kzg.Blob(blob))
 		}
 
 		dataColumnSideCars, err := peerdas.DataColumnSidecars(block, blobs)
