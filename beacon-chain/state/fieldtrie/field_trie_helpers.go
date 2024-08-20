@@ -1,7 +1,6 @@
 package fieldtrie
 
 import (
-	"context"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -10,9 +9,7 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
-	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	pmath "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -315,32 +312,4 @@ func handleBalanceMVSlice(mv multi_value_slice.MultiValueSliceComposite[uint64],
 		return roots, nil
 	}
 	return [][32]byte{}, nil
-}
-
-func PayloadProof(ctx context.Context, block *blocks.BeaconBlock) ([][]byte, error) {
-	i := block.Body()
-	blockBody, ok := i.(*blocks.BeaconBlockBody)
-	if !ok {
-		return nil, errors.New("failed to cast block body")
-	}
-
-	blockBodyFieldRoots, err := blocks.ComputeBlockBodyFieldRoots(ctx, blockBody)
-	if err != nil {
-		return nil, err
-	}
-
-	blockBodyFieldRootsTrie := stateutil.Merkleize(blockBodyFieldRoots)
-	blockBodyProof := trie.ProofFromMerkleLayers(blockBodyFieldRootsTrie, 9)
-
-	beaconBlockFieldRoots, err := blocks.ComputeBlockFieldRoots(ctx, block)
-	if err != nil {
-		return nil, err
-	}
-
-	beaconBlockFieldRootsTrie := stateutil.Merkleize(beaconBlockFieldRoots)
-	beaconBlockProof := trie.ProofFromMerkleLayers(beaconBlockFieldRootsTrie, 4)
-
-	finalProof := append(blockBodyProof, beaconBlockProof...)
-
-	return finalProof, nil
 }
