@@ -1,8 +1,6 @@
 package kzg
 
 import (
-	"errors"
-
 	ckzg4844 "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
 )
@@ -33,10 +31,14 @@ type Bytes32 = ckzg4844.Bytes32
 
 // CellsAndProofs represents the Cells and Proofs corresponding to
 // a single blob.
+
 type CellsAndProofs struct {
 	Cells  []Cell
 	Proofs []Proof
 }
+
+// Set to false to not change any existing behavior
+const USE_GO_ETH_KZG = false
 
 func BlobToKZGCommitment(blob *Blob) (Commitment, error) {
 	comm, err := kzg4844.BlobToCommitment(kzg4844.Blob(*blob))
@@ -55,55 +57,25 @@ func ComputeBlobKZGProof(blob *Blob, commitment Commitment) (Proof, error) {
 }
 
 func ComputeCellsAndKZGProofs(blob *Blob) (CellsAndProofs, error) {
-	ckzgBlob := (*ckzg4844.Blob)(blob)
-	ckzgCells, ckzgProofs, err := ckzg4844.ComputeCellsAndKZGProofs(ckzgBlob)
-	if err != nil {
-		return CellsAndProofs{}, err
+	if USE_GO_ETH_KZG {
+		return computeCellsAndKZGProofsGoEthKZG(blob)
+	} else {
+		return computeCellsAndKZGProofscKZG(blob)
 	}
-
-	return makeCellsAndProofs(ckzgCells[:], ckzgProofs[:])
 }
 
 func VerifyCellKZGProofBatch(commitmentsBytes []Bytes48, cellIndices []uint64, cells []Cell, proofsBytes []Bytes48) (bool, error) {
-	// Convert `Cell` type to `ckzg4844.Cell`
-	ckzgCells := make([]ckzg4844.Cell, len(cells))
-	for i := range cells {
-		ckzgCells[i] = ckzg4844.Cell(cells[i])
+	if USE_GO_ETH_KZG {
+		return verifyCellKZGProofBatchGoEthKZG(commitmentsBytes, cellIndices, cells, proofsBytes)
+	} else {
+		return verifyCellKZGProofBatchcKZG(commitmentsBytes, cellIndices, cells, proofsBytes)
 	}
-
-	return ckzg4844.VerifyCellKZGProofBatch(commitmentsBytes, cellIndices, ckzgCells, proofsBytes)
 }
 
 func RecoverCellsAndKZGProofs(cellIndices []uint64, partialCells []Cell) (CellsAndProofs, error) {
-	// Convert `Cell` type to `ckzg4844.Cell`
-	ckzgPartialCells := make([]ckzg4844.Cell, len(partialCells))
-	for i := range partialCells {
-		ckzgPartialCells[i] = ckzg4844.Cell(partialCells[i])
+	if USE_GO_ETH_KZG {
+		return recoverCellsAndKZGProofsGoEthKZG(cellIndices, partialCells)
+	} else {
+		return recoverCellsAndKZGProofscKZG(cellIndices, partialCells)
 	}
-
-	ckzgCells, ckzgProofs, err := ckzg4844.RecoverCellsAndKZGProofs(cellIndices, ckzgPartialCells)
-	if err != nil {
-		return CellsAndProofs{}, err
-	}
-
-	return makeCellsAndProofs(ckzgCells[:], ckzgProofs[:])
-}
-
-// Convert cells/proofs to the CellsAndProofs type defined in this package.
-func makeCellsAndProofs(ckzgCells []ckzg4844.Cell, ckzgProofs []ckzg4844.KZGProof) (CellsAndProofs, error) {
-	if len(ckzgCells) != len(ckzgProofs) {
-		return CellsAndProofs{}, errors.New("different number of cells/proofs")
-	}
-
-	var cells []Cell
-	var proofs []Proof
-	for i := range ckzgCells {
-		cells = append(cells, Cell(ckzgCells[i]))
-		proofs = append(proofs, Proof(ckzgProofs[i]))
-	}
-
-	return CellsAndProofs{
-		Cells:  cells,
-		Proofs: proofs,
-	}, nil
 }
