@@ -26,6 +26,7 @@ func SepoliaConfig() *BeaconChainConfig {
 	cfg.MinGenesisTime = 1655647200
 	cfg.GenesisDelay = 86400
 	cfg.MinGenesisActiveValidatorCount = 1300
+	cfg.GenesisValidatorsRoot = [32]byte{}
 	cfg.ConfigName = SepoliaName
 	cfg.GenesisForkVersion = []byte{0x90, 0x00, 0x00, 0x69}
 	cfg.SecondsPerETH1Block = 14

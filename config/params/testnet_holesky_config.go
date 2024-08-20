@@ -26,6 +26,7 @@ func HoleskyConfig() *BeaconChainConfig {
 	cfg.MinGenesisTime = 1695902100
 	cfg.GenesisDelay = 300
 	cfg.ConfigName = HoleskyName
+	cfg.GenesisValidatorsRoot = [32]byte{}
 	cfg.GenesisForkVersion = []byte{0x01, 0x01, 0x70, 0x00}
 	cfg.SecondsPerETH1Block = 14
 	cfg.DepositChainID = 17000

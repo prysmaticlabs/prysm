@@ -19,6 +19,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.Eth1FollowDistance = 8
 
 	// Misc.
+	e2eConfig.GenesisValidatorsRoot = [32]byte{}
 	e2eConfig.MinGenesisActiveValidatorCount = 256
 	e2eConfig.GenesisDelay = 10 // 10 seconds so E2E has enough time to process deposits and get started.
 	e2eConfig.ChurnLimitQuotient = 65536
