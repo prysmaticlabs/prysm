@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 
+	goethkzg "github.com/crate-crypto/go-eth-kzg"
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
 	CKZG "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -14,6 +15,7 @@ var (
 	//go:embed trusted_setup.json
 	embeddedTrustedSetup []byte // 1.2Mb
 	kzgContext           *GoKZG.Context
+	goEthKZGContext      *goethkzg.Context
 	kzgLoaded            bool
 )
 
@@ -34,6 +36,11 @@ func Start() error {
 		SetupG1Lagrange: trustedSetup.G1Lagrange})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize go-kzg context")
+	}
+
+	goEthKZGContext, err = goethkzg.NewContext4096Secure()
+	if err != nil {
+		return errors.Wrap(err, "could not initialize go-eth-kzg context")
 	}
 
 	// Length of a G1 point, converted from hex to binary.
