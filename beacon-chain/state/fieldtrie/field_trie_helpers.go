@@ -12,24 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	pmath "github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
-
-// ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
-func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex int) [][]byte {
-	// The merkle tree structure looks as follows:
-	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
-	proof := make([][]byte, 0)
-	currentIndex := startingLeafIndex
-	for i := 0; i < len(layers)-1; i++ {
-		neighborIdx := currentIndex ^ 1
-		neighbor := layers[i][neighborIdx]
-		proof = append(proof, neighbor)
-		currentIndex = currentIndex / 2
-	}
-	return proof
-}
 
 func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	length := f.length
@@ -344,15 +330,15 @@ func PayloadProof(ctx context.Context, block *blocks.BeaconBlock) ([][]byte, err
 	}
 
 	blockBodyFieldRootsTrie := stateutil.Merkleize(blockBodyFieldRoots)
-	blockBodyProof := ProofFromMerkleLayers(blockBodyFieldRootsTrie, 9)
+	blockBodyProof := trie.ProofFromMerkleLayers(blockBodyFieldRootsTrie, 9)
 
-	beaconBlockFieldRoots, err := blocks.ComputeBeaconBlockFieldRoots(ctx, block)
+	beaconBlockFieldRoots, err := blocks.ComputeBlockFieldRoots(ctx, block)
 	if err != nil {
 		return nil, err
 	}
 
 	beaconBlockFieldRootsTrie := stateutil.Merkleize(beaconBlockFieldRoots)
-	beaconBlockProof := ProofFromMerkleLayers(beaconBlockFieldRootsTrie, 4)
+	beaconBlockProof := trie.ProofFromMerkleLayers(beaconBlockFieldRootsTrie, 4)
 
 	finalProof := append(blockBodyProof, beaconBlockProof...)
 

@@ -145,26 +145,3 @@ func TestComputeBlockBodyFieldRoots_Electra(t *testing.T) {
 
 	require.DeepEqual(t, correctHash[:], hash)
 }
-
-func TestComputeBeaconBlockFieldRoots(t *testing.T) {
-	beaconBlock := hydrateBeaconBlock()
-	i, err := NewBeaconBlock(beaconBlock)
-	require.NoError(t, err)
-
-	b, ok := i.(*BeaconBlock)
-	require.Equal(t, true, ok)
-
-	fieldRoots, err := ComputeBeaconBlockFieldRoots(context.Background(), b)
-	require.NoError(t, err)
-	trie, err := trie.GenerateTrieFromItems(fieldRoots, 3)
-	require.NoError(t, err)
-	layers := trie.ToProto().GetLayers()
-
-	hash := layers[len(layers)-1].Layer[0]
-	require.NoError(t, err)
-
-	correctHash, err := b.HashTreeRoot()
-	require.NoError(t, err)
-
-	require.DeepEqual(t, correctHash[:], hash)
-}
