@@ -149,6 +149,7 @@ ssz_electra_objs = [
     "PendingConsolidation",
     "PendingPartialWithdrawal",
     "SignedAggregateAttestationAndProofElectra",
+    "SignedBeaconBlockContentsElectra",
     "SignedBeaconBlockElectra",
     "SignedBlindedBeaconBlockElectra",
     "SignedConsolidation",
@@ -156,90 +157,89 @@ ssz_electra_objs = [
 
 ssz_gen_marshal(
     name = "ssz_generated_phase0",
-    go_proto = ":go_proto",
     out = "phase0.ssz.go",
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_phase0_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_altair",
-    go_proto = ":go_proto",
     out = "altair.ssz.go",
+    exclude_objs = ssz_phase0_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_altair_objs,
-    exclude_objs = ssz_phase0_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_bellatrix",
-    go_proto = ":go_proto",
     out = "bellatrix.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_bellatrix_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_capella",
-    go_proto = ":go_proto",
     out = "capella.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_capella_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_deneb",
-    go_proto = ":go_proto",
     out = "deneb.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs + ssz_capella_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_deneb_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_electra",
-    go_proto = ":go_proto",
     out = "electra.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs + ssz_capella_objs + ssz_deneb_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_electra_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
 )
-
 
 ssz_gen_marshal(
     name = "ssz_generated_non_core",
-    go_proto = ":go_proto",
     out = "non-core.ssz.go",
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = [
         "BeaconBlocksByRangeRequest",
@@ -313,13 +313,13 @@ go_library(
         "eip_7521.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
-        ":ssz_generated_non_core",  # keep
-        ":ssz_generated_phase0",  # keep
         ":ssz_generated_altair",  # keep
         ":ssz_generated_bellatrix",  # keep
         ":ssz_generated_capella",  # keep
         ":ssz_generated_deneb",  # keep
         ":ssz_generated_electra",  # keep
+        ":ssz_generated_non_core",  # keep
+        ":ssz_generated_phase0",  # keep
     ],
     embed = [
         ":go_grpc_gateway_library",
