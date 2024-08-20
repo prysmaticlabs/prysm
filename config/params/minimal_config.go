@@ -10,7 +10,7 @@ import (
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := mainnetBeaconConfig.Copy()
 	// Misc
-	minimalConfig.GenesisValidatorsRoot = bytesutil.ToBytes32([]byte{})
+	minimalConfig.GenesisValidatorsRoot = [32]byte{}
 	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 2048
