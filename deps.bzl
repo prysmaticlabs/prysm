@@ -871,9 +871,6 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_ethereum_go_ethereum",
-        build_directives = [
-            "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
-        ],
         importpath = "github.com/ethereum/go-ethereum",
         patch_args = ["-p1"],
         patches = [
@@ -1929,6 +1926,11 @@ def prysm_deps():
         importpath = "github.com/karalabe/hid",
         sum = "h1:msKODTL1m0wigztaqILOtla9HeW1ciscYG4xjLtvk5I=",
         version = "v1.0.1-0.20240306101548-573246063e52",
+        patch_args = ["-p1"],
+        patches = [
+            # This patch disables the cgo aspects of this library.
+            "//third_party:com_github_karalabe_hid.patch",
+        ],
     )
     go_repository(
         name = "com_github_kataras_blocks",
