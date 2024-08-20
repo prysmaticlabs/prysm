@@ -58,7 +58,7 @@ type ReadOnlyDatabase interface {
 	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 	// light client operations
-	LightClientUpdates(ctx context.Context, startPeriod, endPeriod uint64) ([]*ethpbv2.LightClientUpdateWithVersion, error)
+	LightClientUpdates(ctx context.Context, startPeriod, endPeriod uint64) (map[uint64]*ethpbv2.LightClientUpdateWithVersion, error)
 	LightClientUpdate(ctx context.Context, period uint64) (*ethpbv2.LightClientUpdateWithVersion, error)
 
 	// origin checkpoint sync support

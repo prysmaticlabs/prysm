@@ -83,12 +83,13 @@ func TestStore_LightclientUpdates_canRetrieveRange(t *testing.T) {
 	}
 
 	// Retrieve the updates
-	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 3)
+	retrievedUpdatesMap, err := db.LightClientUpdates(ctx, 1, 3)
 	require.NoError(t, err)
-	require.Equal(t, len(updates), len(retrievedUpdates), "retrieved updates do not match saved updates")
+	require.Equal(t, len(updates), len(retrievedUpdatesMap), "retrieved updates do not match saved updates")
 	for i, update := range updates {
-		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[i].Data.SignatureSlot, "retrieved update does not match saved update")
+		require.Equal(t, update.Data.SignatureSlot, retrievedUpdatesMap[uint64(i+1)].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
+
 }
 
 func TestStore_LightClientUpdate_EndPeriodSmallerThanStartPeriod(t *testing.T) {
@@ -197,7 +198,7 @@ func TestStore_LightClientUpdate_EndPeriodEqualToStartPeriod(t *testing.T) {
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 2, 2)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(retrievedUpdates))
-	require.Equal(t, updates[1].Data.SignatureSlot, retrievedUpdates[0].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[1].Data.SignatureSlot, retrievedUpdates[2].Data.SignatureSlot, "retrieved update does not match saved update")
 }
 
 func TestStore_LightClientUpdate_StartPeriodBeforeFirstUpdate(t *testing.T) {
@@ -252,7 +253,7 @@ func TestStore_LightClientUpdate_StartPeriodBeforeFirstUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(retrievedUpdates))
 	for i, update := range updates {
-		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[i].Data.SignatureSlot, "retrieved update does not match saved update")
+		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[uint64(i+2)].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
 }
 
@@ -308,7 +309,7 @@ func TestStore_LightClientUpdate_EndPeriodAfterLastUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(retrievedUpdates))
 	for i, update := range updates {
-		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[i].Data.SignatureSlot, "retrieved update does not match saved update")
+		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[uint64(i+1)].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
 }
 
@@ -364,7 +365,7 @@ func TestStore_LightClientUpdate_PartialUpdates(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, len(retrievedUpdates))
 	for i, update := range updates[:2] {
-		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[i].Data.SignatureSlot, "retrieved update does not match saved update")
+		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[uint64(i+1)].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
 }
 
@@ -429,28 +430,35 @@ func TestStore_LightClientUpdate_MissingPeriods_SimpleData(t *testing.T) {
 
 	// Retrieve the updates
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 7, 12)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(retrievedUpdates))
+	for _, update := range updates {
+		require.Equal(t, update.Data.SignatureSlot, retrievedUpdates[uint64(update.Data.SignatureSlot)].Data.SignatureSlot, "retrieved update does not match saved update")
+	}
 
 	// Retrieve the updates from the middle
 	retrievedUpdates, err = db.LightClientUpdates(ctx, 8, 12)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(retrievedUpdates))
+	require.Equal(t, updates[1].Data.SignatureSlot, retrievedUpdates[8].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[2].Data.SignatureSlot, retrievedUpdates[11].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[3].Data.SignatureSlot, retrievedUpdates[12].Data.SignatureSlot, "retrieved update does not match saved update")
 
 	// Retrieve the updates from after the missing period
 	retrievedUpdates, err = db.LightClientUpdates(ctx, 11, 12)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(retrievedUpdates))
-	require.Equal(t, updates[2].Data.SignatureSlot, retrievedUpdates[0].Data.SignatureSlot, "retrieved update does not match saved update")
-	require.Equal(t, updates[3].Data.SignatureSlot, retrievedUpdates[1].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[2].Data.SignatureSlot, retrievedUpdates[11].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[3].Data.SignatureSlot, retrievedUpdates[12].Data.SignatureSlot, "retrieved update does not match saved update")
 
 	//retrieve the updates from before the missing period to after the missing period
 	retrievedUpdates, err = db.LightClientUpdates(ctx, 3, 15)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(retrievedUpdates))
+	require.Equal(t, updates[0].Data.SignatureSlot, retrievedUpdates[7].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[1].Data.SignatureSlot, retrievedUpdates[8].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[2].Data.SignatureSlot, retrievedUpdates[11].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, updates[3].Data.SignatureSlot, retrievedUpdates[12].Data.SignatureSlot, "retrieved update does not match saved update")
 }
 
 func TestStore_LightClientUpdate_EmptyDB(t *testing.T) {
@@ -461,14 +469,14 @@ func TestStore_LightClientUpdate_EmptyDB(t *testing.T) {
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 3)
 	require.NotNil(t, err)
 	require.Equal(t, err.Error(), "no light client updates in the database")
-	require.Equal(t, 0, len(retrievedUpdates))
+	require.IsNil(t, retrievedUpdates)
 }
 
 func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd_SimpleData(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	for i := 1; i < 4; i++ { // 10 to 99
+	for i := 1; i < 4; i++ {
 		update := &ethpbv2.LightClientUpdateWithVersion{
 			Version: 1,
 			Data: &ethpbv2.LightClientUpdate{
@@ -484,7 +492,7 @@ func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd_SimpleData(t *testing.T)
 		err := db.SaveLightClientUpdate(ctx, uint64(i), update)
 		require.NoError(t, err)
 	}
-	for i := 7; i < 10; i++ { // 10 to 99
+	for i := 7; i < 10; i++ {
 		update := &ethpbv2.LightClientUpdateWithVersion{
 			Version: 1,
 			Data: &ethpbv2.LightClientUpdate{
@@ -501,11 +509,13 @@ func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd_SimpleData(t *testing.T)
 		require.NoError(t, err)
 	}
 
-	// Retrieve the updates from 1 to 5 - should fail because of missing periods at the end
+	// Retrieve the updates from 1 to 5
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 5)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(retrievedUpdates))
+	require.Equal(t, primitives.Slot(1), retrievedUpdates[1].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, primitives.Slot(2), retrievedUpdates[2].Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, primitives.Slot(3), retrievedUpdates[3].Data.SignatureSlot, "retrieved update does not match saved update")
 
 }
 
@@ -555,9 +565,15 @@ func TestStore_LightClientUpdate_MissingPeriodsInTheMiddleDistributed(t *testing
 
 	// Retrieve the updates - should fail because of missing periods in the middle
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 300)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 91*2, len(retrievedUpdates))
+	for i := 10; i < 101; i++ {
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
+	}
+	for i := 110; i < 201; i++ {
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
+	}
+
 }
 
 func TestStore_LightClientUpdate_RetrieveValidRangeFromStart(t *testing.T) {
@@ -568,7 +584,7 @@ func TestStore_LightClientUpdate_RetrieveValidRangeFromStart(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 91, len(retrievedUpdates))
 	for i := 10; i < 101; i++ {
-		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[i-10].Data.SignatureSlot, "retrieved update does not match saved update")
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
 }
 
@@ -580,47 +596,53 @@ func TestStore_LightClientUpdate_RetrieveValidRangeInTheMiddle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 91, len(retrievedUpdates))
 	for i := 110; i < 201; i++ {
-		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[i-110].Data.SignatureSlot, "retrieved update does not match saved update")
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
 	}
 }
 
 func TestStore_LightClientUpdate_MissingPeriodInTheMiddleConcentrated(t *testing.T) {
 	db, ctx := setupLightClientTestDB(t)
 
-	// retrieve 100 to 200 - should fail because of missing periods in the middle
+	// retrieve 100 to 200
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 100, 200)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 92, len(retrievedUpdates))
+	require.Equal(t, primitives.Slot(100), retrievedUpdates[100].Data.SignatureSlot, "retrieved update does not match saved update")
+	for i := 110; i < 201; i++ {
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
+	}
 }
 
 func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd(t *testing.T) {
 	db, ctx := setupLightClientTestDB(t)
 
-	// retrieve 10 to 109 - should fail because of missing periods at the end
+	// retrieve 10 to 109
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 10, 109)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 91, len(retrievedUpdates))
+	for i := 10; i < 101; i++ {
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
+	}
 }
 
 func TestStore_LightClientUpdate_MissingPeriodsAtTheBeginning(t *testing.T) {
 	db, ctx := setupLightClientTestDB(t)
 
-	// retrieve 105 to 200 - should fail because of missing periods at the beginning
+	// retrieve 105 to 200
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 105, 200)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "missing light client updates for some periods in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 91, len(retrievedUpdates))
+	for i := 110; i < 201; i++ {
+		require.Equal(t, primitives.Slot(uint64(i)), retrievedUpdates[uint64(i)].Data.SignatureSlot, "retrieved update does not match saved update")
+	}
 }
 
 func TestStore_LightClientUpdate_StartPeriodGreaterThanLastPeriod(t *testing.T) {
 	db, ctx := setupLightClientTestDB(t)
 
-	// retrieve 300 to 400 - should fail because of startPeriod > lastPeriodInDB
+	// retrieve 300 to 400
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 300, 400)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "no light client updates in this range")
-	require.IsNil(t, retrievedUpdates)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(retrievedUpdates))
 
 }
