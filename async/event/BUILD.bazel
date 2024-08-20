@@ -18,7 +18,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "example_feed_test.go",
         "example_scope_test.go",
         "example_subscription_test.go",
         "subscription_test.go",
