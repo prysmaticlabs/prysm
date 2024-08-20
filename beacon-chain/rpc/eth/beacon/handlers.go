@@ -286,7 +286,7 @@ func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
@@ -438,7 +438,7 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 	httputil.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -623,7 +623,7 @@ func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -796,7 +796,7 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 	httputil.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
