@@ -50,13 +50,32 @@ func SaveSignedExecutionPayloadHeader(header *enginev1.SignedExecutionPayloadHea
 	}
 }
 
-// SignedExecutionPayloadHeader returns the signed payload header for the given slot and parent block hash.
+// SignedExecutionPayloadHeaderByHashAndRoot returns the signed payload header for the given slot and parent block hash and block root.
 // Returns nil if the header is not found.
-func SignedExecutionPayloadHeader(slot primitives.Slot, parentBlockHash []byte) *enginev1.SignedExecutionPayloadHeader {
+// This should be used when the caller wants the header to match parent block hash and parent block root such as proposer choosing a header to propose.
+func SignedExecutionPayloadHeaderByHashAndRoot(slot primitives.Slot, parentBlockHash []byte, parentBlockRoot []byte) *enginev1.SignedExecutionPayloadHeader {
 	mu.RLock()
 	defer mu.RUnlock()
 
-	if headers, ok := cachedSignedExecutionPayloadHeader[primitives.Slot(uint64(slot))]; ok {
+	if headers, ok := cachedSignedExecutionPayloadHeader[slot]; ok {
+		for _, header := range headers {
+			if bytes.Equal(header.Message.ParentBlockHash, parentBlockHash) && bytes.Equal(header.Message.ParentBlockRoot, parentBlockRoot) {
+				return header
+			}
+		}
+	}
+
+	return nil
+}
+
+// SignedExecutionPayloadHeaderByHash returns the signed payload header for the given slot and parent block hash.
+// Returns nil if the header is not found.
+// This should be used when the caller just want to match parent block hash such as sync service filter header for dos prevention.
+func SignedExecutionPayloadHeaderByHash(slot primitives.Slot, parentBlockHash []byte) *enginev1.SignedExecutionPayloadHeader {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if headers, ok := cachedSignedExecutionPayloadHeader[slot]; ok {
 		for _, header := range headers {
 			if bytes.Equal(header.Message.ParentBlockHash, parentBlockHash) {
 				return header

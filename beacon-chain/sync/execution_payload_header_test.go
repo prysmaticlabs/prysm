@@ -15,11 +15,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util/random"
 )
@@ -58,42 +60,42 @@ func TestValidateExecutionPayloadHeader_MockErrorPath(t *testing.T) {
 	}{
 		{
 			error: errors.New("incorrect slot"),
-			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 				return &verification.MockExecutionPayloadHeader{ErrIncorrectSlot: errors.New("incorrect slot")}
 			},
 			result: pubsub.ValidationIgnore,
 		},
 		{
 			error: errors.New("unknown block root"),
-			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 				return &verification.MockExecutionPayloadHeader{ErrUnknownParentBlockRoot: errors.New("unknown block root")}
 			},
 			result: pubsub.ValidationIgnore,
 		},
 		{
 			error: errors.New("unknown block hash"),
-			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 				return &verification.MockExecutionPayloadHeader{ErrUnknownParentBlockHash: errors.New("unknown block hash")}
 			},
 			result: pubsub.ValidationIgnore,
 		},
 		{
 			error: errors.New("invalid signature"),
-			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 				return &verification.MockExecutionPayloadHeader{ErrInvalidSignature: errors.New("invalid signature")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("builder slashed"),
-			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 				return &verification.MockExecutionPayloadHeader{ErrBuilderSlashed: errors.New("builder slashed")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("insufficient balance"),
-			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+			verifier: func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 				return &verification.MockExecutionPayloadHeader{ErrBuilderInsufficientBalance: errors.New("insufficient balance")}
 			},
 			result: pubsub.ValidationReject,
@@ -136,7 +138,7 @@ func TestValidateExecutionPayloadHeader_Accept(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 	s := &Service{
 		cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
-	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 		return &verification.MockExecutionPayloadHeader{}
 	}
 
@@ -165,7 +167,7 @@ func TestValidateExecutionPayloadHeader_MoreThanOneSameBuilder(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 	s := &Service{
 		cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
-	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 		return &verification.MockExecutionPayloadHeader{}
 	}
 
@@ -193,6 +195,54 @@ func TestValidateExecutionPayloadHeader_MoreThanOneSameBuilder(t *testing.T) {
 			Topic: &topic,
 		}})
 	require.ErrorContains(t, fmt.Sprintf("builder %d has already been seen in slot %d", msg.Message.BuilderIndex, msg.Message.Slot), err)
+	require.Equal(t, result, pubsub.ValidationIgnore)
+}
+
+func TestValidateExecutionPayloadHeader_LowerValue(t *testing.T) {
+	ctx := context.Background()
+	p := p2ptest.NewTestP2P(t)
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
+	s := &Service{
+		cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+		return &verification.MockExecutionPayloadHeader{}
+	}
+
+	msg := random.SignedExecutionPayloadHeader(t)
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := s.currentForkDigest()
+	require.NoError(t, err)
+	topic = s.addDigestToTopic(topic, digest)
+
+	m := &pubsub.Message{
+		Message: &pb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		}}
+	result, err := s.validateExecutionPayloadHeader(ctx, "", m)
+	require.NoError(t, err)
+	require.Equal(t, result, pubsub.ValidationAccept)
+
+	require.NoError(t, s.subscribeExecutionPayloadHeader(ctx, msg))
+
+	// Different builder but lower value should fail
+	newMsg := eth.CopySignedExecutionPayloadHeader(msg)
+	newMsg.Message.BuilderIndex = newMsg.Message.BuilderIndex - 1
+	newMsg.Message.Value = newMsg.Message.Value - 1
+	newBuf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(newBuf, newMsg)
+	require.NoError(t, err)
+
+	result, err = s.validateExecutionPayloadHeader(ctx, "", &pubsub.Message{
+		Message: &pb.Message{
+			Data:  newBuf.Bytes(),
+			Topic: &topic,
+		}})
+	require.ErrorContains(t, "received header has lower value than cached header", err)
 	require.Equal(t, result, pubsub.ValidationIgnore)
 }
 

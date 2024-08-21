@@ -136,7 +136,7 @@ func TestSignedExecutionPayloadHeader(t *testing.T) {
 			},
 		}
 		SaveSignedExecutionPayloadHeader(header)
-		result := SignedExecutionPayloadHeader(1, []byte("parent1"))
+		result := SignedExecutionPayloadHeaderByHash(1, []byte("parent1"))
 		require.NotNil(t, result)
 		require.Equal(t, header, result)
 	})
@@ -150,7 +150,7 @@ func TestSignedExecutionPayloadHeader(t *testing.T) {
 			},
 		}
 		SaveSignedExecutionPayloadHeader(header)
-		result := SignedExecutionPayloadHeader(2, []byte("parent2"))
+		result := SignedExecutionPayloadHeaderByHash(2, []byte("parent2"))
 		require.IsNil(t, result)
 	})
 
@@ -174,12 +174,12 @@ func TestSignedExecutionPayloadHeader(t *testing.T) {
 		SaveSignedExecutionPayloadHeader(header2)
 
 		// Check for the first header
-		result1 := SignedExecutionPayloadHeader(1, []byte("parent1"))
+		result1 := SignedExecutionPayloadHeaderByHash(1, []byte("parent1"))
 		require.NotNil(t, result1)
 		require.Equal(t, header1, result1)
 
 		// Check for the second header
-		result2 := SignedExecutionPayloadHeader(2, []byte("parent2"))
+		result2 := SignedExecutionPayloadHeaderByHash(2, []byte("parent2"))
 		require.NotNil(t, result2)
 		require.Equal(t, header2, result2)
 	})
@@ -212,16 +212,16 @@ func TestSignedExecutionPayloadHeader(t *testing.T) {
 		SaveSignedExecutionPayloadHeader(header3)
 
 		// The first slot should be evicted, so result should be nil
-		result := SignedExecutionPayloadHeader(1, []byte("parent1"))
+		result := SignedExecutionPayloadHeaderByHash(1, []byte("parent1"))
 		require.IsNil(t, result)
 
 		// The second slot should still be present
-		result = SignedExecutionPayloadHeader(2, []byte("parent2"))
+		result = SignedExecutionPayloadHeaderByHash(2, []byte("parent2"))
 		require.NotNil(t, result)
 		require.Equal(t, header2, result)
 
 		// The third slot should be present
-		result = SignedExecutionPayloadHeader(3, []byte("parent3"))
+		result = SignedExecutionPayloadHeaderByHash(3, []byte("parent3"))
 		require.NotNil(t, result)
 		require.Equal(t, header3, result)
 	})
