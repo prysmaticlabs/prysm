@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
@@ -35,11 +34,10 @@ func TestMaxRequestBlock(t *testing.T) {
 }
 
 func TestComputeGenesisValidatorsRoot(t *testing.T) {
-	genesisValidatorRoot := "0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95"
-	wantRoot, err := bytesutil.DecodeHexWithLength(genesisValidatorRoot, 32)
-	if err != nil {
-		t.Errorf("Failed to decode genesis validator root: %v", err)
+	var wantRoot [32]byte = [32]byte{
+		75, 54, 61, 185, 78, 40, 97, 32, 215, 110, 185, 5, 52, 15, 221, 78,
+		84, 191, 233, 240, 107, 243, 63, 246, 207, 90, 210, 127, 81, 27, 254, 149,
 	}
-	gotRoot := ComputeGenesisValidatorsRoot(genesisValidatorRoot)
+	gotRoot := ComputeGenesisValidatorsRoot("0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95")
 	require.DeepEqual(t, gotRoot, wantRoot)
 }
