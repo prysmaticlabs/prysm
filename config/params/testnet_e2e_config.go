@@ -19,7 +19,6 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.Eth1FollowDistance = 8
 
 	// Misc.
-	e2eConfig.GenesisValidatorsRoot = [32]byte{}
 	e2eConfig.MinGenesisActiveValidatorCount = 256
 	e2eConfig.GenesisDelay = 10 // 10 seconds so E2E has enough time to process deposits and get started.
 	e2eConfig.ChurnLimitQuotient = 65536
@@ -51,6 +50,7 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
+	e2eConfig.GenesisValidatorsRoot = ComputeGenesisValidatorsRoot("0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95")
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 253}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
@@ -95,6 +95,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndMainnetName
+	e2eConfig.GenesisValidatorsRoot = ComputeGenesisValidatorsRoot("0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95")
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 254}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 254}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
