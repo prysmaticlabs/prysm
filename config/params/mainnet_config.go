@@ -16,6 +16,16 @@ func MainnetConfig() *BeaconChainConfig {
 	return mainnetBeaconConfig
 }
 
+func ComputeGenesisValidatorsRoot(s string) [32]byte {
+	// Compute the genesis validators root.
+	rootInByte, err := bytesutil.DecodeHexWithLength(s, 32) // Mainnet
+	if err != nil {
+		return [32]byte{}
+	}
+	genesisValidatorsRoot := bytesutil.ToBytes32(rootInByte)
+	return genesisValidatorsRoot
+}
+
 const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0
@@ -174,7 +184,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainConsolidation:               bytesutil.Uint32ToBytes4(0x0B000000),
 
 	// Prysm constants.
-	GenesisValidatorsRoot:          [32]byte{},
+	GenesisValidatorsRoot:          ComputeGenesisValidatorsRoot("0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95"),
 	GweiPerEth:                     1000000000,
 	BLSSecretKeyLength:             32,
 	BLSPubkeyLength:                48,
