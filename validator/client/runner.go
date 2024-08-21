@@ -61,9 +61,29 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
-	if err := v.PushProposerSettings(ctx, km, headSlot); err != nil {
-		log.WithError(err).Fatal("Failed to update proposer settings")
-	}
+
+	pushProposerSettingsChan := make(chan struct{}, 1)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-pushProposerSettingsChan:
+				go func() {
+					headSlot, err := v.CanonicalHeadSlot(ctx)
+					if err != nil {
+						log.WithError(err).Error("Could not get canonical head slot")
+						return
+					}
+					if err := v.PushProposerSettings(ctx, km, headSlot); err != nil {
+						log.WithError(err).Warn("Failed to update proposer settings")
+					}
+				}()
+			}
+		}
+	}()
+	pushProposerSettingsChan <- struct{}{}
+
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 		select {
@@ -93,11 +113,8 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			// call push proposer settings often to account for the following edge cases:
-			// proposer is activated at the start of epoch and tries to propose immediately
-			// account has changed in the middle of an epoch
-			if err := v.PushProposerSettings(ctx, km, slot); err != nil {
-				log.WithError(err).Warn("Failed to update proposer settings")
+			if slots.IsEpochStart(slot) {
+				pushProposerSettingsChan <- struct{}{}
 			}
 
 			// Start fetching domain data for the next epoch.
@@ -126,11 +143,13 @@ func run(ctx context.Context, v iface.Validator) {
 					handleAssignmentError(err, headSlot)
 					continue
 				}
+				pushProposerSettingsChan <- struct{}{}
 			}
 		case e := <-eventsChan:
 			v.ProcessEvent(e)
 		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
+			pushProposerSettingsChan <- struct{}{}
 		}
 	}
 }
