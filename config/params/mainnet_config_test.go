@@ -34,7 +34,7 @@ func TestMaxRequestBlock(t *testing.T) {
 }
 
 func TestComputeGenesisValidatorsRoot(t *testing.T) {
-	var wantRoot [32]byte = [32]byte{
+	wantRoot := [32]byte{
 		75, 54, 61, 185, 78, 40, 97, 32, 215, 110, 185, 5, 52, 15, 221, 78,
 		84, 191, 233, 240, 107, 243, 63, 246, 207, 90, 210, 127, 81, 27, 254, 149,
 	}
