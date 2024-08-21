@@ -43,11 +43,17 @@ func (s *Service) validateExecutionPayloadHeader(ctx context.Context, pid peer.I
 	if !ok {
 		return pubsub.ValidationReject, errWrongMessage
 	}
-	slot := signedHeader.Message.Slot
-	builderIndex := signedHeader.Message.BuilderIndex
+	shm := signedHeader.Message
+	slot := shm.Slot
+	builderIndex := shm.BuilderIndex
 
 	if seenBuilderBySlot(slot, builderIndex) {
 		return pubsub.ValidationIgnore, fmt.Errorf("builder %d has already been seen in slot %d", builderIndex, slot)
+	}
+
+	highestValueHeader := cache.SignedExecutionPayloadHeaderByHash(slot, shm.ParentBlockHash)
+	if highestValueHeader != nil && highestValueHeader.Message.Value >= shm.Value {
+		return pubsub.ValidationIgnore, fmt.Errorf("received header has lower value than cached header")
 	}
 
 	h, err := blocks.WrappedROSignedExecutionPayloadHeader(signedHeader)
@@ -56,7 +62,12 @@ func (s *Service) validateExecutionPayloadHeader(ctx context.Context, pid peer.I
 		return pubsub.ValidationIgnore, err
 	}
 
-	v := s.newExecutionPayloadHeaderVerifier(h, verification.GossipExecutionPayloadHeaderRequirements)
+	roState, err := s.cfg.chain.HeadStateReadOnly(ctx)
+	if err != nil {
+		log.WithError(err).Error("failed to get head state to validate execution payload header")
+		return pubsub.ValidationIgnore, err
+	}
+	v := s.newExecutionPayloadHeaderVerifier(h, roState, verification.GossipExecutionPayloadHeaderRequirements)
 
 	if err := v.VerifyCurrentOrNextSlot(); err != nil {
 		return pubsub.ValidationIgnore, err
@@ -70,26 +81,16 @@ func (s *Service) validateExecutionPayloadHeader(ctx context.Context, pid peer.I
 		return pubsub.ValidationIgnore, err
 	}
 
-	val, err := s.cfg.chain.HeadValidatorAtIndex(ctx, builderIndex)
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	genesisRoot := s.cfg.chain.GenesisValidatorsRoot()
-
-	if err := v.VerifySignature(val, genesisRoot[:]); err != nil {
+	if err := v.VerifySignature(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 	addBuilderBySlot(slot, builderIndex)
 
-	if err := v.VerifyBuilderActiveNotSlashed(val); err != nil {
+	if err := v.VerifyBuilderActiveNotSlashed(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	bal, err := s.cfg.chain.HeadBalanceAtIndex(ctx, builderIndex)
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	if err := v.VerifyBuilderSufficientBalance(bal); err != nil {
+	if err := v.VerifyBuilderSufficientBalance(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 

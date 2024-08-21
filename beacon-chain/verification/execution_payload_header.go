@@ -51,15 +51,20 @@ type HeaderVerifier struct {
 	*sharedResources
 	results *results
 	h       interfaces.ROSignedExecutionPayloadHeader
+	st      state.ReadOnlyBeaconState
 }
 
 var _ ExecutionPayloadHeaderVerifier = &HeaderVerifier{}
 
 // VerifyBuilderActiveNotSlashed verifies that the builder is active and not slashed.
-func (v *HeaderVerifier) VerifyBuilderActiveNotSlashed(val state.ReadOnlyValidator) (err error) {
+func (v *HeaderVerifier) VerifyBuilderActiveNotSlashed() (err error) {
 	defer v.record(RequireBuilderActiveNotSlashed, &err)
 
 	h, err := v.h.Header()
+	if err != nil {
+		return err
+	}
+	val, err := v.st.ValidatorAtIndexReadOnly(h.BuilderIndex())
 	if err != nil {
 		return err
 	}
@@ -79,10 +84,14 @@ func (v *HeaderVerifier) VerifyBuilderActiveNotSlashed(val state.ReadOnlyValidat
 }
 
 // VerifyBuilderSufficientBalance verifies that the builder has a sufficient balance with respect to MinBuilderBalance.
-func (v *HeaderVerifier) VerifyBuilderSufficientBalance(bal uint64) (err error) {
+func (v *HeaderVerifier) VerifyBuilderSufficientBalance() (err error) {
 	defer v.record(RequireBuilderSufficientBalance, &err)
 
 	h, err := v.h.Header()
+	if err != nil {
+		return err
+	}
+	bal, err := v.st.BalanceAtIndex(h.BuilderIndex())
 	if err != nil {
 		return err
 	}
@@ -131,10 +140,10 @@ func (v *HeaderVerifier) VerifyParentBlockRootSeen(seen func([32]byte) bool) (er
 
 // VerifySignature verifies the signature of the execution payload header taking in validator and the genesis root.
 // It uses header's slot for fork version.
-func (v *HeaderVerifier) VerifySignature(val state.ReadOnlyValidator, genesisRoot []byte) (err error) {
+func (v *HeaderVerifier) VerifySignature() (err error) {
 	defer v.record(RequireSignatureValid, &err)
 
-	err = validatePayloadHeaderSignature(val, genesisRoot, v.h)
+	err = validatePayloadHeaderSignature(v.st, v.h)
 	if err != nil {
 		h, envErr := v.h.Header()
 		if envErr != nil {
@@ -194,14 +203,14 @@ func headerLogFields(h interfaces.ROExecutionPayloadHeaderEPBS) log.Fields {
 }
 
 // validatePayloadHeaderSignature validates the signature of the execution payload header.
-func validatePayloadHeaderSignature(validator state.ReadOnlyValidator, genesisRoot []byte, sh interfaces.ROSignedExecutionPayloadHeader) error {
+func validatePayloadHeaderSignature(st state.ReadOnlyBeaconState, sh interfaces.ROSignedExecutionPayloadHeader) error {
 	h, err := sh.Header()
 	if err != nil {
 		return err
 	}
 
-	pubKey := validator.PublicKey()
-	pub, err := bls.PublicKeyFromBytes(pubKey[:])
+	pubkey := st.PubkeyAtIndex(h.BuilderIndex())
+	pub, err := bls.PublicKeyFromBytes(pubkey[:])
 	if err != nil {
 		return err
 	}
@@ -217,9 +226,8 @@ func validatePayloadHeaderSignature(validator state.ReadOnlyValidator, genesisRo
 	if err != nil {
 		return err
 	}
-	fmt.Println("Fork: ", f)
 
-	domain, err := signing.Domain(f, currentEpoch, params.BeaconConfig().DomainBeaconBuilder, genesisRoot)
+	domain, err := signing.Domain(f, currentEpoch, params.BeaconConfig().DomainBeaconBuilder, st.GenesisValidatorsRoot())
 	if err != nil {
 		return err
 	}

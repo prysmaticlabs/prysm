@@ -1,7 +1,5 @@
 package verification
 
-import "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-
 type MockExecutionPayloadHeader struct {
 	ErrBuilderSlashed             error
 	ErrBuilderInsufficientBalance error
@@ -13,11 +11,11 @@ type MockExecutionPayloadHeader struct {
 
 var _ ExecutionPayloadHeaderVerifier = &MockExecutionPayloadHeader{}
 
-func (e *MockExecutionPayloadHeader) VerifyBuilderActiveNotSlashed(validator state.ReadOnlyValidator) error {
+func (e *MockExecutionPayloadHeader) VerifyBuilderActiveNotSlashed() error {
 	return e.ErrBuilderSlashed
 }
 
-func (e *MockExecutionPayloadHeader) VerifyBuilderSufficientBalance(uint642 uint64) error {
+func (e *MockExecutionPayloadHeader) VerifyBuilderSufficientBalance() error {
 	return e.ErrBuilderInsufficientBalance
 }
 
@@ -33,7 +31,7 @@ func (e *MockExecutionPayloadHeader) VerifyCurrentOrNextSlot() error {
 	return e.ErrIncorrectSlot
 }
 
-func (e *MockExecutionPayloadHeader) VerifySignature(validator state.ReadOnlyValidator, genesisRoot []byte) error {
+func (e *MockExecutionPayloadHeader) VerifySignature() error {
 	return e.ErrInvalidSignature
 }
 

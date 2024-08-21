@@ -76,9 +76,6 @@ type HeadFetcher interface {
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
-	HeadValidatorAtIndex(ctx context.Context, index primitives.ValidatorIndex) (state.ReadOnlyValidator, error)
-	HeadBalanceAtIndex(ctx context.Context, index primitives.ValidatorIndex) (uint64, error)
-	HeadGenesisRoot() [32]byte
 	ChainHeads() ([][32]byte, []primitives.Slot)
 	TargetRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 	HeadSyncCommitteeFetcher
@@ -275,43 +272,6 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 		return &ethpb.Eth1Data{}
 	}
 	return s.head.state.Eth1Data()
-}
-
-// HeadValidatorAtIndex returns the validator at the given index in the head state.
-// Error is returned if head state is nil.
-func (s *Service) HeadValidatorAtIndex(ctx context.Context, index primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return nil, ErrNilHead
-	}
-
-	return s.head.state.ValidatorAtIndexReadOnly(index)
-}
-
-// HeadGenesisRoot returns the genesis root of the current head state.
-func (s *Service) HeadGenesisRoot() [32]byte {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return [32]byte{}
-	}
-	return [32]byte(s.head.state.GenesisValidatorsRoot())
-}
-
-// HeadBalanceAtIndex returns the balance of the validator at the given index in the head state.
-// Error is returned if head state is nil.
-func (s *Service) HeadBalanceAtIndex(ctx context.Context, index primitives.ValidatorIndex) (uint64, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return 0, ErrNilHead
-	}
-
-	return s.head.state.BalanceAtIndex(index)
 }
 
 // GenesisTime returns the genesis time of beacon chain.

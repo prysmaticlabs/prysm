@@ -1,6 +1,7 @@
 package verification
 
 import (
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 )
@@ -17,10 +18,11 @@ func (ini *Initializer) NewPayloadAttestationMsgVerifier(pa payloadattestation.R
 
 // NewHeaderVerifier creates a SignedExecutionPayloadHeaderVerifier for a single signed execution payload header,
 // with the given set of requirements.
-func (ini *Initializer) NewHeaderVerifier(eh interfaces.ROSignedExecutionPayloadHeader, reqs []Requirement) *HeaderVerifier {
+func (ini *Initializer) NewHeaderVerifier(eh interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []Requirement) *HeaderVerifier {
 	return &HeaderVerifier{
 		sharedResources: ini.shared,
 		results:         newResults(reqs...),
 		h:               eh,
+		st:              st,
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -39,10 +40,8 @@ func TestHeaderVerifier_VerifyBuilderNotSlashedInactive(t *testing.T) {
 			Message: &enginev1.ExecutionPayloadHeaderEPBS{
 				BuilderIndex: 0,
 			},
-		}, init)
-		val, err := st.ValidatorAtIndexReadOnly(0)
-		require.NoError(t, err)
-		require.NoError(t, h.VerifyBuilderActiveNotSlashed(val))
+		}, st, init)
+		require.NoError(t, h.VerifyBuilderActiveNotSlashed())
 		require.Equal(t, true, h.results.executed(RequireBuilderActiveNotSlashed))
 		require.NoError(t, h.results.result(RequireBuilderActiveNotSlashed))
 	})
@@ -52,10 +51,8 @@ func TestHeaderVerifier_VerifyBuilderNotSlashedInactive(t *testing.T) {
 			Message: &enginev1.ExecutionPayloadHeaderEPBS{
 				BuilderIndex: 1,
 			},
-		}, init)
-		val, err := st.ValidatorAtIndexReadOnly(1)
-		require.NoError(t, err)
-		require.ErrorIs(t, h.VerifyBuilderActiveNotSlashed(val), ErrBuilderSlashed)
+		}, st, init)
+		require.ErrorIs(t, h.VerifyBuilderActiveNotSlashed(), ErrBuilderSlashed)
 		require.Equal(t, true, h.results.executed(RequireBuilderActiveNotSlashed))
 		require.Equal(t, ErrBuilderSlashed, h.results.result(RequireBuilderActiveNotSlashed))
 	})
@@ -65,10 +62,8 @@ func TestHeaderVerifier_VerifyBuilderNotSlashedInactive(t *testing.T) {
 			Message: &enginev1.ExecutionPayloadHeaderEPBS{
 				BuilderIndex: 2,
 			},
-		}, init)
-		val, err := st.ValidatorAtIndexReadOnly(2)
-		require.NoError(t, err)
-		require.ErrorIs(t, h.VerifyBuilderActiveNotSlashed(val), ErrBuilderInactive)
+		}, st, init)
+		require.ErrorIs(t, h.VerifyBuilderActiveNotSlashed(), ErrBuilderInactive)
 		require.Equal(t, true, h.results.executed(RequireBuilderActiveNotSlashed))
 		require.Equal(t, ErrBuilderInactive, h.results.result(RequireBuilderActiveNotSlashed))
 	})
@@ -87,10 +82,8 @@ func TestHeaderVerifier_VerifyBuilderSufficientBalance(t *testing.T) {
 				BuilderIndex: 1,
 				Value:        1,
 			},
-		}, init)
-		bal, err := st.BalanceAtIndex(1)
-		require.NoError(t, err)
-		require.NoError(t, h.VerifyBuilderSufficientBalance(bal))
+		}, st, init)
+		require.NoError(t, h.VerifyBuilderSufficientBalance())
 		require.Equal(t, true, h.results.executed(RequireBuilderSufficientBalance))
 		require.NoError(t, h.results.result(RequireBuilderSufficientBalance))
 	})
@@ -101,10 +94,8 @@ func TestHeaderVerifier_VerifyBuilderSufficientBalance(t *testing.T) {
 				BuilderIndex: 0,
 				Value:        1,
 			},
-		}, init)
-		bal, err := st.BalanceAtIndex(0)
-		require.NoError(t, err)
-		require.ErrorIs(t, h.VerifyBuilderSufficientBalance(bal), ErrBuilderInsufficientBalance)
+		}, st, init)
+		require.ErrorIs(t, h.VerifyBuilderSufficientBalance(), ErrBuilderInsufficientBalance)
 		require.Equal(t, true, h.results.executed(RequireBuilderSufficientBalance))
 		require.Equal(t, ErrBuilderInsufficientBalance, h.results.result(RequireBuilderSufficientBalance))
 	})
@@ -122,7 +113,7 @@ func TestHeaderVerifier_VerifyCurrentOrNextSlot(t *testing.T) {
 			Message: &enginev1.ExecutionPayloadHeaderEPBS{
 				Slot: 1,
 			},
-		}, init)
+		}, nil, init)
 		require.NoError(t, h.VerifyCurrentOrNextSlot())
 		require.Equal(t, true, h.results.executed(RequireCurrentOrNextSlot))
 		require.NoError(t, h.results.result(RequireCurrentOrNextSlot))
@@ -133,7 +124,7 @@ func TestHeaderVerifier_VerifyCurrentOrNextSlot(t *testing.T) {
 			Message: &enginev1.ExecutionPayloadHeaderEPBS{
 				Slot: 2,
 			},
-		}, init)
+		}, nil, init)
 		require.NoError(t, h.VerifyCurrentOrNextSlot())
 		require.Equal(t, true, h.results.executed(RequireCurrentOrNextSlot))
 		require.NoError(t, h.results.result(RequireCurrentOrNextSlot))
@@ -144,7 +135,7 @@ func TestHeaderVerifier_VerifyCurrentOrNextSlot(t *testing.T) {
 			Message: &enginev1.ExecutionPayloadHeaderEPBS{
 				Slot: 3,
 			},
-		}, init)
+		}, nil, init)
 		require.ErrorIs(t, h.VerifyCurrentOrNextSlot(), ErrIncorrectPayloadHeaderSlot)
 		require.Equal(t, true, h.results.executed(RequireCurrentOrNextSlot))
 		require.Equal(t, ErrIncorrectPayloadHeaderSlot, h.results.result(RequireCurrentOrNextSlot))
@@ -154,7 +145,7 @@ func TestHeaderVerifier_VerifyCurrentOrNextSlot(t *testing.T) {
 func TestHeaderVerifier_VerifyParentBlockHashSeen(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		init := Initializer{shared: &sharedResources{}}
-		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, init)
+		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, nil, init)
 		require.NoError(t, h.VerifyParentBlockHashSeen(
 			func(_ [32]byte) bool {
 				return true
@@ -166,7 +157,7 @@ func TestHeaderVerifier_VerifyParentBlockHashSeen(t *testing.T) {
 
 	t.Run("unknown parent hash", func(t *testing.T) {
 		init := Initializer{shared: &sharedResources{}}
-		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, init)
+		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, nil, init)
 		require.ErrorIs(t, h.VerifyParentBlockHashSeen(
 			func(_ [32]byte) bool {
 				return false
@@ -180,7 +171,7 @@ func TestHeaderVerifier_VerifyParentBlockHashSeen(t *testing.T) {
 func TestHeaderVerifier_VerifyParentBlockRootSeen(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		init := Initializer{shared: &sharedResources{}}
-		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, init)
+		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, nil, init)
 		require.NoError(t, h.VerifyParentBlockRootSeen(
 			func(_ [32]byte) bool {
 				return true
@@ -192,7 +183,7 @@ func TestHeaderVerifier_VerifyParentBlockRootSeen(t *testing.T) {
 
 	t.Run("unknown parent root", func(t *testing.T) {
 		init := Initializer{shared: &sharedResources{}}
-		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, init)
+		h := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{}, nil, init)
 		require.ErrorIs(t, h.VerifyParentBlockRootSeen(
 			func(_ [32]byte) bool {
 				return false
@@ -235,11 +226,9 @@ func TestHeaderVerifier_VerifySignature(t *testing.T) {
 		pa := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{
 			Message:   h,
 			Signature: sig.Marshal(),
-		}, init)
+		}, st, init)
 
-		val, err := st.ValidatorAtIndexReadOnly(h.BuilderIndex)
-		require.NoError(t, err)
-		require.NoError(t, pa.VerifySignature(val, st.GenesisValidatorsRoot()))
+		require.NoError(t, pa.VerifySignature())
 		require.Equal(t, true, pa.results.executed(RequireSignatureValid))
 		require.NoError(t, pa.results.result(RequireSignatureValid))
 	})
@@ -261,19 +250,17 @@ func TestHeaderVerifier_VerifySignature(t *testing.T) {
 		pa := newExecutionPayloadHeader(t, &enginev1.SignedExecutionPayloadHeader{
 			Message:   h,
 			Signature: sig.Marshal(),
-		}, init)
+		}, st, init)
 
-		val, err := st.ValidatorAtIndexReadOnly(h.BuilderIndex)
-		require.NoError(t, err)
-		require.ErrorIs(t, pa.VerifySignature(val, st.GenesisValidatorsRoot()), signing.ErrSigFailedToVerify)
+		require.ErrorIs(t, pa.VerifySignature(), signing.ErrSigFailedToVerify)
 		require.Equal(t, true, pa.results.executed(RequireSignatureValid))
 		require.Equal(t, signing.ErrSigFailedToVerify, pa.results.result(RequireSignatureValid))
 	})
 }
 
-func newExecutionPayloadHeader(t *testing.T, h *enginev1.SignedExecutionPayloadHeader, init Initializer) *HeaderVerifier {
+func newExecutionPayloadHeader(t *testing.T, h *enginev1.SignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, init Initializer) *HeaderVerifier {
 	h = util.HydrateSignedExecutionPayloadHeader(h)
 	ro, err := blocks.WrappedROSignedExecutionPayloadHeader(h)
 	require.NoError(t, err)
-	return init.NewHeaderVerifier(ro, GossipExecutionPayloadHeaderRequirements)
+	return init.NewHeaderVerifier(ro, st, GossipExecutionPayloadHeaderRequirements)
 }
