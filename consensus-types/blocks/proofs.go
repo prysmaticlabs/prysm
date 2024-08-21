@@ -3,13 +3,21 @@ package blocks
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"go.opencensus.io/trace"
+)
+
+const (
+	payloadFieldIndex = 9
+	bodyFieldIndex    = 4
 )
 
 func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody) ([][]byte, error) {
@@ -171,4 +179,69 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 	}
 
 	return fieldRoots, nil
+}
+
+func ComputeBlockFieldRoots(ctx context.Context, block *BeaconBlock) ([][]byte, error) {
+	_, span := trace.StartSpan(ctx, "blocks.ComputeBlockFieldRoots")
+	defer span.End()
+
+	if block == nil {
+		return nil, errNilBlock
+	}
+
+	fieldRoots := make([][]byte, 5)
+	for i := range fieldRoots {
+		fieldRoots[i] = make([]byte, 32)
+	}
+
+	// Slot
+	slotRoot := ssz.Uint64Root(uint64(block.slot))
+	copy(fieldRoots[0], slotRoot[:])
+
+	// Proposer Index
+	proposerRoot := ssz.Uint64Root(uint64(block.proposerIndex))
+	copy(fieldRoots[1], proposerRoot[:])
+
+	// Parent Root
+	copy(fieldRoots[2], block.parentRoot[:])
+
+	// State Root
+	copy(fieldRoots[3], block.stateRoot[:])
+
+	// block body Root
+	blockBodyRoot, err := block.body.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(fieldRoots[4], blockBodyRoot[:])
+
+	return fieldRoots, nil
+}
+
+func PayloadProof(ctx context.Context, block *BeaconBlock) ([][]byte, error) {
+	i := block.Body()
+	blockBody, ok := i.(*BeaconBlockBody)
+	if !ok {
+		return nil, errors.New("failed to cast block body")
+	}
+
+	blockBodyFieldRoots, err := ComputeBlockBodyFieldRoots(ctx, blockBody)
+	if err != nil {
+		return nil, err
+	}
+
+	blockBodyFieldRootsTrie := stateutil.Merkleize(blockBodyFieldRoots)
+	blockBodyProof := trie.ProofFromMerkleLayers(blockBodyFieldRootsTrie, payloadFieldIndex)
+
+	beaconBlockFieldRoots, err := ComputeBlockFieldRoots(ctx, block)
+	if err != nil {
+		return nil, err
+	}
+
+	beaconBlockFieldRootsTrie := stateutil.Merkleize(beaconBlockFieldRoots)
+	beaconBlockProof := trie.ProofFromMerkleLayers(beaconBlockFieldRootsTrie, bodyFieldIndex)
+
+	finalProof := append(blockBodyProof, beaconBlockProof...)
+
+	return finalProof, nil
 }
