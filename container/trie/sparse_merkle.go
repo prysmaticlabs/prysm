@@ -260,7 +260,7 @@ func (m *SparseMerkleTrie) NumOfItems() int {
 	return len(m.originalItems)
 }
 
-// ProofFromMerkleLayers creates a proof starting at the leaf index of the state Merkle layers.
+// ProofFromMerkleLayers creates a proof starting at the leaf index of the merkle layers.
 func ProofFromMerkleLayers(layers [][][]byte, startingLeafIndex int) [][]byte {
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
