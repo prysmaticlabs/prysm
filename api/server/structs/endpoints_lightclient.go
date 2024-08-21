@@ -21,13 +21,13 @@ type LightClientUpdate struct {
 	NextSyncCommitteeBranch []string           `json:"next_sync_committee_branch,omitempty"`
 	FinalityBranch          []string           `json:"finality_branch,omitempty"`
 	SignatureSlot           string             `json:"signature_slot"`
+	ssz.Marshaler
+	ssz.Unmarshaler
 }
 
 type LightClientUpdateWithVersion struct {
 	Version string             `json:"version"`
 	Data    *LightClientUpdate `json:"data"`
-	ssz.Marshaler
-	ssz.Unmarshaler
 }
 
 type LightClientUpdatesByRangeResponse struct {

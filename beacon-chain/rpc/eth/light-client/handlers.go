@@ -269,7 +269,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		}
 	}
 
-	update, err := newLightClientFinalityUpdateFromBeaconState(
+	update, ssz_update, err := newLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		state,
 		block,
@@ -287,7 +287,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 	}
 	// Check if the client requests SSZ format
 	if httputil.RespondWithSsz(req) {
-		sszData, err := response.MarshalSSZ()
+		sszData, err := ssz_update.MarshalSSZ()
 		if err != nil {
 			httputil.HandleError(w, "Could not marshal light client finality update into SSZ: "+err.Error(), http.StatusInternalServerError)
 			return
