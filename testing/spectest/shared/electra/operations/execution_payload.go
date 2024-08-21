@@ -8,6 +8,5 @@ import (
 )
 
 func RunExecutionPayloadTest(t *testing.T, config string) {
-	t.Skip("TODO: Electra uses a different execution payload")
 	common.RunExecutionPayloadTest(t, config, version.String(version.Electra), sszToBlockBody, sszToState)
 }

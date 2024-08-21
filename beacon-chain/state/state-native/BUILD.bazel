@@ -3,8 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "beacon_state_mainnet.go",
-        "beacon_state_minimal.go",  # keep
+        "beacon_state.go",
         "doc.go",
         "error.go",
         "getters_attestation.go",
@@ -68,6 +67,7 @@ go_library(
         "//consensus-types/primitives:go_default_library",
         "//container/multi-value-slice:go_default_library",
         "//container/slice:go_default_library",
+        "//container/trie:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",

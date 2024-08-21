@@ -30,8 +30,8 @@ func newFinalizedValidatorIndexCache() *finalizedValidatorIndexCache {
 // If the public key is not found in the cache, it searches through the state starting from the last finalized index.
 func (b *BeaconState) getValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	b.validatorIndexCache.RLock()
+	defer b.validatorIndexCache.RUnlock()
 	index, found := b.validatorIndexCache.indexMap[pubKey]
-	b.validatorIndexCache.RUnlock()
 	if found {
 		return index, true
 	}
