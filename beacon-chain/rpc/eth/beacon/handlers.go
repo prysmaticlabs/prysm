@@ -1584,3 +1584,41 @@ func (s *Server) broadcastSeenBlockSidecars(
 	}
 	return nil
 }
+
+func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.PublishBlobs")
+	defer span.End()
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
+		return
+	}
+
+	blobSidecars := &eth.BlobSidecars{}
+	if err := blobSidecars.UnmarshalSSZ(body); err != nil {
+		httputil.HandleError(w, "Could not unmarshal blob sidecars", http.StatusBadRequest)
+		return
+	}
+
+	for _, blobSidecar := range blobSidecars.Sidecars {
+		readOnlySc, err := blocks.NewROBlobWithRoot(blobSidecar, [32]byte{}) // TODO: replace [32]byte{} with beacon root
+		if err != nil {
+			http.Error(w, "Could not create read-only blob", http.StatusInternalServerError)
+			return
+		}
+
+		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+		if err := s.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+			http.Error(w, "Could not receive blob", http.StatusInternalServerError)
+			return
+		}
+
+		if err := s.Broadcaster.BroadcastBlob(ctx, blobSidecar.Index, blobSidecar); err != nil {
+			log.WithError(err).Error("Failed to broadcast blob")
+		}
+	}
+}

@@ -48,4 +48,5 @@ type Server struct {
 	BLSChangesPool                blstoexec.PoolManager
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
 	CoreService                   *core.Service
+	BlobReceiver                  blockchain.BlobReceiver
 }

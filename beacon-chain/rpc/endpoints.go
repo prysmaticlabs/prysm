@@ -465,6 +465,7 @@ func (s *Service) beaconEndpoints(
 		OperationNotifier:             s.cfg.OperationNotifier,
 		Broadcaster:                   s.cfg.Broadcaster,
 		BlockReceiver:                 s.cfg.BlockReceiver,
+		BlobReceiver:                  s.cfg.BlobReceiver,
 		StateGenService:               s.cfg.StateGen,
 		Stater:                        stater,
 		Blocker:                       blocker,
