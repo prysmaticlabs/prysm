@@ -128,6 +128,7 @@ type Service struct {
 	blkRootToPendingAtts                map[[32]byte][]ethpb.SignedAggregateAttAndProof
 	subHandler                          *subTopicHandler
 	payloadAttestationCache             *cache.PayloadAttestationCache
+	executionPayloadHeaderCache         *cache.ExecutionPayloadHeaders
 	payloadEnvelopeCache                *sync.Map
 	pendingAttsLock                     sync.RWMutex
 	pendingQueueLock                    sync.RWMutex

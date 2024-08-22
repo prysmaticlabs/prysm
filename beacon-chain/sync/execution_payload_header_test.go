@@ -12,6 +12,7 @@ import (
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
@@ -107,7 +108,8 @@ func TestValidateExecutionPayloadHeader_MockErrorPath(t *testing.T) {
 			p := p2ptest.NewTestP2P(t)
 			chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 			s := &Service{
-				cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+				executionPayloadHeaderCache: cache.NewExecutionPayloadHeaders(),
+				cfg:                         &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 			s.newExecutionPayloadHeaderVerifier = tt.verifier
 
 			msg := random.SignedExecutionPayloadHeader(t)
@@ -137,7 +139,8 @@ func TestValidateExecutionPayloadHeader_Accept(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 	s := &Service{
-		cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+		executionPayloadHeaderCache: cache.NewExecutionPayloadHeaders(),
+		cfg:                         &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 		return &verification.MockExecutionPayloadHeader{}
 	}
@@ -166,7 +169,8 @@ func TestValidateExecutionPayloadHeader_MoreThanOneSameBuilder(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 	s := &Service{
-		cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+		executionPayloadHeaderCache: cache.NewExecutionPayloadHeaders(),
+		cfg:                         &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 		return &verification.MockExecutionPayloadHeader{}
 	}
@@ -203,7 +207,8 @@ func TestValidateExecutionPayloadHeader_LowerValue(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 	s := &Service{
-		cfg: &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+		executionPayloadHeaderCache: cache.NewExecutionPayloadHeaders(),
+		cfg:                         &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	s.newExecutionPayloadHeaderVerifier = func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
 		return &verification.MockExecutionPayloadHeader{}
 	}

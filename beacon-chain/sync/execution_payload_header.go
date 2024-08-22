@@ -7,7 +7,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -51,7 +50,7 @@ func (s *Service) validateExecutionPayloadHeader(ctx context.Context, pid peer.I
 		return pubsub.ValidationIgnore, fmt.Errorf("builder %d has already been seen in slot %d", builderIndex, slot)
 	}
 
-	highestValueHeader := cache.SignedExecutionPayloadHeaderByHash(slot, shm.ParentBlockHash)
+	highestValueHeader := s.executionPayloadHeaderCache.SignedExecutionPayloadHeader(slot, shm.ParentBlockHash, shm.ParentBlockRoot)
 	if highestValueHeader != nil && highestValueHeader.Message.Value >= shm.Value {
 		return pubsub.ValidationIgnore, fmt.Errorf("received header has lower value than cached header")
 	}
@@ -103,7 +102,7 @@ func (s *Service) subscribeExecutionPayloadHeader(ctx context.Context, msg proto
 		return errWrongMessage
 	}
 
-	cache.SaveSignedExecutionPayloadHeader(e)
+	s.executionPayloadHeaderCache.SaveSignedExecutionPayloadHeader(e)
 
 	return nil
 }
