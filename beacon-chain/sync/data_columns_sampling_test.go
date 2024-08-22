@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
@@ -204,12 +205,14 @@ func TestDataColumnSampler1D_PeerManagement(t *testing.T) {
 	testCases := []struct {
 		numPeers           int
 		custodyRequirement uint64
+		subnetCount        uint64
 		expectedColumns    [][]uint64
 		prunePeers         map[int]bool // Peers to prune.
 	}{
 		{
 			numPeers:           3,
 			custodyRequirement: 1,
+			subnetCount:        32,
 			expectedColumns: [][]uint64{
 				{6, 38, 70, 102},
 				{3, 35, 67, 99},
@@ -222,6 +225,7 @@ func TestDataColumnSampler1D_PeerManagement(t *testing.T) {
 		{
 			numPeers:           3,
 			custodyRequirement: 2,
+			subnetCount:        32,
 			expectedColumns: [][]uint64{
 				{6, 16, 38, 48, 70, 80, 102, 112},
 				{3, 13, 35, 45, 67, 77, 99, 109},
@@ -233,7 +237,12 @@ func TestDataColumnSampler1D_PeerManagement(t *testing.T) {
 		},
 	}
 
+	params.SetupTestConfigCleanup(t)
 	for _, tc := range testCases {
+		cfg := params.BeaconConfig()
+		cfg.CustodyRequirement = tc.custodyRequirement
+		cfg.DataColumnSidecarSubnetCount = tc.subnetCount
+		params.OverrideBeaconConfig(cfg)
 		test, sampler := setupDataColumnSamplerTest(t, uint64(tc.numPeers))
 		for i := 0; i < tc.numPeers; i++ {
 			p := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, tc.custodyRequirement, nil, i+1)
@@ -283,12 +292,14 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 	testCases := []struct {
 		numPeers             int
 		custodyRequirement   uint64
+		subnetCount          uint64
 		columnsToDistribute  [][]uint64
 		expectedDistribution []map[int][]uint64
 	}{
 		{
 			numPeers:           3,
 			custodyRequirement: 1,
+			subnetCount:        32,
 			// peer custody maps
 			// p0: {6, 38, 70, 102},
 			// p1: {3, 35, 67, 99},
@@ -319,6 +330,7 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 		{
 			numPeers:           3,
 			custodyRequirement: 2,
+			subnetCount:        32,
 			// peer custody maps
 			// p0: {6, 16, 38, 48, 70, 80, 102, 112},
 			// p1: {3, 13, 35, 45, 67, 77, 99, 109},
@@ -341,8 +353,12 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 			},
 		},
 	}
-
+	params.SetupTestConfigCleanup(t)
 	for _, tc := range testCases {
+		cfg := params.BeaconConfig()
+		cfg.CustodyRequirement = tc.custodyRequirement
+		cfg.DataColumnSidecarSubnetCount = tc.subnetCount
+		params.OverrideBeaconConfig(cfg)
 		test, sampler := setupDataColumnSamplerTest(t, uint64(tc.numPeers))
 		for i := 0; i < tc.numPeers; i++ {
 			p := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, tc.custodyRequirement, nil, i+1)
@@ -352,7 +368,7 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 
 		for idx, columns := range tc.columnsToDistribute {
 			result := sampler.distributeSamplesToPeer(columns)
-			require.Equal(t, len(tc.expectedDistribution[idx]), len(result))
+			require.Equal(t, len(tc.expectedDistribution[idx]), len(result), fmt.Sprintf("%v - %v", tc.expectedDistribution[idx], result))
 
 			for peerIdx, dist := range tc.expectedDistribution[idx] {
 				for _, column := range dist {
@@ -365,6 +381,10 @@ func TestDataColumnSampler1D_SampleDistribution(t *testing.T) {
 }
 
 func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.DataColumnSidecarSubnetCount = 32
+	params.OverrideBeaconConfig(cfg)
 	test, sampler := setupDefaultDataColumnSamplerTest(t)
 	sampler.refreshPeerInfo()
 
@@ -392,6 +412,11 @@ func TestDataColumnSampler1D_SampleDataColumns(t *testing.T) {
 }
 
 func TestDataColumnSampler1D_IncrementalDAS(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.DataColumnSidecarSubnetCount = 32
+	params.OverrideBeaconConfig(cfg)
+
 	testCases := []struct {
 		name                     string
 		samplesCount             uint64
@@ -451,9 +476,9 @@ func TestDataColumnSampler1D_IncrementalDAS(t *testing.T) {
 
 	for _, tc := range testCases {
 		test, sampler := setupDataColumnSamplerTest(t, 3)
-		p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, tc.columnsNotToRespond, 1)
-		p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, tc.columnsNotToRespond, 2)
-		p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, 1, tc.columnsNotToRespond, 3)
+		p1 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, params.BeaconConfig().CustodyRequirement, tc.columnsNotToRespond, 1)
+		p2 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, params.BeaconConfig().CustodyRequirement, tc.columnsNotToRespond, 2)
+		p3 := createAndConnectPeer(t, test.p2pSvc, test.chainSvc, test.dataColumnSidecars, params.BeaconConfig().CustodyRequirement, tc.columnsNotToRespond, 3)
 		test.peers = []*p2ptest.TestP2P{p1, p2, p3}
 
 		sampler.refreshPeerInfo()
