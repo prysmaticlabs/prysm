@@ -39,11 +39,10 @@ func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod u
 
 		firstPeriodInDb, _ := c.First()
 		if firstPeriodInDb == nil {
-			return fmt.Errorf("no light client updates in the database")
+			return nil
 		}
 
 		for k, v := c.Seek(bytesutil.Uint64ToBytesBigEndian(startPeriod)); k != nil && binary.BigEndian.Uint64(k) <= endPeriod; k, v = c.Next() {
-			// check if there was a gap by matching the current period with the expected period
 			currentPeriod := binary.BigEndian.Uint64(k)
 
 			var update ethpbv2.LightClientUpdateWithVersion

@@ -467,9 +467,8 @@ func TestStore_LightClientUpdate_EmptyDB(t *testing.T) {
 
 	// Retrieve the updates
 	retrievedUpdates, err := db.LightClientUpdates(ctx, 1, 3)
-	require.NotNil(t, err)
-	require.Equal(t, err.Error(), "no light client updates in the database")
-	require.IsNil(t, retrievedUpdates)
+	require.IsNil(t, err)
+	require.Equal(t, 0, len(retrievedUpdates))
 }
 
 func TestStore_LightClientUpdate_MissingPeriodsAtTheEnd_SimpleData(t *testing.T) {
