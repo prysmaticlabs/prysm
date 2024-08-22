@@ -2071,13 +2071,15 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 			chain, clock := defaultMockChain(t, tc.currentSlot)
 
 			// Create the P2P service.
-			p2p := p2ptest.NewTestP2P(t, swarmt.OptPeerPrivateKey(genFixedCustodyPeer(t)))
-			p2p.UseNodeID = true
+			p2pSvc := p2ptest.NewTestP2P(t, swarmt.OptPeerPrivateKey(genFixedCustodyPeer(t)))
+			nodeID, err := p2p.ConvertPeerIDToNodeID(p2pSvc.PeerID())
+			require.NoError(t, err)
+			p2pSvc.EnodeID = nodeID
 
 			// Connect the peers.
 			peers := make([]*p2ptest.TestP2P, 0, len(tc.peersParams))
 			for i, peerParams := range tc.peersParams {
-				peer := createAndConnectPeer(t, p2p, chain, dataColumnsSidecarFromSlot, peerParams, i)
+				peer := createAndConnectPeer(t, p2pSvc, chain, dataColumnsSidecarFromSlot, peerParams, i)
 				peers = append(peers, peer)
 			}
 
@@ -2097,7 +2099,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 			blocksFetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 				clock:  clock,
 				ctxMap: map[[4]byte]int{{245, 165, 253, 66}: version.Deneb},
-				p2p:    p2p,
+				p2p:    p2pSvc,
 				bs:     blobStorageSummarizer,
 			})
 
