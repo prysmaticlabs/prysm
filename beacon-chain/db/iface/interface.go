@@ -5,8 +5,9 @@ package iface
 
 import (
 	"context"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"io"
+
+	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"

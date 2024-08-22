@@ -3,6 +3,7 @@ package light_client
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 
 	"context"
+
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
