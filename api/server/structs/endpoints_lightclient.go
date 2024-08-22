@@ -1,12 +1,16 @@
 package structs
 
+type LightClientHeader struct {
+	Beacon *BeaconBlockHeader `json:"beacon"`
+}
+
 type LightClientBootstrapResponse struct {
 	Version string                `json:"version"`
 	Data    *LightClientBootstrap `json:"data"`
 }
 
 type LightClientBootstrap struct {
-	Header                     *BeaconBlockHeader `json:"header"`
+	Header                     *LightClientHeader `json:"header"`
 	CurrentSyncCommittee       *SyncCommittee     `json:"current_sync_committee"`
 	CurrentSyncCommitteeBranch []string           `json:"current_sync_committee_branch"`
 }
