@@ -66,11 +66,12 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		branch[i] = hexutil.Encode(proof)
 	}
 
-	header := &structs.LightClientHeader{
-		Beacon: structs.BeaconBlockHeaderFromConsensus(latestBlockHeader),
-	}
-	if header == nil {
+	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
+	if beacon == nil {
 		return nil, fmt.Errorf("could not get beacon block header")
+	}
+	header := &structs.LightClientHeader{
+		Beacon: beacon,
 	}
 
 	// Above shared util function won't calculate state root, so we need to do it manually
