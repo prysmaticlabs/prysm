@@ -491,7 +491,7 @@ func TestGetSpec(t *testing.T) {
 			case "MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT":
 				assert.Equal(t, "256000000000", v)
 			case "DATA_COLUMN_SIDECAR_SUBNET_COUNT":
-				assert.Equal(t, "32", v)
+				assert.Equal(t, "128", v)
 			case "MAX_REQUEST_DATA_COLUMN_SIDECARS":
 				assert.Equal(t, "16384", v)
 			case "MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA":
