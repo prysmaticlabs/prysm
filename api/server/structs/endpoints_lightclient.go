@@ -4,15 +4,49 @@ type LightClientHeader struct {
 	Beacon *BeaconBlockHeader `json:"beacon"`
 }
 
+type LightClientHeaderCapella struct {
+	Beacon          *BeaconBlockHeader             `json:"beacon"`
+	Execution       *ExecutionPayloadHeaderCapella `json:"execution"`
+	ExecutionBranch [][]byte                       `json:"execution_branch"`
+}
+
+type LightClientHeaderDeneb struct {
+	Beacon          *BeaconBlockHeader           `json:"beacon"`
+	Execution       *ExecutionPayloadHeaderDeneb `json:"execution"`
+	ExecutionBranch [][]byte                     `json:"execution_branch"`
+}
+
 type LightClientBootstrapResponse struct {
 	Version string                `json:"version"`
 	Data    *LightClientBootstrap `json:"data"`
+}
+
+type LightClientBootstrapResponseCapella struct {
+	Version string                       `json:"version"`
+	Data    *LightClientBootstrapCapella `json:"data"`
+}
+
+type LightClientBootstrapResponseDeneb struct {
+	Version string                     `json:"version"`
+	Data    *LightClientBootstrapDeneb `json:"data"`
 }
 
 type LightClientBootstrap struct {
 	Header                     *LightClientHeader `json:"header"`
 	CurrentSyncCommittee       *SyncCommittee     `json:"current_sync_committee"`
 	CurrentSyncCommitteeBranch []string           `json:"current_sync_committee_branch"`
+}
+
+type LightClientBootstrapCapella struct {
+	Header                     *LightClientHeaderCapella `json:"header"`
+	CurrentSyncCommittee       *SyncCommittee            `json:"current_sync_committee"`
+	CurrentSyncCommitteeBranch []string                  `json:"current_sync_committee_branch"`
+}
+
+type LightClientBootstrapDeneb struct {
+	Header                     *LightClientHeaderDeneb `json:"header"`
+	CurrentSyncCommittee       *SyncCommittee          `json:"current_sync_committee"`
+	CurrentSyncCommitteeBranch []string                `json:"current_sync_committee_branch"`
 }
 
 type LightClientUpdate struct {
