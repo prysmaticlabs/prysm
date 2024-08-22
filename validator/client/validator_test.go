@@ -1995,7 +1995,7 @@ func TestValidator_PushSettings(t *testing.T) {
 					return &v
 				},
 				logMessages: []string{"request failed"},
-				logDelay:    1 * time.Second,
+				logDelay:    5 * time.Second,
 			},
 		}
 		for _, tt := range tests {
@@ -2009,7 +2009,7 @@ func TestValidator_PushSettings(t *testing.T) {
 				if tt.feeRecipientMap != nil {
 					feeRecipients, err := v.buildPrepProposerReqs(pubkeys)
 					require.NoError(t, err)
-					signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
+					signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign, 0)
 					for _, recipient := range feeRecipients {
 						require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
 					}
@@ -2415,7 +2415,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
 	v.pubkeyToValidatorIndex[pubkey2] = primitives.ValidatorIndex(2)
 	v.pubkeyToValidatorIndex[pubkey3] = primitives.ValidatorIndex(3)
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
 
 	assert.Equal(t, 1, len(actual))
 	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
@@ -2500,7 +2500,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
 	v.pubkeyToValidatorIndex[pubkey2] = primitives.ValidatorIndex(2)
 	v.pubkeyToValidatorIndex[pubkey3] = primitives.ValidatorIndex(3)
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
 
 	assert.Equal(t, 2, len(actual))
 
@@ -2548,7 +2548,7 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 		return nil, errors.New("custom error")
 	}
 
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
 	assert.Equal(t, 0, len(actual))
 }
 
@@ -2604,7 +2604,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 		return signature, nil
 	}
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
 	assert.Equal(t, 0, len(actual))
 }
 

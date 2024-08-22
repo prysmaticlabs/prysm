@@ -1143,7 +1143,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}); err != nil {
 		return err
 	}
-	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
+	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign, slot)
 	if len(signedRegReqs) > 0 {
 		go func() {
 			if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
@@ -1294,6 +1294,7 @@ func (v *validator) buildSignedRegReqs(
 	ctx context.Context,
 	activePubkeys [][fieldparams.BLSPubkeyLength]byte,
 	signer iface.SigningFunc,
+	slot primitives.Slot,
 ) []*ethpb.SignedValidatorRegistrationV1 {
 	ctx, span := trace.StartSpan(ctx, "validator.buildSignedRegReqs")
 	defer span.End()
@@ -1359,7 +1360,7 @@ func (v *validator) buildSignedRegReqs(
 			Pubkey:       activePubkeys[i][:],
 		}
 
-		signedReq, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
+		signedReq, isCached, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"pubkey":       fmt.Sprintf("%#x", req.Pubkey),
@@ -1368,13 +1369,17 @@ func (v *validator) buildSignedRegReqs(
 			continue
 		}
 
-		signedValRegRegs = append(signedValRegRegs, signedReq)
-
 		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.WithFields(logrus.Fields{
 				"pubkey":       fmt.Sprintf("%#x", req.Pubkey),
 				"feeRecipient": feeRecipient,
 			}).Warn("Fee recipient is burn address")
+		}
+
+		if slots.IsEpochEnd(slot) { // if epoch start send all validator registrations
+			signedValRegRegs = append(signedValRegRegs, signedReq)
+		} else if !isCached { // if slot is not epoch start then only send new non cached values
+			signedValRegRegs = append(signedValRegRegs, signedReq)
 		}
 	}
 	return signedValRegRegs

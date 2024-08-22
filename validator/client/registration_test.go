@@ -272,7 +272,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 
 				startingReq, ok := v.signedValidatorRegistrations[bytesutil.ToBytes48(tt.arg.Pubkey)]
 
-				got, err := v.SignValidatorRegistrationRequest(ctx, m.signfunc, tt.arg)
+				got, _, err := v.SignValidatorRegistrationRequest(ctx, m.signfunc, tt.arg)
 				require.NoError(t, err)
 				if tt.isCached {
 					require.DeepEqual(t, got, v.signedValidatorRegistrations[bytesutil.ToBytes48(tt.arg.Pubkey)])

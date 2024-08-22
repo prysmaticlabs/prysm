@@ -214,7 +214,7 @@ func (_ *Validator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager
 }
 
 // SignValidatorRegistrationRequest for mocking
-func (_ *Validator) SignValidatorRegistrationRequest(_ context.Context, _ iface2.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+func (_ *Validator) SignValidatorRegistrationRequest(_ context.Context, _ iface2.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, bool, error) {
 	panic("implement me")
 }
 
