@@ -156,7 +156,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		if !exists {
 			// we want to allow validators to set up keys that haven't been added to the beaconstate validator list yet,
 			// so we should tolerate keys that do not seem to be valid by skipping past them.
-			log.Warnf("Skipping validator registration for pubkey=%#x - not in current validator set.", r.Message.Pubkey)
+			log.Debugf("Skipping validator registration for pubkey=%#x - not in current validator set.", r.Message.Pubkey)
 			continue
 		}
 		idxs = append(idxs, nx)
