@@ -276,7 +276,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Values related to electra
 	MaxRequestDataColumnSidecars:          16384,
-	DataColumnSidecarSubnetCount:          32,
+	DataColumnSidecarSubnetCount:          128,
 	MinPerEpochChurnLimitElectra:          128_000_000_000,
 	MaxPerEpochActivationExitChurnLimit:   256_000_000_000,
 	MaxEffectiveBalanceElectra:            2048_000_000_000,
@@ -292,6 +292,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxWithdrawalRequestsPerPayload:       16,
 	MaxDepositRequestsPerPayload:          8192, // 2**13 (= 8192)
 	UnsetDepositRequestsStartIndex:        math.MaxUint64,
+
+	// PeerDAS
+	NumberOfColumns:          128,
+	MaxCellsInExtendedMatrix: 768,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
@@ -310,10 +314,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AttestationSubnetPrefixBits:     6,
 	SubnetsPerNode:                  2,
 	NodeIdBits:                      256,
-
-	// PeerDAS
-	NumberOfColumns:          128,
-	MaxCellsInExtendedMatrix: 768,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
