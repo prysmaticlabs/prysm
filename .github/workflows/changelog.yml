@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: changelog modified
         id: changelog-modified
-        uses: tj-actions/changed-files@v42
+        uses: tj-actions/changed-files@v45
         with:
           files: CHANGELOG.md
 
