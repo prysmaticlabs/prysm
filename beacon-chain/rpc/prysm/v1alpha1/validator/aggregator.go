@@ -23,7 +23,7 @@ func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	indexInCommittee, validatorIndex, err := vs.aggregateSelection(ctx, req)
+	indexInCommittee, validatorIndex, err := vs.processAggregateSelection(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
-	indexInCommittee, validatorIndex, err := vs.aggregateSelection(ctx, req)
+	indexInCommittee, validatorIndex, err := vs.processAggregateSelection(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 	return &ethpb.AggregateSelectionElectraResponse{AggregateAndProof: attAndProof}, nil
 }
 
-func (vs *Server) aggregateSelection(ctx context.Context, req *ethpb.AggregateSelectionRequest) (uint64, primitives.ValidatorIndex, error) {
+func (vs *Server) processAggregateSelection(ctx context.Context, req *ethpb.AggregateSelectionRequest) (uint64, primitives.ValidatorIndex, error) {
 	if vs.SyncChecker.Syncing() {
 		return 0, 0, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
