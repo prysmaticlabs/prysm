@@ -1,8 +1,9 @@
 package lightclient
 
 import (
-	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"testing"
+
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"

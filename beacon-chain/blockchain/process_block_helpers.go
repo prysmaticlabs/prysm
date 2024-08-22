@@ -3,8 +3,9 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"time"
+
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"

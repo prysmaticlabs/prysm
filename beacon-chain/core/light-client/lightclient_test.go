@@ -1,12 +1,13 @@
 package light_client_test
 
 import (
+	"testing"
+
 	lightClient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
-	"testing"
 
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 )

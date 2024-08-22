@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	bolt "go.etcd.io/bbolt"

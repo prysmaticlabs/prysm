@@ -3,9 +3,10 @@ package lightclient
 import (
 	"context"
 	"fmt"
-	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"reflect"
 	"strconv"
+
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"

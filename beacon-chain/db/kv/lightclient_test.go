@@ -2,10 +2,11 @@ package kv
 
 import (
 	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"testing"
 )
 
 func TestStore_LightclientUpdate_CanSaveRetrieve(t *testing.T) {
