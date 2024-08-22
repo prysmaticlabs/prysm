@@ -24,6 +24,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
@@ -46,6 +47,7 @@ const (
 type TestP2P struct {
 	t               *testing.T
 	BHost           host.Host
+	UseNodeID       bool
 	pubsub          *pubsub.PubSub
 	joinedTopics    map[string]*pubsub.Topic
 	BroadcastCalled atomic.Bool
@@ -277,7 +279,14 @@ func (*TestP2P) ENR() *enr.Record {
 }
 
 // NodeID returns the node id of the local peer.
-func (*TestP2P) NodeID() enode.ID {
+func (p *TestP2P) NodeID() enode.ID {
+	if p.UseNodeID {
+		nodeID, err := p2p.ConvertPeerIDToNodeID(p.BHost.ID())
+		if err != nil {
+			p.t.Fatal(err)
+		}
+		return nodeID
+	}
 	return [32]byte{}
 }
 
