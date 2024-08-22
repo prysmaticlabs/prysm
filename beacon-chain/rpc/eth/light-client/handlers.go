@@ -46,18 +46,52 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	bootstrap, err := createLightClientBootstrap(ctx, state)
-	if err != nil {
-		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+	ver := blk.Version()
+	if ver >= version.Deneb {
+		bootstrap, err := createLightClientBootstrapDeneb(ctx, state)
+		if err != nil {
+			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		response := &structs.LightClientBootstrapResponseDeneb{
+			Version: version.String(blk.Version()),
+			Data:    bootstrap,
+		}
+
+		httputil.WriteJson(w, response)
 		return
 	}
 
-	response := &structs.LightClientBootstrapResponse{
-		Version: version.String(blk.Version()),
-		Data:    bootstrap,
+	if ver >= version.Capella {
+		bootstrap, err := createLightClientBootstrapCapella(ctx, state)
+		if err != nil {
+			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		response := &structs.LightClientBootstrapResponseCapella{
+			Version: version.String(blk.Version()),
+			Data:    bootstrap,
+		}
+		httputil.WriteJson(w, response)
+		return
 	}
 
-	httputil.WriteJson(w, response)
+	if ver >= version.Altair {
+		bootstrap, err := createLightClientBootstrap(ctx, state)
+		if err != nil {
+			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		response := &structs.LightClientBootstrapResponse{
+			Version: version.String(blk.Version()),
+			Data:    bootstrap,
+		}
+		httputil.WriteJson(w, response)
+		return
+	}
 }
 
 // GetLightClientUpdatesByRange - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/updates.yaml

@@ -92,6 +92,116 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	return result, nil
 }
 
+func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrapCapella, error) {
+	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
+	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
+		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
+	}
+
+	// assert state.slot == state.latest_block_header.slot
+	latestBlockHeader := state.LatestBlockHeader()
+	if state.Slot() != latestBlockHeader.Slot {
+		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
+	}
+
+	// Prepare data
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
+	}
+
+	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
+
+	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
+	}
+
+	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	for i, proof := range currentSyncCommitteeProof {
+		branch[i] = hexutil.Encode(proof)
+	}
+
+	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
+	if beacon == nil {
+		return nil, fmt.Errorf("could not get beacon block header")
+	}
+	header := &structs.LightClientHeaderCapella{
+		Beacon: beacon,
+	}
+
+	// Above shared util function won't calculate state root, so we need to do it manually
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get state root: %s", err.Error())
+	}
+	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
+
+	// Return result
+	result := &structs.LightClientBootstrapCapella{
+		Header:                     header,
+		CurrentSyncCommittee:       committee,
+		CurrentSyncCommitteeBranch: branch,
+	}
+
+	return result, nil
+}
+
+func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrapDeneb, error) {
+	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
+	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
+		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
+	}
+
+	// assert state.slot == state.latest_block_header.slot
+	latestBlockHeader := state.LatestBlockHeader()
+	if state.Slot() != latestBlockHeader.Slot {
+		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
+	}
+
+	// Prepare data
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
+	}
+
+	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
+
+	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
+	}
+
+	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	for i, proof := range currentSyncCommitteeProof {
+		branch[i] = hexutil.Encode(proof)
+	}
+
+	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
+	if beacon == nil {
+		return nil, fmt.Errorf("could not get beacon block header")
+	}
+	header := &structs.LightClientHeaderDeneb{
+		Beacon: beacon,
+	}
+
+	// Above shared util function won't calculate state root, so we need to do it manually
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get state root: %s", err.Error())
+	}
+	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
+
+	// Return result
+	result := &structs.LightClientBootstrapDeneb{
+		Header:                     header,
+		CurrentSyncCommittee:       committee,
+		CurrentSyncCommitteeBranch: branch,
+	}
+
+	return result, nil
+}
+
 // createLightClientUpdate - implements https://github.
 // com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
 // def create_light_client_update(state: BeaconState,
