@@ -8,9 +8,19 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Added
 
+- Aggregate and proof committee validation for Electra.
+- More tests for electra field generation.
+- Light client support: implement `ComputeFieldRootsForBlockBody`.
+- Light client support: Add light client database changes.
 
 ### Changed
 
+- `getLocalPayload` has been refactored to enable work in ePBS branch.
+- `TestNodeServer_GetPeer` and `TestNodeServer_ListPeers` test flakes resolved by iterating the whole peer list to find a match rather than taking the first peer in the map.
+- Passing spectests v1.5.0-alpha.4 and v1.5.0-alpha.5.
+- Beacon chain now asserts that the external builder block uses the expected gas limit.
+- Electra: Add electra objects to beacon API.
+- Electra: Updated block publishing beacon APIs to support Electra.
 
 ### Deprecated
 
@@ -20,6 +30,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Fixed
 
+- Fixed early release of read lock in BeaconState.getValidatorIndex.
+- Electra: resolve inconsistencies with validator committee index validation.
+- Electra: build blocks with blobs.
+- E2E: fixed gas limit at genesis
+- Light client support: use LightClientHeader instead of BeaconBlockHeader.
 
 ### Security
 
