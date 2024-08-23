@@ -92,9 +92,9 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	return result, nil
 }
 
-func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrapCapella, error) {
+func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState, block *structs.BlindedBeaconBlockCapella) (*structs.LightClientBootstrapCapella, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
-	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().CapellaForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
 	}
 
@@ -128,6 +128,23 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	}
 	header := &structs.LightClientHeaderCapella{
 		Beacon: beacon,
+		Execution: &structs.ExecutionPayloadHeaderCapella{
+			ParentHash:       block.Body.ExecutionPayloadHeader.ParentHash,
+			FeeRecipient:     block.Body.ExecutionPayloadHeader.FeeRecipient,
+			StateRoot:        block.Body.ExecutionPayloadHeader.StateRoot,
+			ReceiptsRoot:     block.Body.ExecutionPayloadHeader.ReceiptsRoot,
+			LogsBloom:        block.Body.ExecutionPayloadHeader.LogsBloom,
+			PrevRandao:       block.Body.ExecutionPayloadHeader.PrevRandao,
+			BlockNumber:      block.Body.ExecutionPayloadHeader.BlockNumber,
+			GasLimit:         block.Body.ExecutionPayloadHeader.GasLimit,
+			GasUsed:          block.Body.ExecutionPayloadHeader.GasUsed,
+			Timestamp:        block.Body.ExecutionPayloadHeader.Timestamp,
+			ExtraData:        block.Body.ExecutionPayloadHeader.ExtraData,
+			BaseFeePerGas:    block.Body.ExecutionPayloadHeader.BaseFeePerGas,
+			BlockHash:        block.Body.ExecutionPayloadHeader.BlockHash,
+			TransactionsRoot: block.Body.ExecutionPayloadHeader.TransactionsRoot,
+			WithdrawalsRoot:  block.Body.ExecutionPayloadHeader.WithdrawalsRoot,
+		},
 	}
 
 	// Above shared util function won't calculate state root, so we need to do it manually
@@ -149,7 +166,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 
 func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrapDeneb, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
-	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
+	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().DenebForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
 	}
 
@@ -183,6 +200,9 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	}
 	header := &structs.LightClientHeaderDeneb{
 		Beacon: beacon,
+		Execution: &structs.ExecutionPayloadHeaderDeneb{
+			ParentHash: hexutil.Encode(),
+		},
 	}
 
 	// Above shared util function won't calculate state root, so we need to do it manually
