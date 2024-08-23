@@ -424,15 +424,3 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk blocks.ROBlock) bool
 	}
 	return false
 }
-
-type emptyVerifier struct {
-}
-
-func (_ emptyVerifier) VerifiedRODataColumns(_ context.Context, _ blocks.ROBlock, cols []blocks.RODataColumn) ([]blocks.VerifiedRODataColumn, error) {
-	var verCols []blocks.VerifiedRODataColumn
-	for _, col := range cols {
-		vCol := blocks.NewVerifiedRODataColumn(col)
-		verCols = append(verCols, vCol)
-	}
-	return verCols, nil
-}
