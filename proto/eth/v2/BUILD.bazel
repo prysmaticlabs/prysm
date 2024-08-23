@@ -38,7 +38,6 @@ ssz_gen_marshal(
         "//proto/eth/v1:go_default_library",
     ],
     objs = [
-        "LightClientUpdateWithVersion",
         "LightClientUpdate",
         "BlsToExecutionChange",
         "SignedBeaconBlockAltair",
