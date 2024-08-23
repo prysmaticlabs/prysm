@@ -196,7 +196,7 @@ func setupDataColumnSamplerTest(t *testing.T, blobCount uint64) (*dataSamplerTes
 		kzgProofs:          kzgProofs,
 		dataColumnSidecars: dataColumnSidecars,
 	}
-	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil)
+	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil, nil)
 
 	return test, sampler
 }
