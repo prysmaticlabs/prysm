@@ -189,7 +189,7 @@ All PRs with user facing changes should have an entry in the CHANGELOG.md file a
 
 ### Releasing
 
-When a new release is made, the "Unreleased" section should be moved to a new section with the release version and the current date. Then a new "Unreleased" section is made at the top of the file with the six categories listed above.
+When a new release is made, the "Unreleased" section should be moved to a new section with the release version and the current date. Then a new "Unreleased" section is made at the top of the file with the categories listed above.
 
 ## Contributor Responsibilities
 
