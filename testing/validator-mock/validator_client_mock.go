@@ -196,7 +196,7 @@ func (mr *MockValidatorClientMockRecorder) GetPayloadAttestationData(arg0, arg1 
 // Host mocks base method.
 func (m *MockValidatorClient) Host() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HTTPHost")
+	ret := m.ctrl.Call(m, "Host")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
@@ -204,7 +204,7 @@ func (m *MockValidatorClient) Host() string {
 // Host indicates an expected call of Host.
 func (mr *MockValidatorClientMockRecorder) Host() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HTTPHost", reflect.TypeOf((*MockValidatorClient)(nil).Host))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Host", reflect.TypeOf((*MockValidatorClient)(nil).Host))
 }
 
 // MultipleValidatorStatus mocks base method.
