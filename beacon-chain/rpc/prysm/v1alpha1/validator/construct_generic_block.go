@@ -26,6 +26,8 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 	bidStr := primitives.WeiToBigInt(winningBid).String()
 
 	switch sBlk.Version() {
+	case version.EPBS:
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Epbs{Epbs: blockProto.(*ethpb.BeaconBlockEpbs)}}, nil
 	case version.Electra:
 		return vs.constructElectraBlock(blockProto, isBlinded, bidStr, blobsBundle), nil
 	case version.Deneb:
