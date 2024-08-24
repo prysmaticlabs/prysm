@@ -50,7 +50,6 @@ func E2ETestConfig() *BeaconChainConfig {
 
 	// Prysm constants.
 	e2eConfig.ConfigName = EndToEndName
-	e2eConfig.GenesisValidatorsRoot = [32]byte{75, 54, 61, 185, 78, 40, 97, 32, 215, 110, 185, 5, 52, 15, 221, 78, 84, 191, 233, 240, 107, 243, 63, 246, 207, 90, 210, 127, 81, 27, 254, 149}
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 253}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
