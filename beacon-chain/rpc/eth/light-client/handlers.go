@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -61,6 +62,8 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 			Version: version.String(blk.Version()),
 			Data:    bootstrap,
 		}
+		w.Header().Set(api.VersionHeader, version.String(version.Altair))
+
 		httputil.WriteJson(w, response)
 		return
 	case version.Bellatrix:
@@ -77,6 +80,8 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 			Version: version.String(blk.Version()),
 			Data:    bootstrap,
 		}
+		w.Header().Set(api.VersionHeader, version.String(version.Capella))
+
 		httputil.WriteJson(w, response)
 		return
 	case version.Deneb:
@@ -90,6 +95,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 			Version: version.String(blk.Version()),
 			Data:    bootstrap,
 		}
+		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
 
 		httputil.WriteJson(w, response)
 		return
