@@ -4,7 +4,7 @@ import (
 	"context"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	bolt "go.etcd.io/bbolt"
 )
 
