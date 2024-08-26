@@ -78,7 +78,7 @@ type BeaconChainConfig struct {
 	IntervalsPerSlotEPBS            uint64           `yaml:"INTERVALS_PER_SLOT_EPBS" spec:"true"`             // IntervalsPerSlotEPBS defines the number of fork choice intervals in a slot defined in the fork choice spec from EIP-7732.
 	PayloadWithholdBoost            uint64           `yaml:"PAYLOAD_WITHHOLD_BOOST" spec:"true"`              // PayloadWithholdBoost define a value that is the score boost given when a payload is withheld by the builder
 	PayloadRevealBoost              uint64           `yaml:"PAYLOAD_REVEAL_BOOST" spec:"true"`                // PayloadRevealBoost a value that is the score boost given when a payload is revealed by the builder
-	PayloadTimelyThreshold          uint64           `yaml:"PAYLOAD_REVEAL_BOOST" spec:"true"`                // PayloadTimelyThreshold is the threshold for considering a payload timely.
+	PayloadTimelyThreshold          uint64           `yaml:"PAYLOAD_TIMELY_THRESHOLD" spec:"true"`            // PayloadTimelyThreshold is the threshold for considering a payload timely.
 
 	// Ethereum PoW parameters.
 	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID" spec:"true"`         // DepositChainID of the eth1 network. This used for replay protection.
