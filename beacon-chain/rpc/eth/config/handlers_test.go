@@ -196,7 +196,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 157, len(data))
+	assert.Equal(t, 158, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -533,6 +533,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "92", v)
 			case "MAX_DEPOSIT_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "93", v)
+			case "MIN_BUILDER_BALANCE":
+				assert.Equal(t, "0", v)
 			default:
 				for _, pf := range placeholderFields {
 					if k == pf {
