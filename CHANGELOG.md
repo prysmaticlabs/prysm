@@ -21,6 +21,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Beacon chain now asserts that the external builder block uses the expected gas limit.
 - Electra: Add electra objects to beacon API.
 - Electra: Updated block publishing beacon APIs to support Electra.
+- "Submitted builder validator registration settings for custom builders" log message moved to debug level.
 
 ### Deprecated
 
