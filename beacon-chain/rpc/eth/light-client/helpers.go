@@ -3,11 +3,13 @@ package lightclient
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
+
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -65,9 +67,12 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		branch[i] = hexutil.Encode(proof)
 	}
 
-	header := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-	if header == nil {
+	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
+	if beacon == nil {
 		return nil, fmt.Errorf("could not get beacon block header")
+	}
+	header := &structs.LightClientHeader{
+		Beacon: beacon,
 	}
 
 	// Above shared util function won't calculate state root, so we need to do it manually
@@ -75,7 +80,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not get state root: %s", err.Error())
 	}
-	header.StateRoot = hexutil.Encode(stateRoot[:])
+	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
 	// Return result
 	result := &structs.LightClientBootstrap{
@@ -151,7 +156,7 @@ func createLightClientUpdate(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +214,7 @@ func newLightClientFinalityUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +227,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
+	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +240,7 @@ func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap
 
 	var err error
 
-	v1Alpha1Header, err := bootstrapJSON.Header.ToConsensus()
+	v1Alpha1Header, err := bootstrapJSON.Header.Beacon.ToConsensus()
 	if err != nil {
 		return nil, err
 	}
@@ -310,4 +315,65 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 		SyncAggregate:           syncAggregateToJSON(input.SyncAggregate),
 		SignatureSlot:           strconv.FormatUint(uint64(input.SignatureSlot), 10),
 	}
+}
+
+func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
+	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
+	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
+}
+
+func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
+	finalityBranch := make([][]byte, lightclient.FinalityBranchNumOfLeaves)
+	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
+}
+
+func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
+	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
+	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
+	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2
+	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
+
+	if newHasSupermajority != oldHasSupermajority {
+		return newHasSupermajority
+	}
+	if !newHasSupermajority && newNumActiveParticipants != oldNumActiveParticipants {
+		return newNumActiveParticipants > oldNumActiveParticipants
+	}
+
+	// Compare presence of relevant sync committee
+	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
+	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
+
+	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
+		return newHasRelevantSyncCommittee
+	}
+
+	// Compare indication of any finality
+	newHasFinality := IsFinalityUpdate(newUpdate)
+	oldHasFinality := IsFinalityUpdate(oldUpdate)
+	if newHasFinality != oldHasFinality {
+		return newHasFinality
+	}
+
+	// Compare sync committee finality
+	if newHasFinality {
+		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot))
+		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot))
+
+		if newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality {
+			return newHasSyncCommitteeFinality
+		}
+	}
+
+	// Tiebreaker 1: Sync committee participation beyond supermajority
+	if newNumActiveParticipants != oldNumActiveParticipants {
+		return newNumActiveParticipants > oldNumActiveParticipants
+	}
+
+	// Tiebreaker 2: Prefer older data (fewer changes to best)
+	if newUpdate.AttestedHeader.Slot != oldUpdate.AttestedHeader.Slot {
+		return newUpdate.AttestedHeader.Slot < oldUpdate.AttestedHeader.Slot
+	}
+	return newUpdate.SignatureSlot < oldUpdate.SignatureSlot
 }

@@ -1,22 +1,24 @@
-package blockchain
+package light_client
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+
+	"context"
+
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 const (
-	finalityBranchNumOfLeaves = 6
+	FinalityBranchNumOfLeaves = 6
 )
 
 // CreateLightClientFinalityUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
@@ -215,8 +217,8 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			BodyRoot:      make([]byte, 32),
 		}
 
-		finalityBranch = make([][]byte, finalityBranchNumOfLeaves)
-		for i := 0; i < finalityBranchNumOfLeaves; i++ {
+		finalityBranch = make([][]byte, FinalityBranchNumOfLeaves)
+		for i := 0; i < FinalityBranchNumOfLeaves; i++ {
 			finalityBranch[i] = make([]byte, 32)
 		}
 	}

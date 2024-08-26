@@ -22,13 +22,6 @@ func (s *Service) GetProposerHead() [32]byte {
 	return s.cfg.ForkChoiceStore.GetProposerHead()
 }
 
-// ShouldOverrideFCU returns the corresponding value from forkchoice
-func (s *Service) ShouldOverrideFCU() bool {
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.ShouldOverrideFCU()
-}
-
 // SetForkChoiceGenesisTime sets the genesis time in Forkchoice
 func (s *Service) SetForkChoiceGenesisTime(timestamp uint64) {
 	s.cfg.ForkChoiceStore.Lock()
@@ -98,4 +91,11 @@ func (s *Service) FinalizedBlockHash() [32]byte {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.FinalizedPayloadBlockHash()
+}
+
+// ParentRoot wraps a call to the corresponding method in forkchoice
+func (s *Service) ParentRoot(root [32]byte) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ParentRoot(root)
 }

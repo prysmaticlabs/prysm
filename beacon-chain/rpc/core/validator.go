@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	beaconState "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -211,6 +212,131 @@ func (s *Service) ComputeValidatorPerformance(
 	}, nil
 }
 
+// IndividualVotes retrieves individual voting status of validators.
+func (s *Service) IndividualVotes(
+	ctx context.Context,
+	req *ethpb.IndividualVotesRequest,
+) (*ethpb.IndividualVotesRespond, *RpcError) {
+	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
+	if req.Epoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    fmt.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d\n", currentEpoch, req.Epoch),
+			Reason: BadRequest,
+		}
+	}
+
+	slot, err := slots.EpochEnd(req.Epoch)
+	if err != nil {
+		return nil, &RpcError{Err: err, Reason: Internal}
+	}
+	st, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "failed to replay blocks for state at epoch %d", req.Epoch),
+			Reason: Internal,
+		}
+	}
+	// Track filtered validators to prevent duplication in the response.
+	filtered := map[primitives.ValidatorIndex]bool{}
+	filteredIndices := make([]primitives.ValidatorIndex, 0)
+	votes := make([]*ethpb.IndividualVotesRespond_IndividualVote, 0, len(req.Indices)+len(req.PublicKeys))
+	// Filter out assignments by public keys.
+	for _, pubKey := range req.PublicKeys {
+		index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+		if !ok {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{PublicKey: pubKey, ValidatorIndex: primitives.ValidatorIndex(^uint64(0))})
+			continue
+		}
+		filtered[index] = true
+		filteredIndices = append(filteredIndices, index)
+	}
+	// Filter out assignments by validator indices.
+	for _, index := range req.Indices {
+		if !filtered[index] {
+			filteredIndices = append(filteredIndices, index)
+		}
+	}
+	sort.Slice(filteredIndices, func(i, j int) bool {
+		return filteredIndices[i] < filteredIndices[j]
+	})
+
+	var v []*precompute.Validator
+	var bal *precompute.Balance
+	if st.Version() == version.Phase0 {
+		v, bal, err = precompute.New(ctx, st)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not set up pre compute instance"),
+				Reason: Internal,
+			}
+		}
+		v, _, err = precompute.ProcessAttestations(ctx, st, v, bal)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
+				Reason: Internal,
+			}
+		}
+	} else if st.Version() >= version.Altair {
+		v, bal, err = altair.InitializePrecomputeValidators(ctx, st)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not set up altair pre compute instance"),
+				Reason: Internal,
+			}
+		}
+		v, _, err = altair.ProcessEpochParticipation(ctx, st, bal, v)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not pre compute attestations"),
+				Reason: Internal,
+			}
+		}
+	} else {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "invalid state type retrieved with a version of %d", st.Version()),
+			Reason: Internal,
+		}
+	}
+
+	for _, index := range filteredIndices {
+		if uint64(index) >= uint64(len(v)) {
+			votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{ValidatorIndex: index})
+			continue
+		}
+		val, err := st.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			return nil, &RpcError{
+				Err:    errors.Wrapf(err, "could not retrieve validator"),
+				Reason: Internal,
+			}
+		}
+		pb := val.PublicKey()
+		votes = append(votes, &ethpb.IndividualVotesRespond_IndividualVote{
+			Epoch:                            req.Epoch,
+			PublicKey:                        pb[:],
+			ValidatorIndex:                   index,
+			IsSlashed:                        v[index].IsSlashed,
+			IsWithdrawableInCurrentEpoch:     v[index].IsWithdrawableCurrentEpoch,
+			IsActiveInCurrentEpoch:           v[index].IsActiveCurrentEpoch,
+			IsActiveInPreviousEpoch:          v[index].IsActivePrevEpoch,
+			IsCurrentEpochAttester:           v[index].IsCurrentEpochAttester,
+			IsCurrentEpochTargetAttester:     v[index].IsCurrentEpochTargetAttester,
+			IsPreviousEpochAttester:          v[index].IsPrevEpochAttester,
+			IsPreviousEpochTargetAttester:    v[index].IsPrevEpochTargetAttester,
+			IsPreviousEpochHeadAttester:      v[index].IsPrevEpochHeadAttester,
+			CurrentEpochEffectiveBalanceGwei: v[index].CurrentEpochEffectiveBalance,
+			InclusionSlot:                    v[index].InclusionSlot,
+			InclusionDistance:                v[index].InclusionDistance,
+			InactivityScore:                  v[index].InactivityScore,
+		})
+	}
+
+	return &ethpb.IndividualVotesRespond{
+		IndividualVotes: votes,
+	}, nil
+}
+
 // SubmitSignedContributionAndProof is called by a sync committee aggregator
 // to submit signed contribution and proof object.
 func (s *Service) SubmitSignedContributionAndProof(
@@ -368,13 +494,18 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
+	committeeIndex := primitives.CommitteeIndex(0)
+	if slots.ToEpoch(req.Slot) < params.BeaconConfig().ElectraForkEpoch {
+		committeeIndex = req.CommitteeIndex
+	}
+
 	s.AttestationCache.RLock()
 	res := s.AttestationCache.Get()
 	if res != nil && res.Slot == req.Slot {
 		s.AttestationCache.RUnlock()
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  req.CommitteeIndex,
+			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -398,7 +529,7 @@ func (s *Service) GetAttestationData(
 	if res != nil && res.Slot == req.Slot {
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  req.CommitteeIndex,
+			CommitteeIndex:  committeeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -458,7 +589,7 @@ func (s *Service) GetAttestationData(
 
 	return &ethpb.AttestationData{
 		Slot:            req.Slot,
-		CommitteeIndex:  req.CommitteeIndex,
+		CommitteeIndex:  committeeIndex,
 		BeaconBlockRoot: headRoot,
 		Source: &ethpb.Checkpoint{
 			Epoch: justifiedCheckpoint.Epoch,
@@ -621,4 +752,178 @@ func subnetsFromCommittee(pubkey []byte, comm *ethpb.SyncCommittee) []uint64 {
 		}
 	}
 	return positions
+}
+
+// ValidatorParticipation retrieves the validator participation information for a given epoch,
+// it returns the information about validator's participation rate in voting on the proof of stake
+// rules based on their balance compared to the total active validator balance.
+func (s *Service) ValidatorParticipation(
+	ctx context.Context,
+	requestedEpoch primitives.Epoch,
+) (
+	*ethpb.ValidatorParticipationResponse,
+	*RpcError,
+) {
+	currentSlot := s.GenesisTimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	if requestedEpoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    fmt.Errorf("cannot retrieve information about an epoch greater than current epoch, current epoch %d, requesting %d", currentEpoch, requestedEpoch),
+			Reason: BadRequest,
+		}
+	}
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
+	endSlot, err := slots.EpochEnd(requestedEpoch)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get slot from requested epoch")}
+	}
+	// Get as close as we can to the end of the current epoch without going past the current slot.
+	// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
+	// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
+	// Replayer will make sure the slot ultimately used is canonical.
+	if endSlot > currentSlot {
+		endSlot = currentSlot
+	}
+
+	// ReplayerBuilder ensures that a canonical chain is followed to the slot
+	beaconSt, err := s.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrapf(err, "error replaying blocks for state at slot %d", endSlot)}
+	}
+	var v []*precompute.Validator
+	var b *precompute.Balance
+
+	if beaconSt.Version() == version.Phase0 {
+		v, b, err = precompute.New(ctx, beaconSt)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not set up pre compute instance")}
+		}
+		_, b, err = precompute.ProcessAttestations(ctx, beaconSt, v, b)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations")}
+		}
+	} else if beaconSt.Version() >= version.Altair {
+		v, b, err = altair.InitializePrecomputeValidators(ctx, beaconSt)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not set up altair pre compute instance")}
+		}
+		_, b, err = altair.ProcessEpochParticipation(ctx, beaconSt, b, v)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not pre compute attestations: %v")}
+		}
+	} else {
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("invalid state type retrieved with a version of %s", version.String(beaconSt.Version()))}
+	}
+
+	cp := s.FinalizedFetcher.FinalizedCheckpt()
+	p := &ethpb.ValidatorParticipationResponse{
+		Epoch:     requestedEpoch,
+		Finalized: requestedEpoch <= cp.Epoch,
+		Participation: &ethpb.ValidatorParticipation{
+			// TODO(7130): Remove these three deprecated fields.
+			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
+			VotedEther:                       b.PrevEpochTargetAttested,
+			EligibleEther:                    b.ActivePrevEpoch,
+			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
+			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
+			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
+			PreviousEpochActiveGwei:          b.ActivePrevEpoch,
+			PreviousEpochAttestingGwei:       b.PrevEpochAttested,
+			PreviousEpochTargetAttestingGwei: b.PrevEpochTargetAttested,
+			PreviousEpochHeadAttestingGwei:   b.PrevEpochHeadAttested,
+		},
+	}
+	return p, nil
+}
+
+// ValidatorActiveSetChanges retrieves the active set changes for a given epoch.
+//
+// This data includes any activations, voluntary exits, and involuntary
+// ejections.
+func (s *Service) ValidatorActiveSetChanges(
+	ctx context.Context,
+	requestedEpoch primitives.Epoch,
+) (
+	*ethpb.ActiveSetChanges,
+	*RpcError,
+) {
+	currentEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
+	if requestedEpoch > currentEpoch {
+		return nil, &RpcError{
+			Err:    errors.Errorf("cannot retrieve information about an epoch in the future, current epoch %d, requesting %d", currentEpoch, requestedEpoch),
+			Reason: BadRequest,
+		}
+	}
+
+	slot, err := slots.EpochStart(requestedEpoch)
+	if err != nil {
+		return nil, &RpcError{Err: err, Reason: BadRequest}
+	}
+	requestedState, err := s.ReplayerBuilder.ReplayerForSlot(slot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrapf(err, "error replaying blocks for state at slot %d", slot),
+			Reason: Internal,
+		}
+	}
+
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, requestedState, coreTime.CurrentEpoch(requestedState))
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrap(err, "could not get active validator count"),
+			Reason: Internal,
+		}
+	}
+	vs := requestedState.Validators()
+	activatedIndices := validators.ActivatedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
+	exitedIndices, err := validators.ExitedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrap(err, "could not determine exited validator indices"),
+			Reason: Internal,
+		}
+	}
+	slashedIndices := validators.SlashedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
+	ejectedIndices, err := validators.EjectedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs, activeValidatorCount)
+	if err != nil {
+		return nil, &RpcError{
+			Err:    errors.Wrap(err, "could not determine ejected validator indices"),
+			Reason: Internal,
+		}
+	}
+
+	// Retrieve public keys for the indices.
+	activatedKeys := make([][]byte, len(activatedIndices))
+	exitedKeys := make([][]byte, len(exitedIndices))
+	slashedKeys := make([][]byte, len(slashedIndices))
+	ejectedKeys := make([][]byte, len(ejectedIndices))
+	for i, idx := range activatedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		activatedKeys[i] = pubkey[:]
+	}
+	for i, idx := range exitedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		exitedKeys[i] = pubkey[:]
+	}
+	for i, idx := range slashedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		slashedKeys[i] = pubkey[:]
+	}
+	for i, idx := range ejectedIndices {
+		pubkey := requestedState.PubkeyAtIndex(idx)
+		ejectedKeys[i] = pubkey[:]
+	}
+	return &ethpb.ActiveSetChanges{
+		Epoch:               requestedEpoch,
+		ActivatedPublicKeys: activatedKeys,
+		ActivatedIndices:    activatedIndices,
+		ExitedPublicKeys:    exitedKeys,
+		ExitedIndices:       exitedIndices,
+		SlashedPublicKeys:   slashedKeys,
+		SlashedIndices:      slashedIndices,
+		EjectedPublicKeys:   ejectedKeys,
+		EjectedIndices:      ejectedIndices,
+	}, nil
 }

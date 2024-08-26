@@ -52,7 +52,7 @@ func SubmitValidatorRegistrations(
 	}
 
 	if lastErr == nil {
-		log.Infoln("Submitted builder validator registration settings for custom builders")
+		log.Debugln("Submitted builder validator registration settings for custom builders")
 	} else {
 		log.WithError(lastErr).Warn("Could not submit all signed registrations to beacon node")
 	}

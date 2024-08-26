@@ -48,6 +48,7 @@ type Flags struct {
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
+	EnableCommitteeAwarePacking         bool // EnableCommitteeAwarePacking TODO
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 	EnableFullSSZDataLogging  bool // Enables logging for full ssz data on rejected gossip messages
@@ -74,9 +75,8 @@ type Flags struct {
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
 	BlobSaveFsync bool
 
-	SaveInvalidBlock           bool // SaveInvalidBlock saves invalid block to temp.
-	SaveInvalidBlob            bool // SaveInvalidBlob saves invalid blob to temp.
-	EIP6110ValidatorIndexCache bool // EIP6110ValidatorIndexCache specifies whether to use the new validator index cache.
+	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
+	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -255,10 +255,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
 	}
-
-	if ctx.IsSet(eip6110ValidatorCache.Name) {
-		logEnabled(eip6110ValidatorCache)
-		cfg.EIP6110ValidatorIndexCache = true
+	if ctx.IsSet(EnableCommitteeAwarePacking.Name) {
+		logEnabled(EnableCommitteeAwarePacking)
+		cfg.EnableCommitteeAwarePacking = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}

@@ -248,7 +248,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 
 	// constants
 	ffe := params.BeaconConfig().FarFutureEpoch
-	curEpoch := slots.ToEpoch(st.Slot())
+	nextEpoch := slots.ToEpoch(st.Slot()) + 1
 
 	for _, balanceDeposit := range deposits {
 		v, err := st.ValidatorAtIndexReadOnly(balanceDeposit.Index)
@@ -259,7 +259,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 		// If the validator is currently exiting, postpone the deposit until after the withdrawable
 		// epoch.
 		if v.ExitEpoch() < ffe {
-			if curEpoch <= v.WithdrawableEpoch() {
+			if nextEpoch <= v.WithdrawableEpoch() {
 				depositsToPostpone = append(depositsToPostpone, balanceDeposit)
 			} else {
 				// The deposited balance will never become active. Therefore, we increase the balance but do
@@ -308,7 +308,6 @@ func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, 
 	defer span.End()
 
 	if len(requests) == 0 {
-		log.Debug("ProcessDepositRequests: no deposit requests found")
 		return beaconState, nil
 	}
 

@@ -193,12 +193,12 @@ func verifyExitConditions(st state.ReadOnlyBeaconState, validator state.ReadOnly
 
 	if st.Version() >= version.Electra {
 		// Only exit validator if it has no pending withdrawals in the queue.
-		pbw, err := st.PendingBalanceToWithdraw(exit.ValidatorIndex)
+		ok, err := st.HasPendingBalanceToWithdraw(exit.ValidatorIndex)
 		if err != nil {
 			return fmt.Errorf("unable to retrieve pending balance to withdraw for validator %d: %w", exit.ValidatorIndex, err)
 		}
-		if pbw != 0 {
-			return fmt.Errorf("validator %d must have no pending balance to withdraw, got %d pending balance to withdraw", exit.ValidatorIndex, pbw)
+		if ok {
+			return fmt.Errorf("validator %d must have no pending balance to withdraw", exit.ValidatorIndex)
 		}
 	}
 

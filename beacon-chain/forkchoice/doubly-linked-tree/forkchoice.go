@@ -676,3 +676,18 @@ func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) (
 	}
 	return f.TargetRootForEpoch(targetNode.root, epoch)
 }
+
+// ParentRoot returns the block root of the parent node if it is in forkchoice.
+// The exception is for the finalized checkpoint root which we return the zero
+// hash.
+func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return [32]byte{}, ErrNilNode
+	}
+	// Return the zero hash for the tree root
+	if n.parent == nil {
+		return [32]byte{}, nil
+	}
+	return n.parent.root, nil
+}

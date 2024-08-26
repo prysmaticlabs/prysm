@@ -116,9 +116,11 @@ func (s *Server) getBlockV2Ssz(w http.ResponseWriter, blk interfaces.ReadOnlySig
 	result, err := s.getBlockResponseBodySsz(blk)
 	if err != nil {
 		httputil.HandleError(w, "Could not get signed beacon block: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if result == nil {
 		httputil.HandleError(w, fmt.Sprintf("Unknown block type %T", blk), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set(api.VersionHeader, version.String(blk.Version()))
 	httputil.WriteSsz(w, result, "beacon_block.ssz")
@@ -149,6 +151,11 @@ func (s *Server) getBlockV2Json(ctx context.Context, w http.ResponseWriter, blk 
 	result, err := s.getBlockResponseBodyJson(ctx, blk)
 	if err != nil {
 		httputil.HandleError(w, "Error processing request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if result == nil {
+		httputil.HandleError(w, fmt.Sprintf("Unknown block type %T", blk), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Set(api.VersionHeader, result.Version)
 	httputil.WriteJson(w, result)
@@ -279,7 +286,7 @@ func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
@@ -288,6 +295,29 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionRequired && versionHeader == "" {
 		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+	}
+
+	electraBlock := &eth.SignedBlindedBeaconBlockElectra{}
+	if err = electraBlock.UnmarshalSSZ(body); err == nil {
+		genericBlock := &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_BlindedElectra{
+				BlindedElectra: electraBlock,
+			},
+		}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.proposeBlock(ctx, w, genericBlock)
+		return
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
+		return
 	}
 
 	denebBlock := &eth.SignedBlindedBeaconBlockDeneb{}
@@ -408,7 +438,7 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 	httputil.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -420,6 +450,27 @@ func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter,
 	}
 
 	var consensusBlock *eth.GenericSignedBeaconBlock
+
+	var electraBlock *structs.SignedBlindedBeaconBlockElectra
+	if err = unmarshalStrict(body, &electraBlock); err == nil {
+		consensusBlock, err = electraBlock.ToGeneric()
+		if err == nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			s.proposeBlock(ctx, w, consensusBlock)
+			return
+		}
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
+		return
+	}
 
 	var denebBlock *structs.SignedBlindedBeaconBlockDeneb
 	if err = unmarshalStrict(body, &denebBlock); err == nil {
@@ -572,7 +623,7 @@ func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -581,6 +632,39 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionRequired && versionHeader == "" {
 		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+		return
+	}
+
+	electraBlock := &eth.SignedBeaconBlockContentsElectra{}
+	if err = electraBlock.UnmarshalSSZ(body); err == nil {
+		genericBlock := &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Electra{
+				Electra: electraBlock,
+			},
+		}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			if errors.Is(err, errEquivocatedBlock) {
+				b, err := blocks.NewSignedBeaconBlock(genericBlock)
+				if err != nil {
+					httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				if err := s.broadcastSeenBlockSidecars(ctx, b, genericBlock.GetElectra().Blobs, genericBlock.GetElectra().KzgProofs); err != nil {
+					log.WithError(err).Error("Failed to broadcast blob sidecars")
+				}
+			}
+			httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.proposeBlock(ctx, w, genericBlock)
+		return
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -712,7 +796,7 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 	httputil.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -725,6 +809,37 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 	}
 
 	var consensusBlock *eth.GenericSignedBeaconBlock
+
+	var electraBlockContents *structs.SignedBeaconBlockContentsElectra
+	if err = unmarshalStrict(body, &electraBlockContents); err == nil {
+		consensusBlock, err = electraBlockContents.ToGeneric()
+		if err == nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				if errors.Is(err, errEquivocatedBlock) {
+					b, err := blocks.NewSignedBeaconBlock(consensusBlock)
+					if err != nil {
+						httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					if err := s.broadcastSeenBlockSidecars(ctx, b, consensusBlock.GetElectra().Blobs, consensusBlock.GetElectra().KzgProofs); err != nil {
+						log.WithError(err).Error("Failed to broadcast blob sidecars")
+					}
+				}
+				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			s.proposeBlock(ctx, w, consensusBlock)
+			return
+		}
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
+		return
+	}
 
 	var denebBlockContents *structs.SignedBeaconBlockContentsDeneb
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {

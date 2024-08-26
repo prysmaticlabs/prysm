@@ -83,8 +83,8 @@ func AggregatePair(a1, a2 *ethpb.Attestation) (*ethpb.Attestation, error) {
 		return nil, aggregation.ErrBitsOverlap
 	}
 
-	baseAtt := ethpb.CopyAttestation(a1)
-	newAtt := ethpb.CopyAttestation(a2)
+	baseAtt := a1.Copy()
+	newAtt := a2.Copy()
 	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {
 		baseAtt, newAtt = newAtt, baseAtt
 	}

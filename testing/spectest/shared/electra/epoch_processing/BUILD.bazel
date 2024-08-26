@@ -18,6 +18,7 @@ go_library(
         "rewards_and_penalties.go",
         "slashings.go",
         "slashings_reset.go",
+        "sync_committee_updates.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/testing/spectest/shared/electra/epoch_processing",
     visibility = ["//visibility:public"],

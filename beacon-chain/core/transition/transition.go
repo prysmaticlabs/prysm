@@ -29,6 +29,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
+type customProcessingFn func(context.Context, state.BeaconState) error
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Note: This method differs from the spec pseudocode as it uses a batch signature verification.
@@ -173,18 +175,7 @@ func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, target
 	return state, nil
 }
 
-// ProcessSlots process through skip slots and apply epoch transition when it's needed
-//
-// Spec pseudocode definition:
-//
-//	def process_slots(state: BeaconState, slot: Slot) -> None:
-//	  assert state.slot < slot
-//	  while state.slot < slot:
-//	      process_slot(state)
-//	      # Process epoch on the start slot of the next epoch
-//	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-//	          process_epoch(state)
-//	      state.slot = Slot(state.slot + 1)
+// ProcessSlots includes core slot processing as well as a cache
 func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
@@ -231,42 +222,63 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 	defer func() {
 		SkipSlotCache.MarkNotInProgress(key)
 	}()
+	state, err = ProcessSlotsCore(ctx, span, state, slot, cacheBestBeaconStateOnErrFn(highestSlot, key))
+	if err != nil {
+		return nil, err
+	}
+	if highestSlot < state.Slot() {
+		SkipSlotCache.Put(ctx, key, state)
+	}
 
-	for state.Slot() < slot {
+	return state, nil
+}
+
+func cacheBestBeaconStateOnErrFn(highestSlot primitives.Slot, key [32]byte) customProcessingFn {
+	return func(ctx context.Context, state state.BeaconState) error {
 		if ctx.Err() != nil {
-			tracing.AnnotateError(span, ctx.Err())
 			// Cache last best value.
 			if highestSlot < state.Slot() {
-				if SkipSlotCache.Put(ctx, key, state); err != nil {
-					log.WithError(err).Error("Failed to put skip slot cache value")
-				}
+				SkipSlotCache.Put(ctx, key, state)
 			}
-			return nil, ctx.Err()
+			return ctx.Err()
+		}
+		return nil
+	}
+}
+
+// ProcessSlotsCore process through skip slots and apply epoch transition when it's needed
+//
+// Spec pseudocode definition:
+//
+//	def process_slots(state: BeaconState, slot: Slot) -> None:
+//	  assert state.slot < slot
+//	  while state.slot < slot:
+//	      process_slot(state)
+//	      # Process epoch on the start slot of the next epoch
+//	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
+//	          process_epoch(state)
+//	      state.slot = Slot(state.slot + 1)
+func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconState, slot primitives.Slot, fn customProcessingFn) (state.BeaconState, error) {
+	var err error
+	for state.Slot() < slot {
+		if fn != nil {
+			if err = fn(ctx, state); err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
 		}
 		state, err = ProcessSlot(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
 		}
-		if time.CanProcessEpoch(state) {
-			if state.Version() == version.Phase0 {
-				state, err = ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else if state.Version() <= version.Deneb {
-				if err = altair.ProcessEpoch(ctx, state); err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
-				}
-			} else {
-				if err = electra.ProcessEpoch(ctx, state); err != nil {
-					tracing.AnnotateError(span, err)
-					return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
-				}
-			}
+
+		state, err = ProcessEpoch(ctx, state)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
 		}
+
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "failed to increment state slot")
@@ -278,25 +290,46 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.
 			return nil, errors.Wrap(err, "failed to upgrade state")
 		}
 	}
-
-	if highestSlot < state.Slot() {
-		SkipSlotCache.Put(ctx, key, state)
-	}
-
 	return state, nil
+}
+
+// ProcessEpoch is a wrapper on fork specific epoch processing
+func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+	var err error
+	if time.CanProcessEpoch(state) {
+		if state.Version() == version.Electra {
+			if err = electra.ProcessEpoch(ctx, state); err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+			}
+		} else if state.Version() >= version.Altair {
+			if err = altair.ProcessEpoch(ctx, state); err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+			}
+		} else {
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			}
+		}
+	}
+	return state, err
 }
 
 // UpgradeState upgrades the state to the next version if possible.
 func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.UpgradeState")
 	defer span.End()
+
 	var err error
+	upgraded := false
+
 	if time.CanUpgradeToAltair(state.Slot()) {
 		state, err = altair.UpgradeToAltair(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToBellatrix(state.Slot()) {
@@ -305,6 +338,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToCapella(state.Slot()) {
@@ -313,6 +347,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToDeneb(state.Slot()) {
@@ -321,6 +356,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
 
 	if time.CanUpgradeToElectra(state.Slot()) {
@@ -329,7 +365,13 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 			tracing.AnnotateError(span, err)
 			return nil, err
 		}
+		upgraded = true
 	}
+
+	if upgraded {
+		log.Debugf("upgraded state to %s", version.String(state.Version()))
+	}
+
 	return state, nil
 }
 

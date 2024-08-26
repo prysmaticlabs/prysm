@@ -32,14 +32,15 @@ var placeholderFields = []string{
 	"EIP7002_FORK_VERSION",
 	"EIP7594_FORK_EPOCH",
 	"EIP7594_FORK_VERSION",
+	"EIP7732_FORK_EPOCH",
+	"EIP7732_FORK_VERSION",
 	"FIELD_ELEMENTS_PER_BLOB",              // Compile time constant.
 	"KZG_COMMITMENT_INCLUSION_PROOF_DEPTH", // Compile time constant on BlobSidecar.commitment_inclusion_proof.
 	"MAX_BLOBS_PER_BLOCK",
-	"MAX_BLOB_COMMITMENTS_PER_BLOCK",   // Compile time constant on BeaconBlockBodyDeneb.blob_kzg_commitments.
-	"MAX_BYTES_PER_TRANSACTION",        // Used for ssz of EL transactions. Unused in Prysm.
-	"MAX_DEPOSIT_RECEIPTS_PER_PAYLOAD", // Compile time constant on ExecutionPayload.deposit_receipts. TODO: rename when updating spec configs
-	"MAX_EXTRA_DATA_BYTES",             // Compile time constant on ExecutionPayload.extra_data.
-	"MAX_TRANSACTIONS_PER_PAYLOAD",     // Compile time constant on ExecutionPayload.transactions.
+	"MAX_BLOB_COMMITMENTS_PER_BLOCK", // Compile time constant on BeaconBlockBodyDeneb.blob_kzg_commitments.
+	"MAX_BYTES_PER_TRANSACTION",      // Used for ssz of EL transactions. Unused in Prysm.
+	"MAX_EXTRA_DATA_BYTES",           // Compile time constant on ExecutionPayload.extra_data.
+	"MAX_TRANSACTIONS_PER_PAYLOAD",   // Compile time constant on ExecutionPayload.transactions.
 	"REORG_HEAD_WEIGHT_THRESHOLD",
 	"SAMPLES_PER_SLOT",
 	"TARGET_NUMBER_OF_PEERS",

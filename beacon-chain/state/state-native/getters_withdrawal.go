@@ -154,7 +154,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "could not retrieve balance at index %d", validatorIndex)
 		}
-		if helpers.IsFullyWithdrawableValidator(val, balance, epoch) {
+		if helpers.IsFullyWithdrawableValidator(val, balance, epoch, b.version) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
@@ -162,7 +162,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 				Amount:         balance,
 			})
 			withdrawalIndex++
-		} else if helpers.IsPartiallyWithdrawableValidator(val, balance, epoch) {
+		} else if helpers.IsPartiallyWithdrawableValidator(val, balance, epoch, b.version) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
@@ -183,8 +183,17 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	return withdrawals, partialWithdrawalsCount, nil
 }
 
+func (b *BeaconState) PendingPartialWithdrawals() ([]*ethpb.PendingPartialWithdrawal, error) {
+	if b.version < version.Electra {
+		return nil, errNotSupported("PendingPartialWithdrawals", b.version)
+	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	return b.pendingPartialWithdrawalsVal(), nil
+}
+
 func (b *BeaconState) pendingPartialWithdrawalsVal() []*ethpb.PendingPartialWithdrawal {
-	return ethpb.CopyPendingPartialWithdrawals(b.pendingPartialWithdrawals)
+	return ethpb.CopySlice(b.pendingPartialWithdrawals)
 }
 
 func (b *BeaconState) NumPendingPartialWithdrawals() (uint64, error) {

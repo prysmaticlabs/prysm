@@ -68,9 +68,9 @@ func (s *Service) endpoints(
 	endpoints = append(endpoints, s.configEndpoints()...)
 	endpoints = append(endpoints, s.lightClientEndpoints(blocker, stater)...)
 	endpoints = append(endpoints, s.eventsEndpoints()...)
-	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater)...)
+	endpoints = append(endpoints, s.prysmBeaconEndpoints(ch, stater, coreService)...)
 	endpoints = append(endpoints, s.prysmNodeEndpoints()...)
-	endpoints = append(endpoints, s.prysmValidatorEndpoints(coreService)...)
+	endpoints = append(endpoints, s.prysmValidatorEndpoints(stater, coreService)...)
 	if enableDebug {
 		endpoints = append(endpoints, s.debugEndpoints(stater)...)
 	}
@@ -815,6 +815,7 @@ func (s *Service) lightClientEndpoints(blocker lookup.Blocker, stater lookup.Sta
 		Blocker:     blocker,
 		Stater:      stater,
 		HeadFetcher: s.cfg.HeadFetcher,
+		BeaconDB:    s.cfg.BeaconDB,
 	}
 
 	const namespace = "lightclient"
@@ -904,10 +905,11 @@ func (s *Service) debugEndpoints(stater lookup.Stater) []endpoint {
 
 func (s *Service) eventsEndpoints() []endpoint {
 	server := &events.Server{
-		StateNotifier:     s.cfg.StateNotifier,
-		OperationNotifier: s.cfg.OperationNotifier,
-		HeadFetcher:       s.cfg.HeadFetcher,
-		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
+		StateNotifier:          s.cfg.StateNotifier,
+		OperationNotifier:      s.cfg.OperationNotifier,
+		HeadFetcher:            s.cfg.HeadFetcher,
+		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
 	}
 
 	const namespace = "events"
@@ -925,8 +927,11 @@ func (s *Service) eventsEndpoints() []endpoint {
 }
 
 // Prysm custom endpoints
-
-func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater lookup.Stater) []endpoint {
+func (s *Service) prysmBeaconEndpoints(
+	ch *stategen.CanonicalHistory,
+	stater lookup.Stater,
+	coreService *core.Service,
+) []endpoint {
 	server := &beaconprysm.Server{
 		SyncChecker:           s.cfg.SyncService,
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -937,6 +942,7 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 		Stater:                stater,
 		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+		CoreService:           coreService,
 	}
 
 	const namespace = "prysm.beacon"
@@ -966,6 +972,25 @@ func (s *Service) prysmBeaconEndpoints(ch *stategen.CanonicalHistory, stater loo
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
 			handler: server.GetValidatorCount,
+			methods: []string{http.MethodGet},
+		},
+		{
+			template: "/prysm/v1/beacon/individual_votes",
+			name:     namespace + ".GetIndividualVotes",
+			middleware: []mux.MiddlewareFunc{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetIndividualVotes,
+			methods: []string{http.MethodPost},
+		},
+		{
+			template: "/prysm/v1/beacon/chain_head",
+			name:     namespace + ".GetChainHead",
+			middleware: []mux.MiddlewareFunc{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetChainHead,
 			methods: []string{http.MethodGet},
 		},
 	}
@@ -1045,32 +1070,52 @@ func (s *Service) prysmNodeEndpoints() []endpoint {
 	}
 }
 
-func (*Service) prysmValidatorEndpoints(coreService *core.Service) []endpoint {
+func (s *Service) prysmValidatorEndpoints(stater lookup.Stater, coreService *core.Service) []endpoint {
 	server := &validatorprysm.Server{
-		CoreService: coreService,
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		Stater:           stater,
+		CoreService:      coreService,
 	}
 
 	const namespace = "prysm.validator"
 	return []endpoint{
 		{
 			template: "/prysm/validators/performance",
-			name:     namespace + ".GetValidatorPerformance",
+			name:     namespace + ".GetPerformance",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.GetValidatorPerformance,
+			handler: server.GetPerformance,
 			methods: []string{http.MethodPost},
 		},
 		{
 			template: "/prysm/v1/validators/performance",
-			name:     namespace + ".GetValidatorPerformance",
+			name:     namespace + ".GetPerformance",
 			middleware: []mux.MiddlewareFunc{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.GetValidatorPerformance,
+			handler: server.GetPerformance,
 			methods: []string{http.MethodPost},
+		},
+		{
+			template: "/prysm/v1/validators/participation",
+			name:     namespace + ".GetParticipation",
+			middleware: []mux.MiddlewareFunc{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetParticipation,
+			methods: []string{http.MethodGet},
+		},
+		{
+			template: "/prysm/v1/validators/active_set_changes",
+			name:     namespace + ".GetActiveSetChanges",
+			middleware: []mux.MiddlewareFunc{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetActiveSetChanges,
+			methods: []string{http.MethodGet},
 		},
 	}
 }

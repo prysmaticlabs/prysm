@@ -77,59 +77,20 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
-	rob, err := blocks.NewROBlockWithRoot(block, blockRoot)
-	if err != nil {
-		return err
-	}
-
 	preState, err := s.getBlockPreState(ctx, blockCopy.Block())
 	if err != nil {
 		return errors.Wrap(err, "could not get block's prestate")
 	}
-	// Save current justified and finalized epochs for future use.
-	currStoreJustifiedEpoch := s.CurrentJustifiedCheckpt().Epoch
-	currStoreFinalizedEpoch := s.FinalizedCheckpt().Epoch
-	currentEpoch := coreTime.CurrentEpoch(preState)
 
-	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+	currentCheckpoints := s.saveCurrentCheckpoints(preState)
+	postState, isValidPayload, err := s.validateExecutionAndConsensus(ctx, preState, blockCopy, blockRoot)
 	if err != nil {
 		return err
 	}
-	eg, _ := errgroup.WithContext(ctx)
-	var postState state.BeaconState
-	eg.Go(func() error {
-		var err error
-		postState, err = s.validateStateTransition(ctx, preState, blockCopy)
-		if err != nil {
-			return errors.Wrap(err, "failed to validate consensus state transition function")
-		}
-		return nil
-	})
-	var isValidPayload bool
-	eg.Go(func() error {
-		var err error
-		isValidPayload, err = s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, blockCopy, blockRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not notify the engine of the new payload")
-		}
-		return nil
-	})
-	if err := eg.Wait(); err != nil {
+	daWaitedTime, err := s.handleDA(ctx, blockCopy, blockRoot, avs)
+	if err != nil {
 		return err
 	}
-	daStartTime := time.Now()
-	if avs != nil {
-		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), rob); err != nil {
-			return errors.Wrap(err, "could not validate blob data availability (AvailabilityStore.IsDataAvailable)")
-		}
-	} else {
-		if err := s.isDataAvailable(ctx, blockRoot, blockCopy); err != nil {
-			return errors.Wrap(err, "could not validate blob data availability")
-		}
-	}
-	daWaitedTime := time.Since(daStartTime)
-	dataAvailWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
-
 	// Defragment the state before continuing block processing.
 	s.defragmentState(postState)
 
@@ -151,29 +112,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	if coreTime.CurrentEpoch(postState) > currentEpoch && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
-		headSt, err := s.HeadState(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get head state")
-		}
-		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
-			log.WithError(err).Error("could not report epoch metrics")
-		}
+	if err := s.updateCheckpoints(ctx, currentCheckpoints, preState, postState, blockRoot); err != nil {
+		return err
 	}
-	if err := s.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch); err != nil {
-		return errors.Wrap(err, "could not update justified checkpoint")
-	}
-
-	newFinalized, err := s.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
-	if err != nil {
-		return errors.Wrap(err, "could not update finalized checkpoint")
-	}
-	// Send finalized events and finalized deposits in the background
-	if newFinalized {
-		// hook to process all post state finalization tasks
-		s.executePostFinalizationTasks(ctx, postState)
-	}
-
 	// If slasher is configured, forward the attestations in the block via an event feed for processing.
 	if features.Get().EnableSlasher {
 		go s.sendBlockAttestationsToSlasher(blockCopy, preState)
@@ -193,31 +134,140 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err := s.handleCaches(); err != nil {
 		return err
 	}
+	s.reportPostBlockProcessing(blockCopy, blockRoot, receivedTime, daWaitedTime)
+	return nil
+}
 
+type ffgCheckpoints struct {
+	j, f, c primitives.Epoch
+}
+
+func (s *Service) saveCurrentCheckpoints(state state.BeaconState) (cp ffgCheckpoints) {
+	// Save current justified and finalized epochs for future use.
+	cp.j = s.CurrentJustifiedCheckpt().Epoch
+	cp.f = s.FinalizedCheckpt().Epoch
+	cp.c = coreTime.CurrentEpoch(state)
+	return
+}
+
+func (s *Service) updateCheckpoints(
+	ctx context.Context,
+	cp ffgCheckpoints,
+	preState, postState state.BeaconState,
+	blockRoot [32]byte,
+) error {
+	if coreTime.CurrentEpoch(postState) > cp.c && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
+		headSt, err := s.HeadState(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get head state")
+		}
+		if err := reportEpochMetrics(ctx, postState, headSt); err != nil {
+			log.WithError(err).Error("could not report epoch metrics")
+		}
+	}
+	if err := s.updateJustificationOnBlock(ctx, preState, postState, cp.j); err != nil {
+		return errors.Wrap(err, "could not update justified checkpoint")
+	}
+
+	newFinalized, err := s.updateFinalizationOnBlock(ctx, preState, postState, cp.f)
+	if err != nil {
+		return errors.Wrap(err, "could not update finalized checkpoint")
+	}
+	// Send finalized events and finalized deposits in the background
+	if newFinalized {
+		// hook to process all post state finalization tasks
+		s.executePostFinalizationTasks(ctx, postState)
+	}
+	return nil
+}
+
+func (s *Service) validateExecutionAndConsensus(
+	ctx context.Context,
+	preState state.BeaconState,
+	block interfaces.SignedBeaconBlock,
+	blockRoot [32]byte,
+) (state.BeaconState, bool, error) {
+	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
+	if err != nil {
+		return nil, false, err
+	}
+	eg, _ := errgroup.WithContext(ctx)
+	var postState state.BeaconState
+	eg.Go(func() error {
+		var err error
+		postState, err = s.validateStateTransition(ctx, preState, block)
+		if err != nil {
+			return errors.Wrap(err, "failed to validate consensus state transition function")
+		}
+		return nil
+	})
+	var isValidPayload bool
+	eg.Go(func() error {
+		var err error
+		isValidPayload, err = s.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, block, blockRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not notify the engine of the new payload")
+		}
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		return nil, false, err
+	}
+	return postState, isValidPayload, nil
+}
+
+func (s *Service) handleDA(
+	ctx context.Context,
+	block interfaces.SignedBeaconBlock,
+	blockRoot [32]byte,
+	avs das.AvailabilityStore,
+) (time.Duration, error) {
+	daStartTime := time.Now()
+	if avs != nil {
+		rob, err := blocks.NewROBlockWithRoot(block, blockRoot)
+		if err != nil {
+			return 0, err
+		}
+		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), rob); err != nil {
+			return 0, errors.Wrap(err, "could not validate blob data availability (AvailabilityStore.IsDataAvailable)")
+		}
+	} else {
+		if err := s.isDataAvailable(ctx, blockRoot, block); err != nil {
+			return 0, errors.Wrap(err, "could not validate blob data availability")
+		}
+	}
+	daWaitedTime := time.Since(daStartTime)
+	dataAvailWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
+	return daWaitedTime, nil
+}
+
+func (s *Service) reportPostBlockProcessing(
+	block interfaces.SignedBeaconBlock,
+	blockRoot [32]byte,
+	receivedTime time.Time,
+	daWaitedTime time.Duration,
+) {
 	// Reports on block and fork choice metrics.
 	cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	finalized := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
+	reportSlotMetrics(block.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
 	cp = s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	justified := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix()), daWaitedTime); err != nil {
+	if err := logBlockSyncStatus(block.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix()), daWaitedTime); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
 	}
 	// Log payload data
-	if err := logPayload(blockCopy.Block()); err != nil {
+	if err := logPayload(block.Block()); err != nil {
 		log.WithError(err).Error("Unable to log debug block payload data")
 	}
 	// Log state transition data.
-	if err := logStateTransitionData(blockCopy.Block()); err != nil {
+	if err := logStateTransitionData(block.Block()); err != nil {
 		log.WithError(err).Error("Unable to log state transition data")
 	}
-
 	timeWithoutDaWait := time.Since(receivedTime) - daWaitedTime
 	chainServiceProcessingTime.Observe(float64(timeWithoutDaWait.Milliseconds()))
-
-	return nil
 }
 
 func (s *Service) executePostFinalizationTasks(ctx context.Context, finalizedState state.BeaconState) {

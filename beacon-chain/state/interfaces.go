@@ -199,7 +199,9 @@ type ReadOnlyWithdrawals interface {
 	NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
 	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
+	PendingPartialWithdrawals() ([]*ethpb.PendingPartialWithdrawal, error)
 	NumPendingPartialWithdrawals() (uint64, error)
+	HasPendingBalanceToWithdraw(idx primitives.ValidatorIndex) (bool, error)
 }
 
 // ReadOnlyParticipation defines a struct which only has read access to participation methods.

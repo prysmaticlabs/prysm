@@ -1,9 +1,13 @@
 package eth
 
 import (
+	"fmt"
+
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
@@ -15,11 +19,12 @@ type Att interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
-	Copy() Att
+	Clone() Att
 	GetAggregationBits() bitfield.Bitlist
 	GetData() *AttestationData
 	CommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
+	GetCommitteeIndex() (primitives.CommitteeIndex, error)
 }
 
 // IndexedAtt defines common functionality for all indexed attestation types.
@@ -68,14 +73,51 @@ type AttSlashing interface {
 	SecondAttestation() IndexedAtt
 }
 
+// Copy --
+func (cp *Checkpoint) Copy() *Checkpoint {
+	if cp == nil {
+		return nil
+	}
+	return &Checkpoint{
+		Epoch: cp.Epoch,
+		Root:  bytesutil.SafeCopyBytes(cp.Root),
+	}
+}
+
+// Copy --
+func (attData *AttestationData) Copy() *AttestationData {
+	if attData == nil {
+		return nil
+	}
+	return &AttestationData{
+		Slot:            attData.Slot,
+		CommitteeIndex:  attData.CommitteeIndex,
+		BeaconBlockRoot: bytesutil.SafeCopyBytes(attData.BeaconBlockRoot),
+		Source:          attData.Source.Copy(),
+		Target:          attData.Target.Copy(),
+	}
+}
+
 // Version --
 func (a *Attestation) Version() int {
 	return version.Phase0
 }
 
+// Clone --
+func (a *Attestation) Clone() Att {
+	return a.Copy()
+}
+
 // Copy --
-func (a *Attestation) Copy() Att {
-	return CopyAttestation(a)
+func (att *Attestation) Copy() *Attestation {
+	if att == nil {
+		return nil
+	}
+	return &Attestation{
+		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
+		Data:            att.Data.Copy(),
+		Signature:       bytesutil.SafeCopyBytes(att.Signature),
+	}
 }
 
 // CommitteeBitsVal --
@@ -85,14 +127,35 @@ func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
 	return cb
 }
 
+// GetCommitteeIndex --
+func (a *Attestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	return a.Data.CommitteeIndex, nil
+}
+
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
 }
 
+// Clone --
+func (a *PendingAttestation) Clone() Att {
+	return a.Copy()
+}
+
 // Copy --
-func (a *PendingAttestation) Copy() Att {
-	return CopyPendingAttestation(a)
+func (a *PendingAttestation) Copy() *PendingAttestation {
+	if a == nil {
+		return nil
+	}
+	return &PendingAttestation{
+		AggregationBits: bytesutil.SafeCopyBytes(a.AggregationBits),
+		Data:            a.Data.Copy(),
+		InclusionDelay:  a.InclusionDelay,
+		ProposerIndex:   a.ProposerIndex,
+	}
 }
 
 // CommitteeBitsVal --
@@ -105,19 +168,58 @@ func (a *PendingAttestation) GetSignature() []byte {
 	return nil
 }
 
+// GetCommitteeIndex --
+func (a *PendingAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	return a.Data.CommitteeIndex, nil
+}
+
 // Version --
 func (a *AttestationElectra) Version() int {
 	return version.Electra
 }
 
+// Clone --
+func (a *AttestationElectra) Clone() Att {
+	return a.Copy()
+}
+
 // Copy --
-func (a *AttestationElectra) Copy() Att {
-	return CopyAttestationElectra(a)
+func (att *AttestationElectra) Copy() *AttestationElectra {
+	if att == nil {
+		return nil
+	}
+	return &AttestationElectra{
+		AggregationBits: bytesutil.SafeCopyBytes(att.AggregationBits),
+		CommitteeBits:   bytesutil.SafeCopyBytes(att.CommitteeBits),
+		Data:            att.Data.Copy(),
+		Signature:       bytesutil.SafeCopyBytes(att.Signature),
+	}
 }
 
 // CommitteeBitsVal --
 func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 	return a.CommitteeBits
+}
+
+// GetCommitteeIndex --
+func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	if len(a.CommitteeBits) == 0 {
+		return 0, errors.New("no committee bits found in attestation")
+	}
+	if a.Data.CommitteeIndex != 0 {
+		return 0, fmt.Errorf("attestation data's committee index must be 0 but was %d", a.Data.CommitteeIndex)
+	}
+	indices := a.CommitteeBits.BitIndices()
+	if len(indices) != 1 {
+		return 0, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
+	}
+	return primitives.CommitteeIndex(uint64(indices[0])), nil
 }
 
 // Version --
@@ -128,6 +230,38 @@ func (a *IndexedAttestation) Version() int {
 // Version --
 func (a *IndexedAttestationElectra) Version() int {
 	return version.Electra
+}
+
+// Copy --
+func (indexedAtt *IndexedAttestation) Copy() *IndexedAttestation {
+	var indices []uint64
+	if indexedAtt == nil {
+		return nil
+	} else if indexedAtt.AttestingIndices != nil {
+		indices = make([]uint64, len(indexedAtt.AttestingIndices))
+		copy(indices, indexedAtt.AttestingIndices)
+	}
+	return &IndexedAttestation{
+		AttestingIndices: indices,
+		Data:             indexedAtt.Data.Copy(),
+		Signature:        bytesutil.SafeCopyBytes(indexedAtt.Signature),
+	}
+}
+
+// Copy --
+func (indexedAtt *IndexedAttestationElectra) Copy() *IndexedAttestationElectra {
+	var indices []uint64
+	if indexedAtt == nil {
+		return nil
+	} else if indexedAtt.AttestingIndices != nil {
+		indices = make([]uint64, len(indexedAtt.AttestingIndices))
+		copy(indices, indexedAtt.AttestingIndices)
+	}
+	return &IndexedAttestationElectra{
+		AttestingIndices: indices,
+		Data:             indexedAtt.Data.Copy(),
+		Signature:        bytesutil.SafeCopyBytes(indexedAtt.Signature),
+	}
 }
 
 // Version --
@@ -158,6 +292,27 @@ func (a *AttesterSlashingElectra) FirstAttestation() IndexedAtt {
 // SecondAttestation --
 func (a *AttesterSlashingElectra) SecondAttestation() IndexedAtt {
 	return a.Attestation_2
+}
+
+func (a *AttesterSlashing) Copy() *AttesterSlashing {
+	if a == nil {
+		return nil
+	}
+	return &AttesterSlashing{
+		Attestation_1: a.Attestation_1.Copy(),
+		Attestation_2: a.Attestation_2.Copy(),
+	}
+}
+
+// Copy --
+func (a *AttesterSlashingElectra) Copy() *AttesterSlashingElectra {
+	if a == nil {
+		return nil
+	}
+	return &AttesterSlashingElectra{
+		Attestation_1: a.Attestation_1.Copy(),
+		Attestation_2: a.Attestation_2.Copy(),
+	}
 }
 
 // Version --

@@ -73,6 +73,21 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	if cliCtx.IsSet(flags.MinBuilderBid.Name) {
+		c := params.BeaconConfig().Copy()
+		c.MinBuilderBid = cliCtx.Uint64(flags.MinBuilderBid.Name)
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.MinBuilderDiff.Name) {
+		c := params.BeaconConfig().Copy()
+		c.MinBuilderDiff = cliCtx.Uint64(flags.MinBuilderDiff.Name)
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -117,7 +132,7 @@ func configureEth1Config(cliCtx *cli.Context) error {
 }
 
 func configureNetwork(cliCtx *cli.Context) {
-	if len(cliCtx.StringSlice(cmd.BootstrapNode.Name)) > 0 {
+	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
 		c := params.BeaconNetworkConfig()
 		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)

@@ -196,3 +196,48 @@ type DepositSnapshot struct {
 	ExecutionBlockHash   string   `json:"execution_block_hash"`
 	ExecutionBlockHeight string   `json:"execution_block_height"`
 }
+
+type GetIndividualVotesRequest struct {
+	Epoch      string   `json:"epoch"`
+	PublicKeys []string `json:"public_keys,omitempty"`
+	Indices    []string `json:"indices,omitempty"`
+}
+
+type GetIndividualVotesResponse struct {
+	IndividualVotes []*IndividualVote `json:"individual_votes"`
+}
+
+type IndividualVote struct {
+	Epoch                            string `json:"epoch"`
+	PublicKey                        string `json:"public_keys,omitempty"`
+	ValidatorIndex                   string `json:"validator_index"`
+	IsSlashed                        bool   `json:"is_slashed"`
+	IsWithdrawableInCurrentEpoch     bool   `json:"is_withdrawable_in_current_epoch"`
+	IsActiveInCurrentEpoch           bool   `json:"is_active_in_current_epoch"`
+	IsActiveInPreviousEpoch          bool   `json:"is_active_in_previous_epoch"`
+	IsCurrentEpochAttester           bool   `json:"is_current_epoch_attester"`
+	IsCurrentEpochTargetAttester     bool   `json:"is_current_epoch_target_attester"`
+	IsPreviousEpochAttester          bool   `json:"is_previous_epoch_attester"`
+	IsPreviousEpochTargetAttester    bool   `json:"is_previous_epoch_target_attester"`
+	IsPreviousEpochHeadAttester      bool   `json:"is_previous_epoch_head_attester"`
+	CurrentEpochEffectiveBalanceGwei string `json:"current_epoch_effective_balance_gwei"`
+	InclusionSlot                    string `json:"inclusion_slot"`
+	InclusionDistance                string `json:"inclusion_distance"`
+	InactivityScore                  string `json:"inactivity_score"`
+}
+
+type ChainHead struct {
+	HeadSlot                   string `json:"head_slot"`
+	HeadEpoch                  string `json:"head_epoch"`
+	HeadBlockRoot              string `json:"head_block_root"`
+	FinalizedSlot              string `json:"finalized_slot"`
+	FinalizedEpoch             string `json:"finalized_epoch"`
+	FinalizedBlockRoot         string `json:"finalized_block_root"`
+	JustifiedSlot              string `json:"justified_slot"`
+	JustifiedEpoch             string `json:"justified_epoch"`
+	JustifiedBlockRoot         string `json:"justified_block_root"`
+	PreviousJustifiedSlot      string `json:"previous_justified_slot"`
+	PreviousJustifiedEpoch     string `json:"previous_justified_epoch"`
+	PreviousJustifiedBlockRoot string `json:"previous_justified_block_root"`
+	OptimisticStatus           bool   `json:"optimistic_status"`
+}
