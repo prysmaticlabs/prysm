@@ -54,44 +54,44 @@ func BoolAttribute(key string, value bool) trace.Attribute {
 
 type EmptySpan struct{}
 
-func (e EmptySpan) IsRecordingEvents() bool {
+func (EmptySpan) IsRecordingEvents() bool {
 	return false
 }
 
-func (e EmptySpan) End() {
+func (EmptySpan) End() {
 }
 
-func (e EmptySpan) SpanContext() trace.SpanContext {
+func (EmptySpan) SpanContext() trace.SpanContext {
 	return trace.SpanContext{}
 }
 
-func (e EmptySpan) SetName(name string) {
+func (EmptySpan) SetName(string) {
 
 }
 
-func (e EmptySpan) SetStatus(status trace.Status) {
+func (EmptySpan) SetStatus(trace.Status) {
 
 }
 
-func (e EmptySpan) AddAttributes(attributes ...trace.Attribute) {
+func (EmptySpan) AddAttributes(...trace.Attribute) {
 }
 
-func (e EmptySpan) Annotate(attributes []trace.Attribute, str string) {
+func (EmptySpan) Annotate([]trace.Attribute, string) {
 
 }
 
-func (e EmptySpan) Annotatef(attributes []trace.Attribute, format string, a ...interface{}) {
+func (EmptySpan) Annotatef([]trace.Attribute, string, ...interface{}) {
 }
 
-func (e EmptySpan) AddMessageSendEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
+func (EmptySpan) AddMessageSendEvent(_, _, _ int64) {
 }
 
-func (e EmptySpan) AddMessageReceiveEvent(messageID, uncompressedByteSize, compressedByteSize int64) {
+func (EmptySpan) AddMessageReceiveEvent(_, _, _ int64) {
 }
 
-func (e EmptySpan) AddLink(l trace.Link) {
+func (EmptySpan) AddLink(trace.Link) {
 }
 
-func (e EmptySpan) String() string {
+func (EmptySpan) String() string {
 	return ""
 }
