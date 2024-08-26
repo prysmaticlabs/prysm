@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	trace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	goTrace "go.opencensus.io/trace"
 )
 
 type customProcessingFn func(context.Context, state.BeaconState) error
@@ -258,7 +259,7 @@ func cacheBestBeaconStateOnErrFn(highestSlot primitives.Slot, key [32]byte) cust
 //	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //	          process_epoch(state)
 //	      state.slot = Slot(state.slot + 1)
-func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconState, slot primitives.Slot, fn customProcessingFn) (state.BeaconState, error) {
+func ProcessSlotsCore(ctx context.Context, span *goTrace.Span, state state.BeaconState, slot primitives.Slot, fn customProcessingFn) (state.BeaconState, error) {
 	var err error
 	for state.Slot() < slot {
 		if fn != nil {
