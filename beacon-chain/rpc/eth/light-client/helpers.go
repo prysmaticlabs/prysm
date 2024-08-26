@@ -133,6 +133,9 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
 	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+	}
 	var executionPayloadProofStr []string
 	for i, proof := range executionPayloadProof {
 		executionPayloadProofStr[i] = hexutil.Encode(proof)
@@ -200,6 +203,9 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
 	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+	}
 	var executionPayloadProofStr []string
 	for i, proof := range executionPayloadProof {
 		executionPayloadProofStr[i] = hexutil.Encode(proof)
