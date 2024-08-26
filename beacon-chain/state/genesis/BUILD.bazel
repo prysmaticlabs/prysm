@@ -10,7 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/genesis",
     visibility = [
         "//beacon-chain/db:__subpackages__",
-        "//config/params:go_default_test",
+        "//config/params:__pkg__",
     ],
     deps = [
         "//beacon-chain/state:go_default_library",
