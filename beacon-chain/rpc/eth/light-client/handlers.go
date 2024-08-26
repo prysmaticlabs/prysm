@@ -49,7 +49,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 
 	switch blk.Version() {
 	case version.Phase0:
-		httputil.HandleError(w, "light client bootstrap is not supported for phase0", http.StatusNotImplemented)
+		httputil.HandleError(w, "light client bootstrap is not supported for phase0", http.StatusBadRequest)
 		return
 	case version.Altair:
 		bootstrap, err := createLightClientBootstrap(ctx, state)
@@ -67,10 +67,22 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		httputil.WriteJson(w, response)
 		return
 	case version.Bellatrix:
-		httputil.HandleError(w, "light client bootstrap is not supported for bellatrix", http.StatusNotImplemented)
+		bootstrap, err := createLightClientBootstrap(ctx, state)
+		if err != nil {
+			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		response := &structs.LightClientBootstrapResponse{
+			Version: version.String(blk.Version()),
+			Data:    bootstrap,
+		}
+		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
+
+		httputil.WriteJson(w, response)
 		return
 	case version.Capella:
-		bootstrap, err := createLightClientBootstrapCapella(ctx, state)
+		bootstrap, err := createLightClientBootstrapCapella(ctx, state, blk.Block())
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -85,7 +97,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		httputil.WriteJson(w, response)
 		return
 	case version.Deneb:
-		bootstrap, err := createLightClientBootstrapDeneb(ctx, state)
+		bootstrap, err := createLightClientBootstrapDeneb(ctx, state, blk.Block())
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -100,7 +112,19 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		httputil.WriteJson(w, response)
 		return
 	case version.Electra:
-		httputil.HandleError(w, "light client bootstrap is not supported for electra", http.StatusNotImplemented)
+		bootstrap, err := createLightClientBootstrapDeneb(ctx, state, blk.Block())
+		if err != nil {
+			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		response := &structs.LightClientBootstrapResponseDeneb{
+			Version: version.String(blk.Version()),
+			Data:    bootstrap,
+		}
+		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
+
+		httputil.WriteJson(w, response)
 		return
 	}
 }

@@ -1,19 +1,21 @@
 package structs
 
+import "github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+
 type LightClientHeader struct {
 	Beacon *BeaconBlockHeader `json:"beacon"`
 }
 
 type LightClientHeaderCapella struct {
-	Beacon          *BeaconBlockHeader             `json:"beacon"`
-	Execution       *ExecutionPayloadHeaderCapella `json:"execution"`
-	ExecutionBranch [][]string                     `json:"execution_branch"`
+	Beacon          *BeaconBlockHeader       `json:"beacon"`
+	Execution       interfaces.ExecutionData `json:"execution"`
+	ExecutionBranch []string                 `json:"execution_branch"`
 }
 
 type LightClientHeaderDeneb struct {
-	Beacon          *BeaconBlockHeader           `json:"beacon"`
-	Execution       *ExecutionPayloadHeaderDeneb `json:"execution"`
-	ExecutionBranch [][]string                   `json:"execution_branch"`
+	Beacon          *BeaconBlockHeader       `json:"beacon"`
+	Execution       interfaces.ExecutionData `json:"execution"`
+	ExecutionBranch []string                 `json:"execution_branch"`
 }
 
 type LightClientBootstrapResponse struct {
