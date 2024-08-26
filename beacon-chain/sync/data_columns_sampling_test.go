@@ -14,6 +14,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/sirupsen/logrus"
 
 	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
@@ -196,7 +198,12 @@ func setupDataColumnSamplerTest(t *testing.T, blobCount uint64) (*dataSamplerTes
 		kzgProofs:          kzgProofs,
 		dataColumnSidecars: dataColumnSidecars,
 	}
-	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil)
+	clockSync := startup.NewClockSynchronizer()
+	require.NoError(t, clockSync.SetClock(clock))
+	iniWaiter := verification.NewInitializerWaiter(clockSync, nil, nil)
+	ini, err := iniWaiter.WaitForInitializer(context.Background())
+	require.NoError(t, err)
+	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil, newColumnVerifierFromInitializer(ini))
 
 	return test, sampler
 }
