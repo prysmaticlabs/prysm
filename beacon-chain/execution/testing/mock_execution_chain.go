@@ -172,9 +172,17 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 			return nil
 		}
 
-		h, err := r.Backend.HeaderByNumber(ctx, num)
-		if err != nil {
-			return err
+		var h *gethTypes.Header
+		if r.Backend == nil {
+			h = &gethTypes.Header{
+				Number: big.NewInt(15),
+				Time:   150,
+			}
+		} else {
+			h, err = r.Backend.HeaderByNumber(ctx, num)
+			if err != nil {
+				return err
+			}
 		}
 		if h == nil {
 			*assertedObj = nil
