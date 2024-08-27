@@ -30,7 +30,7 @@ option php_namespace = "Ethereum\\Eth\\v2";
 // Beacon LightClient API related messages.
 
 message LightClientHeader {
-  v1.BeaconBlockHeader Beacon = 1;
+  v1.BeaconBlockHeader beacon = 1;
 }
 
 message LightClientBootstrap {
