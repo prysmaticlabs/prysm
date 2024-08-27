@@ -51,7 +51,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 	case version.Phase0:
 		httputil.HandleError(w, "light client bootstrap is not supported for phase0", http.StatusBadRequest)
 		return
-	case version.Altair:
+	case version.Altair, version.Bellatrix:
 		bootstrap, err := createLightClientBootstrap(ctx, state)
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
@@ -63,21 +63,6 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 			Data:    bootstrap,
 		}
 		w.Header().Set(api.VersionHeader, version.String(version.Altair))
-
-		httputil.WriteJson(w, response)
-		return
-	case version.Bellatrix:
-		bootstrap, err := createLightClientBootstrap(ctx, state)
-		if err != nil {
-			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		response := &structs.LightClientBootstrapResponse{
-			Version: version.String(blk.Version()),
-			Data:    bootstrap,
-		}
-		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
 
 		httputil.WriteJson(w, response)
 		return
@@ -96,22 +81,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 
 		httputil.WriteJson(w, response)
 		return
-	case version.Deneb:
-		bootstrap, err := createLightClientBootstrapDeneb(ctx, state, blk.Block())
-		if err != nil {
-			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		response := &structs.LightClientBootstrapResponseDeneb{
-			Version: version.String(blk.Version()),
-			Data:    bootstrap,
-		}
-		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
-
-		httputil.WriteJson(w, response)
-		return
-	case version.Electra:
+	case version.Deneb, version.Electra:
 		bootstrap, err := createLightClientBootstrapDeneb(ctx, state, blk.Block())
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
