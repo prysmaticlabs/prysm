@@ -154,11 +154,6 @@ func TestGetSpec(t *testing.T) {
 	config.MaxCellsInExtendedMatrix = 91
 	config.UnsetDepositRequestsStartIndex = 92
 	config.MaxDepositRequestsPerPayload = 93
-	config.ProposerScoreBoostEPBS = 20
-	config.PayloadRevealBoost = 40
-	config.PayloadWithholdBoost = 40
-	config.PayloadTimelyThreshold = 256
-	config.IntervalsPerSlotEPBS = 4
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -201,7 +196,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 158, len(data))
+	assert.Equal(t, 163, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
