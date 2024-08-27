@@ -154,6 +154,11 @@ func TestGetSpec(t *testing.T) {
 	config.MaxCellsInExtendedMatrix = 91
 	config.UnsetDepositRequestsStartIndex = 92
 	config.MaxDepositRequestsPerPayload = 93
+	config.ProposerScoreBoostEPBS = 20
+	config.PayloadRevealBoost = 40
+	config.PayloadWithholdBoost = 40
+	config.PayloadTimelyThreshold = 256
+	config.IntervalsPerSlotEPBS = 4
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -533,6 +538,16 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "92", v)
 			case "MAX_DEPOSIT_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "93", v)
+			case "PROPOSER_SCORE_BOOST_EPBS":
+				assert.Equal(t, "20", v)
+			case "PAYLOAD_REVEAL_BOOST":
+				assert.Equal(t, "40", v)
+			case "PAYLOAD_WITHHOLD_BOOST":
+				assert.Equal(t, "40", v)
+			case "PAYLOAD_TIMELY_THRESHOLD":
+				assert.Equal(t, "256", v)
+			case "INTERVALS_PER_SLOT_EPBS":
+				assert.Equal(t, "4", v)
 			default:
 				for _, pf := range placeholderFields {
 					if k == pf {
