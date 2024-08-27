@@ -99,14 +99,14 @@ func (l *TestLightClient) SetupTest() *TestLightClient {
 }
 
 func (l *TestLightClient) CheckAttestedHeader(update *ethpbv2.LightClientUpdate) {
-	require.Equal(l.T, l.AttestedHeader.Slot, update.AttestedHeader.Slot, "Attested header slot is not equal")
-	require.Equal(l.T, l.AttestedHeader.ProposerIndex, update.AttestedHeader.ProposerIndex, "Attested header proposer index is not equal")
-	require.DeepSSZEqual(l.T, l.AttestedHeader.ParentRoot, update.AttestedHeader.ParentRoot, "Attested header parent root is not equal")
-	require.DeepSSZEqual(l.T, l.AttestedHeader.BodyRoot, update.AttestedHeader.BodyRoot, "Attested header body root is not equal")
+	require.Equal(l.T, l.AttestedHeader.Slot, update.AttestedHeader.Beacon.Slot, "Attested header slot is not equal")
+	require.Equal(l.T, l.AttestedHeader.ProposerIndex, update.AttestedHeader.Beacon.ProposerIndex, "Attested header proposer index is not equal")
+	require.DeepSSZEqual(l.T, l.AttestedHeader.ParentRoot, update.AttestedHeader.Beacon.ParentRoot, "Attested header parent root is not equal")
+	require.DeepSSZEqual(l.T, l.AttestedHeader.BodyRoot, update.AttestedHeader.Beacon.BodyRoot, "Attested header body root is not equal")
 
 	attestedStateRoot, err := l.AttestedState.HashTreeRoot(l.Ctx)
 	require.NoError(l.T, err)
-	require.DeepSSZEqual(l.T, attestedStateRoot[:], update.AttestedHeader.StateRoot, "Attested header state root is not equal")
+	require.DeepSSZEqual(l.T, attestedStateRoot[:], update.AttestedHeader.Beacon.StateRoot, "Attested header state root is not equal")
 }
 
 func (l *TestLightClient) CheckSyncAggregate(update *ethpbv2.LightClientUpdate) {
