@@ -111,10 +111,15 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost:              40,
+	ProposerScoreBoostEPBS:          20,
 	ReorgWeightThreshold:            20,
 	ReorgParentWeightThreshold:      160,
 	ReorgMaxEpochsSinceFinalization: 2,
 	IntervalsPerSlot:                3,
+	IntervalsPerSlotEPBS:            4,
+	PayloadWithholdBoost:            40,
+	PayloadRevealBoost:              40,
+	PayloadTimelyThreshold:          256, // PTC_SIZE / 2.
 
 	// Ethereum PoW parameters.
 	DepositChainID:         1, // Chain ID of eth1 mainnet.
@@ -247,7 +252,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EpochsPerSyncCommitteePeriod: 256,
 
 	// Updated penalty values.
-	InactivityPenaltyQuotientAltair:         3 * 1 << 24, //50331648
+	InactivityPenaltyQuotientAltair:         3 * 1 << 24, // 50331648
 	MinSlashingPenaltyQuotientAltair:        64,
 	ProportionalSlashingMultiplierAltair:    2,
 	MinSlashingPenaltyQuotientBellatrix:     32,
