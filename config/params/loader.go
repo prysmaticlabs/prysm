@@ -217,6 +217,8 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("DENEB_FORK_VERSION: %#x", cfg.DenebForkVersion),
 		fmt.Sprintf("ELECTRA_FORK_EPOCH: %d", cfg.ElectraForkEpoch),
 		fmt.Sprintf("ELECTRA_FORK_VERSION: %#x", cfg.ElectraForkVersion),
+		fmt.Sprintf("EPBS_FORK_EPOCH: %d", cfg.EPBSForkEpoch),
+		fmt.Sprintf("EPBS_FORK_VERSION: %#x", cfg.EPBSForkVersion),
 		fmt.Sprintf("EPOCHS_PER_SUBNET_SUBSCRIPTION: %d", cfg.EpochsPerSubnetSubscription),
 		fmt.Sprintf("ATTESTATION_SUBNET_EXTRA_BITS: %d", cfg.AttestationSubnetExtraBits),
 		fmt.Sprintf("ATTESTATION_SUBNET_PREFIX_BITS: %d", cfg.AttestationSubnetPrefixBits),
@@ -233,8 +235,6 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("MESSAGE_DOMAIN_INVALID_SNAPPY:  %#x", cfg.MessageDomainInvalidSnappy),
 		fmt.Sprintf("MESSAGE_DOMAIN_VALID_SNAPPY: %#x", cfg.MessageDomainValidSnappy),
 		fmt.Sprintf("MIN_EPOCHS_FOR_BLOCK_REQUESTS: %d", int(cfg.MinEpochsForBlockRequests)),
-		fmt.Sprintf("ELECTRA_FORK_EPOCH: %d", cfg.ElectraForkEpoch),
-		fmt.Sprintf("ELECTRA_FORK_VERSION: %#x", cfg.ElectraForkVersion),
 	}
 
 	yamlFile := []byte(strings.Join(lines, "\n"))
