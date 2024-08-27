@@ -307,7 +307,7 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 	}
 
 	return &structs.LightClientUpdate{
-		AttestedHeader:          structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader)),
+		AttestedHeader:          &structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader))},
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
 		FinalizedHeader:         finalizedHeader,
