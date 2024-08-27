@@ -18,7 +18,7 @@ type LightClientBootstrap struct {
 type LightClientUpdate struct {
 	AttestedHeader          *LightClientHeader `json:"attested_header"`
 	NextSyncCommittee       *SyncCommittee     `json:"next_sync_committee,omitempty"`
-	FinalizedHeader         *BeaconBlockHeader `json:"finalized_header,omitempty"`
+	FinalizedHeader         *LightClientHeader `json:"finalized_header,omitempty"`
 	SyncAggregate           *SyncAggregate     `json:"sync_aggregate"`
 	NextSyncCommitteeBranch []string           `json:"next_sync_committee_branch,omitempty"`
 	FinalityBranch          []string           `json:"finality_branch,omitempty"`
