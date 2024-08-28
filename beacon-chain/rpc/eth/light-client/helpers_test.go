@@ -3,7 +3,8 @@ package lightclient
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
+
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
@@ -19,7 +20,7 @@ func createNonEmptySyncCommitteeBranch() [][]byte {
 
 // When the update has finality
 func createNonEmptyFinalityBranch() [][]byte {
-	res := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
+	res := make([][]byte, lightclient.FinalityBranchNumOfLeaves)
 	res[0] = []byte("xyz")
 	return res
 }
@@ -146,7 +147,7 @@ func TestIsBetterUpdate(t *testing.T) {
 				},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          make([][]byte, blockchain.FinalityBranchNumOfLeaves),
+				FinalityBranch:          make([][]byte, lightclient.FinalityBranchNumOfLeaves),
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
@@ -183,7 +184,7 @@ func TestIsBetterUpdate(t *testing.T) {
 				},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
-				FinalityBranch:          make([][]byte, blockchain.FinalityBranchNumOfLeaves),
+				FinalityBranch:          make([][]byte, lightclient.FinalityBranchNumOfLeaves),
 			},
 			expectedResult: false,
 		},

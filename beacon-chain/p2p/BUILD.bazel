@@ -66,6 +66,7 @@ go_library(
         "//io/file:go_default_library",
         "//math:go_default_library",
         "//monitoring/tracing:go_default_library",
+        "//monitoring/tracing/trace:go_default_library",
         "//network:go_default_library",
         "//network/forks:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

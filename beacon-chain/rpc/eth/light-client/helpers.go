@@ -6,9 +6,10 @@ import (
 	"reflect"
 	"strconv"
 
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -66,9 +67,12 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		branch[i] = hexutil.Encode(proof)
 	}
 
-	header := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-	if header == nil {
+	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
+	if beacon == nil {
 		return nil, fmt.Errorf("could not get beacon block header")
+	}
+	header := &structs.LightClientHeader{
+		Beacon: beacon,
 	}
 
 	// Above shared util function won't calculate state root, so we need to do it manually
@@ -76,7 +80,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not get state root: %s", err.Error())
 	}
-	header.StateRoot = hexutil.Encode(stateRoot[:])
+	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
 	// Return result
 	result := &structs.LightClientBootstrap{
@@ -152,7 +156,7 @@ func createLightClientUpdate(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +214,7 @@ func newLightClientFinalityUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +227,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState) (*structs.LightClientUpdate, error) {
-	result, err := blockchain.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
+	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +240,7 @@ func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap
 
 	var err error
 
-	v1Alpha1Header, err := bootstrapJSON.Header.ToConsensus()
+	v1Alpha1Header, err := bootstrapJSON.Header.Beacon.ToConsensus()
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +323,7 @@ func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
 }
 
 func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
-	finalityBranch := make([][]byte, blockchain.FinalityBranchNumOfLeaves)
+	finalityBranch := make([][]byte, lightclient.FinalityBranchNumOfLeaves)
 	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
