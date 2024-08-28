@@ -24,9 +24,9 @@ import (
 )
 
 // Ensure Service implements chain info interface.
-// var _ ChainInfoFetcher = (*Service)(nil)
-// var _ TimeFetcher = (*Service)(nil)
-// var _ ForkFetcher = (*Service)(nil)
+var _ ChainInfoFetcher = (*Service)(nil)
+var _ TimeFetcher = (*Service)(nil)
+var _ ForkFetcher = (*Service)(nil)
 
 // prepareForkchoiceState prepares a beacon state with the given data to mock
 // insert into forkchoice

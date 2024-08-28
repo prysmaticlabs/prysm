@@ -66,6 +66,7 @@ type HeadFetcher interface {
 	HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
+	HeadGenesisValidatorsRoot() [32]byte
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
