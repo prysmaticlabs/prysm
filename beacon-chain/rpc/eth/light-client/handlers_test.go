@@ -73,7 +73,7 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	resp := &structs.LightClientBootstrapResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.BodyRoot)
+	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.Beacon.BodyRoot)
 	require.NotNil(t, resp.Data)
 }
 
