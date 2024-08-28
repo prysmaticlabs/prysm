@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -638,4 +639,9 @@ func (c *ChainService) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) ([32]b
 // HashInForkchoice mocks the same method in the chain service
 func (c *ChainService) HashInForkchoice([32]byte) bool {
 	return false
+}
+
+// ReceivePayloadAttestationMessage mocks the same method in the chain service
+func (c *ChainService) ReceivePayloadAttestationMessage(_ context.Context, _ *eth.PayloadAttestationMessage) error {
+	return nil
 }

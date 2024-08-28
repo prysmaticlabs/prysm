@@ -2,15 +2,12 @@ package sync
 
 import (
 	"context"
-	"slices"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -91,25 +88,5 @@ func (s *Service) payloadAttestationSubscriber(ctx context.Context, msg proto.Me
 	if !ok {
 		return errWrongMessage
 	}
-	if err := helpers.ValidateNilPayloadAttestationMessage(a); err != nil {
-		return err
-	}
-	root := [32]byte(a.Data.BeaconBlockRoot)
-	st, err := s.cfg.chain.HeadState(ctx)
-	if err != nil {
-		return err
-	}
-	ptc, err := helpers.GetPayloadTimelinessCommittee(ctx, st, a.Data.Slot)
-	if err != nil {
-		return err
-	}
-	idx := slices.Index(ptc, a.ValidatorIndex)
-	if idx == -1 {
-		return errInvalidValidatorIndex
-	}
-	if s.payloadAttestationCache.Seen(root, uint64(primitives.ValidatorIndex(idx))) {
-		return nil
-	}
-
-	return s.payloadAttestationCache.Add(a, uint64(idx))
+	return s.cfg.chain.ReceivePayloadAttestationMessage(ctx, a)
 }
