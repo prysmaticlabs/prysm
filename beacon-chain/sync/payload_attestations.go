@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	errInvalidValidatorIndex         = errors.New("invalid validator index")
 	errAlreadySeenPayloadAttestation = errors.New("payload attestation already seen for validator index")
 )
 
