@@ -29,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -642,6 +641,6 @@ func (c *ChainService) HashInForkchoice([32]byte) bool {
 }
 
 // ReceivePayloadAttestationMessage mocks the same method in the chain service
-func (c *ChainService) ReceivePayloadAttestationMessage(_ context.Context, _ *eth.PayloadAttestationMessage) error {
+func (c *ChainService) ReceivePayloadAttestationMessage(_ context.Context, _ *ethpb.PayloadAttestationMessage) error {
 	return nil
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -50,7 +49,7 @@ type BlockReceiver interface {
 // PayloadAttestationReceiver defines methods of the chain service for receiving
 // and processing new payload attestations and payload attestation messages
 type PayloadAttestationReceiver interface {
-	ReceivePayloadAttestationMessage(ctx context.Context, a *eth.PayloadAttestationMessage) error
+	ReceivePayloadAttestationMessage(ctx context.Context, a *ethpb.PayloadAttestationMessage) error
 }
 
 // BlobReceiver interface defines the methods of chain service for receiving new
