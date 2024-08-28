@@ -294,7 +294,7 @@ func (s *Service) headStateReadOnly(ctx context.Context) state.ReadOnlyBeaconSta
 
 // This returns the genesis validators root of the head state.
 // This is a lock free version.
-func (s *Service) headGenesisValidatorsRoot() [32]byte {
+func (*Service) headGenesisValidatorsRoot() [32]byte {
 	return params.BeaconConfig().GenesisValidatorsRoot
 }
 

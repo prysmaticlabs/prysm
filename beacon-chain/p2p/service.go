@@ -414,7 +414,7 @@ func (s *Service) awaitStateInitialized() {
 	}
 	s.genesisTime = clock.GenesisTime()
 	gvr := params.BeaconConfig().GenesisValidatorsRoot[:]
-	s.genesisValidatorsRoot = gvr[:]
+	s.genesisValidatorsRoot = gvr
 	_, err = s.currentForkDigest() // initialize fork digest cache
 	if err != nil {
 		log.WithError(err).Error("Could not initialize fork digest")
