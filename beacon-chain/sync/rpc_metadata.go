@@ -104,7 +104,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	valRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
+	valRoot := params.BeaconConfig().GenesisValidatorsRoot
 	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.clock.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err

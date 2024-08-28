@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -51,7 +50,7 @@ func TestPoolDetectAllEnded(t *testing.T) {
 	v, err := newBackfillVerifier(params.BeaconConfig().GenesisValidatorsRoot[:], keys)
 	require.NoError(t, err)
 
-	ctxMap, err := sync.ContextByteVersionsForValRoot(bytesutil.ToBytes32(params.BeaconConfig().GenesisValidatorsRoot[:]))
+	ctxMap, err := sync.ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
 	require.NoError(t, err)
 	bfs := filesystem.NewEphemeralBlobStorage(t)
 	pool.spawn(ctx, nw, startup.NewClock(time.Now(), [32]byte{}), ma, v, ctxMap, mockNewBlobVerifier, bfs)

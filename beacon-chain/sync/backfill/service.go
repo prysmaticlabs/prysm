@@ -169,12 +169,12 @@ func (s *Service) initVerifier(ctx context.Context) (*verifier, sync.ContextByte
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "unable to retrieve public keys for all validators in the origin state")
 	}
-	vr := params.BeaconConfig().GenesisValidatorsRoot[:]
-	ctxMap, err := sync.ContextByteVersionsForValRoot(bytesutil.ToBytes32(vr))
+	vr := params.BeaconConfig().GenesisValidatorsRoot
+	ctxMap, err := sync.ContextByteVersionsForValRoot(vr)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "unable to initialize context version map using genesis validator root %#x", vr)
 	}
-	v, err := newBackfillVerifier(vr, keys)
+	v, err := newBackfillVerifier(vr[:], keys)
 	return v, ctxMap, err
 }
 

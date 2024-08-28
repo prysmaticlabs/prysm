@@ -98,6 +98,6 @@ func TestConfigGenesisValidatorRoot(t *testing.T) {
 	gvr  := []byte{75, 54, 61, 185, 78, 40, 97, 32, 215, 110, 185, 5, 52, 15, 221, 78, 84, 191, 233, 240, 107, 243, 63, 246, 207, 90, 210, 127, 81, 27, 254, 149}
 
 	if !bytes.Equal(gvr, params.BeaconConfig().GenesisValidatorsRoot[:]) {
-		t.Fatal("mainnet params genesis validator root does not match the mainnet genesis state value")
+		t.Fatal("mainnet params genesis validator root does not match the expected value")
 	}
 }

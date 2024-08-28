@@ -156,6 +156,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 					Epoch:           0,
 				}
 				genesisRoot := [32]byte{'a'}
+
 				st := &ethpb.BeaconState{
 					Slot:                  0,
 					Fork:                  fork,

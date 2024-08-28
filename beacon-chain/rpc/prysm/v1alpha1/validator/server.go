@@ -199,7 +199,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 	}
 	log.WithField("startTime", clock.GenesisTime()).Debug("Received chain started event")
 	log.Debug("Sending genesis time notification to connected validator clients")
-	gvr := params.BeaconConfig().GenesisValidatorsRoot[:]
+	gvr := params.BeaconConfig().GenesisValidatorsRoot
 	res := &ethpb.ChainStartResponse{
 		Started:               true,
 		GenesisTime:           uint64(clock.GenesisTime().Unix()),

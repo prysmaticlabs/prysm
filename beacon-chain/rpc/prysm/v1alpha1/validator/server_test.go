@@ -220,6 +220,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	require.NoError(t, st.SetSlot(3))
 	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
 	require.NoError(t, st.SetGenesisValidatorsRoot(genesisValidatorsRoot[:]))
+
 	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
 		Ctx: context.Background(),

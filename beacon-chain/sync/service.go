@@ -107,6 +107,7 @@ type blockchainService interface {
 	blockchain.ForkFetcher
 	blockchain.AttestationReceiver
 	blockchain.TimeFetcher
+	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
 	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
@@ -294,12 +295,11 @@ func (s *Service) waitForChainStart() {
 	}
 	s.cfg.clock = clock
 	startTime := clock.GenesisTime()
-	genesisValidatorRoot := params.BeaconConfig().GenesisValidatorsRoot
 	log.WithField("startTime", startTime).Debug("Received state initialized event")
 
-	ctxMap, err := ContextByteVersionsForValRoot(genesisValidatorRoot)
+	ctxMap, err := ContextByteVersionsForValRoot(clock.GenesisValidatorsRoot())
 	if err != nil {
-		log.WithError(err).WithField("genesisValidatorRoot", genesisValidatorRoot).
+		log.WithError(err).WithField("genesisValidatorRoot", clock.GenesisValidatorsRoot()).
 			Error("sync service failed to initialize context version map")
 		return
 	}

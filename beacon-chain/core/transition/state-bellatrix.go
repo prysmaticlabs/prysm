@@ -124,6 +124,7 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
+
 	scores, err := preState.InactivityScores()
 	if err != nil {
 		return nil, err
@@ -147,6 +148,7 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		Slot:                  0,
 		GenesisTime:           genesisTime,
 		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().AltairForkVersion,
 			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,

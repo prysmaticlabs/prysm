@@ -416,9 +416,9 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	gs, err := beaconDB.GenesisState(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, nil, gs)
-	require.Equal(t, 32, len(params.BeaconConfig().GenesisValidatorsRoot[:]))
+	require.Equal(t, 32, len(params.BeaconConfig().GenesisValidatorsRoot))
 	var zero [32]byte
-	require.DeepNotEqual(t, params.BeaconConfig().GenesisValidatorsRoot[:], zero[:])
+	require.DeepNotEqual(t, params.BeaconConfig().GenesisValidatorsRoot, zero[:])
 	require.Equal(t, gt, mgs.G.GenesisTime())
 }
 

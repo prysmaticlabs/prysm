@@ -320,6 +320,7 @@ func (b *BeaconState) ToProto() interface{} {
 		return &ethpb.BeaconStateCapella{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
 			BlockRoots:                   br,

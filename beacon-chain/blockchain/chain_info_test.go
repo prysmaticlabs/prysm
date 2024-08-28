@@ -302,7 +302,7 @@ func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 
 	c.head = &head{state: s}
 	root = c.HeadGenesisValidatorsRoot()
-	require.DeepEqual(t, root[:], params.BeaconConfig().GenesisValidatorsRoot[:])
+	require.DeepEqual(t, root[:], params.BeaconConfig().GenesisValidatorsRoot)
 }
 
 //
