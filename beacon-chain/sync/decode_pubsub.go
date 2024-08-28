@@ -104,7 +104,7 @@ func extractDataTypeFromTypeMap[T any](typeMap map[[4]byte]func() (T, error), di
 	if len(digest) != forkDigestLength {
 		return zero, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
-	vRoot := tor.GenesisValidatorsRoot()
+	vRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 	for k, f := range typeMap {
 		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {
@@ -120,6 +120,6 @@ func extractDataTypeFromTypeMap[T any](typeMap map[[4]byte]func() (T, error), di
 		zero,
 		digest,
 		tor.GenesisTime(),
-		tor.GenesisValidatorsRoot(),
+		params.BeaconConfig().GenesisValidatorsRoot[:],
 	)
 }

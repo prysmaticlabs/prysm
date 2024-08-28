@@ -124,7 +124,7 @@ func processSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
 func VerifySyncCommitteeSig(s state.BeaconState, syncKeys []bls.PublicKey, syncSig []byte) error {
 	ps := slots.PrevSlot(s.Slot())
-	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorsRoot())
+	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return err
 	}

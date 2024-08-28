@@ -150,7 +150,7 @@ func TestReadChunkEncodedBlobs(t *testing.T) {
 // Specifies a max expected chunk parameter of 1, so that a response with one or more blobs will give ErrInvalidFetchedData.
 func readChunkEncodedBlobsLowMax(t *testing.T, s *Service, expect []*expectedBlobChunk) func(network.Stream) {
 	encoding := s.cfg.p2p.Encoding()
-	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
+	ctxMap, err := ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
 	require.NoError(t, err)
 	vf := func(sidecar blocks.ROBlob) error {
 		return nil
@@ -163,7 +163,7 @@ func readChunkEncodedBlobsLowMax(t *testing.T, s *Service, expect []*expectedBlo
 
 func readChunkEncodedBlobsAsStreamReader(t *testing.T, s *Service, expect []*expectedBlobChunk) func(network.Stream) {
 	encoding := s.cfg.p2p.Encoding()
-	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
+	ctxMap, err := ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
 	require.NoError(t, err)
 	vf := func(sidecar blocks.ROBlob) error {
 		return nil

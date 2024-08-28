@@ -41,7 +41,7 @@ func TestVerifyBlockHeaderSignature(t *testing.T) {
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorsRoot(),
+		params.BeaconConfig().GenesisValidatorsRoot[:],
 	)
 	require.NoError(t, err)
 	htr, err := blockHeader.Header.HashTreeRoot()
@@ -77,7 +77,7 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 		CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	}
-	domain, err := signing.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
+	domain, err := signing.Domain(fData, 100, params.BeaconConfig().DomainBeaconProposer, params.BeaconConfig().GenesisValidatorsRoot[:])
 	assert.NoError(t, err)
 	blkRoot, err := altairBlk.Block.HashTreeRoot()
 	assert.NoError(t, err)

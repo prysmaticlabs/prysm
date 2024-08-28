@@ -270,7 +270,6 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
-	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -315,7 +314,6 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
-	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -416,11 +414,10 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	gs, err := beaconDB.GenesisState(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, nil, gs)
-	require.Equal(t, 32, len(gs.GenesisValidatorsRoot()))
+	require.Equal(t, 32, len(params.BeaconConfig().GenesisValidatorsRoot[:]))
 	var zero [32]byte
-	require.DeepNotEqual(t, gs.GenesisValidatorsRoot(), zero[:])
+	require.DeepNotEqual(t, params.BeaconConfig().GenesisValidatorsRoot[:], zero[:])
 	require.Equal(t, gt, mgs.G.GenesisTime())
-	require.Equal(t, bytesutil.ToBytes32(gs.GenesisValidatorsRoot()), mgs.G.GenesisValidatorsRoot())
 }
 
 func BenchmarkHasBlockDB(b *testing.B) {
@@ -477,7 +474,6 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
-	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -533,7 +529,6 @@ func TestStartFromSavedState_ValidatorIndexCacheUpdated(t *testing.T) {
 		},
 	}))
 	require.NoError(t, headState.SetSlot(finalizedSlot))
-	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 

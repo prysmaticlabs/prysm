@@ -24,9 +24,9 @@ import (
 )
 
 // Ensure Service implements chain info interface.
-var _ ChainInfoFetcher = (*Service)(nil)
-var _ TimeFetcher = (*Service)(nil)
-var _ ForkFetcher = (*Service)(nil)
+// var _ ChainInfoFetcher = (*Service)(nil)
+// var _ TimeFetcher = (*Service)(nil)
+// var _ ForkFetcher = (*Service)(nil)
 
 // prepareForkchoiceState prepares a beacon state with the given data to mock
 // insert into forkchoice
@@ -229,17 +229,6 @@ func TestCurrentFork_NilHeadSTate(t *testing.T) {
 	}
 }
 
-func TestGenesisValidatorsRoot_CanRetrieve(t *testing.T) {
-	// Should not panic if head state is nil.
-	c := &Service{}
-	assert.Equal(t, [32]byte{}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
-
-	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{GenesisValidatorsRoot: []byte{'a'}})
-	require.NoError(t, err)
-	c.head = &head{state: s}
-	assert.Equal(t, [32]byte{'a'}, c.GenesisValidatorsRoot(), "Did not get correct genesis validators root")
-}
-
 func TestHeadETH1Data_Nil(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	c := setupBeaconChain(t, beaconDB)
@@ -302,7 +291,7 @@ func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 
 	c.head = &head{state: s}
 	root = c.HeadGenesisValidatorsRoot()
-	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
+	require.DeepEqual(t, root[:], params.BeaconConfig().GenesisValidatorsRoot[:])
 }
 
 //

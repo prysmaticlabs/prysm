@@ -1036,7 +1036,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")

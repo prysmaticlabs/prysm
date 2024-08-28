@@ -49,7 +49,6 @@ type Server struct {
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
 	ForkchoiceFetcher      blockchain.ForkchoiceFetcher
-	GenesisFetcher         blockchain.GenesisFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           execution.POWBlockFetcher
@@ -151,7 +150,7 @@ func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) 
 	if err != nil {
 		return nil, err
 	}
-	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
+	headGenesisValidatorsRoot := params.BeaconConfig().GenesisValidatorsRoot
 	isExitDomain := [4]byte(request.Domain) == params.BeaconConfig().DomainVoluntaryExit
 	if isExitDomain {
 		hs, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
@@ -188,7 +187,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: head.GenesisValidatorsRoot(),
+			GenesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 		}
 		return stream.Send(res)
 	}
@@ -199,7 +198,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 	}
 	log.WithField("startTime", clock.GenesisTime()).Debug("Received chain started event")
 	log.Debug("Sending genesis time notification to connected validator clients")
-	gvr := clock.GenesisValidatorsRoot()
+	gvr := params.BeaconConfig().GenesisValidatorsRoot[:]
 	res := &ethpb.ChainStartResponse{
 		Started:               true,
 		GenesisTime:           uint64(clock.GenesisTime().Unix()),

@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -120,11 +119,6 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
-	}
-
 	scores, err := preState.InactivityScores()
 	if err != nil {
 		return nil, err
@@ -147,8 +141,6 @@ func OptimizedGenesisBeaconStateBellatrix(genesisTime uint64, preState state.Bea
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
-		GenesisValidatorsRoot: genesisValidatorsRoot[:],
-
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().AltairForkVersion,
 			CurrentVersion:  params.BeaconConfig().BellatrixForkVersion,

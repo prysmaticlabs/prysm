@@ -63,7 +63,6 @@ type ReadOnlyBeaconState interface {
 	ToProtoUnsafe() interface{}
 	ToProto() interface{}
 	GenesisTime() uint64
-	GenesisValidatorsRoot() []byte
 	Slot() primitives.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
@@ -95,7 +94,6 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyWithdrawals
 	WriteOnlyDeposits
 	SetGenesisTime(val uint64) error
-	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val primitives.Slot) error
 	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error

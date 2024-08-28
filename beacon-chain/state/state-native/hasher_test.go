@@ -20,7 +20,6 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	beaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
-	require.NoError(t, beaconState.SetGenesisValidatorsRoot(genesisValidatorsRoot()))
 	require.NoError(t, beaconState.SetSlot(123))
 	require.NoError(t, beaconState.SetFork(fork()))
 	require.NoError(t, beaconState.SetLatestBlockHeader(latestBlockHeader()))
@@ -84,7 +83,6 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 	beaconState, err := util.NewBeaconStateAltair(util.FillRootsNaturalOptAltair)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
-	require.NoError(t, beaconState.SetGenesisValidatorsRoot(genesisValidatorsRoot()))
 	require.NoError(t, beaconState.SetSlot(123))
 	require.NoError(t, beaconState.SetFork(fork()))
 	require.NoError(t, beaconState.SetLatestBlockHeader(latestBlockHeader()))
@@ -154,7 +152,6 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	beaconState, err := util.NewBeaconStateBellatrix(util.FillRootsNaturalOptBellatrix)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
-	require.NoError(t, beaconState.SetGenesisValidatorsRoot(genesisValidatorsRoot()))
 	require.NoError(t, beaconState.SetSlot(123))
 	require.NoError(t, beaconState.SetFork(fork()))
 	require.NoError(t, beaconState.SetLatestBlockHeader(latestBlockHeader()))
@@ -228,7 +225,6 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 	beaconState, err := util.NewBeaconStateCapella(util.FillRootsNaturalOptCapella)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
-	require.NoError(t, beaconState.SetGenesisValidatorsRoot(genesisValidatorsRoot()))
 	require.NoError(t, beaconState.SetSlot(123))
 	require.NoError(t, beaconState.SetFork(fork()))
 	require.NoError(t, beaconState.SetLatestBlockHeader(latestBlockHeader()))
@@ -305,11 +301,6 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 		{0xa1, 0x4, 0x64, 0x31, 0x2a, 0xa, 0x49, 0x31, 0x1c, 0x1, 0x41, 0x17, 0xc0, 0x52, 0x52, 0xfa, 0x4c, 0xf4, 0x95, 0x4f, 0x5c, 0xb0, 0x5a, 0x40, 0xc1, 0x32, 0x39, 0xc3, 0x7c, 0xb7, 0x2c, 0x27},
 	}
 	assert.DeepEqual(t, expected, root)
-}
-
-func genesisValidatorsRoot() []byte {
-	gvr := bytesutil.ToBytes32([]byte("gvr"))
-	return gvr[:]
 }
 
 func fork() *ethpb.Fork {

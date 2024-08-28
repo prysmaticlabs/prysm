@@ -207,7 +207,7 @@ func GenerateAttestations(bState state.BeaconState, privs []bls.SecretKey, numTo
 		)
 	}
 
-	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, bState.GenesisValidatorsRoot())
+	domain, err := signing.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}

@@ -109,7 +109,7 @@ func BlockSignature(
 		return nil, err
 	}
 
-	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
+	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}

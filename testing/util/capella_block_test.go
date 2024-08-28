@@ -28,7 +28,7 @@ func TestGenerateBLSToExecutionChange(t *testing.T) {
 	digest := hashFn.Hash(fromPubkey)
 	require.DeepEqual(t, digest[1:], digest[1:])
 
-	domain, err := signing.Domain(st.Fork(), time.CurrentEpoch(st), params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+	domain, err := signing.Domain(st.Fork(), time.CurrentEpoch(st), params.BeaconConfig().DomainBLSToExecutionChange, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 
 	require.NoError(t, signing.VerifySigningRoot(message, fromPubkey, change.Signature, domain))

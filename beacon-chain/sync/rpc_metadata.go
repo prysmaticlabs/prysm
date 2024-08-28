@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -103,7 +104,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	valRoot := s.cfg.clock.GenesisValidatorsRoot()
+	valRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.clock.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err

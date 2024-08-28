@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -64,7 +65,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 }
 
 func (s *Service) startBlocksQueue(ctx context.Context, highestSlot primitives.Slot, mode syncMode) (*blocksQueue, error) {
-	vr := s.clock.GenesisValidatorsRoot()
+	vr := params.BeaconConfig().GenesisValidatorsRoot
 	ctxMap, err := sync.ContextByteVersionsForValRoot(vr)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to initialize context version map using genesis validator root = %#x", vr)

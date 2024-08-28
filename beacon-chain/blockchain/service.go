@@ -324,7 +324,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not verify initial checkpoint provided for chain sync")
 	}
 
-	vr := bytesutil.ToBytes32(saved.GenesisValidatorsRoot())
+	vr := params.BeaconConfig().GenesisValidatorsRoot
 	if err := s.clockSetter.SetClock(startup.NewClock(s.genesisTime, vr)); err != nil {
 		return errors.Wrap(err, "failed to initialize blockchain service")
 	}
@@ -452,7 +452,7 @@ func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Ti
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
-	vr := bytesutil.ToBytes32(initializedState.GenesisValidatorsRoot())
+	vr := params.BeaconConfig().GenesisValidatorsRoot
 	if err := s.clockSetter.SetClock(startup.NewClock(genesisTime, vr)); err != nil {
 		log.WithError(err).Fatal("failed to initialize blockchain service from execution start event")
 	}

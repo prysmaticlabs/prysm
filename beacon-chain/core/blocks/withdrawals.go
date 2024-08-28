@@ -239,7 +239,7 @@ func BLSChangesSignatureBatch(
 		Descriptions: make([]string, len(changes)),
 	}
 	c := params.BeaconConfig()
-	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing domain")
 	}
@@ -268,7 +268,7 @@ func VerifyBLSChangeSignature(
 	change *ethpb.SignedBLSToExecutionChange,
 ) error {
 	c := params.BeaconConfig()
-	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing domain")
 	}

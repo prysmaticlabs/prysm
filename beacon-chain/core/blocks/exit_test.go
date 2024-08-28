@@ -155,12 +155,9 @@ func TestVerifyExitAndSignature(t *testing.T) {
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 					Epoch:           0,
 				}
-				genesisRoot := [32]byte{'a'}
-
 				st := &ethpb.BeaconState{
 					Slot:                  0,
 					Fork:                  fork,
-					GenesisValidatorsRoot: genesisRoot[:],
 				}
 
 				s, err := state_native.InitializeFromProtoUnsafePhase0(st)
@@ -234,11 +231,6 @@ func TestVerifyExitAndSignature(t *testing.T) {
 					return nil, nil, nil, err
 				}
 
-				// use wrong genesis root and don't update validator
-				genesisRoot := [32]byte{'a'}
-				if err := bs.SetGenesisValidatorsRoot(genesisRoot[:]); err != nil {
-					return nil, nil, nil, err
-				}
 				return validator, signedExit, bs, nil
 			},
 			wantErr: "signature did not verify",
@@ -259,7 +251,6 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				}
 				bs, keys := util.DeterministicGenesisState(t, 1)
 				bs, err := state_native.InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
-					GenesisValidatorsRoot: bs.GenesisValidatorsRoot(),
 					Fork:                  fork,
 					Slot:                  denebSlot,
 					Validators:            bs.Validators(),
@@ -298,7 +289,6 @@ func TestVerifyExitAndSignature(t *testing.T) {
 				require.NoError(t, err)
 				bs, keys := util.DeterministicGenesisState(t, 1)
 				bs, err = state_native.InitializeFromProtoUnsafeElectra(&ethpb.BeaconStateElectra{
-					GenesisValidatorsRoot: bs.GenesisValidatorsRoot(),
 					Fork:                  fork,
 					Slot:                  electraSlot,
 					Validators:            bs.Validators(),

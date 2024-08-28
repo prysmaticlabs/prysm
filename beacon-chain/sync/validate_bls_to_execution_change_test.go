@@ -177,7 +177,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				msg.Message.FromBlsPubkey = keys[51].PublicKey().Marshal()
 				msg.Message.ToExecutionAddress = wantedExecAddress
 				epoch := slots.ToEpoch(st.Slot())
-				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, params.BeaconConfig().GenesisValidatorsRoot[:])
 				assert.NoError(t, err)
 				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
@@ -395,7 +395,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				msg.Message.FromBlsPubkey = keys[51].PublicKey().Marshal()
 				msg.Message.ToExecutionAddress = wantedExecAddress
 				epoch := slots.ToEpoch(st.Slot())
-				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
+				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, params.BeaconConfig().GenesisValidatorsRoot[:])
 				assert.NoError(t, err)
 				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)

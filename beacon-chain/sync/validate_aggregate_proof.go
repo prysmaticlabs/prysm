@@ -314,7 +314,7 @@ func validateSelectionIndex(
 		return nil, err
 	}
 
-	d, err := signing.Domain(bs.Fork(), epoch, domain, bs.GenesisValidatorsRoot())
+	d, err := signing.Domain(bs.Fork(), epoch, domain, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +345,7 @@ func aggSigSet(s state.ReadOnlyBeaconState, a ethpb.SignedAggregateAttAndProof) 
 	}
 
 	epoch := slots.ToEpoch(aggregateAndProof.AggregateVal().GetData().Slot)
-	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, s.GenesisValidatorsRoot())
+	d, err := signing.Domain(s.Fork(), epoch, params.BeaconConfig().DomainAggregateAndProof, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}

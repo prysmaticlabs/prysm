@@ -56,7 +56,7 @@ const (
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	return ComputeDomainAndSignWithoutState(st.Fork(), epoch, domain, st.GenesisValidatorsRoot(), obj, key)
+	return ComputeDomainAndSignWithoutState(st.Fork(), epoch, domain, params.BeaconConfig().GenesisValidatorsRoot[:], obj, key)
 }
 
 // ComputeDomainAndSignWithoutState offers the same functionality as ComputeDomainAndSign without the need to provide a BeaconState.
@@ -124,7 +124,7 @@ func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index primitiv
 	if err != nil {
 		return err
 	}
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
+	d, err := Domain(st.Fork(), epoch, domain, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return err
 	}

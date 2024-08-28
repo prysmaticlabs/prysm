@@ -63,7 +63,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorsRoot(),
+		params.BeaconConfig().GenesisValidatorsRoot[:],
 	)
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(firstAtt.Data, domain)
@@ -197,7 +197,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		beaconState.Fork(),
 		0,
 		params.BeaconConfig().DomainBeaconProposer,
-		beaconState.GenesisValidatorsRoot(),
+		params.BeaconConfig().GenesisValidatorsRoot[:],
 	)
 	require.NoError(t, err)
 	htr, err := firstBlockHeader.Header.HashTreeRoot()

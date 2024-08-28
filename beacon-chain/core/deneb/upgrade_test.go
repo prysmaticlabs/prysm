@@ -20,7 +20,6 @@ func TestUpgradeToDeneb(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), mSt.GenesisTime())
-	require.DeepSSZEqual(t, preForkState.GenesisValidatorsRoot(), mSt.GenesisValidatorsRoot())
 	require.Equal(t, preForkState.Slot(), mSt.Slot())
 	require.DeepSSZEqual(t, preForkState.LatestBlockHeader(), mSt.LatestBlockHeader())
 	require.DeepSSZEqual(t, preForkState.BlockRoots(), mSt.BlockRoots())

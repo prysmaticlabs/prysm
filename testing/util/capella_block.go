@@ -233,7 +233,7 @@ func GenerateBLSToExecutionChange(st state.BeaconState, priv bls.SecretKey, val 
 		FromBlsPubkey:      pubkey,
 	}
 	c := params.BeaconConfig()
-	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())
+	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, params.BeaconConfig().GenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}

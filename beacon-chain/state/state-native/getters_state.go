@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	customtypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -16,7 +17,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 		return nil
 	}
 
-	gvrCopy := b.genesisValidatorsRoot
+	gvrCopy := params.BeaconConfig().GenesisValidatorsRoot[:]
 	br := b.blockRootsVal().Slice()
 	sr := b.stateRootsVal().Slice()
 	rm := b.randaoMixesVal().Slice()
@@ -226,7 +227,6 @@ func (b *BeaconState) ToProto() interface{} {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	gvrCopy := b.genesisValidatorsRoot
 	br := b.blockRootsVal().Slice()
 	sr := b.stateRootsVal().Slice()
 	rm := b.randaoMixesVal().Slice()
@@ -240,7 +240,6 @@ func (b *BeaconState) ToProto() interface{} {
 	case version.Phase0:
 		return &ethpb.BeaconState{
 			GenesisTime:                 b.genesisTime,
-			GenesisValidatorsRoot:       gvrCopy[:],
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
@@ -264,7 +263,6 @@ func (b *BeaconState) ToProto() interface{} {
 	case version.Altair:
 		return &ethpb.BeaconStateAltair{
 			GenesisTime:                 b.genesisTime,
-			GenesisValidatorsRoot:       gvrCopy[:],
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
@@ -291,7 +289,6 @@ func (b *BeaconState) ToProto() interface{} {
 	case version.Bellatrix:
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
-			GenesisValidatorsRoot:        gvrCopy[:],
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
@@ -319,7 +316,6 @@ func (b *BeaconState) ToProto() interface{} {
 	case version.Capella:
 		return &ethpb.BeaconStateCapella{
 			GenesisTime:                  b.genesisTime,
-			GenesisValidatorsRoot:        gvrCopy[:],
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
@@ -350,7 +346,6 @@ func (b *BeaconState) ToProto() interface{} {
 	case version.Deneb:
 		return &ethpb.BeaconStateDeneb{
 			GenesisTime:                  b.genesisTime,
-			GenesisValidatorsRoot:        gvrCopy[:],
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
@@ -381,7 +376,6 @@ func (b *BeaconState) ToProto() interface{} {
 	case version.Electra:
 		return &ethpb.BeaconStateElectra{
 			GenesisTime:                   b.genesisTime,
-			GenesisValidatorsRoot:         gvrCopy[:],
 			Slot:                          b.slot,
 			Fork:                          b.forkVal(),
 			LatestBlockHeader:             b.latestBlockHeaderVal(),

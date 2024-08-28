@@ -51,7 +51,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 
 	// Genesis validators root.
 	var r [32]byte
-	copy(r[:], state.genesisValidatorsRoot[:])
+	copy(r[:], params.BeaconConfig().GenesisValidatorsRoot[:])
 	fieldRoots[types.GenesisValidatorsRoot.RealPosition()] = r[:]
 
 	// Slot root.

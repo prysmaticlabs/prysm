@@ -150,7 +150,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribe(topic string, validator wrappedVal, handle subHandler, digest [4]byte) *pubsub.Subscription {
-	genRoot := s.cfg.clock.GenesisValidatorsRoot()
+	genRoot := params.BeaconConfig().GenesisValidatorsRoot
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -324,7 +324,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 // subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte, subnetCount uint64) {
-	genRoot := s.cfg.clock.GenesisValidatorsRoot()
+	genRoot := params.BeaconConfig().GenesisValidatorsRoot
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -397,7 +397,7 @@ func (s *Service) subscribeDynamicWithSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	genRoot := s.cfg.clock.GenesisValidatorsRoot()
+	genRoot := params.BeaconConfig().GenesisValidatorsRoot
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		// Impossible condition as it would mean digest does not exist.
@@ -526,7 +526,7 @@ func (s *Service) subscribeSyncSubnet(
 // subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
 // used to handle messages from the subnet. The base protobuf message is used to initialize new messages for decoding.
 func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrappedVal, handle subHandler, digest [4]byte) {
-	genRoot := s.cfg.clock.GenesisValidatorsRoot()
+	genRoot := params.BeaconConfig().GenesisValidatorsRoot
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
@@ -597,7 +597,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 	handle subHandler,
 	digest [4]byte,
 ) {
-	genRoot := s.cfg.clock.GenesisValidatorsRoot()
+	genRoot := params.BeaconConfig().GenesisValidatorsRoot
 	_, e, err := forks.RetrieveForkDataFromDigest(digest, genRoot[:])
 	if err != nil {
 		panic(err)
@@ -763,7 +763,7 @@ func (*Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uint6
 }
 
 func (s *Service) currentForkDigest() ([4]byte, error) {
-	genRoot := s.cfg.clock.GenesisValidatorsRoot()
+	genRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 	return forks.CreateForkDigest(s.cfg.clock.GenesisTime(), genRoot[:])
 }
 

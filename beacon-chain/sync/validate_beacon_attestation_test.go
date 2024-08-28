@@ -264,7 +264,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			if tt.validAttestationSignature {
 				com, err := helpers.BeaconCommitteeFromState(context.Background(), savedState, tt.msg.Data.Slot, tt.msg.Data.CommitteeIndex)
 				require.NoError(t, err)
-				domain, err := signing.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, savedState.GenesisValidatorsRoot())
+				domain, err := signing.Domain(savedState.Fork(), tt.msg.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().GenesisValidatorsRoot[:])
 				require.NoError(t, err)
 				attRoot, err := signing.ComputeSigningRoot(tt.msg.Data, domain)
 				require.NoError(t, err)

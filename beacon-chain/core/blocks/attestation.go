@@ -233,7 +233,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 		beaconState.Fork(),
 		indexedAtt.GetData().Target.Epoch,
 		params.BeaconConfig().DomainBeaconAttester,
-		beaconState.GenesisValidatorsRoot(),
+		params.BeaconConfig().GenesisValidatorsRoot[:],
 	)
 	if err != nil {
 		return err

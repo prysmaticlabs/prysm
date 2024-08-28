@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -20,7 +19,6 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
 	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
-		GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
 		Slot:                  64,
 	})
 	require.NoError(t, err)

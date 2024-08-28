@@ -1219,7 +1219,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
+	genesisValidatorsRoot := params.BeaconConfig().GenesisValidatorsRoot
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1291,7 +1291,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
+	genesisValidatorsRoot := params.BeaconConfig().GenesisValidatorsRoot
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1451,7 +1451,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
+	genesisValidatorsRoot := params.BeaconConfig().GenesisValidatorsRoot
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)

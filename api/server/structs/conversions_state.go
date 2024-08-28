@@ -74,7 +74,6 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 
 	return &BeaconState{
 		GenesisTime:                 fmt.Sprintf("%d", st.GenesisTime()),
-		GenesisValidatorsRoot:       hexutil.Encode(st.GenesisValidatorsRoot()),
 		Slot:                        fmt.Sprintf("%d", st.Slot()),
 		Fork:                        ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:           BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
@@ -176,7 +175,6 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 
 	return &BeaconStateAltair{
 		GenesisTime:                 fmt.Sprintf("%d", st.GenesisTime()),
-		GenesisValidatorsRoot:       hexutil.Encode(st.GenesisValidatorsRoot()),
 		Slot:                        fmt.Sprintf("%d", st.Slot()),
 		Fork:                        ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:           BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
@@ -293,7 +291,6 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 
 	return &BeaconStateBellatrix{
 		GenesisTime:                  fmt.Sprintf("%d", st.GenesisTime()),
-		GenesisValidatorsRoot:        hexutil.Encode(st.GenesisValidatorsRoot()),
 		Slot:                         fmt.Sprintf("%d", st.Slot()),
 		Fork:                         ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:            BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
@@ -427,7 +424,6 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 
 	return &BeaconStateCapella{
 		GenesisTime:                  fmt.Sprintf("%d", st.GenesisTime()),
-		GenesisValidatorsRoot:        hexutil.Encode(st.GenesisValidatorsRoot()),
 		Slot:                         fmt.Sprintf("%d", st.Slot()),
 		Fork:                         ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:            BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
@@ -564,7 +560,6 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 
 	return &BeaconStateDeneb{
 		GenesisTime:                  fmt.Sprintf("%d", st.GenesisTime()),
-		GenesisValidatorsRoot:        hexutil.Encode(st.GenesisValidatorsRoot()),
 		Slot:                         fmt.Sprintf("%d", st.Slot()),
 		Fork:                         ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:            BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
@@ -737,7 +732,6 @@ func BeaconStateElectraFromConsensus(st beaconState.BeaconState) (*BeaconStateEl
 
 	return &BeaconStateElectra{
 		GenesisTime:                   fmt.Sprintf("%d", st.GenesisTime()),
-		GenesisValidatorsRoot:         hexutil.Encode(st.GenesisValidatorsRoot()),
 		Slot:                          fmt.Sprintf("%d", st.Slot()),
 		Fork:                          ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:             BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),

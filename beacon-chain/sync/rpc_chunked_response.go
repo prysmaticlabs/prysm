@@ -31,7 +31,7 @@ func WriteBlockChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, en
 	}
 	var obtainedCtx []byte
 
-	valRoot := tor.GenesisValidatorsRoot()
+	valRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 	switch blk.Version() {
 	case version.Phase0:
 		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
@@ -143,7 +143,7 @@ func WriteBlobSidecarChunk(stream libp2pcore.Stream, tor blockchain.TemporalOrac
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
-	valRoot := tor.GenesisValidatorsRoot()
+	valRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 	ctxBytes, err := forks.ForkDigestFromEpoch(slots.ToEpoch(sidecar.Slot()), valRoot[:])
 	if err != nil {
 		return err

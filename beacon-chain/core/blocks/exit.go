@@ -116,7 +116,7 @@ func VerifyExitAndSignature(
 	}
 
 	fork := state.Fork()
-	genesisRoot := state.GenesisValidatorsRoot()
+	genesisRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 
 	// EIP-7044: Beginning in Deneb, fix the fork version to Capella.
 	// This allows for signed validator exits to be valid forever.

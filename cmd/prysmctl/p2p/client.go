@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network"
@@ -185,7 +184,6 @@ func (c *client) initializeMockChainService(ctx context.Context) (*mockChain, er
 	return &mockChain{
 		genesisTime:     genesisResp.GenesisTime.AsTime(),
 		currentFork:     currFork,
-		genesisValsRoot: bytesutil.ToBytes32(genesisResp.GenesisValidatorsRoot),
 	}, nil
 }
 

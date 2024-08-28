@@ -26,7 +26,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := primitives.Epoch(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, uint64(epoch))
-	domain, err := signing.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorsRoot())
+	domain, err := signing.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 	root, err := (&ethpb.SigningData{ObjectRoot: buf, Domain: domain}).HashTreeRoot()
 	require.NoError(t, err)

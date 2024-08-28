@@ -2,7 +2,6 @@ package structs
 
 type BeaconState struct {
 	GenesisTime                 string                `json:"genesis_time"`
-	GenesisValidatorsRoot       string                `json:"genesis_validators_root"`
 	Slot                        string                `json:"slot"`
 	Fork                        *Fork                 `json:"fork"`
 	LatestBlockHeader           *BeaconBlockHeader    `json:"latest_block_header"`
@@ -26,7 +25,6 @@ type BeaconState struct {
 
 type BeaconStateAltair struct {
 	GenesisTime                 string             `json:"genesis_time"`
-	GenesisValidatorsRoot       string             `json:"genesis_validators_root"`
 	Slot                        string             `json:"slot"`
 	Fork                        *Fork              `json:"fork"`
 	LatestBlockHeader           *BeaconBlockHeader `json:"latest_block_header"`
@@ -53,7 +51,6 @@ type BeaconStateAltair struct {
 
 type BeaconStateBellatrix struct {
 	GenesisTime                  string                  `json:"genesis_time"`
-	GenesisValidatorsRoot        string                  `json:"genesis_validators_root"`
 	Slot                         string                  `json:"slot"`
 	Fork                         *Fork                   `json:"fork"`
 	LatestBlockHeader            *BeaconBlockHeader      `json:"latest_block_header"`
@@ -81,7 +78,6 @@ type BeaconStateBellatrix struct {
 
 type BeaconStateCapella struct {
 	GenesisTime                  string                         `json:"genesis_time"`
-	GenesisValidatorsRoot        string                         `json:"genesis_validators_root"`
 	Slot                         string                         `json:"slot"`
 	Fork                         *Fork                          `json:"fork"`
 	LatestBlockHeader            *BeaconBlockHeader             `json:"latest_block_header"`
@@ -112,7 +108,6 @@ type BeaconStateCapella struct {
 
 type BeaconStateDeneb struct {
 	GenesisTime                  string                       `json:"genesis_time"`
-	GenesisValidatorsRoot        string                       `json:"genesis_validators_root"`
 	Slot                         string                       `json:"slot"`
 	Fork                         *Fork                        `json:"fork"`
 	LatestBlockHeader            *BeaconBlockHeader           `json:"latest_block_header"`
@@ -143,7 +138,6 @@ type BeaconStateDeneb struct {
 
 type BeaconStateElectra struct {
 	GenesisTime                   string                         `json:"genesis_time"`
-	GenesisValidatorsRoot         string                         `json:"genesis_validators_root"`
 	Slot                          string                         `json:"slot"`
 	Fork                          *Fork                          `json:"fork"`
 	LatestBlockHeader             *BeaconBlockHeader             `json:"latest_block_header"`

@@ -41,7 +41,6 @@ func UpgradeToBellatrix(state state.BeaconState) (state.BeaconState, error) {
 	}
 	s := &ethpb.BeaconStateBellatrix{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,

@@ -111,7 +111,6 @@ type Config struct {
 	ChainStartFetcher             execution.ChainStartFetcher
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
-	GenesisFetcher                blockchain.GenesisFetcher
 	MockEth1Votes                 bool
 	EnableDebugRPCEndpoints       bool
 	AttestationsPool              attestations.Pool
@@ -236,7 +235,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		HeadFetcher:            s.cfg.HeadFetcher,
 		ForkFetcher:            s.cfg.ForkFetcher,
 		ForkchoiceFetcher:      s.cfg.ForkchoiceFetcher,
-		GenesisFetcher:         s.cfg.GenesisFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
 		BlockFetcher:           s.cfg.ExecutionChainService,
@@ -277,7 +275,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		GenesisTimeFetcher:   s.cfg.GenesisTimeFetcher,
 		PeersFetcher:         s.cfg.PeersFetcher,
 		PeerManager:          s.cfg.PeerManager,
-		GenesisFetcher:       s.cfg.GenesisFetcher,
 		POWChainInfoFetcher:  s.cfg.ExecutionChainInfoFetcher,
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,

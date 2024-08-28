@@ -58,11 +58,6 @@ type TimeFetcher interface {
 	CurrentSlot() primitives.Slot
 }
 
-// GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
-type GenesisFetcher interface {
-	GenesisValidatorsRoot() [32]byte
-}
-
 // HeadFetcher defines a common interface for methods in blockchain service which
 // directly retrieve head related data.
 type HeadFetcher interface {
@@ -72,7 +67,6 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
-	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
@@ -85,13 +79,11 @@ type HeadFetcher interface {
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
 	CurrentFork() *ethpb.Fork
-	GenesisFetcher
 	TimeFetcher
 }
 
 // TemporalOracle is like ForkFetcher minus CurrentFork()
 type TemporalOracle interface {
-	GenesisFetcher
 	TimeFetcher
 }
 
@@ -254,7 +246,7 @@ func (s *Service) HeadGenesisValidatorsRoot() [32]byte {
 		return [32]byte{}
 	}
 
-	return s.headGenesisValidatorsRoot()
+	return params.BeaconConfig().GenesisValidatorsRoot
 }
 
 // HeadETH1Data returns the eth1data of the current head state.
@@ -271,18 +263,6 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
-}
-
-// GenesisValidatorsRoot returns the genesis validators
-// root of the chain.
-func (s *Service) GenesisValidatorsRoot() [32]byte {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return [32]byte{}
-	}
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.

@@ -610,7 +610,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 			FromBlsPubkey:      privKeys[idx].PublicKey().Marshal(),
 			ToExecutionAddress: bytesutil.ToBytes(uint64(idx), 20),
 		}
-		domain, err := signing.ComputeDomain(params.BeaconConfig().DomainBLSToExecutionChange, params.BeaconConfig().GenesisForkVersion, st.GenesisValidatorsRoot())
+		domain, err := signing.ComputeDomain(params.BeaconConfig().DomainBLSToExecutionChange, params.BeaconConfig().GenesisForkVersion, params.BeaconConfig().GenesisValidatorsRoot[:])
 		if err != nil {
 			return err
 		}
