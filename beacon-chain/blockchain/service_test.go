@@ -270,6 +270,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -314,6 +315,7 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	headRoot, err := headBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -475,6 +477,7 @@ func TestChainService_EverythingOptimistic(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(finalizedSlot))
 	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	require.NoError(t, err)
 
 	c, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
@@ -530,6 +533,7 @@ func TestStartFromSavedState_ValidatorIndexCacheUpdated(t *testing.T) {
 	}))
 	require.NoError(t, headState.SetSlot(finalizedSlot))
 	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	require.NoError(t, err)
 
 	c, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -271,6 +272,9 @@ func (s *PremineGenesisConfig) populate(g state.BeaconState) error {
 	if err := g.SetGenesisTime(s.GenesisTime); err != nil {
 		return err
 	}
+	if err := s.setGenesisValidatorsRoot(g); err != nil {
+		return err
+	}
 	if err := s.setFork(g); err != nil {
 		return err
 	}
@@ -309,6 +313,14 @@ func (s *PremineGenesisConfig) populate(g state.BeaconState) error {
 	// For pre-mined genesis, we want to keep the deposit root set to the root of an empty trie.
 	// This needs to be set again because the methods used by processDeposits mutate the state's eth1data.
 	return s.setEth1Data(g)
+}
+
+func (s *PremineGenesisConfig) setGenesisValidatorsRoot(g state.BeaconState) error {
+	vroot, err := stateutil.ValidatorRegistryRoot(g.Validators())
+	if err != nil {
+		return err
+	}
+	return g.SetGenesisValidatorsRoot(vroot[:])
 }
 
 func (s *PremineGenesisConfig) setFork(g state.BeaconState) error {

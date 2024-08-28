@@ -64,6 +64,7 @@ func UpgradeToDeneb(state state.BeaconState) (state.BeaconState, error) {
 
 	s := &ethpb.BeaconStateDeneb{
 		GenesisTime:           state.GenesisTime(),
+		GenesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,

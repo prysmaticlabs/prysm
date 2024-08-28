@@ -1489,7 +1489,7 @@ func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
 		return
 	}
-	validatorsRoot := params.BeaconConfig().GenesisValidatorsRoot
+	validatorsRoot := s.ChainInfoFetcher.GenesisValidatorsRoot()
 	if bytes.Equal(validatorsRoot[:], params.BeaconConfig().ZeroHash[:]) {
 		httputil.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
 		return

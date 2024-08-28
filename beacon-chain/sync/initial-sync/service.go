@@ -133,11 +133,10 @@ func (s *Service) Start() {
 		return
 	}
 	s.clock = clock
-	genesisValidatorRoot := params.BeaconConfig().GenesisValidatorsRoot
 	log.Info("Received state initialized event")
-	ctxMap, err := sync.ContextByteVersionsForValRoot(genesisValidatorRoot)
+	ctxMap, err := sync.ContextByteVersionsForValRoot(clock.GenesisValidatorsRoot())
 	if err != nil {
-		log.WithField("genesisValidatorRoot", genesisValidatorRoot).
+		log.WithField("genesisValidatorRoot", clock.GenesisValidatorsRoot()).
 			WithError(err).Error("unable to initialize context version map using genesis validator")
 		return
 	}

@@ -217,6 +217,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 
 	s := &ethpb.BeaconStateElectra{
 		GenesisTime:           beaconState.GenesisTime(),
+		GenesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 		Slot:                  beaconState.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: beaconState.Fork().CurrentVersion,

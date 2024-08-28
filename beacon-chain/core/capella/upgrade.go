@@ -48,6 +48,7 @@ func UpgradeToCapella(state state.BeaconState) (state.BeaconState, error) {
 	}
 	s := &ethpb.BeaconStateCapella{
 		GenesisTime:           state.GenesisTime(),
+		GenesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,

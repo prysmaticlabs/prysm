@@ -49,6 +49,7 @@ type Server struct {
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
 	ForkchoiceFetcher      blockchain.ForkchoiceFetcher
+	GenesisFetcher         blockchain.GenesisFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           execution.POWBlockFetcher
@@ -150,7 +151,7 @@ func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) 
 	if err != nil {
 		return nil, err
 	}
-	headGenesisValidatorsRoot := params.BeaconConfig().GenesisValidatorsRoot
+	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
 	isExitDomain := [4]byte(request.Domain) == params.BeaconConfig().DomainVoluntaryExit
 	if isExitDomain {
 		hs, err := vs.HeadFetcher.HeadStateReadOnly(ctx)

@@ -8,7 +8,6 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
@@ -105,7 +104,7 @@ func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initialize
 		return nil, err
 	}
 	// We wait until this point to initialize the signature cache because here we have access to the genesis validator root.
-	vr := params.BeaconConfig().GenesisValidatorsRoot[:]
+	vr := w.ini.shared.clock.GenesisValidatorsRoot()
 	sc := newSigCache(vr[:], DefaultSignatureCacheSize, w.getFork)
 	w.ini.shared.sc = sc
 	return w.ini, nil

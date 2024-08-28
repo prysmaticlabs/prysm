@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -48,5 +47,5 @@ func TestWaitForClock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, later, c.Now())
 	require.Equal(t, genesis, c.GenesisTime())
-	require.Equal(t, vr, params.BeaconConfig().GenesisValidatorsRoot[:])
+	require.Equal(t, vr, c.GenesisValidatorsRoot())
 }

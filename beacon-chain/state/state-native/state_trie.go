@@ -171,6 +171,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	b := &BeaconState{
 		version:                     version.Phase0,
 		genesisTime:                 st.GenesisTime,
+		genesisValidatorsRoot:       params.BeaconConfig().GenesisValidatorsRoot,
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
@@ -275,6 +276,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	b := &BeaconState{
 		version:                     version.Altair,
 		genesisTime:                 st.GenesisTime,
+		genesisValidatorsRoot:       params.BeaconConfig().GenesisValidatorsRoot,
 		slot:                        st.Slot,
 		fork:                        st.Fork,
 		latestBlockHeader:           st.LatestBlockHeader,
@@ -384,6 +386,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	b := &BeaconState{
 		version:                      version.Bellatrix,
 		genesisTime:                  st.GenesisTime,
+		genesisValidatorsRoot:        params.BeaconConfig().GenesisValidatorsRoot,
 		slot:                         st.Slot,
 		fork:                         st.Fork,
 		latestBlockHeader:            st.LatestBlockHeader,
@@ -495,6 +498,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 	b := &BeaconState{
 		version:                             version.Capella,
 		genesisTime:                         st.GenesisTime,
+		genesisValidatorsRoot:               params.BeaconConfig().GenesisValidatorsRoot,
 		slot:                                st.Slot,
 		fork:                                st.Fork,
 		latestBlockHeader:                   st.LatestBlockHeader,
@@ -610,6 +614,7 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 	b := &BeaconState{
 		version:                           version.Deneb,
 		genesisTime:                       st.GenesisTime,
+		genesisValidatorsRoot:             params.BeaconConfig().GenesisValidatorsRoot,
 		slot:                              st.Slot,
 		fork:                              st.Fork,
 		latestBlockHeader:                 st.LatestBlockHeader,
@@ -723,6 +728,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 	b := &BeaconState{
 		version:                             version.Electra,
 		genesisTime:                         st.GenesisTime,
+		genesisValidatorsRoot:               params.BeaconConfig().GenesisValidatorsRoot,
 		slot:                                st.Slot,
 		fork:                                st.Fork,
 		latestBlockHeader:                   st.LatestBlockHeader,
@@ -897,6 +903,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		pendingConsolidations:      b.pendingConsolidations,
 
 		// Everything else, too small to be concerned about, constant size.
+		genesisValidatorsRoot:               b.genesisValidatorsRoot,
 		justificationBits:                   b.justificationBitsVal(),
 		fork:                                b.forkVal(),
 		latestBlockHeader:                   b.latestBlockHeaderVal(),
@@ -1177,6 +1184,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	switch field {
 	case types.GenesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
+	case types.GenesisValidatorsRoot:
+		return b.genesisValidatorsRoot, nil
 	case types.Slot:
 		return ssz.Uint64Root(uint64(b.slot)), nil
 	case types.Eth1DepositIndex:

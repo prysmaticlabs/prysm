@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
@@ -48,10 +49,16 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	ctx := context.Background()
 	addr := common.Address{1, 2, 3}
 	require.NoError(t, db.SaveDepositContractAddress(ctx, addr))
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
 	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
+		GenesisFetcher: &mock.ChainService{
+			State:          st,
+			ValidatorsRoot: genValRoot,
+		},
 	}
 	res, err := ns.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)

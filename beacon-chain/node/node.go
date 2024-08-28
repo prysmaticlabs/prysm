@@ -990,6 +990,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		BlobReceiver:                  chainService,
 		AttestationReceiver:           chainService,
 		GenesisTimeFetcher:            chainService,
+		GenesisFetcher:                chainService,
 		OptimisticModeFetcher:         chainService,
 		AttestationsPool:              b.attestationPool,
 		ExitPool:                      b.exitPool,

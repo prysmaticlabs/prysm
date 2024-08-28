@@ -4,9 +4,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -47,6 +49,19 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 
 	b.genesisTime = val
 	b.markFieldAsDirty(types.GenesisTime)
+	return nil
+}
+
+// SetGenesisValidatorsRoot for the beacon state.
+func (b *BeaconState) SetGenesisValidatorsRoot(val []byte) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if len(val) != fieldparams.RootLength {
+		return errors.New("incorrect validators root length")
+	}
+	b.genesisValidatorsRoot = bytesutil.ToBytes32(val)
+	b.markFieldAsDirty(types.GenesisValidatorsRoot)
 	return nil
 }
 

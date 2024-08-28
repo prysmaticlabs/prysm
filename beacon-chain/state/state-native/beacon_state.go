@@ -20,6 +20,7 @@ import (
 type BeaconState struct {
 	version                             int
 	genesisTime                         uint64
+	genesisValidatorsRoot               [32]byte
 	slot                                primitives.Slot
 	fork                                *ethpb.Fork
 	latestBlockHeader                   *ethpb.BeaconBlockHeader
@@ -84,6 +85,7 @@ type BeaconState struct {
 type beaconStateMarshalable struct {
 	Version                             int                                     `json:"version" yaml:"version"`
 	GenesisTime                         uint64                                  `json:"genesis_time" yaml:"genesis_time"`
+	GenesisValidatorsRoot               [32]byte                                `json:"genesis_validators_root" yaml:"genesis_validators_root"`
 	Slot                                primitives.Slot                         `json:"slot" yaml:"slot"`
 	Fork                                *ethpb.Fork                             `json:"fork" yaml:"fork"`
 	LatestBlockHeader                   *ethpb.BeaconBlockHeader                `json:"latest_block_header" yaml:"latest_block_header"`
@@ -153,6 +155,7 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 	marshalable := &beaconStateMarshalable{
 		Version:                             b.version,
 		GenesisTime:                         b.genesisTime,
+		GenesisValidatorsRoot:               b.genesisValidatorsRoot,
 		Slot:                                b.slot,
 		Fork:                                b.fork,
 		LatestBlockHeader:                   b.latestBlockHeader,

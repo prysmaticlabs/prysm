@@ -166,7 +166,7 @@ func cliActionRequestBlobs(cliCtx *cli.Context) error {
 			fields["headSlot"] = *headSlot
 		}
 
-		ctxByte, err := sync.ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
+		ctxByte, err := sync.ContextByteVersionsForValRoot(chain.genesisValsRoot)
 		if err != nil {
 			return err
 		}

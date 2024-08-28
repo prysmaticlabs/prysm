@@ -452,6 +452,7 @@ func Test_executePostFinalizationTasks(t *testing.T) {
 		Epoch: 123,
 		Root:  headRoot[:],
 	}))
+	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
 	s, tr := minimalTestService(t, WithFinalizedStateAtStartUp(headState))
 	ctx, beaconDB, stateGen := tr.ctx, tr.db, tr.sg
 

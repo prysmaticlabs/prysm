@@ -356,6 +356,11 @@ func (s *ChainService) GenesisTime() time.Time {
 	return s.Genesis
 }
 
+// GenesisValidatorsRoot mocks the same method in the chain service.
+func (s *ChainService) GenesisValidatorsRoot() [32]byte {
+	return s.ValidatorsRoot
+}
+
 // CurrentSlot mocks the same method in the chain service.
 func (s *ChainService) CurrentSlot() primitives.Slot {
 	if s.Slot != nil {
