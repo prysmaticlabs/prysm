@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["span.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace",
+    visibility = ["//visibility:public"],
+    deps = ["@io_opencensus_go//trace:go_default_library"],
+)
