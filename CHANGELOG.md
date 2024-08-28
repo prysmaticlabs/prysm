@@ -171,7 +171,7 @@ Updating to this release is recommended at your earliest convenience, especially
 - use time.NewTimer() to avoid possible memory leaks
 - paranoid underflow protection without error handling
 - Fix CommitteeAssignments to not return every validator
-- Fix dependent root retrival genesis case
+- Fix dependent root retrieval genesis case
 - Restrict Dials From Discovery
 - Always close cache warm chan to prevent blocking
 - Keep only the latest value in the health channel
@@ -316,7 +316,7 @@ In this release, there is a notable change to the default value of --local-block
 - handle special case of batch size=1
 - Always Set Inprogress Boolean In Cache
 - Builder APIs: adding headers to post endpoint
-- Rename mispelled variable
+- Rename misspelled variable
 - allow blob by root within da period
 - Rewrite Pruning Implementation To Handle EIP 7045
 - Set default fee recipient if tracked val fails
