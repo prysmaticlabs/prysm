@@ -23,12 +23,15 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: Updated block publishing beacon APIs to support Electra.
 - "Submitted builder validator registration settings for custom builders" log message moved to debug level.
 - config: Genesis validator root is now hardcoded in params.BeaconConfig()
+- `grpc-gateway-host` is renamed to http-host. The old name can still be used as an alias.
+- `grpc-gateway-port` is renamed to http-port.
+- `grpc-gateway-corsdomain` is renamed to http-cors-domain.
 
 ### Deprecated
-
+- The `disable-grpc-gateway` flag.
 
 ### Removed
-
+- removed gRPC Gateway and gRPC versions of REST endpoints ( unused endpoints )
 
 ### Fixed
 
