@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -306,8 +307,35 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 
 		// Does the state exists in DB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
-			s, err := s.beaconDB.State(ctx, parentRoot)
-			return s, errors.Wrap(err, "failed to retrieve state from db")
+			st, err := s.beaconDB.State(ctx, parentRoot)
+			if err != nil {
+				return nil, err
+			}
+			blk, err := s.beaconDB.Block(ctx, parentRoot)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get block from db!")
+			}
+
+			if st.Slot() != blk.Block().Slot() {
+				return nil, errors.New("slot mismatch!")
+			}
+
+			stateRoot1, err := st.HashTreeRoot(ctx)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash tree root of state!")
+			}
+			stateRoot2 := blk.Block().StateRoot()
+			if stateRoot1 != stateRoot2 {
+				log.WithFields(logrus.Fields{
+					"StateRoot":       stateRoot1,
+					"BlockStateRoot":  stateRoot2,
+					"ParentBlockRoot": parentRoot,
+					"BlockSlot":       blk.Block().Slot(),
+					"StateSlot":       st.Slot(),
+				}).Warn("State root missmatch between block and state")
+			}
+
+			return st, nil
 		}
 
 		b, err = s.beaconDB.Block(ctx, parentRoot)
