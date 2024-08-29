@@ -1099,7 +1099,7 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, forceFullPush bool) error {
 	ctx, span := trace.StartSpan(ctx, "validator.PushProposerSettings")
 	defer span.End()
 
@@ -1140,7 +1140,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}); err != nil {
 		return err
 	}
-	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign, slot)
+	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign, slot, forceFullPush)
 	if len(signedRegReqs) > 0 {
 		go func() {
 			if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
@@ -1314,6 +1314,7 @@ func (v *validator) buildSignedRegReqs(
 	activePubkeys [][fieldparams.BLSPubkeyLength]byte,
 	signer iface.SigningFunc,
 	slot primitives.Slot,
+	forceFullPush bool,
 ) []*ethpb.SignedValidatorRegistrationV1 {
 	ctx, span := trace.StartSpan(ctx, "validator.buildSignedRegReqs")
 	defer span.End()
@@ -1395,7 +1396,7 @@ func (v *validator) buildSignedRegReqs(
 			}).Warn("Fee recipient is burn address")
 		}
 
-		if slots.IsEpochStart(slot) { // if epoch start send all validator registrations
+		if slots.IsEpochStart(slot) || forceFullPush { // if epoch start (or forced to) send all validator registrations
 			signedValRegRegs = append(signedValRegRegs, signedReq)
 		} else if !isCached { // if slot is not epoch start then only send new non cached values
 			signedValRegRegs = append(signedValRegRegs, signedReq)

@@ -38,6 +38,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: build blocks with blobs.
 - E2E: fixed gas limit at genesis
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
+- validator registration changed to debug, and the frequency of validator registration calls are reduced
 
 ### Security
 

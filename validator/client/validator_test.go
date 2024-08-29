@@ -2059,7 +2059,7 @@ func TestValidator_PushSettings(t *testing.T) {
 				if tt.feeRecipientMap != nil {
 					feeRecipients, err := v.buildPrepProposerReqs(pubkeys)
 					require.NoError(t, err)
-					signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign, 0)
+					signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign, 0, false)
 					for _, recipient := range feeRecipients {
 						require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
 					}
@@ -2077,7 +2077,7 @@ func TestValidator_PushSettings(t *testing.T) {
 					require.Equal(t, len(tt.mockExpectedRequests), len(signedRegisterValidatorRequests))
 					require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
 				}
-				if err := v.PushProposerSettings(ctx, km, 0); tt.err != "" {
+				if err := v.PushProposerSettings(ctx, km, 0, false); tt.err != "" {
 					assert.ErrorContains(t, tt.err, err)
 				}
 				if len(tt.logMessages) > 0 {
@@ -2502,7 +2502,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 		status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
 		index:     3,
 	}
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)
 
 	assert.Equal(t, 1, len(actual))
 	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
@@ -2599,7 +2599,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 		status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
 		index:     3,
 	}
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)
 
 	assert.Equal(t, 2, len(actual))
 
@@ -2647,7 +2647,7 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 		return nil, errors.New("custom error")
 	}
 
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)
 	assert.Equal(t, 0, len(actual))
 }
 
@@ -2707,7 +2707,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 		status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
 		index:     1,
 	}
-	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)
 	assert.Equal(t, 0, len(actual))
 }
 
