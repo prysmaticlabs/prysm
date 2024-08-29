@@ -678,7 +678,7 @@ func (s *Service) subscribeColumnSubnet(
 	// subnet
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.DataColumnSidecar{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
-	// check if subscription exists and if not sub scribe the relevant subnet.
+	// check if subscription exists and if not subscribe the relevant subnet.
 	if _, exists := subscriptions[idx]; !exists {
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
