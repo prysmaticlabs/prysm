@@ -70,7 +70,7 @@ type ReadOnlyBeaconBlockBody interface {
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
 	PayloadAttestations() ([]*ethpb.PayloadAttestation, error)
-	SignedExecutionPayloadHeader() (*enginev1.SignedExecutionPayloadHeader, error)
+	SignedExecutionPayloadHeader() (ROSignedExecutionPayloadHeader, error)
 }
 
 type SignedBeaconBlock interface {
