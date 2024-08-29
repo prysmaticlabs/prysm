@@ -124,15 +124,12 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	}
 
 	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-	if beacon == nil {
-		return nil, fmt.Errorf("could not get beacon block header")
-	}
 
 	executionPayloadHeaderInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+		return nil, err
 	}
-	var executionPayloadHeader *structs.ExecutionPayloadHeaderCapella
+	executionPayloadHeader := &structs.ExecutionPayloadHeaderCapella{}
 	if executionPayloadHeaderInterface != nil {
 		executionPayloadHeader.ParentHash = hexutil.Encode(executionPayloadHeaderInterface.ParentHash())
 		executionPayloadHeader.FeeRecipient = hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient())
@@ -222,15 +219,12 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	}
 
 	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-	if beacon == nil {
-		return nil, fmt.Errorf("could not get beacon block header")
-	}
 
 	executionPayloadHeaderInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+		return nil, err
 	}
-	var executionPayloadHeader *structs.ExecutionPayloadHeaderDeneb
+	executionPayloadHeader := &structs.ExecutionPayloadHeaderDeneb{}
 	if executionPayloadHeaderInterface != nil {
 		executionPayloadHeader.ParentHash = hexutil.Encode(executionPayloadHeaderInterface.ParentHash())
 		executionPayloadHeader.FeeRecipient = hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient())
