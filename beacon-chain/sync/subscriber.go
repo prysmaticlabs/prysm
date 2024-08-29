@@ -332,8 +332,8 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 					"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
 					"peerID":       pid.String(),
 					"agent":        agentString(pid, s.cfg.p2p.Host()),
-					"gossipScore":  s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
-				}).Debugf("Gossip message was ignored")
+					"gossipScore":  fmt.Sprintf("%.2f", s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid)),
+				}).Debug("Gossip message was ignored")
 			}
 			messageIgnoredValidationCounter.WithLabelValues(topic).Inc()
 		}
@@ -678,14 +678,21 @@ func (s *Service) subscribeColumnSubnet(
 	// subnet
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.DataColumnSidecar{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
-	// check if subscription exists and if not subscribe the relevant subnet.
+	// check if subscription exists and if not sub scribe the relevant subnet.
 	if _, exists := subscriptions[idx]; !exists {
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
+
+	minimumPeersPerSubnet := flags.Get().MinimumPeersPerSubnet
+
 	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to column gossip subnet with "+
-			"column index %d. Searching network for peers subscribed to the subnet.", idx)
-		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
+		log.WithFields(logrus.Fields{
+			"columnSubnet":          idx,
+			"minimumPeersPerSubnet": minimumPeersPerSubnet,
+			"topic":                 subnetTopic,
+		}).Debug("No peers found subscribed to column gossip subnet. Searching network for peers subscribed to it")
+
+		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, minimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
 		}
