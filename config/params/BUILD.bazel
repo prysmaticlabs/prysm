@@ -62,6 +62,7 @@ go_test(
     gotags = ["develop"],
     tags = ["CI_race_detection"],
     deps = [
+        "//beacon-chain/state/genesis:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",

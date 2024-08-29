@@ -366,7 +366,7 @@ func createLightClientUpdate(
 	updateSignaturePeriod := slots.ToEpoch(block.Block().Slot())
 
 	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := slots.ToEpoch(result.AttestedHeader.Slot)
+	updateAttestedPeriod := slots.ToEpoch(result.AttestedHeader.Beacon.Slot)
 
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
@@ -441,7 +441,7 @@ func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap
 	if err != nil {
 		return nil, err
 	}
-	bootstrap.Header = migration.V1Alpha1HeaderToV1(v1Alpha1Header)
+	bootstrap.Header = &v2.LightClientHeader{Beacon: migration.V1Alpha1HeaderToV1(v1Alpha1Header)}
 
 	currentSyncCommittee, err := bootstrapJSON.CurrentSyncCommittee.ToConsensus()
 	if err != nil {
@@ -500,14 +500,14 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 
 	var finalizedHeader *structs.BeaconBlockHeader
 	if input.FinalizedHeader != nil {
-		finalizedHeader = structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader))
+		finalizedHeader = structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader.Beacon))
 	}
 
 	return &structs.LightClientUpdate{
-		AttestedHeader:          structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader)),
+		AttestedHeader:          &structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader.Beacon))},
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
-		FinalizedHeader:         finalizedHeader,
+		FinalizedHeader:         &structs.LightClientHeader{Beacon: finalizedHeader},
 		FinalityBranch:          branchToJSON(input.FinalityBranch),
 		SyncAggregate:           syncAggregateToJSON(input.SyncAggregate),
 		SignatureSlot:           strconv.FormatUint(uint64(input.SignatureSlot), 10),
@@ -539,8 +539,8 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
 	}
 
 	// Compare presence of relevant sync committee
-	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
-	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
+	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Beacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
+	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Beacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
 
 	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
 		return newHasRelevantSyncCommittee
@@ -555,8 +555,8 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
 
 	// Compare sync committee finality
 	if newHasFinality {
-		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Slot))
-		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.FinalizedHeader.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Slot))
+		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.FinalizedHeader.Beacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.Beacon.Slot))
+		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.FinalizedHeader.Beacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.Beacon.Slot))
 
 		if newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality {
 			return newHasSyncCommitteeFinality
@@ -569,8 +569,8 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
 	}
 
 	// Tiebreaker 2: Prefer older data (fewer changes to best)
-	if newUpdate.AttestedHeader.Slot != oldUpdate.AttestedHeader.Slot {
-		return newUpdate.AttestedHeader.Slot < oldUpdate.AttestedHeader.Slot
+	if newUpdate.AttestedHeader.Beacon.Slot != oldUpdate.AttestedHeader.Beacon.Slot {
+		return newUpdate.AttestedHeader.Beacon.Slot < oldUpdate.AttestedHeader.Beacon.Slot
 	}
 	return newUpdate.SignatureSlot < oldUpdate.SignatureSlot
 }
