@@ -175,7 +175,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, "capella", resp[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.Beacon.BodyRoot)
 	require.NotNil(t, resp)
 }
 
@@ -278,7 +278,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCount(t *tes
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp)) // Even with big count input, the response is still the max available period, which is 1 in test case.
 	require.Equal(t, "capella", resp[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.Beacon.BodyRoot)
 	require.NotNil(t, resp)
 }
 
@@ -381,7 +381,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriod(t *testi
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, "capella", resp[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.Beacon.BodyRoot)
 	require.NotNil(t, resp)
 }
 
@@ -484,7 +484,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCount(t *testing.
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, "capella", resp[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.Beacon.BodyRoot)
 	require.NotNil(t, resp)
 }
 
@@ -687,7 +687,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	resp := &structs.LightClientUpdateWithVersion{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
 	require.NotNil(t, resp.Data)
 }
 
@@ -793,7 +793,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	resp := &structs.LightClientUpdateWithVersion{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
 	require.NotNil(t, resp.Data)
 }
 
