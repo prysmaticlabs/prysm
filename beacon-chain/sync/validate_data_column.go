@@ -133,8 +133,8 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 	fields := logging.DataColumnFields(ds)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	validationTime := s.cfg.clock.Now().Sub(receivedTime)
-	fields["intoSlotTime"] = sinceSlotStartTime
-	fields["valTime"] = validationTime
+	fields["sinceSlotStartTime"] = sinceSlotStartTime
+	fields["validationTime"] = validationTime
 
 	log.WithFields(fields).Debug("Accepted data column sidecar gossip")
 	return pubsub.ValidationAccept, nil
