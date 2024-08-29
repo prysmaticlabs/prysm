@@ -310,17 +310,17 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 			Version: version.String(int(updateData.Version)),
 			Data: &structs.LightClientFinalityUpdate{
 				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.Beacon.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.Beacon.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.Beacon.BodyRoot),
 				},
 				FinalizedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.StateRoot),
+					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Beacon.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Beacon.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.Beacon.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.Beacon.StateRoot),
 				},
 				FinalityBranch: finalityBranch,
 				SyncAggregate: &structs.SyncAggregate{
@@ -343,11 +343,11 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 			Version: version.String(int(updateData.Version)),
 			Data: &structs.LightClientOptimisticUpdate{
 				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.Beacon.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.Beacon.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.Beacon.BodyRoot),
 				},
 				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
