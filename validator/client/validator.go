@@ -40,7 +40,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
-	beaconapi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
@@ -49,9 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -66,7 +63,6 @@ var (
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
 	msgNoKeysFetched     = "No validating keys fetched. Waiting for keys..."
-	nonExistentIndex     = primitives.ValidatorIndex(^uint64(0))
 )
 
 type validator struct {
@@ -1406,28 +1402,6 @@ func (v *validator) buildSignedRegReqs(
 		}
 	}
 	return signedValRegRegs
-}
-
-func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.validatorIndex")
-	defer span.End()
-
-	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
-	switch {
-	case status.Code(err) == codes.NotFound:
-		log.Debugf("Could not find validator index for public key %#x. "+
-			"Perhaps the validator is not yet active.", pubkey)
-		return 0, false, nil
-	case err != nil:
-		notFoundErr := &beaconapi.IndexNotFoundError{}
-		if errors.As(err, &notFoundErr) {
-			log.Debugf("Could not find validator index for public key %#x. "+
-				"Perhaps the validator is not yet active.", pubkey)
-			return 0, false, nil
-		}
-		return 0, false, err
-	}
-	return resp.Index, true, nil
 }
 
 func (v *validator) aggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {
