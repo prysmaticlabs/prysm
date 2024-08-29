@@ -157,12 +157,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.InteropStartIndex,
 		},
 	},
-	{
-		Name: "deprecated",
-		Flags: []cli.Flag{
-			flags.DeprecatedBeaconRPCGatewayProviderFlag,
-		},
-	},
 }
 
 func init() {
