@@ -64,7 +64,7 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 
 // Start the http rest service.
 func (g *Server) Start() {
-	g.ctx, g.cancel := context.WithCancel(g.ctx)
+	g.ctx, g.cancel = context.WithCancel(g.ctx)
 
 	go func() {
 		log.WithField("address", g.cfg.httpAddr).Info("Starting HTTP server")

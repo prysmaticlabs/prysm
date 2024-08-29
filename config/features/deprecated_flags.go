@@ -1,6 +1,8 @@
 package features
 
-import "github.com/urfave/cli/v2"
+import (
+	"github.com/urfave/cli/v2"
+)
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
@@ -57,6 +59,13 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedBeaconRPCGatewayProviderFlag = &cli.StringFlag{
+		Name:   "beacon-rpc-gateway-provider",
+		Usage:  "Flag deprecated and unused",
+		Value:  "127.0.0.1:3500",
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -71,6 +80,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableEIP4881,
 	deprecatedVerboseSigVerification,
 	deprecatedEnableDebugRPCEndpoints,
+	deprecatedBeaconRPCGatewayProviderFlag,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

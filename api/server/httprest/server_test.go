@@ -30,12 +30,6 @@ func TestServer_StartStop(t *testing.T) {
 
 	opts := []Option{
 		WithHTTPAddr(address),
-		WithMuxHandler(func(
-			_ http.HandlerFunc,
-			_ http.ResponseWriter,
-			_ *http.Request,
-		) {
-		}),
 		WithRouter(mux.NewRouter()),
 	}
 
