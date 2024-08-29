@@ -214,7 +214,7 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 			"slot":         slot,
 			"timeIntoSlot": broadCastMissingDataColumnsTimeIntoSlot,
 			"columns":      missingColumnsList,
-		}).Debug("Broadcasting not seen via gossip but reconstructed data columns.")
+		}).Debug("Broadcasting not seen via gossip but reconstructed data columns")
 	})
 
 	return nil
