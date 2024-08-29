@@ -114,15 +114,7 @@ func (f FieldIndex) String() string {
 		return "pendingPartialWithdrawals"
 	case PendingConsolidations:
 		return "pendingConsolidations"
-	case PreviousInclusionListProposer: // ePBS fields start here
-		return "PreviousInclusionListProposer"
-	case PreviousInclusionListSlot:
-		return "PreviousInclusionListSlot"
-	case LatestInclusionListProposer:
-		return "LatestInclusionListProposer"
-	case LatestInclusionListSlot:
-		return "LatestInclusionListSlot"
-	case LatestBlockHash:
+	case LatestBlockHash: // ePBS fields start here
 		return "LatestBlockHash"
 	case LatestFullSlot:
 		return "LatestFullSlot"
@@ -214,15 +206,7 @@ func (f FieldIndex) RealPosition() int {
 		return 35
 	case PendingConsolidations:
 		return 36
-	case PreviousInclusionListProposer: // ePBS fields start here
-		return 37
-	case PreviousInclusionListSlot:
-		return 38
-	case LatestInclusionListProposer:
-		return 39
-	case LatestInclusionListSlot:
-		return 40
-	case LatestBlockHash:
+	case LatestBlockHash: // ePBS fields start here
 		return 41
 	case LatestFullSlot:
 		return 42
@@ -281,6 +265,7 @@ const (
 	LatestExecutionPayloadHeaderCapella
 	LatestExecutionPayloadHeaderDeneb
 	LatestExecutionPayloadHeaderElectra
+	ExecutionPayloadHeader
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
@@ -293,13 +278,8 @@ const (
 	PendingBalanceDeposits        // Electra: EIP-7251
 	PendingPartialWithdrawals     // Electra: EIP-7251
 	PendingConsolidations         // Electra: EIP-7251
-	PreviousInclusionListProposer // ePBS fields start here
-	PreviousInclusionListSlot
-	LatestInclusionListProposer
-	LatestInclusionListSlot
-	LatestBlockHash
+	LatestBlockHash               // ePBS fields start here
 	LatestFullSlot
-	ExecutionPayloadHeader
 	LastWithdrawalsRoot
 )
 
