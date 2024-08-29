@@ -275,7 +275,8 @@ func initializePersistentColumnSubnets(id enode.ID) error {
 
 	subs := make([]uint64, 0, len(subsMap))
 	for sub := range subsMap {
-		subs = append(subs, sub)
+		copiedSub := sub
+		subs = append(subs, copiedSub)
 	}
 
 	cache.ColumnSubnetIDs.AddColumnSubnets(subs)
