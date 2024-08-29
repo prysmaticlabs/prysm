@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -172,7 +171,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 				},
 				validatorSetter: func(t *testing.T) *validator {
 					v := validator{
-						pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
+						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						useWeb:                       false,
 						genesisTime:                  0,
@@ -200,7 +199,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 				},
 				validatorSetter: func(t *testing.T) *validator {
 					v := validator{
-						pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
+						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						useWeb:                       false,
 						genesisTime:                  0,
@@ -228,7 +227,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 				},
 				validatorSetter: func(t *testing.T) *validator {
 					v := validator{
-						pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
+						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						useWeb:                       false,
 						genesisTime:                  0,
@@ -256,7 +255,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 				},
 				validatorSetter: func(t *testing.T) *validator {
 					v := validator{
-						pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
+						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						useWeb:                       false,
 						genesisTime:                  0,

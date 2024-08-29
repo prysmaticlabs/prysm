@@ -66,6 +66,7 @@ var (
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
 	msgNoKeysFetched     = "No validating keys fetched. Waiting for keys..."
+	nonExistentIndex     = primitives.ValidatorIndex(^uint64(0))
 )
 
 type validator struct {
@@ -77,7 +78,7 @@ type validator struct {
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	prevEpochBalances                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	blacklistedPubkeys                 map[[fieldparams.BLSPubkeyLength]byte]bool
-	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex
+	pubkeyToStatus                     map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus
 	wallet                             *wallet.Wallet
 	walletInitializedChan              chan *wallet.Wallet
 	walletInitializedFeed              *event.Feed
@@ -1212,44 +1213,66 @@ func (v *validator) ChangeHost() {
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.filterAndCacheActiveKeys")
 	defer span.End()
-
+	isEpochStart := slots.IsEpochStart(slot)
+	validatorStatusUnpopulated := false
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)
+	validatorStatuses := make([]*validatorStatus, 0)
 	for _, k := range pubkeys {
-		_, ok := v.pubkeyToValidatorIndex[k]
-		// Get validator index from RPC server if not found.
+		sta, ok := v.pubkeyToStatus[k]
 		if !ok {
-			i, ok, err := v.validatorIndex(ctx, k)
-			if err != nil {
-				return nil, err
-			}
-			if !ok { // Nothing we can do if RPC server doesn't have validator index.
-				continue
-			}
-			v.pubkeyToValidatorIndex[k] = i
+			validatorStatusUnpopulated = true
+			// skip adding if not found
+			continue
 		}
 		copiedk := k
 		statusRequestKeys = append(statusRequestKeys, copiedk[:])
+		copiedStatus := sta
+		validatorStatuses = append(validatorStatuses, copiedStatus)
 	}
-	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
-		PublicKeys: statusRequestKeys,
-	})
-	if err != nil {
-		return nil, err
+	if isEpochStart || validatorStatusUnpopulated {
+		resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+			PublicKeys: statusRequestKeys,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if resp == nil {
+			return nil, errors.New("response is nil")
+		}
+		if len(resp.Statuses) != len(resp.PublicKeys) {
+			return nil, fmt.Errorf("expected %d pubkeys in status, received %d", len(resp.Statuses), len(resp.PublicKeys))
+		}
+		if len(resp.Statuses) != len(resp.Indices) {
+			return nil, fmt.Errorf("expected %d indices in status, received %d", len(resp.Statuses), len(resp.Indices))
+		}
+		statuses := make([]*validatorStatus, 0)
+		for i, s := range resp.Statuses {
+			sta := &validatorStatus{
+				publicKey: resp.PublicKeys[i],
+				status:    s,
+				index:     resp.Indices[i],
+			}
+			statuses = append(statuses, sta)
+			// update cache
+			v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = sta
+		}
+		validatorStatuses = statuses
 	}
-	for i, s := range resp.Statuses {
-		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-		currActivating := s.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.ActivationEpoch
 
-		active := s.Status == ethpb.ValidatorStatus_ACTIVE
-		exiting := s.Status == ethpb.ValidatorStatus_EXITING
+	for _, s := range validatorStatuses {
+		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
+		currActivating := s.status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.status.ActivationEpoch
+
+		active := s.status.Status == ethpb.ValidatorStatus_ACTIVE
+		exiting := s.status.Status == ethpb.ValidatorStatus_EXITING
 
 		if currActivating || active || exiting {
-			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
+			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(s.publicKey))
 		} else {
 			log.WithFields(logrus.Fields{
-				"pubkey": hexutil.Encode(resp.PublicKeys[i]),
-				"status": s.Status.String(),
+				"pubkey": hexutil.Encode(s.publicKey),
+				"status": s.status.Status.String(),
 			}).Debugf("Skipping non-active status key.")
 		}
 	}
@@ -1260,8 +1283,13 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 func (v *validator) buildPrepProposerReqs(activePubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
 	var prepareProposerReqs []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	for _, k := range activePubkeys {
+		s, ok := v.pubkeyToStatus[k]
+		if !ok {
+			continue
+		}
+
 		// Default case: Define fee recipient to burn address
-		var feeRecipient common.Address
+		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 
 		// If fee recipient is defined in default configuration, use it
 		if v.ProposerSettings() != nil && v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
@@ -1277,13 +1305,8 @@ func (v *validator) buildPrepProposerReqs(activePubkeys [][fieldparams.BLSPubkey
 			}
 		}
 
-		validatorIndex, ok := v.pubkeyToValidatorIndex[k]
-		if !ok {
-			continue
-		}
-
 		prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			ValidatorIndex: validatorIndex,
+			ValidatorIndex: s.index,
 			FeeRecipient:   feeRecipient[:],
 		})
 	}
@@ -1308,6 +1331,12 @@ func (v *validator) buildSignedRegReqs(
 		return signedValRegRegs
 	}
 	for i, k := range activePubkeys {
+		// map is populated before this function in buildPrepProposerReq
+		_, ok := v.pubkeyToStatus[k]
+		if !ok {
+			continue
+		}
+
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		enabled := false
@@ -1344,12 +1373,6 @@ func (v *validator) buildSignedRegReqs(
 		}
 
 		if !enabled {
-			continue
-		}
-
-		// map is populated before this function in buildPrepProposerReq
-		_, ok := v.pubkeyToValidatorIndex[k]
-		if !ok {
 			continue
 		}
 
