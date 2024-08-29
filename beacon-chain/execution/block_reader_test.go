@@ -12,6 +12,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -261,11 +262,11 @@ func TestService_BlockNumberByTimestampLessTargetTime(t *testing.T) {
 	defer cancel()
 
 	// Provide an unattainable target time
-	_, err = web3Service.findMaxTargetEth1Block(ctx, hd.Number, hd.Time/2)
+	_, err = web3Service.findMaxTargetEth1Block(ctx, hd.Number.Uint64(), hd.Time/2)
 	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
 
 	// Provide an attainable target time
-	blk, err := web3Service.findMaxTargetEth1Block(context.Background(), hd.Number, hd.Time-5)
+	blk, err := web3Service.findMaxTargetEth1Block(context.Background(), hd.Number.Uint64(), hd.Time-5)
 	require.NoError(t, err)
 	require.NotEqual(t, hd.Number.Uint64(), blk.Number.Uint64(), "retrieved block is not less than the head")
 }
@@ -299,11 +300,16 @@ func TestService_BlockNumberByTimestampMoreTargetTime(t *testing.T) {
 	defer cancel()
 
 	// Provide an unattainable target time with respect to head
-	_, err = web3Service.findMinTargetEth1Block(ctx, big.NewInt(0).Div(hd.Number, big.NewInt(2)), hd.Time)
+	_, err = web3Service.findMinTargetEth1Block(ctx, hd.Number.Uint64()/2, hd.Time)
 	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
 
 	// Provide an attainable target time with respect to head
-	blk, err := web3Service.findMinTargetEth1Block(context.Background(), big.NewInt(0).Sub(hd.Number, big.NewInt(5)), hd.Time)
+	blk, err := web3Service.findMinTargetEth1Block(context.Background(), hd.Number.Uint64()-5, hd.Time)
+	require.NoError(t, err)
+	require.Equal(t, hd.Number.Uint64(), blk.Number.Uint64(), "retrieved block is not equal to the head")
+
+	// Provide an attainable target time with respect to head
+	blk, err = web3Service.findMinTargetEth1Block(context.Background(), hd.Number.Uint64()-5, hd.Time+params.BeaconConfig().SecondsPerETH1Block/2)
 	require.NoError(t, err)
 	require.Equal(t, hd.Number.Uint64(), blk.Number.Uint64(), "retrieved block is not equal to the head")
 }

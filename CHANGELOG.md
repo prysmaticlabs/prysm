@@ -1,4 +1,4 @@
-# Changelog 
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -22,13 +22,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: Add electra objects to beacon API.
 - Electra: Updated block publishing beacon APIs to support Electra.
 - "Submitted builder validator registration settings for custom builders" log message moved to debug level.
+- Remove unnecessary conversion and infeasible check, add a case in findMinTargetEth1Block
 - config: Genesis validator root is now hardcoded in params.BeaconConfig()
 
 ### Deprecated
 
-
 ### Removed
-
 
 ### Fixed
 
@@ -39,7 +38,6 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
 
 ### Security
-
 
 ## [v5.1.0](https://github.com/prysmaticlabs/prysm/compare/v5.0.4...v5.1.0) - 2024-08-20
 
@@ -112,7 +110,6 @@ In an upcoming release, we will be deprecating the gRPC gateway and renaming sev
 - Fix Event stream with carriage return support
 - Fix panic on empty block result in REST API
 - engine_getPayloadBodiesByRangeV1 - fix, adding hexutil encoding on request parameters
-
 
 ### Security
 
@@ -217,7 +214,6 @@ No security updates in this release.
 This release has many optimizations, UX improvements, and bug fixes. Due to the number of important bug fixes and optimizations, we encourage all operators to update to v5.0.2 at their earliest convenience.
 
 In this release, there is a notable change to the default value of --local-block-value-boost from 0 to 10. This means that the default behavior of using the builder API / mev-boost requires the builder bid to be 10% better than your local block profit. If you want to preserve the existing behavior, set --local-block-value-boost=0.
-
 
 ### Added
 
@@ -412,7 +408,6 @@ The following flags have been removed entirely:
 - --safe-slots-to-import-optimistically
 - --show-deposit-data
 
-
 ### Removed
 
 - Prysm gRPC slasher endpoints are removed
@@ -441,7 +436,6 @@ The following flags have been removed entirely:
 - Fix pending block/blob zero peer edge case
 - Check non-zero blob data is written to disk
 - Avoid blob partial filepath collisions with mem addr entropy
-
 
 ### Security
 
@@ -517,24 +511,27 @@ Happy new year! We have an incredibly exciting release to kick off the new year.
 
 There are some API changes bundled in this release that require you to upgrade or downgrade in particular order. If the validator is updated before the beacon node, it will see repeated 404 errors at start up until the beacon node is updated as it uses a new API endpoint introduced in v4.2.0.
 
-:arrow_up_small:  **Upgrading**: Upgrade the beacon node, then the validator.
+:arrow_up_small: **Upgrading**: Upgrade the beacon node, then the validator.
 :arrow_down_small: **Downgrading**: Downgrade the validator to v4.1.1 then downgrade the beacon node.
 
 #### Deneb Goerli Support
+
 This release adds in full support for the upcoming deneb hard fork on goerli next week on January 17th.
 
 #### Networking Parameter Changes
+
 This release increases the default peer count to 70 from 45. The reason this is done is so that node's running
 with default peer counts can perform their validator duties as expected. Users who want to use the old peer count
 can add in `--p2p-max-peers=45` as a flag.
 
 #### Profile Guided Optimization
-This release has binaries built using PGO, for more information on how it works feel free to look here: https://tip.golang.org/doc/pgo . 
-This allows the go compiler to build more optimized Prysm binaries using production profiles and workloads.  
+
+This release has binaries built using PGO, for more information on how it works feel free to look here: https://tip.golang.org/doc/pgo .
+This allows the go compiler to build more optimized Prysm binaries using production profiles and workloads.
 
 #### ARM Supported Docker Images
 
-Our docker images now support amd64 and arm64 architecture! This long awaited feature is finally here for Apple Silicon and Raspberry Pi users. 
+Our docker images now support amd64 and arm64 architecture! This long awaited feature is finally here for Apple Silicon and Raspberry Pi users.
 
 ### Deneb
 
@@ -586,18 +583,18 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 - Prune dangling blob
 - Use Afero Walk for Pruning Blob
 - Initialize blob storage without pruning
-- Fix batch pruning errors 
+- Fix batch pruning errors
 - Blob filesystem add pruning during blob write
 - Blob filesystem add pruning at startup
 - Ensure partial blob is deleted if there's an error
 - Split blob pruning into two funcs
 - Use functional options for `--blob-retention-epochs`
-- Blob filesystem: delete blobs 
+- Blob filesystem: delete blobs
 - Fix Blob Storage Path
 - Add blob getters
 - Blob filesystem: Save Blobs
 - Blob filesystem: prune blobs
-- blobstorage: Improve mkdirall error 
+- blobstorage: Improve mkdirall error
 
 #### Beacon-API
 
@@ -615,7 +612,7 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 #### Validator Client
 
 - Validator client: remove blob signing
-- Deneb - web3signer 
+- Deneb - web3signer
 
 #### Testing
 
@@ -633,7 +630,7 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 - Check builder header kzg commitment
 - Add more color to sending blob by range req log
 - Move pruning log to after retention check
-- Enhance Pruning Logs 
+- Enhance Pruning Logs
 - Rename Blob retention epoch flag
 - Check that blobs count is correct when unblinding
 - Log blob's kzg commmitment at sync
@@ -673,7 +670,7 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 - Verify lmd without ancestor
 - Track target in forkchoice
 - Return early from ReceiveBlock if already sycned
- 
+
 #### Builder
 
 - Adding builder boost factor to get block v3
@@ -722,7 +719,7 @@ _Most of the PRs here involve shifting our http endpoints to using vanilla http 
 - http endpoint cleanup
 - Revert "REST VC: Subscribe to Beacon API events "
 - proposer and attester slashing sse
-- REST VC: Subscribe to Beacon API events 
+- REST VC: Subscribe to Beacon API events
 - Simplify error handling for JsonRestHandler
 - Update block publishing to 2.4.2 spec
 - Use `SkipMevBoost` properly during block production
@@ -747,7 +744,7 @@ _Most of the PRs here involve shifting our http endpoints to using vanilla http 
 - Validator HTTP endpoints
 - Debug HTTP endpoints
 - HTTP validator API: health endpoints
-- HTTP Validator API:  `/eth/v1/keystores`
+- HTTP Validator API: `/eth/v1/keystores`
 - Allow unknown fields in Beacon API responses
 - HTTP state endpoints
 - HTTP Validator API: `/eth/v1/validator/{pubkey}/feerecipient`
@@ -862,12 +859,12 @@ _Most of the PRs here involve shifting our http endpoints to using vanilla http 
 - Fix missing testnet versions. Issue
 - Update README.md
 - Only run metrics for canonical blocks
-- Relax file permissions check on existing directories 
+- Relax file permissions check on existing directories
 - forkchoice.Getter wrapper with locking wrappers
 - Initialize cancellable root context in main.go
 - Fix forkchoice pkg's comments grammar
 - lock RecentBlockSlot
-- Comment typo 
+- Comment typo
 - Optimize `ReplayBlocks` for Zero Diff
 - Remove default value of circuit breaker flags
 - Fix Withdrawals
@@ -910,20 +907,23 @@ No security issues in thsi release.
 - **EIP-4881 Deposit Tree**: Integrated the EIP-4881 Deposit Tree into Prysm to optimize runtime block processing and production. This feature is controlled by a flag: `--enable-eip-4881`
 - **BLST version 0.3.11**: Introduced a significant improvement to the portable build's performance. The portable build now features runtime detection, automatically enabling optimized code paths if your CPU supports it.
 - **Multiarch Containers Preview Available**: multiarch (:wave: arm64 support :wave:) containers will be offered for preview at the following locations:
-    - Beacon Chain: [gcr.io/prylabs-dev/prysm/beacon-chain:v4.1.0](gcr.io/prylabs-dev/prysm/beacon-chain:v4.1.0)
-    - Validator: [gcr.io/prylabs-dev/prysm/validator:v4.1.0](gcr.io/prylabs-dev/prysm/validator:v4.1.0)
-    - Please note that in the next cycle, we will exclusively use these containers at the canonical URLs.
+  - Beacon Chain: [gcr.io/prylabs-dev/prysm/beacon-chain:v4.1.0](gcr.io/prylabs-dev/prysm/beacon-chain:v4.1.0)
+  - Validator: [gcr.io/prylabs-dev/prysm/validator:v4.1.0](gcr.io/prylabs-dev/prysm/validator:v4.1.0)
+  - Please note that in the next cycle, we will exclusively use these containers at the canonical URLs.
 
 ### Added
 
 #### EIP-4844:
+
 ##### Core:
+
 - **Deneb State & Block Types**: New state and block types added specifically for Deneb.
 - **Deneb Protobufs**: Protocol Buffers designed exclusively for Deneb.
 - **Deneb Engine API**: Specialized API endpoints for Deneb.
 - **Deneb Config/Params**: Deneb-specific configurations and parameters from the deneb-integration branch.
 
 ##### Blob Management:
+
 - **Blob Retention Epoch Period**: Configurable retention periods for blobs.
 - **Blob Arrival Gossip Metric**: Metrics for blob arrivals via gossip protocol.
 - **Blob Merge Function**: Functionality to merge and validate saved/new blobs.
@@ -931,11 +931,13 @@ No security issues in thsi release.
 - **Save Blobs to DB**: Feature to save blobs to the database for subscribers.
 
 ##### Logging and Validation:
+
 - **Logging for Blob Sidecar**: Improved logging functionalities for Blob Sidecar.
 - **Blob Commitment Count Logging**: Introduced logging for blob commitment counts.
 - **Blob Validation**: A feature to validate blobs.
 
 ##### Additional Features and Tests:
+
 - **Deneb Changes & Blobs to Builder**: Deneb-specific changes and blob functionality added to the builder.
 - **Deneb Blob Sidecar Events**: Blob sidecar events added as part of the Deneb release.
 - **KZG Commitments**: Functionality to copy KZG commitments when using the builder block.
@@ -948,14 +950,16 @@ No security issues in thsi release.
 - **Deneb Upgrade Function**: A function to handle the upgrade to Deneb.
 
 #### Rest of EIPs
+
 - **EIP-4788**: Added support for Beacon block root in the EVM.
 - **EIP-7044** and **EIP-7045**: Implemented support for Perpetually Valid Signed Voluntary Exits and increased the max attestation inclusion slot.
 
 #### Beacon API:
 
-*Note: All Beacon API work is related with moving endpoints into pure HTTP handlers. This is NOT new functionality.*
+_Note: All Beacon API work is related with moving endpoints into pure HTTP handlers. This is NOT new functionality._
 
 ##### Endpoints moved to HTTP:
+
 - `/eth/v1/beacon/blocks` and `/eth/v1/beacon/blinded_blocks`.
 - `/eth/v1/beacon/states/{state_id}/committees`.
 - `/eth/v1/config/deposit_contract`.
@@ -974,13 +978,16 @@ No security issues in thsi release.
 - `/eth/v1/beacon/headers/{block_id}` and `/eth/v1/validator/liveness/{epoch}`.
 
 ##### Miscellaneous:
+
 - **Comma-Separated Query Params**: Support for comma-separated query parameters added to Beacon API.
 - **Middleware for Query Params**: Middleware introduced for handling comma-separated query parameters.
 - **Content-Type Header**: Compliance improved by adding Content-Type header to VC POST requests.
 - **Node Version**: REST-based node version endpoint implemented.
 
 #### Other additions
+
 ##### Protocol:
+
 - **Multi-Value Slice for Beacon State**: Enhanced the beacon state by utilizing a multi-value slice.
 - **EIP-4881 Deposit Tree**: EIP-4881 Deposit Tree integrated into Prysm, controlled by a feature flag.
 - **New Engine Methods**: New engine methods set as the default.
@@ -988,36 +995,44 @@ No security issues in thsi release.
 - **Block Commitment Checks**: Functionality to reject blocks with excessive commitments added.
 
 ##### State Management:
+
 - **Alloc More Items**: Modified beacon-node/state to allocate an additional item during appends.
 - **GetParentBlockHash Helper**: Refactoring of `getLocalPayloadAndBlobs` with a new helper function for fetching parent block hashes.
 - **RW Lock for Duties**: Read-Write lock mechanism introduced for managing validator duties.
 
 ##### Build and CI/CD Improvements:
+
 - **Manual Build Tag**: A "manual" build tag introduced to expedite CI build times.
 - **Multiarch Docker Containers**: Support for multiple architectures in Docker containers added.
 
 ##### Testing:
+
 - **Init-Sync DA Tests**: Tests for initial sync Data Availability (DA) included.
 - **Fuzz List Timeout**: Github workflow for fuzz testing now includes a timeout setting.
 - **Go Fuzzing Workflow**: New Github workflow for Go fuzzing on a cron schedule.
 
 ##### Logging and Monitoring:
+
 - **FFG-LMD Consistency Logging**: Enhanced logging for Finality Gadget LMD (FFG-LMD) consistency.
 - **Validator Count Endpoint**: New endpoint to count the number of validators.
 
 ##### User Interface and Web:
+
 - **Web UI Release**: Prysm Web UI v2.0.4 released with unspecified updates and improvements.
 
 ##### Testnet support:
+
 - **Holesky Support**: Support for Holesky decompositions integrated into the codebase.
 
 ##### Error Handling and Responses:
+
 - **Validation Error in ForkchoiceUpdatedResponse**: Included validation errors in fork choice update responses.
 - **Wrapped Invalid Block Error**: Improved error handling for cases where an invalid block error is wrapped..
 
 ### Changed
 
 #### General:
+
 - **Skip MEV-Boost Flag**: Updated `GetBlock` RPC to utilize `skip mev-boost` flag.
 - **Portable Version of BLST**: Transitioned to portable BLST version as default.
 - **Teku Mainnet Bootnodes**: Refreshed Teku mainnet bootnodes ENRs.
@@ -1025,6 +1040,7 @@ No security issues in thsi release.
 - **Parallel Block Building**: Deprecated sequential block building path
 
 #### Deneb-Specific Changes:
+
 - **Deneb Spectests Release**: Upgraded to Deneb spectests v1.4.0-beta.2-hotfix.
 - **Deneb API and Builder Cleanup**: Conducted clean-up activities for Deneb-specific API and builder.
 - **Deneb Block Versioning**: Introduced changes related to Deneb produce block version 3.
@@ -1033,23 +1049,28 @@ No security issues in thsi release.
 - **Blob Sidecar Syncing**: Altered behavior when value is 0.
 
 #### Code Cleanup and Refactor:
+
 - **API Types Cleanup**: Reorganized API types for improved readability.
 - **Geth Client Headers**: Simplified code for setting geth client headers.
 - **Bug Report Template**: Revised requirements for more clarity.
 
 #### Flags and Configuration:
+
 - **Safe Slots to Import Flag**: Deprecated this flag for standard alignment.
 - **Holesky Config**: Revised the Holesky configuration for new genesis.
 
 #### Logging:
+
 - **Genesis State Warning**: Will log a warning if the genesis state size is under 1KB.
 - **Debug Log Removal**: Excised debug logs for cleaner output.
 
 #### Miscellaneous:
+
 - **First Aggregation Timing**: Default setting for first aggregation is 7 seconds post-genesis.
 - **Pointer Usage**: Modified execution chain to use pointers, reducing copy operations.
 
 #### Dependency Updates:
+
 - **Go Version Update**: Updated to Go version 1.20.7.
 - **Go Version Update**: Updated to Go version 1.20.9 for better security.
 - **Various Dependencies**: Updated multiple dependencies including Geth, Bazel, rules_go, Gazelle, BLST, and go-libp2p.
@@ -1069,6 +1090,7 @@ No security issues in thsi release.
 ### Fixed
 
 #### Deneb-Specific Bug Fixes:
+
 - **Deneb Builder Bid HTR**: Fixed an issue related to HashTreeRoot (HTR) in Deneb builder bid.
 - **PBV2 Condition**: Corrected conditions related to PBV2.
 - **Route Handler and Cleanup**: Updated the route handler and performed minor cleanups.
@@ -1081,11 +1103,13 @@ No security issues in thsi release.
 - **Sync/RPC Blob Usage**: Rectified blob usage when requesting a block by root in Sync/RPC.
 
 #### Cache Fixes:
+
 - **Don't Prune Proposer ID Cache**: Fixed a loop erroneously pruning the proposer ID cache.
 - **LastRoot Adjustment**: Altered `LastRoot` to return the head root.
 - **Last Canonical Root**: Modified forkchoice to return the last canonical root of the epoch.
 
 #### Block Processing fixes:
+
 - **Block Validation**: Fixed an issue where blocks were incorrectly marked as bad during validation.
 - **Churn Limit Helpers**: Improved churn limit calculations through refactoring.
 - **Churn with 0 Exits**: Rectified a bug that calculated churn even when there were 0 exits.
@@ -1093,19 +1117,22 @@ No security issues in thsi release.
 - **Duplicate Block Processing**: Eliminated redundant block processing.
 
 #### Error Handling and Logging:
+
 - **RpcError from Core Service**: Ensured that `RpcError` is returned from core services.
 - **Unhandled Error**: Enhanced error management by handling previously unhandled errors.
 - **Error Handling**: Wrapped `ctx.Err` for improved error handling.
 - **Attestation Error**: Optimized error management in attestation processing.
 
 #### Test and Build Fixes:
+
 - **Racy Tests in Blockchain**: Resolved race conditions in blockchain tests.
 - **TestService_ReceiveBlock**: Modified `TestService_ReceiveBlock` to work as expected.
 - **Build Issue with @com_github_ethereum_c_kzg_4844**: Resolved build issues related to this specific library.
-- **Fuzz Testing**: Addressed fuzz testing issues in the `origin/deneb-integration` 
+- **Fuzz Testing**: Addressed fuzz testing issues in the `origin/deneb-integration`
 - **Long-Running E2E Tests**: Fixed issues that were causing the end-to-end tests to run for an extended period.
 
 #### Additional Fixes:
+
 - **Public Key Copies During Aggregation**: Optimized to avoid unnecessary public key copies during aggregation.
 - **Epoch Participations**: Fixed the setting of current and previous epoch participations.
 - **Verify Attestations**: Resolved an attestation verification issue in proposer logic.
@@ -1114,7 +1141,6 @@ No security issues in thsi release.
 - **Phase0 Block Parsing**: Resolved parsing issues in phase0 blocks on submit.
 - **Hex Handling**: Upgraded the hex handling in various modules.
 - **Initial Sync PreProcessing**: Resolved an issue affecting the initial sync preprocessing.
-
 
 ### Security
 
@@ -1485,7 +1511,7 @@ Minor fixes in this release address a bug that affected certain large operators 
 - Beacon-API: Implemented Block rewards endpoint
 - Beacon-API client: Implemented GetSyncStatus endpoint
 - Beacon-API client: Implemented GetGenesis endpoint
-- Beacon-API client: Implemented ListValidators  endpoint
+- Beacon-API client: Implemented ListValidators endpoint
 
 ### Changed
 
@@ -1562,7 +1588,6 @@ This is a reissue of v4.0.0. See https://github.com/prysmaticlabs/prysm/issues/1
 - Libp2p: make peer scorer permanent default
 - Test: disable e2e slasher test
 - CLI: derecate the following flags
-
 
 ### Deprecated
 
@@ -1870,13 +1895,12 @@ No security updates in this release.
 
 ## [v3.1.0](https://github.com/prysmaticlabs/prysm/compare/v3.1.0...v3.0.0) - 2022-09-05
 
-Updating to this release is highly recommended as it contains several important fixes and features for the merge. You must be using Prysm v3 or later before Bellatrix activates on September 6th. 
+Updating to this release is highly recommended as it contains several important fixes and features for the merge. You must be using Prysm v3 or later before Bellatrix activates on September 6th.
 
 **Important docs links**
 
 - [How to prepare for the merge](https://docs.prylabs.network/docs/prepare-for-merge)
 - [How to check merge readiness status](https://docs.prylabs.network/docs/monitoring/checking-status)
-
 
 ### Added
 
@@ -1936,7 +1960,7 @@ There are no security updates in this release.
 
 ### Changed
 
-- **Require an execution client** `--execution-endpoint=...`. The default value has changed to `localhost:8551` and you must use the jwt flag `--jwt-secret=...`. Review [the docs](https://docs.prylabs.network/docs/prepare-for-merge) for more information 
+- **Require an execution client** `--execution-endpoint=...`. The default value has changed to `localhost:8551` and you must use the jwt flag `--jwt-secret=...`. Review [the docs](https://docs.prylabs.network/docs/prepare-for-merge) for more information
 - `--http-web3provider` has been renamed to `--execution-endpoint`. Please update your configuration as `--http-web3provider` will be removed in a future release.
 - Insert attestations into forkchoice sooner
 - Builder API: `gas_limit` changed from int to string to support JSON / YAML configs. `--suggested-gas-limit` changed from int to string.
@@ -1988,39 +2012,39 @@ As we prepare our `v3` mainnet release for [The Merge](https://ethereum.org/en/u
 ### Added
 
 - Sepolia testnet configs `--sepolia`
-- Goerli as an alias to Prater and testnet configs `--prater` or `--goerli` 
+- Goerli as an alias to Prater and testnet configs `--prater` or `--goerli`
 - Fee recipient API for key manager
 - YML config flag support for web3 signer
-- Validator registration API for web3 signer 
+- Validator registration API for web3 signer
 - JSON tcontent type with optional metadata
-- Flashbots MEV boost support 
-- Store blind block (i.e block with payload header) instead of full block (i.e. block with payload) for storage efficiency (currently only available when the `enable-only-blinded-beacon-blocks` feature flag is enabled) 
-- Pcli utility support to print blinded block 
+- Flashbots MEV boost support
+- Store blind block (i.e block with payload header) instead of full block (i.e. block with payload) for storage efficiency (currently only available when the `enable-only-blinded-beacon-blocks` feature flag is enabled)
+- Pcli utility support to print blinded block
 - New Web v2.0 release into Prysm
 
 ### Changed
 
-- Native state improvement is enabled by default 
-- Use native blocks instead of protobuf blocks 
+- Native state improvement is enabled by default
+- Use native blocks instead of protobuf blocks
 - Peer scorer is enabled by default
-- Enable fastssz to use vectorized HTR hash algorithm improvement 
+- Enable fastssz to use vectorized HTR hash algorithm improvement
 - Forkchoice store refactor and cleanups
-- Update libp2p library dependency 
-- RPC proposer duty is now allowed next epoch query 
+- Update libp2p library dependency
+- RPC proposer duty is now allowed next epoch query
 - Do not print traces with `log.withError(err)`
 - Testnets are running with pre-defined feature flags
 
 ### Removed
 
-- Deprecate Step Parameter from our Block By Range Requests 
+- Deprecate Step Parameter from our Block By Range Requests
 
 ### Fixed
 
-- Ignore nil forkchoice node when saving orphaned atts 
-- Sync: better handling of missing state summary in DB 
-- Validator: creates invalid terminal block using the same timestamp as payload 
-- P2P: uses incorrect goodbye codes 
-- P2p: defaults Incorrectly to using Mplex, which results in losing Teku peers 
+- Ignore nil forkchoice node when saving orphaned atts
+- Sync: better handling of missing state summary in DB
+- Validator: creates invalid terminal block using the same timestamp as payload
+- P2P: uses incorrect goodbye codes
+- P2p: defaults Incorrectly to using Mplex, which results in losing Teku peers
 - Disable returning future state for API
 - Eth1 connection API panic
 
@@ -2041,7 +2065,7 @@ There are no security updates in this release.
 - JSON API allows SSZ-serialized requests in `produceBlockV2` and `produceBlindedBlock`
 - Progress towards Builder API and MEV boost support (not ready for testing in this release)
 - Support for `DOMAIN_APPLICATION_MARK` configuration
-- Ignore subset aggregates if a better aggregate has been seen already 
+- Ignore subset aggregates if a better aggregate has been seen already
 - Reinsertion of reorg'd attestations
 - Command `beacon-chain generate-auth-secret` to assist with generating a hex encoded secret for engine API
 - Return optimistic status to `ChainHead` related grpc service
@@ -2051,7 +2075,7 @@ There are no security updates in this release.
 ### Changed
 
 - Improvements to forkchoice
-- Invalid checksummed (or no checksum) addresses used for fee recipient will log a warning. fixes, 
+- Invalid checksummed (or no checksum) addresses used for fee recipient will log a warning. fixes,
 - Use cache backed `getBlock` method in several places of blockchain package
 - Reduced log frequency of "beacon node doesn't have a parent in db with root" error
 - Improved nil checks for state management
@@ -2061,26 +2085,26 @@ There are no security updates in this release.
 - Handle connection closing for web3/eth1 nil connection
 - Testing improvements
 - E2E test improvements
-- Increase file descriptor limit up to the maximum by default 
+- Increase file descriptor limit up to the maximum by default
 - Improved classification of "bad blocks"
 - Updated engine API error code handling
 - Improved "Synced new block" message to include minimal information based on the log verbosity.
 - Add nil checks for nil finalized checkpoints
 - Change weak subjectivity sync to use the most recent finalized state rather than the oldest state within the current period.
 - Ensure a finalized root can't be all zeros
-- Improved db lookup of HighestSlotBlocksBelow to start from the end of the index rather than the beginning. 
+- Improved db lookup of HighestSlotBlocksBelow to start from the end of the index rather than the beginning.
 - Improved packing of state balances for hashtreeroot
 - Improved field trie recomputation
 
 ### Removed
 
--  Removed handling of `INVALID_TERMINAL_BLOCK` response from engine API 
+- Removed handling of `INVALID_TERMINAL_BLOCK` response from engine API
 
 ### Fixed
 
 - `/eth/v1/beacon/blinded_blocks` JSON API endpoint
 - SSZ handling of JSON API payloads
-- Config registry fixes 
+- Config registry fixes
 - Withdrawal epoch overflows
 - Race condition with blockchain service Head()
 - Race condition with validator's highest valid slot accessor
@@ -2117,7 +2141,7 @@ There are no security updates in this release.
 - Flag `disable-get-block-optimizations` which disables optimization with beacon block construction
 - Flag `disable-optimized-balance-update"` which disables optimized effective balance update
 - Flag `disable-active-balance-cache` which disables active balance cache
-- Flag `disable-balance-trie-computation` which disables balance trie optimization for hash tree root 
+- Flag `disable-balance-trie-computation` which disables balance trie optimization for hash tree root
 - Flag `disable-batch-gossip-verification` which disables batch gossip verification
 - Flag `disable-correctly-insert-orphaned-atts` which disables the fix for orphaned attestations insertion
 
@@ -2142,25 +2166,25 @@ If upgrading from v2.0.6, please review the [full changelist](https://github.com
 This release is required for users on v2.1.0 and recommended for anyone on v2.0.6.
 
 The following known issues exist in v2.1.0 and also exist in this release.
-    
-- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and does not affect run time behavior in Phase0/Altair. 
+
+- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and does not affect run time behavior in Phase0/Altair.
 - In Bellatrix/Kiln: Fee recipient flags may not work as expected. See for a fix and more details.
 
 ### Fixed
 
-- Doppelganger false positives may have caused a failure to start in the validator client. 
-- Connections to execution layer clients were not properly cleaned up and lead to resource leaks when using ipc. 
-- Initial sync (or resync when beacon node falls out of sync) could lead to a panic. 
+- Doppelganger false positives may have caused a failure to start in the validator client.
+- Connections to execution layer clients were not properly cleaned up and lead to resource leaks when using ipc.
+- Initial sync (or resync when beacon node falls out of sync) could lead to a panic.
 
 ### Security
 
 There are no security updates in this release.
 
-## [v2.1.0](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.0) - 2022-04-26 
+## [v2.1.0](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.0) - 2022-04-26
 
 There are two known issues with this release:
 
-- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and does not affect run time behavior in Phase0/Altair. 
+- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and does not affect run time behavior in Phase0/Altair.
 - In Bellatrix/Kiln: Fee recipient flags may not work as expected. See for a fix and more details.
 
 ### Added
@@ -2393,7 +2417,7 @@ This release also includes a major update to the web UI. Please review the v1 we
 - Fix stategen with genesis state.
 - Fixed multiple typos
 - Fix genesis state registration in interop mode
-- Fix network flags in slashing protection export  
+- Fix network flags in slashing protection export
 
 ### Security
 
@@ -2475,30 +2499,30 @@ Please update your beacon node to v2.0.0 prior to updating your validator. The b
 
 **Beacon chain node**
 
-| Metric                                           | Description                                                                                           | References  |
-|--------------------------------------------------|-------------------------------------------------------------------------------------------------------|-------------|
-| `p2p_message_ignored_validation_total`           | Count of messages that were ignored in validation                                                     |       |
-| `beacon_current_active_validators`               | Current total active validators                                                                       |       |
-| `beacon_processed_deposits_total`                | Total number of deposits processed                                                                    |       |
-| `sync_head_state_miss`                           | The number of sync head state requests that are not present in the cache                              |       |
-| `sync_head_state_hit`                            | The number of sync head state requests that are present in the cache                                  |       |
-| `total_effective_balance_cache_miss`             | The number of get requests that are not present in the cache                                          |       |
-| `total_effective_balance_cache_hit`              | The number of get requests that are present in the cache                                              |       |
-| `sync_committee_index_cache_miss_total`          | The number of committee requests that aren't present in the sync committee index cache                |       |
-| `sync_committee_index_cache_hit_total`           | The number of committee requests that are present in the sync committee index cache                   |       |
-| `next_slot_cache_hit`                            | The number of cache hits on the next slot state cache                                                 |       |
-| `next_slot_cache_miss`                           | The number of cache misses on the next slot state cache                                               |       |
-| `validator_entry_cache_hit_total`                | The number of cache hits on the validator entry cache                                                 | |
-| `validator_entry_cache_miss_total`               | The number of cache misses on the validator entry cache                                               | |
-| `validator_entry_cache_delete_total`             | The number of cache deletes on the validator entry cache                                              |       |
-| `saved_sync_committee_message_total`             | The number of saved sync committee message total                                                      |       |
-| `saved_sync_committee_contribution_total`        | The number of saved sync committee contribution total                                                 |       |
-| `libp2p_peers`                                   | Tracks the total number of libp2p peers                                                               |       |
-| `p2p_status_message_missing`                     | The number of attempts the connection handler rejects a peer for a missing status message             |       |
-| `p2p_sync_committee_subnet_recovered_broadcasts` | The number of sync committee messages that were attempted to be broadcast with no peers on the subnet |       |
-| `p2p_sync_committee_subnet_attempted_broadcasts` | The number of sync committees that were attempted to be broadcast                                     |       |
-| `p2p_subscribed_topic_peer_total`                | The number of peers subscribed to topics that a host node is also subscribed to                       |       |
-| `saved_orphaned_att_total`                       | Count the number of times an orphaned attestation is saved                                            |       |
+| Metric                                           | Description                                                                                           | References |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------- |
+| `p2p_message_ignored_validation_total`           | Count of messages that were ignored in validation                                                     |            |
+| `beacon_current_active_validators`               | Current total active validators                                                                       |            |
+| `beacon_processed_deposits_total`                | Total number of deposits processed                                                                    |            |
+| `sync_head_state_miss`                           | The number of sync head state requests that are not present in the cache                              |            |
+| `sync_head_state_hit`                            | The number of sync head state requests that are present in the cache                                  |            |
+| `total_effective_balance_cache_miss`             | The number of get requests that are not present in the cache                                          |            |
+| `total_effective_balance_cache_hit`              | The number of get requests that are present in the cache                                              |            |
+| `sync_committee_index_cache_miss_total`          | The number of committee requests that aren't present in the sync committee index cache                |            |
+| `sync_committee_index_cache_hit_total`           | The number of committee requests that are present in the sync committee index cache                   |            |
+| `next_slot_cache_hit`                            | The number of cache hits on the next slot state cache                                                 |            |
+| `next_slot_cache_miss`                           | The number of cache misses on the next slot state cache                                               |            |
+| `validator_entry_cache_hit_total`                | The number of cache hits on the validator entry cache                                                 |            |
+| `validator_entry_cache_miss_total`               | The number of cache misses on the validator entry cache                                               |            |
+| `validator_entry_cache_delete_total`             | The number of cache deletes on the validator entry cache                                              |            |
+| `saved_sync_committee_message_total`             | The number of saved sync committee message total                                                      |            |
+| `saved_sync_committee_contribution_total`        | The number of saved sync committee contribution total                                                 |            |
+| `libp2p_peers`                                   | Tracks the total number of libp2p peers                                                               |            |
+| `p2p_status_message_missing`                     | The number of attempts the connection handler rejects a peer for a missing status message             |            |
+| `p2p_sync_committee_subnet_recovered_broadcasts` | The number of sync committee messages that were attempted to be broadcast with no peers on the subnet |            |
+| `p2p_sync_committee_subnet_attempted_broadcasts` | The number of sync committees that were attempted to be broadcast                                     |            |
+| `p2p_subscribed_topic_peer_total`                | The number of peers subscribed to topics that a host node is also subscribed to                       |            |
+| `saved_orphaned_att_total`                       | Count the number of times an orphaned attestation is saved                                            |            |
 
 ### Changed
 
@@ -2521,9 +2545,9 @@ Please update your beacon node to v2.0.0 prior to updating your validator. The b
 #### Changed Metrics
 
 **Beacon chain node**
-| Metric                | Old Name             | Description                                          | References |
+| Metric | Old Name | Description | References |
 |-----------------------|----------------------|------------------------------------------------------|------------|
-| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg |      |
+| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg | |
 
 ### Deprecated
 
@@ -2571,6 +2595,7 @@ Please check that you are not using any of the removed flags in this section!
 - Prysm's JWT library has been updated to a maintained version of the previous JWT library. JWTs are only used in the UI.
 
 Please review our newly updated [security reporting policy](https://github.com/prysmaticlabs/prysm/blob/develop/SECURITY.md).
+
 - Fix subcommands such as validator accounts list
 
 ### Security
