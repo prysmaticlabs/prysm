@@ -64,6 +64,12 @@ var (
 		Name:   "beacon-rpc-gateway-provider",
 		Usage:  "Flag deprecated and unused",
 		Value:  "127.0.0.1:3500",
+    Hidden: true,
+  }
+
+	deprecatedEnableExperimentalState = &cli.BoolFlag{
+		Name:   "enable-experimental-state",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -81,6 +87,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedVerboseSigVerification,
 	deprecatedEnableDebugRPCEndpoints,
 	deprecatedBeaconRPCGatewayProviderFlag,
+	deprecatedEnableExperimentalState,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

@@ -28,7 +28,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain.
 
 ### Deprecated
-- The `disable-grpc-gateway` flag.
+- `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
+- `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
 
 ### Removed
 - removed gRPC Gateway and gRPC versions of REST endpoints ( unused endpoints )
