@@ -739,7 +739,6 @@ func (s *Service) subscribeDynamicWithColumnSubnets(
 				}
 
 				wantedSubs := s.retrieveActiveColumnSubnets()
-				log.Infof("wanted subs %d", wantedSubs)
 				// Resize as appropriate.
 				s.reValidateSubscriptions(subscriptions, wantedSubs, topicFormat, digest)
 
