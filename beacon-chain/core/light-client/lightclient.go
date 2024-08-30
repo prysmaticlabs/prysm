@@ -1,18 +1,20 @@
-package blockchain
+package light_client
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+
+	"context"
+
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 const (
@@ -129,13 +131,16 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	}
 
 	// Return result
-	attestedHeaderResult := &ethpbv1.BeaconBlockHeader{
-		Slot:          attestedHeader.Slot,
-		ProposerIndex: attestedHeader.ProposerIndex,
-		ParentRoot:    attestedHeader.ParentRoot,
-		StateRoot:     attestedHeader.StateRoot,
-		BodyRoot:      attestedHeader.BodyRoot,
-	}
+	attestedHeaderResult :=
+		&ethpbv2.LightClientHeader{
+			Beacon: &ethpbv1.BeaconBlockHeader{
+				Slot:          attestedHeader.Slot,
+				ProposerIndex: attestedHeader.ProposerIndex,
+				ParentRoot:    attestedHeader.ParentRoot,
+				StateRoot:     attestedHeader.StateRoot,
+				BodyRoot:      attestedHeader.BodyRoot,
+			},
+		}
 
 	syncAggregateResult := &ethpbv1.SyncAggregate{
 		SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
@@ -168,7 +173,7 @@ func NewLightClientFinalityUpdateFromBeaconState(
 	}
 
 	// Indicate finality whenever possible
-	var finalizedHeader *ethpbv1.BeaconBlockHeader
+	var finalizedHeader *ethpbv2.LightClientHeader
 	var finalityBranch [][]byte
 
 	if finalizedBlock != nil && !finalizedBlock.IsNil() {
@@ -177,9 +182,9 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			if err != nil {
 				return nil, fmt.Errorf("could not get finalized header %w", err)
 			}
-			finalizedHeader = migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
+			finalizedHeader = &ethpbv2.LightClientHeader{Beacon: migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()}
 
-			finalizedHeaderRoot, err := finalizedHeader.HashTreeRoot()
+			finalizedHeaderRoot, err := finalizedHeader.Beacon.HashTreeRoot()
 			if err != nil {
 				return nil, fmt.Errorf("could not get finalized header root %w", err)
 			}
@@ -192,13 +197,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 				return nil, fmt.Errorf("invalid finalized header root %v", attestedState.FinalizedCheckpoint().Root)
 			}
 
-			finalizedHeader = &ethpbv1.BeaconBlockHeader{
+			finalizedHeader = &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 				Slot:          0,
 				ProposerIndex: 0,
 				ParentRoot:    make([]byte, 32),
 				StateRoot:     make([]byte, 32),
 				BodyRoot:      make([]byte, 32),
-			}
+			}}
 		}
 
 		var bErr error
@@ -207,13 +212,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			return nil, fmt.Errorf("could not get finalized root proof %w", bErr)
 		}
 	} else {
-		finalizedHeader = &ethpbv1.BeaconBlockHeader{
+		finalizedHeader = &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
 			ParentRoot:    make([]byte, 32),
 			StateRoot:     make([]byte, 32),
 			BodyRoot:      make([]byte, 32),
-		}
+		}}
 
 		finalityBranch = make([][]byte, FinalityBranchNumOfLeaves)
 		for i := 0; i < FinalityBranchNumOfLeaves; i++ {

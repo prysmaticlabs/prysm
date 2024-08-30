@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
@@ -20,11 +22,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // CurrentSlot returns the current slot based on time.
@@ -176,7 +178,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 		}
 	}
 
-	update, err := NewLightClientFinalityUpdateFromBeaconState(
+	update, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		postState,
 		signed,
@@ -191,7 +193,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    CreateLightClientFinalityUpdate(update),
+		Data:    lightclient.CreateLightClientFinalityUpdate(update),
 	}
 
 	// Send event
@@ -211,7 +213,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 		return 0, errors.Wrap(err, "could not get attested state")
 	}
 
-	update, err := NewLightClientOptimisticUpdateFromBeaconState(
+	update, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
 		postState,
 		signed,
@@ -225,7 +227,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    CreateLightClientOptimisticUpdate(update),
+		Data:    lightclient.CreateLightClientOptimisticUpdate(update),
 	}
 
 	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{

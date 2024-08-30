@@ -1,9 +1,11 @@
 package params_test
 
 import (
+	"bytes"
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/genesis"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -90,5 +92,16 @@ func TestConfig_WithinDAPeriod(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			require.Equal(t, c.within, params.WithinDAPeriod(c.block, c.current))
 		})
+	}
+}
+
+func TestConfigGenesisValidatorRoot(t *testing.T) {
+	g, err := genesis.State(params.MainnetName)
+	require.NoError(t, err)
+
+	gvr := g.GenesisValidatorsRoot()
+
+	if !bytes.Equal(gvr, params.BeaconConfig().GenesisValidatorsRoot[:]) {
+		t.Fatal("mainnet params genesis validator root does not match the mainnet genesis state value")
 	}
 }
