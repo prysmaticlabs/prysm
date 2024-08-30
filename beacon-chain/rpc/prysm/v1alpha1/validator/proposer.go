@@ -394,10 +394,12 @@ func (vs *Server) handleUnblindedBlock(
 			blobs = append(blobs, kzg.Blob(blob))
 		}
 
+		startTime := time.Now()
 		dataColumnSideCars, err := peerdas.DataColumnSidecars(block, blobs)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "data column sidecars")
 		}
+		dataColumnComputationTime.Observe(float64(time.Since(startTime).Milliseconds()))
 
 		return nil, dataColumnSideCars, nil
 	}
