@@ -1,9 +1,9 @@
 name: Horusec Security Scan
 
-on: [push]
-  # schedule:
-  #   # Runs cron at 16.00 UTC on
-  #   - cron: '0 0 * * SUN'
+on:
+  schedule:
+    # Runs cron at 16.00 UTC on
+    - cron: '*/10 * * * *'
 
 jobs:
   Horusec_Scan:
