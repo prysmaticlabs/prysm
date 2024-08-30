@@ -23,6 +23,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: Updated block publishing beacon APIs to support Electra.
 - "Submitted builder validator registration settings for custom builders" log message moved to debug level.
 - config: Genesis validator root is now hardcoded in params.BeaconConfig()
+- Replaced st.GenesisValidatorsRoot() function in some packages with hardcoded value of Genesis validator root
 
 ### Deprecated
 
