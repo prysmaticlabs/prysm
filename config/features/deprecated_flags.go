@@ -64,8 +64,8 @@ var (
 		Name:   "beacon-rpc-gateway-provider",
 		Usage:  "Flag deprecated and unused",
 		Value:  "127.0.0.1:3500",
-    Hidden: true,
-  }
+		Hidden: true,
+	}
 
 	deprecatedEnableExperimentalState = &cli.BoolFlag{
 		Name:   "enable-experimental-state",
