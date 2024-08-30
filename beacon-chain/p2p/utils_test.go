@@ -2,11 +2,16 @@ package p2p
 
 import (
 	"fmt"
+	"math/rand"
+	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -63,4 +68,51 @@ func TestSerializeENR(t *testing.T) {
 		require.NotNil(t, err)
 		assert.ErrorContains(t, "could not serialize nil record", err)
 	})
+}
+
+func TestMetaDataFromFile(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	tempDir := t.TempDir()
+	path := filepath.Join(tempDir, metaDataPath)
+
+	// Generate metadata V1
+	seqNum := rand.Uint64()
+	md := &pb.MetaDataV1{
+		SeqNumber: seqNum,
+		Attnets:   bitfield.NewBitvector64(),
+		Syncnets:  bitfield.NewBitvector4(),
+	}
+	metaData := wrapper.WrappedMetadataV1(md)
+
+	// Save to file
+	err := saveMetaDataToFile(path, metaData)
+	require.NoError(t, err)
+
+	// Load file, and compare
+	mdFromFile, err := metaDataFromFile(path)
+	require.NoError(t, err)
+	require.DeepEqual(t, metaData.Copy(), mdFromFile.Copy())
+}
+
+func TestMetaDataFromFile_V0(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	tempDir := t.TempDir()
+	path := filepath.Join(tempDir, metaDataPath)
+
+	// Generate metadata V0
+	seqNum := rand.Uint64()
+	md := &pb.MetaDataV0{
+		SeqNumber: seqNum,
+		Attnets:   bitfield.NewBitvector64(),
+	}
+	metaData := wrapper.WrappedMetadataV0(md)
+
+	// Save to file
+	err := saveMetaDataToFile(path, metaData)
+	require.NoError(t, err)
+
+	// Load file, and compare
+	mdFromFile, err := metaDataFromFile(path)
+	require.NoError(t, err)
+	require.DeepEqual(t, metaData.Copy(), mdFromFile.Copy())
 }

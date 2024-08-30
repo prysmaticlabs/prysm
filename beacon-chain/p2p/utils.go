@@ -155,6 +155,46 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	return wrapper.WrappedMetadataV0(metaData), nil
 }
 
+// metaDataFromFile retrieves unmarshalled p2p metadata from file.
+func metaDataFromFile(path string) (metadata.Metadata, error) {
+	src, err := os.ReadFile(path) // #nosec G304
+	if err != nil {
+		log.WithError(err).Error("Error reading metadata from file")
+		return nil, err
+	}
+
+	// Load V1 version (after altair) regardless of current fork by default.
+	md := &pb.MetaDataV1{}
+	err = md.UnmarshalSSZ(src)
+	if err != nil {
+		// If unmarshal failed, try to unmarshal for V0
+		log.WithError(err).Error("Error unmarshalling V1 metadata from file, try to unmarshal for V0.")
+		md0 := &pb.MetaDataV0{}
+		md0Err := md0.UnmarshalSSZ(src)
+		if md0Err != nil {
+			log.WithError(md0Err).Error("Error unmarshalling V0 metadata from file")
+			return nil, md0Err
+		}
+		return wrapper.WrappedMetadataV0(md0), nil
+	}
+	return wrapper.WrappedMetadataV1(md), nil
+}
+
+// saveMetaDataToFile writes marshalled metadata to given path.
+func saveMetaDataToFile(path string, metadata metadata.Metadata) error {
+	enc, err := metadata.MarshalSSZ()
+	if err != nil {
+		log.WithError(err).Error("Error marshalling metadata to SSZ")
+		return err
+	}
+
+	if err := file.WriteFile(path, enc); err != nil {
+		log.WithError(err).Error("Failed to write to disk")
+		return err
+	}
+	return nil
+}
+
 // Attempt to dial an address to verify its connectivity
 func verifyConnectivity(addr string, port uint, protocol string) {
 	if addr != "" {
