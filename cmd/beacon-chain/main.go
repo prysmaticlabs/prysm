@@ -49,7 +49,6 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.KeyFlag,
 	flags.HTTPModules,
-	flags.DeprecatedDisableGRPCGateway,
 	flags.HTTPServerHost,
 	flags.HTTPServerPort,
 	flags.HTTPServerCorsDomain,
