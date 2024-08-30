@@ -1,14 +1,15 @@
 name: Horusec Security Scan
 
-on: 
-  pull_request:
-    types: [opened, synchronize, reopened]
+on:
+  schedule:
+    # Runs cron at 16.00 UTC on
+    - cron: '0 0 * * SUN'
 
 jobs:
   Horusec_Scan:
     name: horusec-Scan
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == true
+    if: github.ref == 'refs/heads/develop'
     steps:
     - name: Check out code
       uses: actions/checkout@v4
