@@ -145,6 +145,7 @@ func configureTestnet(ctx *cli.Context) error {
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
+			params.UseCustomNetworkConfig()
 		} else {
 			log.Info("Running on Ethereum Mainnet")
 		}
