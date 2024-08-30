@@ -202,12 +202,13 @@ func (s *Service) Start() {
 			s.startupErr = err
 			return
 		}
-		err = s.connectToBootnodes()
-		if err != nil {
+
+		if err := s.connectToBootnodes(); err != nil {
 			log.WithError(err).Error("Could not add bootnode to the exclusion list")
 			s.startupErr = err
 			return
 		}
+
 		s.dv5Listener = listener
 		go s.listenForNewNodes()
 	}
