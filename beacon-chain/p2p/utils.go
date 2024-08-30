@@ -132,8 +132,8 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 		return wrappedDefaultMd, nil
 	}
 
-	mdPath := resolveMetaDataPath(cfg)
-	if mdPath != "" {
+	mdPath, exist := resolveMetaDataPath(cfg)
+	if exist {
 		md, err := metaDataFromFile(mdPath)
 		if err != nil {
 			if errors.Is(err, ssz.ErrSize) {
@@ -145,7 +145,6 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 		}
 		return md, err
 	}
-
 	if err := saveMetaDataToFile(mdPath, wrappedDefaultMd); err != nil {
 		return nil, err
 	}
@@ -153,9 +152,9 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	return wrappedDefaultMd, nil
 }
 
-// resolveMetaDataPath returns path if it exists, or returns empty string.
+// resolveMetaDataPath returns path and the existence of that path.
 // Issue while opening a file(e.g. permission issues) will be handled at metaDataFromFile.
-func resolveMetaDataPath(cfg *Config) string {
+func resolveMetaDataPath(cfg *Config) (string, bool) {
 	var mdPath string
 
 	// Prioritize if --p2p-metadata is provided.
@@ -168,9 +167,9 @@ func resolveMetaDataPath(cfg *Config) string {
 	// Return path if it exists, or return empty string.
 	_, err := os.Stat(mdPath)
 	if !os.IsNotExist(err) {
-		return mdPath
+		return mdPath, true
 	}
-	return ""
+	return mdPath, false
 }
 
 // metaDataFromFile retrieves unmarshalled p2p metadata from file.

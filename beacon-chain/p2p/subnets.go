@@ -176,9 +176,15 @@ func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	})
 	s.metaData = md
 	if s.cfg.StaticPeerID {
-		mdPath := resolveMetaDataPath(s.cfg)
-		// ignore error
-		_ = saveMetaDataToFile(mdPath, md)
+		mdPath, exist := resolveMetaDataPath(s.cfg)
+		if !exist {
+			return
+		}
+		err := saveMetaDataToFile(mdPath, md)
+		if err != nil {
+			// ignore error
+			log.WithError(err).Error("Could not save metadata to file")
+		}
 	}
 }
 
@@ -198,9 +204,15 @@ func (s *Service) updateSubnetRecordWithMetadataV2(bitVAtt bitfield.Bitvector64,
 	})
 	s.metaData = md
 	if s.cfg.StaticPeerID {
-		mdPath := resolveMetaDataPath(s.cfg)
-		// ignore error
-		_ = saveMetaDataToFile(mdPath, md)
+		mdPath, exist := resolveMetaDataPath(s.cfg)
+		if !exist {
+			return
+		}
+		err := saveMetaDataToFile(mdPath, md)
+		if err != nil {
+			// ignore error
+			log.WithError(err).Error("Could not save metadata to file")
+		}
 	}
 }
 
