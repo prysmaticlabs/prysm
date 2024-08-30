@@ -67,6 +67,12 @@ var (
 		Hidden: true,
 	}
 
+	deprecatedDisableGRPCGateway = &cli.BoolFlag{
+		Name:   "disable-grpc-gateway",
+		Usage:  "Flag deprecated and unused",
+		Hidden: true,
+	}
+
 	deprecatedEnableExperimentalState = &cli.BoolFlag{
 		Name:   "enable-experimental-state",
 		Usage:  deprecatedUsage,
@@ -87,6 +93,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedVerboseSigVerification,
 	deprecatedEnableDebugRPCEndpoints,
 	deprecatedBeaconRPCGatewayProviderFlag,
+	deprecatedDisableGRPCGateway,
 	deprecatedEnableExperimentalState,
 }
 

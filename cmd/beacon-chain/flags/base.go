@@ -118,11 +118,7 @@ var (
 		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
 		Value: PrysmAPIModule + `,` + EthAPIModule,
 	}
-	// Deprecated: DeprecatedDisableGRPCGateway for JSON-HTTP requests to the beacon node.
-	DeprecatedDisableGRPCGateway = &cli.BoolFlag{
-		Name:  "disable-grpc-gateway",
-		Usage: "Flag deprecated and unused",
-	}
+
 	// HTTPServerHost specifies a HTTP server host for the validator client.
 	HTTPServerHost = &cli.StringFlag{
 		Name:    "http-host",
