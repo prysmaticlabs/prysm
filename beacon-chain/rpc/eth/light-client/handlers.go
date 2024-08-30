@@ -54,25 +54,17 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	case version.Altair, version.Bellatrix:
 		bootstrap, err = createLightClientBootstrap(ctx, state)
-		if err != nil {
-			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 	case version.Capella:
 		bootstrap, err = createLightClientBootstrapCapella(ctx, state, blk.Block())
-		if err != nil {
-			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 
 	case version.Deneb, version.Electra:
 		bootstrap, err = createLightClientBootstrapDeneb(ctx, state, blk.Block())
-		if err != nil {
-			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 
+	}
+	if err != nil {
+		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	response := &structs.LightClientBootstrapResponse{
 		Version: version.String(blk.Version()),
