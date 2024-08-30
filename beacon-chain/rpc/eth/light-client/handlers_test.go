@@ -76,108 +76,107 @@ func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 	require.NotNil(t, resp.Data)
 }
 
-//
-//func TestLightClientHandler_GetLightClientBootstrap_Capella(t *testing.T) {
-//	helpers.ClearCache()
-//	slot := primitives.Slot(params.BeaconConfig().CapellaForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
-//
-//	b := util.NewBeaconBlockCapella()
-//	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
-//	b.Block.Slot = slot
-//
-//	signedBlock, err := blocks.NewSignedBeaconBlock(b)
-//
-//	require.NoError(t, err)
-//	header, err := signedBlock.Header()
-//	require.NoError(t, err)
-//
-//	r, err := b.Block.HashTreeRoot()
-//	require.NoError(t, err)
-//
-//	bs, err := util.NewBeaconStateCapella(func(state *ethpb.BeaconStateCapella) error {
-//		state.BlockRoots[0] = r[:]
-//		return nil
-//	})
-//	require.NoError(t, err)
-//
-//	require.NoError(t, bs.SetSlot(slot))
-//	require.NoError(t, bs.SetLatestBlockHeader(header.Header))
-//
-//	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
-//	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
-//	s := &Server{
-//		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
-//			slot: bs,
-//		}},
-//		Blocker:     mockBlocker,
-//		HeadFetcher: mockChainService,
-//	}
-//	muxVars := make(map[string]string)
-//	muxVars["block_root"] = hexutil.Encode(r[:])
-//	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-//	request = mux.SetURLVars(request, muxVars)
-//	writer := httptest.NewRecorder()
-//	writer.Body = &bytes.Buffer{}
-//
-//	s.GetLightClientBootstrap(writer, request)
-//	require.Equal(t, http.StatusOK, writer.Code)
-//	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
-//	require.NoError(t, err)
-//	require.Equal(t, "capella", resp.Version)
-//	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.(*structs.LightClientHeaderCapella).Beacon.BodyRoot)
-//	require.NotNil(t, resp.Data)
-//}
+func TestLightClientHandler_GetLightClientBootstrap_Capella(t *testing.T) {
+	helpers.ClearCache()
+	slot := primitives.Slot(params.BeaconConfig().CapellaForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
 
-//func TestLightClientHandler_GetLightClientBootstrap_Deneb(t *testing.T) {
-//	helpers.ClearCache()
-//	slot := primitives.Slot(params.BeaconConfig().AltairForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
-//
-//	b := util.NewBeaconBlockDeneb()
-//	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
-//	b.Block.Slot = slot
-//
-//	signedBlock, err := blocks.NewSignedBeaconBlock(b)
-//
-//	require.NoError(t, err)
-//	header, err := signedBlock.Header()
-//	require.NoError(t, err)
-//
-//	r, err := b.Block.HashTreeRoot()
-//	require.NoError(t, err)
-//
-//	bs, err := util.NewBeaconStateDeneb(func(state *ethpb.BeaconStateDeneb) error {
-//		state.BlockRoots[0] = r[:]
-//		return nil
-//	})
-//	require.NoError(t, err)
-//
-//	require.NoError(t, bs.SetSlot(slot))
-//	require.NoError(t, bs.SetLatestBlockHeader(header.Header))
-//
-//	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
-//	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
-//	s := &Server{
-//		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
-//			slot: bs,
-//		}},
-//		Blocker:     mockBlocker,
-//		HeadFetcher: mockChainService,
-//	}
-//	muxVars := make(map[string]string)
-//	muxVars["block_root"] = hexutil.Encode(r[:])
-//	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-//	request = mux.SetURLVars(request, muxVars)
-//	writer := httptest.NewRecorder()
-//	writer.Body = &bytes.Buffer{}
-//
-//	s.GetLightClientBootstrap(writer, request)
-//	require.Equal(t, http.StatusOK, writer.Code)
-//	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
-//	require.NoError(t, err)
-//	require.Equal(t, "deneb", resp.Version)
-//	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.(*structs.LightClientHeaderDeneb).Beacon.BodyRoot)
-//	require.NotNil(t, resp.Data)
-//}
+	b := util.NewBeaconBlockCapella()
+	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
+	b.Block.Slot = slot
+
+	signedBlock, err := blocks.NewSignedBeaconBlock(b)
+
+	require.NoError(t, err)
+	header, err := signedBlock.Header()
+	require.NoError(t, err)
+
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	bs, err := util.NewBeaconStateCapella(func(state *ethpb.BeaconStateCapella) error {
+		state.BlockRoots[0] = r[:]
+		return nil
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, bs.SetSlot(slot))
+	require.NoError(t, bs.SetLatestBlockHeader(header.Header))
+
+	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
+	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
+	s := &Server{
+		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+			slot: bs,
+		}},
+		Blocker:     mockBlocker,
+		HeadFetcher: mockChainService,
+	}
+	muxVars := make(map[string]string)
+	muxVars["block_root"] = hexutil.Encode(r[:])
+	request := httptest.NewRequest("GET", "http://foo.com/", nil)
+	request = mux.SetURLVars(request, muxVars)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetLightClientBootstrap(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
+	require.NoError(t, err)
+	require.Equal(t, "capella", resp.Version)
+	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.(*structs.LightClientHeaderCapella).Beacon.BodyRoot)
+	require.NotNil(t, resp.Data)
+}
+
+func TestLightClientHandler_GetLightClientBootstrap_Deneb(t *testing.T) {
+	helpers.ClearCache()
+	slot := primitives.Slot(params.BeaconConfig().DenebForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
+
+	b := util.NewBeaconBlockDeneb()
+	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
+	b.Block.Slot = slot
+
+	signedBlock, err := blocks.NewSignedBeaconBlock(b)
+
+	require.NoError(t, err)
+	header, err := signedBlock.Header()
+	require.NoError(t, err)
+
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	bs, err := util.NewBeaconStateDeneb(func(state *ethpb.BeaconStateDeneb) error {
+		state.BlockRoots[0] = r[:]
+		return nil
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, bs.SetSlot(slot))
+	require.NoError(t, bs.SetLatestBlockHeader(header.Header))
+
+	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
+	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
+	s := &Server{
+		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+			slot: bs,
+		}},
+		Blocker:     mockBlocker,
+		HeadFetcher: mockChainService,
+	}
+	muxVars := make(map[string]string)
+	muxVars["block_root"] = hexutil.Encode(r[:])
+	request := httptest.NewRequest("GET", "http://foo.com/", nil)
+	request = mux.SetURLVars(request, muxVars)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetLightClientBootstrap(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
+	require.NoError(t, err)
+	require.Equal(t, "deneb", resp.Version)
+	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.(*structs.LightClientHeaderDeneb).Beacon.BodyRoot)
+	require.NotNil(t, resp.Data)
+}
 
 func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	helpers.ClearCache()
