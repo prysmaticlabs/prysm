@@ -69,7 +69,7 @@ var (
 
 	deprecatedDisableGRPCGateway = &cli.BoolFlag{
 		Name:   "disable-grpc-gateway",
-		Usage:  "Flag deprecated and unused",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 
