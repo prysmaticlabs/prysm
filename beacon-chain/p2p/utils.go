@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v5/crypto/ecdsa"
@@ -116,42 +117,60 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 
 // Retrieves node p2p metadata from a set of configuration values
 // from the p2p service.
+// When using static peer id, metaDataFromConfig returns default V1 metadata.
 func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
-	defaultKeyPath := path.Join(cfg.DataDir, metaDataPath)
-	metaDataPath := cfg.MetaDataDir
+	// Load V1 metadata by default, since V1 metadata can be covered to V0.
+	defaultMd := &pb.MetaDataV1{
+		SeqNumber: 0,
+		Attnets:   bitfield.NewBitvector64(),
+		Syncnets:  bitfield.NewBitvector4(),
+	}
+	wrappedDefaultMd := wrapper.WrappedMetadataV1(defaultMd)
 
-	_, err := os.Stat(defaultKeyPath)
-	defaultMetadataExist := !os.IsNotExist(err)
-	if err != nil && defaultMetadataExist {
-		return nil, err
+	// If --p2p-static-id is false, return default metadata for initialization
+	if !cfg.StaticPeerID {
+		return wrappedDefaultMd, nil
 	}
-	if metaDataPath == "" && !defaultMetadataExist {
-		metaData := &pb.MetaDataV0{
-			SeqNumber: 0,
-			Attnets:   bitfield.NewBitvector64(),
-		}
-		dst, err := proto.Marshal(metaData)
+
+	mdPath := resolveMetaDataPath(cfg)
+	if mdPath != "" {
+		md, err := metaDataFromFile(mdPath)
 		if err != nil {
+			if errors.Is(err, ssz.ErrSize) {
+				// In case previous metadata file is encoded by proto,
+				// we need to migrate it into ssz encoded version.
+				return migrateFromProtoToSsz(mdPath)
+			}
 			return nil, err
 		}
-		if err := file.WriteFile(defaultKeyPath, dst); err != nil {
-			return nil, err
-		}
-		return wrapper.WrappedMetadataV0(metaData), nil
+		return md, err
 	}
-	if defaultMetadataExist && metaDataPath == "" {
-		metaDataPath = defaultKeyPath
-	}
-	src, err := os.ReadFile(metaDataPath) // #nosec G304
-	if err != nil {
-		log.WithError(err).Error("Error reading metadata from file")
+
+	if err := saveMetaDataToFile(mdPath, wrappedDefaultMd); err != nil {
 		return nil, err
 	}
-	metaData := &pb.MetaDataV0{}
-	if err := proto.Unmarshal(src, metaData); err != nil {
-		return nil, err
+
+	return wrappedDefaultMd, nil
+}
+
+// resolveMetaDataPath returns path if it exists, or returns empty string.
+// Issue while opening a file(e.g. permission issues) will be handled at metaDataFromFile.
+func resolveMetaDataPath(cfg *Config) string {
+	var mdPath string
+
+	// Prioritize if --p2p-metadata is provided.
+	if cfg.MetaDataDir != "" {
+		mdPath = cfg.MetaDataDir
+	} else {
+		mdPath = path.Join(cfg.DataDir, metaDataPath)
 	}
-	return wrapper.WrappedMetadataV0(metaData), nil
+
+	// Return path if it exists, or return empty string.
+	_, err := os.Stat(mdPath)
+	if !os.IsNotExist(err) {
+		return mdPath
+	}
+	return ""
 }
 
 // metaDataFromFile retrieves unmarshalled p2p metadata from file.
