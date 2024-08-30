@@ -47,21 +47,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	var bootstrap *structs.LightClientBootstrap
-	switch blk.Version() {
-	case version.Phase0:
-		httputil.HandleError(w, "light client bootstrap is not supported for phase0", http.StatusBadRequest)
-		return
-	case version.Altair, version.Bellatrix:
-		bootstrap, err = createLightClientBootstrap(ctx, state)
-
-	case version.Capella:
-		bootstrap, err = createLightClientBootstrapCapella(ctx, state, blk.Block())
-
-	case version.Deneb, version.Electra:
-		bootstrap, err = createLightClientBootstrapDeneb(ctx, state, blk.Block())
-
-	}
+	bootstrap, err := createLightClientBootstrapVersionAgnostic(ctx, state, blk.Block())
 	if err != nil {
 		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 		return

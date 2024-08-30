@@ -10,6 +10,7 @@ import (
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
@@ -23,6 +24,20 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
+
+func createLightClientBootstrapVersionAgnostic(ctx context.Context, state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
+	switch blk.Version() {
+	case version.Phase0:
+		return nil, fmt.Errorf("light client bootstrap is not supported for phase0")
+	case version.Altair, version.Bellatrix:
+		return createLightClientBootstrap(ctx, state)
+	case version.Capella:
+		return createLightClientBootstrapCapella(ctx, state, blk)
+	case version.Deneb, version.Electra:
+		return createLightClientBootstrapDeneb(ctx, state, blk)
+	}
+	return nil, fmt.Errorf("unsupported block version")
+}
 
 // createLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
 // def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
