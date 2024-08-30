@@ -396,9 +396,14 @@ func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) er
 func (s *Service) pingPeers() {
 	s.pingMethodLock.RLock()
 	defer s.pingMethodLock.RUnlock()
+
+	localENR := s.dv5Listener.Self()
+	log.WithField("ENR", localENR).Info("New node record")
+
 	if s.pingMethod == nil {
 		return
 	}
+
 	for _, pid := range s.peers.Connected() {
 		go func(id peer.ID) {
 			if err := s.pingMethod(s.ctx, id); err != nil {
