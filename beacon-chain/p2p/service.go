@@ -204,7 +204,7 @@ func (s *Service) Start() {
 		}
 
 		if err := s.connectToBootnodes(); err != nil {
-			log.WithError(err).Error("Could not add bootnode to the exclusion list")
+			log.WithError(err).Error("Could not connect to boot nodes")
 			s.startupErr = err
 			return
 		}
