@@ -47,56 +47,40 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
+	var bootstrap *structs.LightClientBootstrap
 	switch blk.Version() {
 	case version.Phase0:
 		httputil.HandleError(w, "light client bootstrap is not supported for phase0", http.StatusBadRequest)
 		return
 	case version.Altair, version.Bellatrix:
-		bootstrap, err := createLightClientBootstrap(ctx, state)
+		bootstrap, err = createLightClientBootstrap(ctx, state)
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		response := &structs.LightClientBootstrapResponse{
-			Version: version.String(blk.Version()),
-			Data:    bootstrap,
-		}
-		w.Header().Set(api.VersionHeader, version.String(version.Altair))
-
-		httputil.WriteJson(w, response)
-		return
 	case version.Capella:
-		bootstrap, err := createLightClientBootstrapCapella(ctx, state, blk.Block())
+		bootstrap, err = createLightClientBootstrapCapella(ctx, state, blk.Block())
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		response := &structs.LightClientBootstrapResponse{
-			Version: version.String(blk.Version()),
-			Data:    bootstrap,
-		}
-		w.Header().Set(api.VersionHeader, version.String(version.Capella))
-
-		httputil.WriteJson(w, response)
-		return
 	case version.Deneb, version.Electra:
-		bootstrap, err := createLightClientBootstrapDeneb(ctx, state, blk.Block())
+		bootstrap, err = createLightClientBootstrapDeneb(ctx, state, blk.Block())
 		if err != nil {
 			httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		response := &structs.LightClientBootstrapResponse{
-			Version: version.String(blk.Version()),
-			Data:    bootstrap,
-		}
-		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
-
-		httputil.WriteJson(w, response)
-		return
 	}
+	response := &structs.LightClientBootstrapResponse{
+		Version: version.String(blk.Version()),
+		Data:    bootstrap,
+	}
+	w.Header().Set(api.VersionHeader, version.String(version.Deneb))
+
+	httputil.WriteJson(w, response)
 }
 
 // GetLightClientUpdatesByRange - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/updates.yaml
