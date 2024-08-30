@@ -85,7 +85,7 @@ func TestMetaDataFromFile(t *testing.T) {
 	metaData := wrapper.WrappedMetadataV1(md)
 
 	// Save to file
-	err := saveMetaDataToFile(path, metaData)
+	err := saveMetaDataToFile(path, metaData.Copy())
 	require.NoError(t, err)
 
 	// Load file, and compare
@@ -108,7 +108,7 @@ func TestMetaDataFromFile_V0(t *testing.T) {
 	metaData := wrapper.WrappedMetadataV0(md)
 
 	// Save to file
-	err := saveMetaDataToFile(path, metaData)
+	err := saveMetaDataToFile(path, metaData.Copy())
 	require.NoError(t, err)
 
 	// Load file, and compare
