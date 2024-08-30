@@ -119,7 +119,7 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 
 	attData1 := util.HydrateAttestationData(&eth.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32)})
 	attData2 := util.HydrateAttestationData(&eth.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32)})
-	domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorsRoot())
+	domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 	sigRoot1, err := signing.ComputeSigningRoot(attData1, domain)
 	require.NoError(t, err)
@@ -153,7 +153,7 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 		StateRoot:     bytesutil.PadTo([]byte("root2"), 32),
 		BodyRoot:      bytesutil.PadTo([]byte("root2"), 32),
 	}
-	domain, err = signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, st.GenesisValidatorsRoot())
+	domain, err = signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconProposer, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 	sigRoot1, err = signing.ComputeSigningRoot(header1, domain)
 	require.NoError(t, err)
@@ -174,7 +174,7 @@ func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, int
 	scBits := bitfield.NewBitvector512()
 	scBits.SetBitAt(10, true)
 	scBits.SetBitAt(100, true)
-	domain, err = signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorsRoot())
+	domain, err = signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainSyncCommittee, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 	sszBytes := primitives.SSZBytes(slot0bRoot)
 	r, err := signing.ComputeSigningRoot(&sszBytes, domain)
@@ -701,7 +701,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 	for i := uint64(0); i < fieldparams.SyncCommitteeLength-10; i++ {
 		scBits.SetBitAt(i, true)
 	}
-	domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainSyncCommittee, st.GenesisValidatorsRoot())
+	domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainSyncCommittee, params.BeaconConfig().GenesisValidatorsRoot[:])
 	require.NoError(t, err)
 	sszBytes := primitives.SSZBytes("")
 	r, err := signing.ComputeSigningRoot(&sszBytes, domain)

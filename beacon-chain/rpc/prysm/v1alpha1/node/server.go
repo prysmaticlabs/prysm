@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/io/logs"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -101,11 +102,11 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 		gt = timestamppb.New(genesisTime)
 	}
 
-	genValRoot := ns.GenesisFetcher.GenesisValidatorsRoot()
+	genValRoot := params.BeaconConfig().GenesisValidatorsRoot[:]
 	return &ethpb.Genesis{
 		GenesisTime:            gt,
 		DepositContractAddress: contractAddr,
-		GenesisValidatorsRoot:  genValRoot[:],
+		GenesisValidatorsRoot:  genValRoot,
 	}, nil
 }
 

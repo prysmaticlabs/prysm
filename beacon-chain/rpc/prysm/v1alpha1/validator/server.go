@@ -188,7 +188,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: head.GenesisValidatorsRoot(),
+			GenesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 		}
 		return stream.Send(res)
 	}
@@ -199,11 +199,10 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 	}
 	log.WithField("startTime", clock.GenesisTime()).Debug("Received chain started event")
 	log.Debug("Sending genesis time notification to connected validator clients")
-	gvr := clock.GenesisValidatorsRoot()
 	res := &ethpb.ChainStartResponse{
 		Started:               true,
 		GenesisTime:           uint64(clock.GenesisTime().Unix()),
-		GenesisValidatorsRoot: gvr[:],
+		GenesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 	}
 	return stream.Send(res)
 }

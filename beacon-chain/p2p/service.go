@@ -413,8 +413,7 @@ func (s *Service) awaitStateInitialized() {
 		log.WithError(err).Fatal("failed to receive initial genesis data")
 	}
 	s.genesisTime = clock.GenesisTime()
-	gvr := clock.GenesisValidatorsRoot()
-	s.genesisValidatorsRoot = gvr[:]
+	s.genesisValidatorsRoot = params.BeaconConfig().GenesisValidatorsRoot[:]
 	_, err = s.currentForkDigest() // initialize fork digest cache
 	if err != nil {
 		log.WithError(err).Error("Could not initialize fork digest")
