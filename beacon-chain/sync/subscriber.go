@@ -389,8 +389,6 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 				// Check every slot that there are enough peers
 				for i := uint64(0); i < subnetCount; i++ {
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
-						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						_, err := s.cfg.p2p.FindPeersWithSubnet(
 							s.ctx,
 							s.addDigestAndIndexToTopic(topic, digest, i),
@@ -508,8 +506,6 @@ func (s *Service) subscribeAggregatorSubnet(
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
 	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
@@ -534,8 +530,6 @@ func (s *Service) subscribeSyncSubnet(
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
 	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to sync gossip subnet with "+
-			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
@@ -589,8 +583,6 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrapped
 				// Check every slot that there are enough peers
 				for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
-						log.Debugf("No peers found subscribed to sync gossip subnet with "+
-							"committee index %d. Searching network for peers subscribed to the subnet.", i)
 						_, err := s.cfg.p2p.FindPeersWithSubnet(
 							s.ctx,
 							s.addDigestAndIndexToTopic(topic, digest, i),
@@ -686,12 +678,6 @@ func (s *Service) subscribeColumnSubnet(
 	minimumPeersPerSubnet := flags.Get().MinimumPeersPerSubnet
 
 	if !s.validPeersExist(subnetTopic) {
-		log.WithFields(logrus.Fields{
-			"columnSubnet":          idx,
-			"minimumPeersPerSubnet": minimumPeersPerSubnet,
-			"topic":                 subnetTopic,
-		}).Debug("No peers found subscribed to column gossip subnet. Searching network for peers subscribed to it")
-
 		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, minimumPeersPerSubnet)
 		if err != nil {
 			log.WithError(err).Debug("Could not search for peers")
@@ -763,8 +749,6 @@ func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
 	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
 		// perform a search for peers with the desired committee index.
 		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
 		if err != nil {
@@ -790,8 +774,21 @@ func (s *Service) unSubscribeFromTopic(topic string) {
 
 // find if we have peers who are subscribed to the same subnet
 func (s *Service) validPeersExist(subnetTopic string) bool {
-	numOfPeers := s.cfg.p2p.PubSub().ListPeers(subnetTopic + s.cfg.p2p.Encoding().ProtocolSuffix())
-	return len(numOfPeers) >= flags.Get().MinimumPeersPerSubnet
+	topic := subnetTopic + s.cfg.p2p.Encoding().ProtocolSuffix()
+	threshold := flags.Get().MinimumPeersPerSubnet
+	peersCount := len(s.cfg.p2p.PubSub().ListPeers(topic))
+
+	enoughPeers := peersCount >= threshold
+
+	if !enoughPeers {
+		log.WithFields(logrus.Fields{
+			"topic":      topic,
+			"peersCount": peersCount,
+			"threshold":  threshold,
+		}).Debug("Not enough peers for this subnet, running network search")
+	}
+
+	return enoughPeers
 }
 
 func (s *Service) retrievePersistentSubs(currSlot primitives.Slot) []uint64 {
