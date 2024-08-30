@@ -62,7 +62,7 @@ var (
 
 	deprecatedBeaconRPCGatewayProviderFlag = &cli.StringFlag{
 		Name:   "beacon-rpc-gateway-provider",
-		Usage:  "Flag deprecated and unused",
+		Usage:  deprecatedUsage,
 		Value:  "127.0.0.1:3500",
 		Hidden: true,
 	}
