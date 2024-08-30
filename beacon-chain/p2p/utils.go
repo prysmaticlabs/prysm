@@ -194,6 +194,37 @@ func saveMetaDataToFile(path string, metadata metadata.Metadata) error {
 	return nil
 }
 
+// migrateFromProtoToSsz tries to unmarshal by proto, and migrates to ssz encoded file
+// if unmarshalling is successful.
+func migrateFromProtoToSsz(path string) (metadata.Metadata, error) {
+	src, err := os.ReadFile(path) // #nosec G304
+	if err != nil {
+		log.WithError(err).Error("Error reading metadata from file")
+		return nil, err
+	}
+
+	md := &pb.MetaDataV0{}
+	if err := proto.Unmarshal(src, md); err != nil {
+		return nil, err
+	}
+
+	wmd := wrapper.WrappedMetadataV0(md)
+	// increment sequence number
+	seqNum := wmd.SequenceNumber() + 1
+	newMd := &pb.MetaDataV1{
+		SeqNumber: seqNum,
+		Attnets:   wmd.AttnetsBitfield().Bytes(),
+		Syncnets:  bitfield.NewBitvector4(),
+	}
+	wrappedNewMd := wrapper.WrappedMetadataV1(newMd)
+
+	saveErr := saveMetaDataToFile(path, wrappedNewMd)
+	if saveErr != nil {
+		return nil, saveErr
+	}
+	return wrapper.WrappedMetadataV1(newMd), nil
+}
+
 // Attempt to dial an address to verify its connectivity
 func verifyConnectivity(addr string, port uint, protocol string) {
 	if addr != "" {
