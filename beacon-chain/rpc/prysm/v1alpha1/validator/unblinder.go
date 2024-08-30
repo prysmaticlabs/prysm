@@ -2,11 +2,8 @@ package validator
 
 import (
 	"bytes"
-	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -15,14 +12,6 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-)
-
-var dataColumnComputationTime = promauto.NewHistogram(
-	prometheus.HistogramOpts{
-		Name:    "data_column_sidecar_computation_milliseconds",
-		Help:    "Captures the time taken to compute data column sidecars from blobs.",
-		Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000, 16000},
-	},
 )
 
 func unblindBlobsSidecars(block interfaces.SignedBeaconBlock, bundle *enginev1.BlobsBundle) ([]*ethpb.BlobSidecar, error) {
@@ -99,13 +88,11 @@ func unblindDataColumnsSidecars(block interfaces.SignedBeaconBlock, bundle *engi
 		blobs = append(blobs, kzg.Blob(blob))
 	}
 
-	startTime := time.Now()
 	// Retrieve data columns from blobs.
 	dataColumnSidecars, err := peerdas.DataColumnSidecars(block, blobs)
 	if err != nil {
 		return nil, errors.Wrap(err, "data column sidecars")
 	}
-	dataColumnComputationTime.Observe(float64(time.Since(startTime).Milliseconds()))
 
 	return dataColumnSidecars, nil
 }
