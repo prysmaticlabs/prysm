@@ -127,36 +127,34 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 
 	executionPayloadHeaderInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
-	executionPayloadHeader := &structs.ExecutionPayloadHeaderCapella{}
-	if executionPayloadHeaderInterface != nil {
-		executionPayloadHeader.ParentHash = hexutil.Encode(executionPayloadHeaderInterface.ParentHash())
-		executionPayloadHeader.FeeRecipient = hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient())
-		executionPayloadHeader.StateRoot = hexutil.Encode(executionPayloadHeaderInterface.StateRoot())
-		executionPayloadHeader.ReceiptsRoot = hexutil.Encode(executionPayloadHeaderInterface.ReceiptsRoot())
-		executionPayloadHeader.LogsBloom = hexutil.Encode(executionPayloadHeaderInterface.LogsBloom())
-		executionPayloadHeader.PrevRandao = hexutil.Encode(executionPayloadHeaderInterface.PrevRandao())
-		executionPayloadHeader.BlockNumber = hexutil.EncodeUint64(executionPayloadHeaderInterface.BlockNumber())
-		executionPayloadHeader.GasLimit = hexutil.EncodeUint64(executionPayloadHeaderInterface.GasLimit())
-		executionPayloadHeader.GasUsed = hexutil.EncodeUint64(executionPayloadHeaderInterface.GasUsed())
-		executionPayloadHeader.Timestamp = hexutil.EncodeUint64(executionPayloadHeaderInterface.Timestamp())
-		executionPayloadHeader.ExtraData = hexutil.Encode(executionPayloadHeaderInterface.ExtraData())
-		executionPayloadHeader.BaseFeePerGas = hexutil.Encode(executionPayloadHeaderInterface.BaseFeePerGas())
-		executionPayloadHeader.BlockHash = hexutil.Encode(executionPayloadHeaderInterface.BlockHash())
-
-		transactionsRoot, err := executionPayloadHeaderInterface.TransactionsRoot()
-		if err != nil {
-			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
-		}
-		executionPayloadHeader.TransactionsRoot = hexutil.Encode(transactionsRoot)
-
-		withdrawalsRoot, err := executionPayloadHeaderInterface.WithdrawalsRoot()
-		if err != nil {
-			return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
-		}
-		executionPayloadHeader.WithdrawalsRoot = hexutil.Encode(withdrawalsRoot)
+	transactionsRoot, err := executionPayloadHeaderInterface.TransactionsRoot()
+	if err != nil {
+		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
 	}
+	withdrawalsRoot, err := executionPayloadHeaderInterface.WithdrawalsRoot()
+	if err != nil {
+		return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+	}
+	executionPayloadHeader := &structs.ExecutionPayloadHeaderCapella{
+		ParentHash:       hexutil.Encode(executionPayloadHeaderInterface.ParentHash()),
+		FeeRecipient:     hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient()),
+		StateRoot:        hexutil.Encode(executionPayloadHeaderInterface.StateRoot()),
+		ReceiptsRoot:     hexutil.Encode(executionPayloadHeaderInterface.ReceiptsRoot()),
+		LogsBloom:        hexutil.Encode(executionPayloadHeaderInterface.LogsBloom()),
+		PrevRandao:       hexutil.Encode(executionPayloadHeaderInterface.PrevRandao()),
+		BlockNumber:      hexutil.EncodeUint64(executionPayloadHeaderInterface.BlockNumber()),
+		GasLimit:         hexutil.EncodeUint64(executionPayloadHeaderInterface.GasLimit()),
+		GasUsed:          hexutil.EncodeUint64(executionPayloadHeaderInterface.GasUsed()),
+		Timestamp:        hexutil.EncodeUint64(executionPayloadHeaderInterface.Timestamp()),
+		ExtraData:        hexutil.Encode(executionPayloadHeaderInterface.ExtraData()),
+		BaseFeePerGas:    hexutil.Encode(executionPayloadHeaderInterface.BaseFeePerGas()),
+		BlockHash:        hexutil.Encode(executionPayloadHeaderInterface.BlockHash()),
+		TransactionsRoot: hexutil.Encode(transactionsRoot),
+		WithdrawalsRoot:  hexutil.Encode(withdrawalsRoot),
+	}
+
 	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
@@ -222,36 +220,34 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 
 	executionPayloadHeaderInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
-	executionPayloadHeader := &structs.ExecutionPayloadHeaderDeneb{}
-	if executionPayloadHeaderInterface != nil {
-		executionPayloadHeader.ParentHash = hexutil.Encode(executionPayloadHeaderInterface.ParentHash())
-		executionPayloadHeader.FeeRecipient = hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient())
-		executionPayloadHeader.StateRoot = hexutil.Encode(executionPayloadHeaderInterface.StateRoot())
-		executionPayloadHeader.ReceiptsRoot = hexutil.Encode(executionPayloadHeaderInterface.ReceiptsRoot())
-		executionPayloadHeader.LogsBloom = hexutil.Encode(executionPayloadHeaderInterface.LogsBloom())
-		executionPayloadHeader.PrevRandao = hexutil.Encode(executionPayloadHeaderInterface.PrevRandao())
-		executionPayloadHeader.BlockNumber = hexutil.EncodeUint64(executionPayloadHeaderInterface.BlockNumber())
-		executionPayloadHeader.GasLimit = hexutil.EncodeUint64(executionPayloadHeaderInterface.GasLimit())
-		executionPayloadHeader.GasUsed = hexutil.EncodeUint64(executionPayloadHeaderInterface.GasUsed())
-		executionPayloadHeader.Timestamp = hexutil.EncodeUint64(executionPayloadHeaderInterface.Timestamp())
-		executionPayloadHeader.ExtraData = hexutil.Encode(executionPayloadHeaderInterface.ExtraData())
-		executionPayloadHeader.BaseFeePerGas = hexutil.Encode(executionPayloadHeaderInterface.BaseFeePerGas())
-		executionPayloadHeader.BlockHash = hexutil.Encode(executionPayloadHeaderInterface.BlockHash())
-
-		transactionsRoot, err := executionPayloadHeaderInterface.TransactionsRoot()
-		if err != nil {
-			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
-		}
-		executionPayloadHeader.TransactionsRoot = hexutil.Encode(transactionsRoot)
-
-		withdrawalsRoot, err := executionPayloadHeaderInterface.WithdrawalsRoot()
-		if err != nil {
-			return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
-		}
-		executionPayloadHeader.WithdrawalsRoot = hexutil.Encode(withdrawalsRoot)
+	transactionsRoot, err := executionPayloadHeaderInterface.TransactionsRoot()
+	if err != nil {
+		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
 	}
+	withdrawalsRoot, err := executionPayloadHeaderInterface.WithdrawalsRoot()
+	if err != nil {
+		return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+	}
+	executionPayloadHeader := &structs.ExecutionPayloadHeaderDeneb{
+		ParentHash:       hexutil.Encode(executionPayloadHeaderInterface.ParentHash()),
+		FeeRecipient:     hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient()),
+		StateRoot:        hexutil.Encode(executionPayloadHeaderInterface.StateRoot()),
+		ReceiptsRoot:     hexutil.Encode(executionPayloadHeaderInterface.ReceiptsRoot()),
+		LogsBloom:        hexutil.Encode(executionPayloadHeaderInterface.LogsBloom()),
+		PrevRandao:       hexutil.Encode(executionPayloadHeaderInterface.PrevRandao()),
+		BlockNumber:      hexutil.EncodeUint64(executionPayloadHeaderInterface.BlockNumber()),
+		GasLimit:         hexutil.EncodeUint64(executionPayloadHeaderInterface.GasLimit()),
+		GasUsed:          hexutil.EncodeUint64(executionPayloadHeaderInterface.GasUsed()),
+		Timestamp:        hexutil.EncodeUint64(executionPayloadHeaderInterface.Timestamp()),
+		ExtraData:        hexutil.Encode(executionPayloadHeaderInterface.ExtraData()),
+		BaseFeePerGas:    hexutil.Encode(executionPayloadHeaderInterface.BaseFeePerGas()),
+		BlockHash:        hexutil.Encode(executionPayloadHeaderInterface.BlockHash()),
+		TransactionsRoot: hexutil.Encode(transactionsRoot),
+		WithdrawalsRoot:  hexutil.Encode(withdrawalsRoot),
+	}
+
 	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
