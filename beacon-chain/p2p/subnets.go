@@ -170,10 +170,16 @@ func (s *Service) hasPeerWithSubnet(topic string) bool {
 func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	s.dv5Listener.LocalNode().Set(entry)
-	s.metaData = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	md := wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
 		Attnets:   bitV,
 	})
+	s.metaData = md
+	if s.cfg.StaticPeerID {
+		mdPath := resolveMetaDataPath(s.cfg)
+		// ignore error
+		_ = saveMetaDataToFile(mdPath, md)
+	}
 }
 
 // Updates the service's discv5 listener record's attestation subnet
@@ -185,11 +191,17 @@ func (s *Service) updateSubnetRecordWithMetadataV2(bitVAtt bitfield.Bitvector64,
 	subEntry := enr.WithEntry(syncCommsSubnetEnrKey, &bitVSync)
 	s.dv5Listener.LocalNode().Set(entry)
 	s.dv5Listener.LocalNode().Set(subEntry)
-	s.metaData = wrapper.WrappedMetadataV1(&pb.MetaDataV1{
+	md := wrapper.WrappedMetadataV1(&pb.MetaDataV1{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
 		Attnets:   bitVAtt,
 		Syncnets:  bitVSync,
 	})
+	s.metaData = md
+	if s.cfg.StaticPeerID {
+		mdPath := resolveMetaDataPath(s.cfg)
+		// ignore error
+		_ = saveMetaDataToFile(mdPath, md)
+	}
 }
 
 func initializePersistentSubnets(id enode.ID, epoch primitives.Epoch) error {
