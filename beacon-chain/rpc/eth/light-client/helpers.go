@@ -2,6 +2,7 @@ package lightclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -132,7 +133,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
-	if err == consensus_types.ErrUnsupportedField {
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		transactions, err := payloadInterface.Transactions()
 		if err != nil {
 			return nil, fmt.Errorf("could not get transactions: %s", err.Error())
@@ -146,7 +147,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
 	}
 	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-	if err == consensus_types.ErrUnsupportedField {
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		withdrawals, err := payloadInterface.Withdrawals()
 		if err != nil {
 			return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
@@ -243,7 +244,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
-	if err == consensus_types.ErrUnsupportedField {
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		transactions, err := payloadInterface.Transactions()
 		if err != nil {
 			return nil, fmt.Errorf("could not get transactions: %s", err.Error())
@@ -257,7 +258,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
 	}
 	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-	if err == consensus_types.ErrUnsupportedField {
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		withdrawals, err := payloadInterface.Withdrawals()
 		if err != nil {
 			return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
