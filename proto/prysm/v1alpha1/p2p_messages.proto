@@ -51,6 +51,7 @@ message MetaDataV0 {
  (
  seq_number: uint64
  attnets: Bitvector[ATTESTATION_SUBNET_COUNT]
+ syncnets: Bitvector[SYNC_COMMITTEE_SUBNET_COUNT]
  )
 */
 message MetaDataV1 {
