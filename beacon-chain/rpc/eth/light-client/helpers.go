@@ -93,7 +93,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	return result, nil
 }
 
-func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrapCapella, error) {
+func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= CAPELLA_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().CapellaForkEpoch {
 		return nil, fmt.Errorf("creating Capella light client bootstrap is not supported before Capella, invalid slot %d", state.Slot())
@@ -179,7 +179,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
 	// Return result
-	result := &structs.LightClientBootstrapCapella{
+	result := &structs.LightClientBootstrap{
 		Header:                     header,
 		CurrentSyncCommittee:       committee,
 		CurrentSyncCommitteeBranch: branch,
@@ -188,7 +188,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	return result, nil
 }
 
-func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrapDeneb, error) {
+func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= DENEB_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().DenebForkEpoch {
 		return nil, fmt.Errorf("creating Deneb light client bootstrap is not supported before Deneb, invalid slot %d", state.Slot())
@@ -256,7 +256,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	if err != nil {
 		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
 	}
-	var executionPayloadProofStr []string
+	executionPayloadProofStr := make([]string, len(executionPayloadProof))
 	for i, proof := range executionPayloadProof {
 		executionPayloadProofStr[i] = hexutil.Encode(proof)
 	}
@@ -274,7 +274,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
 	// Return result
-	result := &structs.LightClientBootstrapDeneb{
+	result := &structs.LightClientBootstrap{
 		Header:                     header,
 		CurrentSyncCommittee:       committee,
 		CurrentSyncCommitteeBranch: branch,
@@ -426,28 +426,28 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	return newLightClientUpdateToJSON(result), nil
 }
 
-func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap) (*v2.LightClientBootstrap, error) {
-	bootstrap := &v2.LightClientBootstrap{}
-
-	var err error
-
-	v1Alpha1Header, err := bootstrapJSON.Header.Beacon.ToConsensus()
-	if err != nil {
-		return nil, err
-	}
-	bootstrap.Header = &v2.LightClientHeader{Beacon: migration.V1Alpha1HeaderToV1(v1Alpha1Header)}
-
-	currentSyncCommittee, err := bootstrapJSON.CurrentSyncCommittee.ToConsensus()
-	if err != nil {
-		return nil, err
-	}
-	bootstrap.CurrentSyncCommittee = migration.V1Alpha1SyncCommitteeToV2(currentSyncCommittee)
-
-	if bootstrap.CurrentSyncCommitteeBranch, err = branchFromJSON(bootstrapJSON.CurrentSyncCommitteeBranch); err != nil {
-		return nil, err
-	}
-	return bootstrap, nil
-}
+//func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap) (*v2.LightClientBootstrap, error) {
+//	bootstrap := &v2.LightClientBootstrap{}
+//
+//	var err error
+//
+//	v1Alpha1Header, err := bootstrapJSON.Header.Beacon.ToConsensus()
+//	if err != nil {
+//		return nil, err
+//	}
+//	bootstrap.Header = &v2.LightClientHeader{Beacon: migration.V1Alpha1HeaderToV1(v1Alpha1Header)}
+//
+//	currentSyncCommittee, err := bootstrapJSON.CurrentSyncCommittee.ToConsensus()
+//	if err != nil {
+//		return nil, err
+//	}
+//	bootstrap.CurrentSyncCommittee = migration.V1Alpha1SyncCommitteeToV2(currentSyncCommittee)
+//
+//	if bootstrap.CurrentSyncCommitteeBranch, err = branchFromJSON(bootstrapJSON.CurrentSyncCommitteeBranch); err != nil {
+//		return nil, err
+//	}
+//	return bootstrap, nil
+//}
 
 func branchFromJSON(branch []string) ([][]byte, error) {
 	var branchBytes [][]byte

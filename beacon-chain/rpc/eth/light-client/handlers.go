@@ -73,7 +73,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 			return
 		}
 
-		response := &structs.LightClientBootstrapResponseCapella{
+		response := &structs.LightClientBootstrapResponse{
 			Version: version.String(blk.Version()),
 			Data:    bootstrap,
 		}
@@ -88,7 +88,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 			return
 		}
 
-		response := &structs.LightClientBootstrapResponseDeneb{
+		response := &structs.LightClientBootstrapResponse{
 			Version: version.String(blk.Version()),
 			Data:    bootstrap,
 		}
