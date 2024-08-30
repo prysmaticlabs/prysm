@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
@@ -125,32 +127,50 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 
 	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
 
-	executionPayloadHeaderInterface, err := block.Body().Execution()
+	payloadInterface, err := block.Body().Execution()
 	if err != nil {
 		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
-	transactionsRoot, err := executionPayloadHeaderInterface.TransactionsRoot()
-	if err != nil {
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if err == consensus_types.ErrUnsupportedField {
+		transactions, err := payloadInterface.Transactions()
+		if err != nil {
+			return nil, fmt.Errorf("could not get transactions: %s", err.Error())
+		}
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		if err != nil {
+			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+		}
+		transactionsRoot = transactionsRootArray[:]
+	} else if err != nil {
 		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
 	}
-	withdrawalsRoot, err := executionPayloadHeaderInterface.WithdrawalsRoot()
-	if err != nil {
-		return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if err == consensus_types.ErrUnsupportedField {
+		withdrawals, err := payloadInterface.Withdrawals()
+		if err != nil {
+			return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
+		}
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+		}
+		withdrawalsRoot = withdrawalsRootArray[:]
 	}
 	executionPayloadHeader := &structs.ExecutionPayloadHeaderCapella{
-		ParentHash:       hexutil.Encode(executionPayloadHeaderInterface.ParentHash()),
-		FeeRecipient:     hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient()),
-		StateRoot:        hexutil.Encode(executionPayloadHeaderInterface.StateRoot()),
-		ReceiptsRoot:     hexutil.Encode(executionPayloadHeaderInterface.ReceiptsRoot()),
-		LogsBloom:        hexutil.Encode(executionPayloadHeaderInterface.LogsBloom()),
-		PrevRandao:       hexutil.Encode(executionPayloadHeaderInterface.PrevRandao()),
-		BlockNumber:      hexutil.EncodeUint64(executionPayloadHeaderInterface.BlockNumber()),
-		GasLimit:         hexutil.EncodeUint64(executionPayloadHeaderInterface.GasLimit()),
-		GasUsed:          hexutil.EncodeUint64(executionPayloadHeaderInterface.GasUsed()),
-		Timestamp:        hexutil.EncodeUint64(executionPayloadHeaderInterface.Timestamp()),
-		ExtraData:        hexutil.Encode(executionPayloadHeaderInterface.ExtraData()),
-		BaseFeePerGas:    hexutil.Encode(executionPayloadHeaderInterface.BaseFeePerGas()),
-		BlockHash:        hexutil.Encode(executionPayloadHeaderInterface.BlockHash()),
+		ParentHash:       hexutil.Encode(payloadInterface.ParentHash()),
+		FeeRecipient:     hexutil.Encode(payloadInterface.FeeRecipient()),
+		StateRoot:        hexutil.Encode(payloadInterface.StateRoot()),
+		ReceiptsRoot:     hexutil.Encode(payloadInterface.ReceiptsRoot()),
+		LogsBloom:        hexutil.Encode(payloadInterface.LogsBloom()),
+		PrevRandao:       hexutil.Encode(payloadInterface.PrevRandao()),
+		BlockNumber:      hexutil.EncodeUint64(payloadInterface.BlockNumber()),
+		GasLimit:         hexutil.EncodeUint64(payloadInterface.GasLimit()),
+		GasUsed:          hexutil.EncodeUint64(payloadInterface.GasUsed()),
+		Timestamp:        hexutil.EncodeUint64(payloadInterface.Timestamp()),
+		ExtraData:        hexutil.Encode(payloadInterface.ExtraData()),
+		BaseFeePerGas:    hexutil.Encode(payloadInterface.BaseFeePerGas()),
+		BlockHash:        hexutil.Encode(payloadInterface.BlockHash()),
 		TransactionsRoot: hexutil.Encode(transactionsRoot),
 		WithdrawalsRoot:  hexutil.Encode(withdrawalsRoot),
 	}
@@ -218,32 +238,50 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 
 	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
 
-	executionPayloadHeaderInterface, err := block.Body().Execution()
+	payloadInterface, err := block.Body().Execution()
 	if err != nil {
 		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
 	}
-	transactionsRoot, err := executionPayloadHeaderInterface.TransactionsRoot()
-	if err != nil {
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if err == consensus_types.ErrUnsupportedField {
+		transactions, err := payloadInterface.Transactions()
+		if err != nil {
+			return nil, fmt.Errorf("could not get transactions: %s", err.Error())
+		}
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		if err != nil {
+			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+		}
+		transactionsRoot = transactionsRootArray[:]
+	} else if err != nil {
 		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
 	}
-	withdrawalsRoot, err := executionPayloadHeaderInterface.WithdrawalsRoot()
-	if err != nil {
-		return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if err == consensus_types.ErrUnsupportedField {
+		withdrawals, err := payloadInterface.Withdrawals()
+		if err != nil {
+			return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
+		}
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+		}
+		withdrawalsRoot = withdrawalsRootArray[:]
 	}
 	executionPayloadHeader := &structs.ExecutionPayloadHeaderDeneb{
-		ParentHash:       hexutil.Encode(executionPayloadHeaderInterface.ParentHash()),
-		FeeRecipient:     hexutil.Encode(executionPayloadHeaderInterface.FeeRecipient()),
-		StateRoot:        hexutil.Encode(executionPayloadHeaderInterface.StateRoot()),
-		ReceiptsRoot:     hexutil.Encode(executionPayloadHeaderInterface.ReceiptsRoot()),
-		LogsBloom:        hexutil.Encode(executionPayloadHeaderInterface.LogsBloom()),
-		PrevRandao:       hexutil.Encode(executionPayloadHeaderInterface.PrevRandao()),
-		BlockNumber:      hexutil.EncodeUint64(executionPayloadHeaderInterface.BlockNumber()),
-		GasLimit:         hexutil.EncodeUint64(executionPayloadHeaderInterface.GasLimit()),
-		GasUsed:          hexutil.EncodeUint64(executionPayloadHeaderInterface.GasUsed()),
-		Timestamp:        hexutil.EncodeUint64(executionPayloadHeaderInterface.Timestamp()),
-		ExtraData:        hexutil.Encode(executionPayloadHeaderInterface.ExtraData()),
-		BaseFeePerGas:    hexutil.Encode(executionPayloadHeaderInterface.BaseFeePerGas()),
-		BlockHash:        hexutil.Encode(executionPayloadHeaderInterface.BlockHash()),
+		ParentHash:       hexutil.Encode(payloadInterface.ParentHash()),
+		FeeRecipient:     hexutil.Encode(payloadInterface.FeeRecipient()),
+		StateRoot:        hexutil.Encode(payloadInterface.StateRoot()),
+		ReceiptsRoot:     hexutil.Encode(payloadInterface.ReceiptsRoot()),
+		LogsBloom:        hexutil.Encode(payloadInterface.LogsBloom()),
+		PrevRandao:       hexutil.Encode(payloadInterface.PrevRandao()),
+		BlockNumber:      hexutil.EncodeUint64(payloadInterface.BlockNumber()),
+		GasLimit:         hexutil.EncodeUint64(payloadInterface.GasLimit()),
+		GasUsed:          hexutil.EncodeUint64(payloadInterface.GasUsed()),
+		Timestamp:        hexutil.EncodeUint64(payloadInterface.Timestamp()),
+		ExtraData:        hexutil.Encode(payloadInterface.ExtraData()),
+		BaseFeePerGas:    hexutil.Encode(payloadInterface.BaseFeePerGas()),
+		BlockHash:        hexutil.Encode(payloadInterface.BlockHash()),
 		TransactionsRoot: hexutil.Encode(transactionsRoot),
 		WithdrawalsRoot:  hexutil.Encode(withdrawalsRoot),
 	}

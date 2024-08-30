@@ -79,7 +79,7 @@ func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 
 func TestLightClientHandler_GetLightClientBootstrap_Capella(t *testing.T) {
 	helpers.ClearCache()
-	slot := primitives.Slot(params.BeaconConfig().AltairForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
+	slot := primitives.Slot(params.BeaconConfig().CapellaForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
 
 	b := util.NewBeaconBlockCapella()
 	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
@@ -130,7 +130,7 @@ func TestLightClientHandler_GetLightClientBootstrap_Capella(t *testing.T) {
 
 func TestLightClientHandler_GetLightClientBootstrap_Deneb(t *testing.T) {
 	helpers.ClearCache()
-	slot := primitives.Slot(params.BeaconConfig().AltairForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
+	slot := primitives.Slot(params.BeaconConfig().DenebForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
 
 	b := util.NewBeaconBlockDeneb()
 	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
