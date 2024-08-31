@@ -26,6 +26,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Deprecated
 
+- `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
 
 ### Removed
 

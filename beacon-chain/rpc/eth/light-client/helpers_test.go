@@ -94,9 +94,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: make([][]byte, fieldparams.NextSyncCommitteeBranchDepth),
 				SignatureSlot:           9999,
 			},
@@ -104,9 +104,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000001,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           1000000,
 			},
@@ -118,9 +118,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000001,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           1000000,
 			},
@@ -128,9 +128,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: make([][]byte, fieldparams.NextSyncCommitteeBranchDepth),
 				SignatureSlot:           9999,
 			},
@@ -142,9 +142,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          make([][]byte, lightclient.FinalityBranchNumOfLeaves),
@@ -153,9 +153,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
@@ -168,9 +168,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
@@ -179,9 +179,9 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          make([][]byte, lightclient.FinalityBranchNumOfLeaves),
@@ -194,29 +194,29 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           999999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
-				},
+				}},
 			},
 			expectedResult: true,
 		},
@@ -226,29 +226,29 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           999999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: false,
 		},
@@ -258,29 +258,29 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b01111100, 0b1}, // [0,1,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: true,
 		},
@@ -290,29 +290,29 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b01111100, 0b1}, // [0,1,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: false,
 		},
@@ -322,29 +322,29 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: true,
 		},
@@ -354,61 +354,61 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 999999,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: false,
 		},
 		{
-			name: "none of the above conditions are met and new signature's slot is lesser than old signature's slot",
+			name: "none of the above conditions are met and new signature's slot is less than old signature's slot",
 			oldUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9998,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: true,
 		},
@@ -418,29 +418,29 @@ func TestIsBetterUpdate(t *testing.T) {
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9998,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
 				SyncAggregate: &ethpbv1.SyncAggregate{
 					SyncCommitteeBits: []byte{0b00111100, 0b1}, // [0,0,1,1,1,1,0,0]
 				},
-				AttestedHeader: &ethpbv1.BeaconBlockHeader{
+				AttestedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 1000000,
-				},
+				}},
 				NextSyncCommitteeBranch: createNonEmptySyncCommitteeBranch(),
 				SignatureSlot:           9999,
 				FinalityBranch:          createNonEmptyFinalityBranch(),
-				FinalizedHeader: &ethpbv1.BeaconBlockHeader{
+				FinalizedHeader: &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
 					Slot: 9999,
-				},
+				}},
 			},
 			expectedResult: false,
 		},
