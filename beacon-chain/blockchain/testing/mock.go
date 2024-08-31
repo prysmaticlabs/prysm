@@ -159,6 +159,11 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 	return msn.feed
 }
 
+// NewSimpleStateNotifier makes a state feed without the custom mock feed machinery.
+func NewSimpleStateNotifier() *MockStateNotifier {
+	return &MockStateNotifier{feed: new(event.Feed)}
+}
+
 // OperationNotifier mocks the same method in the chain service.
 func (s *ChainService) OperationNotifier() opfeed.Notifier {
 	if s.opNotifier == nil {

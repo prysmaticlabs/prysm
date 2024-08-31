@@ -15,7 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	ethv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 var errNilValue = errors.New("nil value")
@@ -1507,4 +1510,101 @@ func PendingConsolidationsFromConsensus(cs []*eth.PendingConsolidation) []*Pendi
 		}
 	}
 	return consolidations
+}
+
+func HeadEventFromV1(event *ethv1.EventHead) *HeadEvent {
+	return &HeadEvent{
+		Slot:                      fmt.Sprintf("%d", event.Slot),
+		Block:                     hexutil.Encode(event.Block),
+		State:                     hexutil.Encode(event.State),
+		EpochTransition:           event.EpochTransition,
+		ExecutionOptimistic:       event.ExecutionOptimistic,
+		PreviousDutyDependentRoot: hexutil.Encode(event.PreviousDutyDependentRoot),
+		CurrentDutyDependentRoot:  hexutil.Encode(event.CurrentDutyDependentRoot),
+	}
+}
+
+func FinalizedCheckpointEventFromV1(event *ethv1.EventFinalizedCheckpoint) *FinalizedCheckpointEvent {
+	return &FinalizedCheckpointEvent{
+		Block:               hexutil.Encode(event.Block),
+		State:               hexutil.Encode(event.State),
+		Epoch:               fmt.Sprintf("%d", event.Epoch),
+		ExecutionOptimistic: event.ExecutionOptimistic,
+	}
+}
+
+func LightClientFinalityUpdateEventFromV2(event *ethv2.LightClientFinalityUpdateWithVersion) (*LightClientFinalityUpdateEvent, error) {
+	var finalityBranch []string
+	for _, b := range event.Data.FinalityBranch {
+		finalityBranch = append(finalityBranch, hexutil.Encode(b))
+	}
+	attestedBeacon, err := event.Data.AttestedHeader.GetBeacon()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attested header")
+	}
+	finalizedBeacon, err := event.Data.FinalizedHeader.GetBeacon()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get finalized header")
+	}
+	return &LightClientFinalityUpdateEvent{
+		Version: version.String(int(event.Version)),
+		Data: &LightClientFinalityUpdate{
+			AttestedHeader: &BeaconBlockHeader{
+				Slot:          fmt.Sprintf("%d", attestedBeacon.Slot),
+				ProposerIndex: fmt.Sprintf("%d", attestedBeacon.ProposerIndex),
+				ParentRoot:    hexutil.Encode(attestedBeacon.ParentRoot),
+				StateRoot:     hexutil.Encode(attestedBeacon.StateRoot),
+				BodyRoot:      hexutil.Encode(attestedBeacon.BodyRoot),
+			},
+			FinalizedHeader: &BeaconBlockHeader{
+				Slot:          fmt.Sprintf("%d", finalizedBeacon.Slot),
+				ProposerIndex: fmt.Sprintf("%d", finalizedBeacon.ProposerIndex),
+				ParentRoot:    hexutil.Encode(finalizedBeacon.ParentRoot),
+				StateRoot:     hexutil.Encode(finalizedBeacon.StateRoot),
+			},
+			FinalityBranch: finalityBranch,
+			SyncAggregate: &SyncAggregate{
+				SyncCommitteeBits:      hexutil.Encode(event.Data.SyncAggregate.SyncCommitteeBits),
+				SyncCommitteeSignature: hexutil.Encode(event.Data.SyncAggregate.SyncCommitteeSignature),
+			},
+			SignatureSlot: fmt.Sprintf("%d", event.Data.SignatureSlot),
+		},
+	}, nil
+}
+
+func LightClientOptimisticUpdateWithVersionFromV2(event *ethv2.LightClientOptimisticUpdateWithVersion) (*LightClientOptimisticUpdateEvent, error) {
+	attestedBeacon, err := event.Data.AttestedHeader.GetBeacon()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attested header")
+	}
+	return &LightClientOptimisticUpdateEvent{
+		Version: version.String(int(event.Version)),
+		Data: &LightClientOptimisticUpdate{
+			AttestedHeader: &BeaconBlockHeader{
+				Slot:          fmt.Sprintf("%d", attestedBeacon.Slot),
+				ProposerIndex: fmt.Sprintf("%d", attestedBeacon.ProposerIndex),
+				ParentRoot:    hexutil.Encode(attestedBeacon.ParentRoot),
+				StateRoot:     hexutil.Encode(attestedBeacon.StateRoot),
+				BodyRoot:      hexutil.Encode(attestedBeacon.BodyRoot),
+			},
+			SyncAggregate: &SyncAggregate{
+				SyncCommitteeBits:      hexutil.Encode(event.Data.SyncAggregate.SyncCommitteeBits),
+				SyncCommitteeSignature: hexutil.Encode(event.Data.SyncAggregate.SyncCommitteeSignature),
+			},
+			SignatureSlot: fmt.Sprintf("%d", event.Data.SignatureSlot),
+		},
+	}, nil
+}
+
+func EventChainReorgFromV1(event *ethv1.EventChainReorg) *ChainReorgEvent {
+	return &ChainReorgEvent{
+		Slot:                fmt.Sprintf("%d", event.Slot),
+		Depth:               fmt.Sprintf("%d", event.Depth),
+		OldHeadBlock:        hexutil.Encode(event.OldHeadBlock),
+		NewHeadBlock:        hexutil.Encode(event.NewHeadBlock),
+		OldHeadState:        hexutil.Encode(event.OldHeadState),
+		NewHeadState:        hexutil.Encode(event.NewHeadState),
+		Epoch:               fmt.Sprintf("%d", event.Epoch),
+		ExecutionOptimistic: event.ExecutionOptimistic,
+	}
 }

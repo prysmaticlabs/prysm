@@ -385,7 +385,21 @@ load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_d
 
 gometalinter_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+
+go_repository(
+    name = "com_github_r3labs_sse_v2",
+    importpath = "github.com/r3labs/sse/v2",
+    sum = "h1:hFEkLLFY4LDifoHdiCN/LlGBAdVJYsANaLqNYa1l/v0=",
+    version = "v2.10.0",
+)
+
+go_repository(
+    name = "in_gopkg_cenkalti_backoff_v1",
+    importpath = "gopkg.in/cenkalti/backoff.v1",
+    sum = "h1:Arh75ttbsvlpVA7WtVpH4u9h6Zl46xuptxqLxPiSo4Y=",
+    version = "v1.1.0",
+)
 
 gazelle_dependencies()
 
