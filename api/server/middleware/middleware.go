@@ -9,39 +9,18 @@ import (
 )
 
 // NormalizeQueryValuesHandler normalizes an input query of "key=value1,value2,value3" to "key=value1&key=value2&key=value3"
-type NormalizeQueryValuesHandler struct {
-	Handler http.Handler
-	Router  *http.ServeMux
+func NormalizeQueryValuesHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		NormalizeQueryValues(query)
+		r.URL.RawQuery = query.Encode()
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // CorsHandler sets the cors settings on api endpoints
-type CorsHandler struct {
-	handler      http.Handler
-	allowOrigins []string
-}
-
-// ServeHTTP handles the request by passing it to the real handler
-func (n *NormalizeQueryValuesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-	n.Handler.ServeHTTP(w, r)
-}
-
-// NewNormalizeQueryValuesHandler constructs a new Logger middleware handler
-func NewNormalizeQueryValuesHandler(handlerToWrap http.Handler, mux *http.ServeMux) *NormalizeQueryValuesHandler {
-	if mux == nil {
-		mux = http.NewServeMux()
-	}
-	return &NormalizeQueryValuesHandler{handlerToWrap, mux}
-}
-
-// ServeHTTP handles the request by passing it to the real handler
-func (n *CorsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	n.handler.ServeHTTP(w, r)
-}
-
-func NewCorsHandler(handlerToWrap http.Handler, allowOrigins []string) *CorsHandler {
+func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   allowOrigins,
 		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
@@ -49,8 +28,8 @@ func NewCorsHandler(handlerToWrap http.Handler, allowOrigins []string) *CorsHand
 		MaxAge:           600,
 		AllowedHeaders:   []string{"*"},
 	})
-	c.Handler(handlerToWrap)
-	return &CorsHandler{handlerToWrap, allowOrigins}
+
+	return c.Handler
 }
 
 // ContentTypeHandler checks request for the appropriate media types otherwise returning a http.StatusUnsupportedMediaType error
@@ -129,4 +108,18 @@ func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.H
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+type Middleware func(http.Handler) http.Handler
+
+func MiddlewareChain(h http.Handler,mw []Middleware) http.Handler {
+	if len(mw) < 1 {
+		return h
+	}
+	
+	wrapped := h
+	for i := len(mw) - 1; i >= 0; i--{
+		wrapped = mw[i](wrapped)
+	}
+	return wrapped
 }

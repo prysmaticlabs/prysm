@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 )
 
@@ -21,6 +22,7 @@ type httpHandler func(
 // Config parameters for setting up the http-rest service.
 type config struct {
 	httpAddr string
+	middlewares []middleware.Middleware
 	handler  httpHandler
 	router   http.Handler
 	timeout  time.Duration
@@ -66,9 +68,10 @@ func (g *Server) Start() {
 	_, cancel := context.WithCancel(g.ctx)
 	g.cancel = cancel
 
+	handler := middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	go func() {
 		log.WithField("address", g.cfg.httpAddr).Info("Starting HTTP server")
-		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
+		if err := http.ListenAndServe(g.cfg.httpAddr,handler); err != http.ErrServerClosed {
 			log.WithError(err).Error("Failed to start HTTP server")
 			g.startFailure = err
 			return

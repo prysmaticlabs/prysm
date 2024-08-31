@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,7 +16,7 @@ func TestNormalizeQueryValuesHandler(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	handler := NewNormalizeQueryValuesHandler(nextHandler, nil)
+	handler := NormalizeQueryValuesHandler(nextHandler)
 
 	tests := []struct {
 		name          string
@@ -201,4 +202,24 @@ func TestAcceptHeaderHandler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestImplementation(t *testing.T){
+	mux := http.NewServeMux()
+	mux.HandleFunc("/my/path/to/handler",func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write([]byte("next handler"))
+		require.NoError(t, err)
+	})
+	allowedOrigins := []string{}
+	mw :=[]Middleware{
+		NormalizeQueryValuesHandler,
+		CorsHandler(allowedOrigins),
+	}
+	testServer := httptest.NewServer(MiddlewareChain(mux ,mw))
+	request, err := http.NewRequest(http.MethodGet, testServer.URL+"/my/path/to/handler", nil)
+	require.NoError(t, err)
+	client := &http.Client{}
+	resp, err := client.Do(request)
+    require.NoError(t, err)
+	fmt.Printf("resp.Body: %v\n", resp.Body)
 }

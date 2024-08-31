@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"net/http"
+
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 )
 
 type Option func(g *Server) error
@@ -11,6 +13,13 @@ type Option func(g *Server) error
 func WithMuxHandler(m httpHandler) Option {
 	return func(g *Server) error {
 		g.cfg.handler = m
+		return nil
+	}
+}
+
+func WithMiddlewares(mw []middleware.Middleware) Option {
+	return func(g *Server) error {
+		g.cfg.middlewares = mw
 		return nil
 	}
 }

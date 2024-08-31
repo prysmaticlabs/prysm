@@ -19,7 +19,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -112,7 +111,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	// initialize router used for endpoints
-	router := newRouter(cliCtx)
+	router := http.NewServeMux()
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
@@ -121,29 +120,17 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
 		}
 		log.Info("Enabling web portal to manage the validator client")
-		if err := validatorClient.initializeForWeb(cliCtx, router.Router); err != nil {
+		if err := validatorClient.initializeForWeb(cliCtx, router); err != nil {
 			return nil, err
 		}
 		return validatorClient, nil
 	}
 
-	if err := validatorClient.initializeFromCLI(cliCtx, router.Router); err != nil {
+	if err := validatorClient.initializeFromCLI(cliCtx, router); err != nil {
 		return nil, err
 	}
 
 	return validatorClient, nil
-}
-
-func newRouter(cliCtx *cli.Context) *middleware.NormalizeQueryValuesHandler {
-	var allowedOrigins []string
-	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
-	}
-	mux := http.NewServeMux()
-	wrappedmux := middleware.NewNormalizeQueryValuesHandler(middleware.NewCorsHandler(mux, allowedOrigins), nil)
-	return wrappedmux
 }
 
 // Start every service in the validator client.
