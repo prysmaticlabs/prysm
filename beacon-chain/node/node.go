@@ -1030,8 +1030,6 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-type Middleware func(http.Handler) http.Handler
-
 func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
 	host := b.cliCtx.String(flags.HTTPServerHost.Name)
 	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
@@ -1044,9 +1042,9 @@ func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	middlewares := []middleware.Middleware{
-        middleware.NormalizeQueryValuesHandler,
-        middleware.CorsHandler(allowedOrigins),
-    } 
+		middleware.NormalizeQueryValuesHandler,
+		middleware.CorsHandler(allowedOrigins),
+	}
 
 	opts := []httprest.Option{
 		httprest.WithRouter(router),

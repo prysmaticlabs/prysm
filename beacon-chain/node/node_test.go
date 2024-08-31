@@ -287,7 +287,7 @@ func TestCORS(t *testing.T) {
 			req := httptest.NewRequest("GET", "http://example.com/some-path", nil)
 			req.Header.Set("Origin", tc.origin)
 			rr := httptest.NewRecorder()
-			
+
 			// Serve HTTP
 			router.ServeHTTP(rr, req)
 

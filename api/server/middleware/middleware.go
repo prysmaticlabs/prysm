@@ -112,13 +112,13 @@ func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.H
 
 type Middleware func(http.Handler) http.Handler
 
-func MiddlewareChain(h http.Handler,mw []Middleware) http.Handler {
+func MiddlewareChain(h http.Handler, mw []Middleware) http.Handler {
 	if len(mw) < 1 {
 		return h
 	}
-	
+
 	wrapped := h
-	for i := len(mw) - 1; i >= 0; i--{
+	for i := len(mw) - 1; i >= 0; i-- {
 		wrapped = mw[i](wrapped)
 	}
 	return wrapped

@@ -21,11 +21,11 @@ type httpHandler func(
 
 // Config parameters for setting up the http-rest service.
 type config struct {
-	httpAddr string
+	httpAddr    string
 	middlewares []middleware.Middleware
-	handler  httpHandler
-	router   http.Handler
-	timeout  time.Duration
+	handler     httpHandler
+	router      http.Handler
+	timeout     time.Duration
 }
 
 // Server serves HTTP traffic.
@@ -73,7 +73,7 @@ func (g *Server) Start() {
 	handler := middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	go func() {
 		log.WithField("address", g.cfg.httpAddr).Info("Starting HTTP server")
-		if err := http.ListenAndServe(g.cfg.httpAddr,handler); err != http.ErrServerClosed {
+		if err := http.ListenAndServe(g.cfg.httpAddr, handler); err != http.ErrServerClosed {
 			log.WithError(err).Error("Failed to start HTTP server")
 			g.startFailure = err
 			return
