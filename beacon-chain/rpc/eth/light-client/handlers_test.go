@@ -802,16 +802,34 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	}
 	request := httptest.NewRequest("GET", "http://foo.com", nil)
 	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
 
-	s.GetLightClientOptimisticUpdate(writer, request)
+	t.Run("JSON response", func(t *testing.T) {
 
-	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &structs.LightClientUpdateWithVersion{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
-	require.NotNil(t, resp.Data)
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLightClientOptimisticUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.LightClientUpdateWithVersion{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, "capella", resp.Version)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+		require.NotNil(t, resp.Data)
+	})
+	t.Run("SSZ response", func(t *testing.T) {
+
+		writer.Body = &bytes.Buffer{}
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+
+		s.GetLightClientOptimisticUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &eth.LightClientUpdate{}
+		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()), resp)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.BodyRoot))
+		require.NotNil(t, resp)
+	})
+
 }
 
 func TestLightClientHandler_GetLightClientEventBlock(t *testing.T) {
