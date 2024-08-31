@@ -19,6 +19,7 @@ import "proto/eth/ext/options.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v2/version.proto";
 import "proto/eth/v2/sync_committee.proto";
+import "proto/engine/v1/execution_engine.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
 option go_package = "github.com/prysmaticlabs/prysm/v5/proto/eth/v2;eth";
@@ -32,6 +33,19 @@ option php_namespace = "Ethereum\\Eth\\v2";
 message LightClientHeader {
   v1.BeaconBlockHeader beacon = 1;
 }
+
+message LightClientHeaderCapella {
+  v1.BeaconBlockHeader beacon = 1;
+  ethereum.engine.v1.ExecutionPayloadHeaderCapella execution = 2;
+  repeated bytes execution_branch = 3;
+}
+
+message LightClientHeaderDeneb {
+  v1.BeaconBlockHeader beacon = 1;
+  ethereum.engine.v1.ExecutionPayloadHeaderDeneb execution = 2;
+  repeated bytes execution_branch = 3;
+}
+
 
 message LightClientBootstrap {
   LightClientHeader header = 1;
