@@ -48,15 +48,18 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 			return nil, err
 		}
 	}
-
 	if g.cfg.router == nil {
 		return nil, errors.New("router option not configured")
 	}
-
-	// TODO: actually use the timeout config provided
+	var handler http.Handler
+	if g.cfg.timeout > 10 {
+		handler = http.TimeoutHandler(g.cfg.router, g.cfg.timeout, "request timed out")
+	} else {
+		handler = g.cfg.router
+	}
 	g.server = &http.Server{
 		Addr:              g.cfg.httpAddr,
-		Handler:           g.cfg.router,
+		Handler:           handler,
 		ReadHeaderTimeout: time.Second,
 	}
 
@@ -65,8 +68,7 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 
 // Start the http rest service.
 func (g *Server) Start() {
-	_, cancel := context.WithCancel(g.ctx)
-	g.cancel = cancel
+	g.ctx, g.cancel = context.WithCancel(g.ctx)
 
 	handler := middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	go func() {

@@ -35,12 +35,7 @@ var (
 		Usage: "Beacon node RPC provider endpoint.",
 		Value: "127.0.0.1:4000",
 	}
-	// Deprecated: DeprecatedBeaconRPCGatewayProviderFlag defines a beacon node JSON-RPC endpoint.
-	DeprecatedBeaconRPCGatewayProviderFlag = &cli.StringFlag{
-		Name:  "beacon-rpc-gateway-provider",
-		Usage: "Flag deprecated and unused",
-		Value: "127.0.0.1:3500",
-	}
+
 	// BeaconRESTApiProviderFlag defines a beacon node REST API endpoint.
 	BeaconRESTApiProviderFlag = &cli.StringFlag{
 		Name:  "beacon-rest-api-provider",

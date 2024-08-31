@@ -119,9 +119,7 @@ func IsValid(walletDir string) (bool, error) {
 	}
 	f, err := os.Open(expanded) // #nosec G304
 	if err != nil {
-		if strings.Contains(err.Error(), "no such file") ||
-			strings.Contains(err.Error(), "cannot find the file") ||
-			strings.Contains(err.Error(), "cannot find the path") {
+		if os.IsNotExist(err) {
 			return false, nil
 		}
 		return false, err

@@ -196,7 +196,6 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "deprecated",
 		Flags: []cli.Flag{
 			cmd.BackupWebhookOutputDir,
-			flags.DeprecatedDisableGRPCGateway,
 		},
 	},
 }

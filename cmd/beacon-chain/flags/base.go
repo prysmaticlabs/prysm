@@ -21,8 +21,9 @@ var (
 		Value: 3,
 	}
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
-		Name:  "max-builder-epoch-missed-slots",
-		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
+		Name: "max-builder-epoch-missed-slots",
+		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window. " +
+			"The values are on the basis of the networks and the default value for mainnet is 5.",
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
@@ -117,11 +118,7 @@ var (
 		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
 		Value: PrysmAPIModule + `,` + EthAPIModule,
 	}
-	// Deprecated: DeprecatedDisableGRPCGateway for JSON-HTTP requests to the beacon node.
-	DeprecatedDisableGRPCGateway = &cli.BoolFlag{
-		Name:  "disable-grpc-gateway",
-		Usage: "Flag deprecated and unused",
-	}
+
 	// HTTPServerHost specifies a HTTP server host for the validator client.
 	HTTPServerHost = &cli.StringFlag{
 		Name:    "http-host",
