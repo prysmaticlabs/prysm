@@ -10,7 +10,6 @@ import (
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -475,48 +474,6 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	}
 
 	return newLightClientUpdateToJSON(result), nil
-}
-
-func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap) (*v2.LightClientBootstrap, error) {
-	bootstrap := &v2.LightClientBootstrap{}
-
-	var err error
-	var v1Alpha1Header *eth.BeaconBlockHeader
-	switch bootstrapJSON.Header.(type) {
-	case *structs.LightClientHeader:
-		v1Alpha1Header, err = bootstrapJSON.Header.(*structs.LightClientHeader).Beacon.ToConsensus()
-	case *structs.LightClientHeaderCapella:
-		v1Alpha1Header, err = bootstrapJSON.Header.(*structs.LightClientHeaderCapella).Beacon.ToConsensus()
-	case *structs.LightClientHeaderDeneb:
-		v1Alpha1Header, err = bootstrapJSON.Header.(*structs.LightClientHeaderDeneb).Beacon.ToConsensus()
-	}
-	if err != nil {
-		return nil, err
-	}
-	bootstrap.Header = &v2.LightClientHeader{Beacon: migration.V1Alpha1HeaderToV1(v1Alpha1Header)}
-
-	currentSyncCommittee, err := bootstrapJSON.CurrentSyncCommittee.ToConsensus()
-	if err != nil {
-		return nil, err
-	}
-	bootstrap.CurrentSyncCommittee = migration.V1Alpha1SyncCommitteeToV2(currentSyncCommittee)
-
-	if bootstrap.CurrentSyncCommitteeBranch, err = branchFromJSON(bootstrapJSON.CurrentSyncCommitteeBranch); err != nil {
-		return nil, err
-	}
-	return bootstrap, nil
-}
-
-func branchFromJSON(branch []string) ([][]byte, error) {
-	var branchBytes [][]byte
-	for _, root := range branch {
-		branch, err := hexutil.Decode(root)
-		if err != nil {
-			return nil, err
-		}
-		branchBytes = append(branchBytes, branch)
-	}
-	return branchBytes, nil
 }
 
 func branchToJSON(branchBytes [][]byte) []string {

@@ -48,9 +48,13 @@ message LightClientHeaderDeneb {
 
 
 message LightClientBootstrap {
-  LightClientHeader header = 1;
-  SyncCommittee current_sync_committee = 2;
-  repeated bytes current_sync_committee_branch = 3;
+  oneof header {
+    LightClientHeader header_altair = 1;
+    LightClientHeaderCapella header_capella = 2;
+    LightClientHeaderDeneb header_deneb = 3;
+  }
+  SyncCommittee current_sync_committee = 4;
+  repeated bytes current_sync_committee_branch = 5;
 }
 
 message LightClientUpdate {
