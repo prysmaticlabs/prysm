@@ -3,6 +3,8 @@ package eth
 import (
 	"bytes"
 	"math/bits"
+
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 )
 
 const (
@@ -48,4 +50,17 @@ func (x *LightClientUpdate) IsSyncCommiteeUpdate() bool {
 
 func (x *LightClientUpdate) IsFinalityUpdate() bool {
 	return !isEmptyWithLength(x.GetFinalityBranch(), FinalizedRootIndex)
+}
+
+func (x *LightClientHeaderContainer) GetBeacon() *v1.BeaconBlockHeader {
+	switch input := x.Header.(type) {
+	case *LightClientHeaderContainer_HeaderAltair:
+		return input.HeaderAltair.Beacon
+	case *LightClientHeaderContainer_HeaderCapella:
+		return input.HeaderCapella.Beacon
+	case *LightClientHeaderContainer_HeaderDeneb:
+		return input.HeaderDeneb.Beacon
+	default:
+		panic("invalid type")
+	}
 }
