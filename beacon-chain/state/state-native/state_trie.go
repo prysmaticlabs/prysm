@@ -892,7 +892,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		balancesMultiValue:         b.balancesMultiValue,
 		historicalRoots:            b.historicalRoots,
 		historicalSummaries:        b.historicalSummaries,
-		validators:                 b.validators,
+		validators:                 b.validatorsVal(),
 		validatorsMultiValue:       b.validatorsMultiValue,
 		previousEpochParticipation: b.previousEpochParticipation,
 		currentEpochParticipation:  b.currentEpochParticipation,
