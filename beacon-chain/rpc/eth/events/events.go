@@ -307,8 +307,14 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 			finalityBranch = append(finalityBranch, hexutil.Encode(b))
 		}
 
-		attestedBeacon := updateData.Data.AttestedHeader.GetBeacon()
-		finalizedBeacon := updateData.Data.FinalizedHeader.GetBeacon()
+		attestedBeacon, err := updateData.Data.AttestedHeader.GetBeacon()
+		if err != nil {
+			return errors.Wrap(err, "could not get attested header")
+		}
+		finalizedBeacon, err := updateData.Data.FinalizedHeader.GetBeacon()
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized header")
+		}
 		update := &structs.LightClientFinalityUpdateEvent{
 			Version: version.String(int(updateData.Version)),
 			Data: &structs.LightClientFinalityUpdate{
@@ -342,7 +348,10 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
 		}
-		attestedBeacon := updateData.Data.AttestedHeader.GetBeacon()
+		attestedBeacon, err := updateData.Data.AttestedHeader.GetBeacon()
+		if err != nil {
+			return errors.Wrap(err, "could not get attested header")
+		}
 		update := &structs.LightClientOptimisticUpdateEvent{
 			Version: version.String(int(updateData.Version)),
 			Data: &structs.LightClientOptimisticUpdate{

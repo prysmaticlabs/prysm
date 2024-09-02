@@ -2,6 +2,7 @@ package eth
 
 import (
 	"bytes"
+	"fmt"
 	"math/bits"
 
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
@@ -44,7 +45,7 @@ func isEmptyWithLength(bb [][]byte, length uint64) bool {
 	return true
 }
 
-func (x *LightClientUpdate) IsSyncCommiteeUpdate() bool {
+func (x *LightClientUpdate) IsSyncCommitteeUpdate() bool {
 	return !isEmptyWithLength(x.GetNextSyncCommitteeBranch(), NextSyncCommitteeIndex)
 }
 
@@ -52,15 +53,15 @@ func (x *LightClientUpdate) IsFinalityUpdate() bool {
 	return !isEmptyWithLength(x.GetFinalityBranch(), FinalizedRootIndex)
 }
 
-func (x *LightClientHeaderContainer) GetBeacon() *v1.BeaconBlockHeader {
+func (x *LightClientHeaderContainer) GetBeacon() (*v1.BeaconBlockHeader, error) {
 	switch input := x.Header.(type) {
 	case *LightClientHeaderContainer_HeaderAltair:
-		return input.HeaderAltair.Beacon
+		return input.HeaderAltair.Beacon, nil
 	case *LightClientHeaderContainer_HeaderCapella:
-		return input.HeaderCapella.Beacon
+		return input.HeaderCapella.Beacon, nil
 	case *LightClientHeaderContainer_HeaderDeneb:
-		return input.HeaderDeneb.Beacon
+		return input.HeaderDeneb.Beacon, nil
 	default:
-		panic("invalid type")
+		return nil, fmt.Errorf("unknown header type: %T", input)
 	}
 }

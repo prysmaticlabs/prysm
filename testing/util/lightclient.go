@@ -242,14 +242,16 @@ func (l *TestLightClient) SetupTestDeneb() *TestLightClient {
 }
 
 func (l *TestLightClient) CheckAttestedHeader(update *ethpbv2.LightClientUpdate) {
-	require.Equal(l.T, l.AttestedHeader.Slot, update.AttestedHeader.GetBeacon().Slot, "Attested header slot is not equal")
-	require.Equal(l.T, l.AttestedHeader.ProposerIndex, update.AttestedHeader.GetBeacon().ProposerIndex, "Attested header proposer index is not equal")
-	require.DeepSSZEqual(l.T, l.AttestedHeader.ParentRoot, update.AttestedHeader.GetBeacon().ParentRoot, "Attested header parent root is not equal")
-	require.DeepSSZEqual(l.T, l.AttestedHeader.BodyRoot, update.AttestedHeader.GetBeacon().BodyRoot, "Attested header body root is not equal")
+	updateAttestedHeaderBeacon, err := update.AttestedHeader.GetBeacon()
+	require.NoError(l.T, err)
+	require.Equal(l.T, l.AttestedHeader.Slot, updateAttestedHeaderBeacon.Slot, "Attested header slot is not equal")
+	require.Equal(l.T, l.AttestedHeader.ProposerIndex, updateAttestedHeaderBeacon.ProposerIndex, "Attested header proposer index is not equal")
+	require.DeepSSZEqual(l.T, l.AttestedHeader.ParentRoot, updateAttestedHeaderBeacon.ParentRoot, "Attested header parent root is not equal")
+	require.DeepSSZEqual(l.T, l.AttestedHeader.BodyRoot, updateAttestedHeaderBeacon.BodyRoot, "Attested header body root is not equal")
 
 	attestedStateRoot, err := l.AttestedState.HashTreeRoot(l.Ctx)
 	require.NoError(l.T, err)
-	require.DeepSSZEqual(l.T, attestedStateRoot[:], update.AttestedHeader.GetBeacon().StateRoot, "Attested header state root is not equal")
+	require.DeepSSZEqual(l.T, attestedStateRoot[:], updateAttestedHeaderBeacon.StateRoot, "Attested header state root is not equal")
 }
 
 func (l *TestLightClient) CheckSyncAggregate(update *ethpbv2.LightClientUpdate) {

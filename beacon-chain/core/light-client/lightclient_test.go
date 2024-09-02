@@ -72,11 +72,13 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testi
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
-	require.Equal(t, primitives.Slot(0), update.FinalizedHeader.GetBeacon().Slot, "Finalized header slot is not zero")
-	require.Equal(t, primitives.ValidatorIndex(0), update.FinalizedHeader.GetBeacon().ProposerIndex, "Finalized header proposer index is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().ParentRoot, "Finalized header parent root is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().StateRoot, "Finalized header state root is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().BodyRoot, "Finalized header body root is not zero")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(0), updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not zero")
+	require.Equal(t, primitives.ValidatorIndex(0), updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not zero")
 	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
 	for _, leaf := range update.FinalityBranch {
 		require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
@@ -97,11 +99,13 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testin
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
-	require.Equal(t, primitives.Slot(0), update.FinalizedHeader.GetBeacon().Slot, "Finalized header slot is not zero")
-	require.Equal(t, primitives.ValidatorIndex(0), update.FinalizedHeader.GetBeacon().ProposerIndex, "Finalized header proposer index is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().ParentRoot, "Finalized header parent root is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().StateRoot, "Finalized header state root is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().BodyRoot, "Finalized header body root is not zero")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(0), updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not zero")
+	require.Equal(t, primitives.ValidatorIndex(0), updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not zero")
 	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
 	for _, leaf := range update.FinalityBranch {
 		require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
@@ -122,11 +126,13 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
-	require.Equal(t, primitives.Slot(0), update.FinalizedHeader.GetBeacon().Slot, "Finalized header slot is not zero")
-	require.Equal(t, primitives.ValidatorIndex(0), update.FinalizedHeader.GetBeacon().ProposerIndex, "Finalized header proposer index is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().ParentRoot, "Finalized header parent root is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().StateRoot, "Finalized header state root is not zero")
-	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetBeacon().BodyRoot, "Finalized header body root is not zero")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(0), updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not zero")
+	require.Equal(t, primitives.ValidatorIndex(0), updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not zero")
+	require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not zero")
 	require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetHeaderDeneb().Execution.BlockHash, "Execution BlockHash is not zero")
 	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
 	for _, leaf := range update.FinalityBranch {

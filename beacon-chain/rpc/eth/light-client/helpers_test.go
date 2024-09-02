@@ -608,7 +608,9 @@ func TestIsBetterUpdate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			assert.Equal(t, testCase.expectedResult, IsBetterUpdate(testCase.newUpdate, testCase.oldUpdate))
+			result, err := IsBetterUpdate(testCase.newUpdate, testCase.oldUpdate)
+			assert.NoError(t, err)
+			assert.Equal(t, testCase.expectedResult, result)
 		})
 	}
 }

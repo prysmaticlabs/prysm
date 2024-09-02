@@ -410,7 +410,11 @@ func createLightClientUpdate(
 	updateSignaturePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(block.Block().Slot()))
 
 	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(result.AttestedHeader.GetBeacon().Slot))
+	resultAttestedHeaderBeacon, err := result.AttestedHeader.GetBeacon()
+	if err != nil {
+		return nil, fmt.Errorf("could not get attested header beacon: %s", err.Error())
+	}
+	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(resultAttestedHeaderBeacon.Slot))
 
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
@@ -509,11 +513,19 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 
 	var finalizedHeader *structs.BeaconBlockHeader
 	if input.FinalizedHeader != nil {
-		finalizedHeader = structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader.GetBeacon()))
+		inputFinalizedHeaderBeacon, err := input.FinalizedHeader.GetBeacon()
+		if err != nil {
+			return nil
+		}
+		finalizedHeader = structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputFinalizedHeaderBeacon))
 	}
 
+	inputAttestedHeaderBeacon, err := input.AttestedHeader.GetBeacon()
+	if err != nil {
+		return nil
+	}
 	result := &structs.LightClientUpdate{
-		AttestedHeader:          &structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader.GetBeacon()))},
+		AttestedHeader:          &structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputAttestedHeaderBeacon))},
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
 		FinalizedHeader:         &structs.LightClientHeader{Beacon: finalizedHeader},
@@ -535,7 +547,7 @@ func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
 	return !reflect.DeepEqual(update.FinalityBranch, finalityBranch)
 }
 
-func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
+func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) (bool, error) {
 	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
 	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
@@ -543,45 +555,62 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
 	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
 
 	if newHasSupermajority != oldHasSupermajority {
-		return newHasSupermajority
+		return newHasSupermajority, nil
 	}
 	if !newHasSupermajority && newNumActiveParticipants != oldNumActiveParticipants {
-		return newNumActiveParticipants > oldNumActiveParticipants
+		return newNumActiveParticipants > oldNumActiveParticipants, nil
+	}
+
+	newUpdateAttestedHeaderBeacon, err := newUpdate.AttestedHeader.GetBeacon()
+	if err != nil {
+		return false, fmt.Errorf("could not get attested header beacon: %s", err.Error())
+	}
+	oldUpdateAttestedHeaderBeacon, err := oldUpdate.AttestedHeader.GetBeacon()
+	if err != nil {
+		return false, fmt.Errorf("could not get attested header beacon: %s", err.Error())
+	}
+	newUpdateFinalizedHeaderBeacon, err := newUpdate.FinalizedHeader.GetBeacon()
+	if err != nil {
+		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
+	}
+	oldUpdateFinalizedHeaderBeacon, err := oldUpdate.FinalizedHeader.GetBeacon()
+	if err != nil {
+		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
 	}
 
 	// Compare presence of relevant sync committee
-	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.GetBeacon().Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
-	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.GetBeacon().Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
+	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdateAttestedHeaderBeacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
+	oldHasRelevantSyncCommittee := IsSyncCommitteeUpdate(oldUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdateAttestedHeaderBeacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.SignatureSlot)))
 
 	if newHasRelevantSyncCommittee != oldHasRelevantSyncCommittee {
-		return newHasRelevantSyncCommittee
+		return newHasRelevantSyncCommittee, nil
 	}
 
 	// Compare indication of any finality
 	newHasFinality := IsFinalityUpdate(newUpdate)
 	oldHasFinality := IsFinalityUpdate(oldUpdate)
 	if newHasFinality != oldHasFinality {
-		return newHasFinality
+		return newHasFinality, nil
 	}
 
 	// Compare sync committee finality
 	if newHasFinality {
-		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.FinalizedHeader.GetBeacon().Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.AttestedHeader.GetBeacon().Slot))
-		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.FinalizedHeader.GetBeacon().Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdate.AttestedHeader.GetBeacon().Slot))
+		newHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(newUpdateFinalizedHeaderBeacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdateAttestedHeaderBeacon.Slot))
+		oldHasSyncCommitteeFinality := slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdateFinalizedHeaderBeacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(oldUpdateAttestedHeaderBeacon.Slot))
 
 		if newHasSyncCommitteeFinality != oldHasSyncCommitteeFinality {
-			return newHasSyncCommitteeFinality
+			return newHasSyncCommitteeFinality, nil
 		}
 	}
 
 	// Tiebreaker 1: Sync committee participation beyond supermajority
 	if newNumActiveParticipants != oldNumActiveParticipants {
-		return newNumActiveParticipants > oldNumActiveParticipants
+		return newNumActiveParticipants > oldNumActiveParticipants, nil
 	}
 
 	// Tiebreaker 2: Prefer older data (fewer changes to best)
-	if newUpdate.AttestedHeader.GetBeacon().Slot != oldUpdate.AttestedHeader.GetBeacon().Slot {
-		return newUpdate.AttestedHeader.GetBeacon().Slot < oldUpdate.AttestedHeader.GetBeacon().Slot
+	if newUpdateAttestedHeaderBeacon.Slot != oldUpdateAttestedHeaderBeacon.Slot {
+		return newUpdateAttestedHeaderBeacon.Slot < oldUpdateAttestedHeaderBeacon.Slot, nil
 	}
-	return newUpdate.SignatureSlot < oldUpdate.SignatureSlot
+	return newUpdate.SignatureSlot < oldUpdate.SignatureSlot, nil
 }
