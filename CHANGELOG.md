@@ -113,7 +113,7 @@ In an upcoming release, we will be deprecating the gRPC gateway and renaming sev
 - Fix Event stream with carriage return support
 - Fix panic on empty block result in REST API
 - engine_getPayloadBodiesByRangeV1 - fix, adding hexutil encoding on request parameters
-- Fix some places which use an Epoch instead of a sync committee 
+- Use sync committee period instead of epoch in `createLightClientUpdate` 
 
 
 ### Security
