@@ -76,9 +76,13 @@ var (
 // Common type for functional p2p validation options.
 type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
-type lightClientFinalityUpdateInfo struct {
+type lcFinalityUpdateInfo struct {
 	slot             primitives.Slot
 	hasSupermajority bool
+}
+
+type lcOptimisticUpdateInfo struct {
+	slot primitives.Slot
 }
 
 // config to hold dependencies for the sync service.
@@ -157,8 +161,6 @@ type Service struct {
 	badBlockLock                     sync.RWMutex
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
-	lightClientFinalityUpdateLock    sync.Mutex
-	bestLightClientFinalityUpdate    *lightClientFinalityUpdateInfo
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
@@ -166,6 +168,10 @@ type Service struct {
 	newBlobVerifier                  verification.NewBlobVerifier
 	availableBlocker                 coverage.AvailableBlocker
 	ctxMap                           ContextByteVersions
+	lcFinalityUpdateLock             sync.Mutex
+	lastFCFinalityUpdate             *lcFinalityUpdateInfo
+	lcOptimisticUpdateLock           sync.Mutex
+	lastFCOptimisticUpdate           *lcOptimisticUpdateInfo
 }
 
 // NewService initializes new regular sync service.
