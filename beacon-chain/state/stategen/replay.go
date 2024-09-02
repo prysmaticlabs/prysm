@@ -53,6 +53,17 @@ func (*State) replayBlocks(
 			if err != nil {
 				return nil, err
 			}
+			htr, err := state.HashTreeRoot(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if htr != signed[i].Block().StateRoot() {
+				log.WithFields(logrus.Fields{
+					"stateRoot": fmt.Sprintf("%x", htr),
+					"blockRoot": fmt.Sprintf("%x", signed[i].Block().StateRoot()),
+					"slot":      signed[i].Block().Slot(),
+				}).Fatal("state root mismatch")
+			}
 		}
 	}
 
