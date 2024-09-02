@@ -776,16 +776,19 @@ func (s *Service) unSubscribeFromTopic(topic string) {
 func (s *Service) validPeersExist(subnetTopic string) bool {
 	topic := subnetTopic + s.cfg.p2p.Encoding().ProtocolSuffix()
 	threshold := flags.Get().MinimumPeersPerSubnet
-	peersCount := len(s.cfg.p2p.PubSub().ListPeers(topic))
 
-	enoughPeers := peersCount >= threshold
+	peersWithSubnet := s.cfg.p2p.PubSub().ListPeers(topic)
+	peersWithSubnetCount := len(peersWithSubnet)
+
+	enoughPeers := peersWithSubnetCount >= threshold
 
 	if !enoughPeers {
 		log.WithFields(logrus.Fields{
 			"topic":      topic,
-			"peersCount": peersCount,
+			"peersCount": peersWithSubnetCount,
 			"threshold":  threshold,
-		}).Debug("Not enough peers for this subnet, running network search")
+			"ctxError":   s.ctx.Err(),
+		}).Debug("Not enough valid peers, starting network search")
 	}
 
 	return enoughPeers

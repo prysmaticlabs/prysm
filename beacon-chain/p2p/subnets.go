@@ -20,9 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
@@ -61,8 +61,12 @@ const dataColumnSubnetVal = 150
 // On some edge cases, this method may hang indefinitely while peers
 // are actually found. In such a case, the user should cancel the context
 // and re-run the method again.
-func (s *Service) FindPeersWithSubnet(ctx context.Context, topic string,
-	index uint64, threshold int) (bool, error) {
+func (s *Service) FindPeersWithSubnet(
+	ctx context.Context,
+	topic string,
+	index uint64,
+	threshold int,
+) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
@@ -183,11 +187,25 @@ func (s *Service) filterPeerForDataColumnsSubnet(index uint64) func(node *enode.
 // lower threshold to broadcast object compared to searching
 // for a subnet. So that even in the event of poor peer
 // connectivity, we can still broadcast an attestation.
-func (s *Service) hasPeerWithSubnet(topic string) bool {
+func (s *Service) hasPeerWithSubnet(subnetTopic string) bool {
 	// In the event peer threshold is lower, we will choose the lower
 	// threshold.
-	minPeers := mathutil.Min(1, uint64(flags.Get().MinimumPeersPerSubnet))
-	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= int(minPeers) // lint:ignore uintcast -- Min peers can be safely cast to int.
+	minPeers := min(1, flags.Get().MinimumPeersPerSubnet)
+	topic := subnetTopic + s.Encoding().ProtocolSuffix()
+	peersWithSubnet := s.pubsub.ListPeers(topic)
+	peersWithSubnetCount := len(peersWithSubnet)
+
+	enoughPeers := peersWithSubnetCount >= minPeers
+
+	if !enoughPeers {
+		log.WithFields(logrus.Fields{
+			"topic":      topic,
+			"peersCount": peersWithSubnetCount,
+			"ctxError":   s.ctx.Err(),
+		}).Debug("No valid peers, starting network search")
+	}
+
+	return enoughPeers
 }
 
 // Updates the service's discv5 listener record's attestation subnet
