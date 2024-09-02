@@ -170,6 +170,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 
 		return result, nil
 	}
+
 	// post altair block
 	payloadInterface, err := block.Block().Body().Execution()
 	if err != nil {
@@ -201,6 +202,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 		}
 		withdrawalsRoot = withdrawalsRootArray[:]
 	}
+
 	// Capella block
 	if block.Block().Version() == version.Capella {
 		executionPayloadHeader := &enginev1.ExecutionPayloadHeaderCapella{
@@ -327,7 +329,6 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
 				return nil, fmt.Errorf("finalized header root %#x not equal to attested finalized checkpoint root %#x", finalizedHeaderRoot, bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root))
 			}
-
 		} else {
 			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
 				return nil, fmt.Errorf("invalid finalized header root %v", attestedState.FinalizedCheckpoint().Root)
