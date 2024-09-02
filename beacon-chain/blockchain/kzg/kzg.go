@@ -38,7 +38,7 @@ type CellsAndProofs struct {
 }
 
 // Set to false to not change any existing behavior
-const USE_GO_ETH_KZG = false
+const USE_GO_ETH_KZG = true
 
 func BlobToKZGCommitment(blob *Blob) (Commitment, error) {
 	comm, err := kzg4844.BlobToCommitment(kzg4844.Blob(*blob))

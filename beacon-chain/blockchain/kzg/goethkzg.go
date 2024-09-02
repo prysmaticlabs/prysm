@@ -13,11 +13,9 @@ func computeCellsAndKZGProofsGoEthKZG(blob *Blob) (CellsAndProofs, error) {
 		return CellsAndProofs{}, err
 	}
 	return makeCellsAndProofsGoEthKZG(cells[:], proofs[:])
-
 }
 
 func verifyCellKZGProofBatchGoEthKZG(commitmentsBytes []Bytes48, cellIndices []uint64, cells []Cell, proofsBytes []Bytes48) (bool, error) {
-
 	kzgCommitments := convertBytes48SliceToKZGCommitmentSlice(commitmentsBytes)
 	kzgCells := convertCellSliceToPointers(cells)
 	kzgProofs := convertBytes48SliceToKZGProofSlice(proofsBytes)
@@ -38,7 +36,6 @@ func recoverCellsAndKZGProofsGoEthKZG(cellIndices []uint64, partialCells []Cell)
 	}
 
 	return makeCellsAndProofsGoEthKZG(cells[:], proofs[:])
-
 }
 
 // Convert c-kzg cells/proofs to the CellsAndProofs type defined in this package.
@@ -58,12 +55,6 @@ func makeCellsAndProofsGoEthKZG(goethkzgCells []*goethkzg.Cell, goethkzgProofs [
 		Cells:  cells,
 		Proofs: proofs,
 	}, nil
-}
-
-func convertBytes48ToKZGCommitment(b48 Bytes48) goethkzg.KZGCommitment {
-	var commitment goethkzg.KZGCommitment
-	copy(commitment[:], b48[:])
-	return commitment
 }
 
 func convertBytes48SliceToKZGCommitmentSlice(bytes48Slice []Bytes48) []goethkzg.KZGCommitment {
