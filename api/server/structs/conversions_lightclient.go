@@ -2,7 +2,6 @@ package structs
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 func LightClientBootstrapResponseFromJson(data []byte) (*LightClientBootstrapResponse, error) {
@@ -57,9 +56,6 @@ func LightClientBootstrapResponseFromJson(data []byte) (*LightClientBootstrapRes
 }
 
 func LightClientUpdateWithVersionFromJson(data []byte) (*LightClientUpdateWithVersion, error) {
-	fmt.Println("versioned data")
-	fmt.Println(string(data))
-
 	var aux struct {
 		Version string `json:"version"`
 		Data    struct {
@@ -106,28 +102,23 @@ func LightClientUpdateWithVersionFromJson(data []byte) (*LightClientUpdateWithVe
 		result.Data.FinalizedHeader = &y
 	case "capella":
 		var x LightClientHeaderCapella
-		fmt.Println("attested header data")
-		fmt.Println(string(aux.Data.AttestedHeader))
 		err = json.Unmarshal(aux.Data.AttestedHeader, &x)
 		if err != nil {
 			return nil, err
 		}
 		result.Data.AttestedHeader = &x
-		fmt.Println("attested header is set")
 		var y LightClientHeaderCapella
 		err = json.Unmarshal(aux.Data.FinalizedHeader, &y)
 		if err != nil {
 			return nil, err
 		}
 		result.Data.FinalizedHeader = &y
-		fmt.Println("finalized header is set")
 	case "deneb", "electra":
 		var x LightClientHeaderDeneb
 		err = json.Unmarshal(aux.Data.AttestedHeader, &x)
 		if err != nil {
 			return nil, err
 		}
-		//TODO handle the case where the finalized header is nil
 		result.Data.AttestedHeader = &x
 		var y LightClientHeaderDeneb
 		err = json.Unmarshal(aux.Data.FinalizedHeader, &y)
@@ -141,17 +132,12 @@ func LightClientUpdateWithVersionFromJson(data []byte) (*LightClientUpdateWithVe
 }
 
 func LightClientUpdatesByRangeResponseFromJson(data []byte) (*LightClientUpdatesByRangeResponse, error) {
-	fmt.Println("data ")
-	fmt.Println(string(data))
 	var Updates []json.RawMessage
 
 	err := json.Unmarshal(data, &Updates)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("updates ")
-	fmt.Println(string(Updates[0]))
-	fmt.Println(len(Updates))
 
 	result := LightClientUpdatesByRangeResponse{
 		Updates: make([]*LightClientUpdateWithVersion, len(Updates)),

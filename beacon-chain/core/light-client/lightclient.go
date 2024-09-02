@@ -167,6 +167,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 				},
 			},
 		}
+
 		return result, nil
 	}
 	// post altair block
@@ -306,11 +307,8 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		return nil, err
 	}
 
-	if block.Block().Version() != version.Altair || block.Block().Version() != version.Bellatrix {
-		return nil, fmt.Errorf("unsupported block version %d", block.Block().Version())
-	}
 	// Indicate finality whenever possible
-	var finalizedHeader *ethpbv2.LightClientHeader
+	var finalizedHeaderBeacon *ethpbv1.BeaconBlockHeader
 	var finalityBranch [][]byte
 
 	if finalizedBlock != nil && !finalizedBlock.IsNil() {
@@ -319,9 +317,9 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			if err != nil {
 				return nil, fmt.Errorf("could not get finalized header %w", err)
 			}
-			finalizedHeader = &ethpbv2.LightClientHeader{Beacon: migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()}
+			finalizedHeaderBeacon := migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
 
-			finalizedHeaderRoot, err := finalizedHeader.Beacon.HashTreeRoot()
+			finalizedHeaderRoot, err := finalizedHeaderBeacon.HashTreeRoot()
 			if err != nil {
 				return nil, fmt.Errorf("could not get finalized header root %w", err)
 			}
@@ -329,18 +327,20 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
 				return nil, fmt.Errorf("finalized header root %#x not equal to attested finalized checkpoint root %#x", finalizedHeaderRoot, bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root))
 			}
+
 		} else {
 			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
 				return nil, fmt.Errorf("invalid finalized header root %v", attestedState.FinalizedCheckpoint().Root)
 			}
 
-			finalizedHeader = &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
+			finalizedHeaderBeacon = &ethpbv1.BeaconBlockHeader{
 				Slot:          0,
 				ProposerIndex: 0,
 				ParentRoot:    make([]byte, 32),
 				StateRoot:     make([]byte, 32),
 				BodyRoot:      make([]byte, 32),
-			}}
+			}
+
 		}
 
 		var bErr error
@@ -349,13 +349,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			return nil, fmt.Errorf("could not get finalized root proof %w", bErr)
 		}
 	} else {
-		finalizedHeader = &ethpbv2.LightClientHeader{Beacon: &ethpbv1.BeaconBlockHeader{
+		finalizedHeaderBeacon = &ethpbv1.BeaconBlockHeader{
 			Slot:          0,
 			ProposerIndex: 0,
 			ParentRoot:    make([]byte, 32),
 			StateRoot:     make([]byte, 32),
 			BodyRoot:      make([]byte, 32),
-		}}
+		}
 
 		finalityBranch = make([][]byte, FinalityBranchNumOfLeaves)
 		for i := 0; i < FinalityBranchNumOfLeaves; i++ {
@@ -363,13 +363,192 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		}
 	}
 
-	result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
-		Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-			HeaderAltair: finalizedHeader,
-		},
+	if block.Block().Version() == version.Altair || block.Block().Version() == version.Bellatrix {
+		result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{Beacon: finalizedHeaderBeacon},
+			},
+		}
+		result.FinalityBranch = finalityBranch
+		return result, nil
 	}
-	result.FinalityBranch = finalityBranch
-	return result, nil
+	// post altair block
+	if finalizedBlock != nil && !finalizedBlock.IsNil() {
+		payloadInterface, err := finalizedBlock.Block().Body().Execution()
+		if err != nil {
+			return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+		}
+		transactionsRoot, err := payloadInterface.TransactionsRoot()
+		if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			transactions, err := payloadInterface.Transactions()
+			if err != nil {
+				return nil, fmt.Errorf("could not get transactions: %s", err.Error())
+			}
+			transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+			if err != nil {
+				return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+			}
+			transactionsRoot = transactionsRootArray[:]
+		} else if err != nil {
+			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+		}
+		withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+		if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			withdrawals, err := payloadInterface.Withdrawals()
+			if err != nil {
+				return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
+			}
+			withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			if err != nil {
+				return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+			}
+			withdrawalsRoot = withdrawalsRootArray[:]
+		}
+
+		switch finalizedBlock.Block().Version() {
+		case version.Capella:
+			execution := &enginev1.ExecutionPayloadHeaderCapella{
+				ParentHash:       payloadInterface.ParentHash(),
+				FeeRecipient:     payloadInterface.FeeRecipient(),
+				StateRoot:        payloadInterface.StateRoot(),
+				ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+				LogsBloom:        payloadInterface.LogsBloom(),
+				PrevRandao:       payloadInterface.PrevRandao(),
+				BlockNumber:      payloadInterface.BlockNumber(),
+				GasLimit:         payloadInterface.GasLimit(),
+				GasUsed:          payloadInterface.GasUsed(),
+				Timestamp:        payloadInterface.Timestamp(),
+				ExtraData:        payloadInterface.ExtraData(),
+				BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+				BlockHash:        payloadInterface.BlockHash(),
+				TransactionsRoot: transactionsRoot,
+				WithdrawalsRoot:  withdrawalsRoot,
+			}
+			executionBranch, err := blocks.PayloadProof(ctx, finalizedBlock.Block())
+			if err != nil {
+				return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+			}
+
+			result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
+				Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+					HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+						Beacon:          finalizedHeaderBeacon,
+						Execution:       execution,
+						ExecutionBranch: executionBranch,
+					},
+				},
+			}
+			result.FinalityBranch = finalityBranch
+			return result, nil
+		case version.Deneb, version.Electra:
+			execution := &enginev1.ExecutionPayloadHeaderDeneb{
+				ParentHash:       payloadInterface.ParentHash(),
+				FeeRecipient:     payloadInterface.FeeRecipient(),
+				StateRoot:        payloadInterface.StateRoot(),
+				ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+				LogsBloom:        payloadInterface.LogsBloom(),
+				PrevRandao:       payloadInterface.PrevRandao(),
+				BlockNumber:      payloadInterface.BlockNumber(),
+				GasLimit:         payloadInterface.GasLimit(),
+				GasUsed:          payloadInterface.GasUsed(),
+				Timestamp:        payloadInterface.Timestamp(),
+				ExtraData:        payloadInterface.ExtraData(),
+				BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+				BlockHash:        payloadInterface.BlockHash(),
+				TransactionsRoot: transactionsRoot,
+				WithdrawalsRoot:  withdrawalsRoot,
+			}
+			executionBranch, err := blocks.PayloadProof(ctx, finalizedBlock.Block())
+			if err != nil {
+				return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+			}
+
+			result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
+				Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+					HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+						Beacon:          finalizedHeaderBeacon,
+						Execution:       execution,
+						ExecutionBranch: executionBranch,
+					},
+				},
+			}
+			result.FinalityBranch = finalityBranch
+			return result, nil
+		default:
+			panic("unsupported block version")
+		}
+
+	} else {
+		switch block.Block().Version() {
+		case version.Capella:
+			execution := &enginev1.ExecutionPayloadHeaderCapella{
+				ParentHash:       make([]byte, 32),
+				FeeRecipient:     make([]byte, 20),
+				StateRoot:        make([]byte, 32),
+				ReceiptsRoot:     make([]byte, 32),
+				LogsBloom:        make([]byte, 256),
+				PrevRandao:       make([]byte, 32),
+				BlockNumber:      0,
+				GasLimit:         0,
+				GasUsed:          0,
+				Timestamp:        0,
+				ExtraData:        make([]byte, 32),
+				BaseFeePerGas:    make([]byte, 32),
+				BlockHash:        make([]byte, 32),
+				TransactionsRoot: make([]byte, 32),
+				WithdrawalsRoot:  make([]byte, 32),
+			}
+			executionBranch := make([][]byte, 0)
+
+			result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
+				Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+					HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+						Beacon:          finalizedHeaderBeacon,
+						Execution:       execution,
+						ExecutionBranch: executionBranch,
+					},
+				},
+			}
+
+			result.FinalityBranch = finalityBranch
+			return result, nil
+		case version.Deneb, version.Electra:
+			execution := &enginev1.ExecutionPayloadHeaderDeneb{
+				ParentHash:       make([]byte, 32),
+				FeeRecipient:     make([]byte, 20),
+				StateRoot:        make([]byte, 32),
+				ReceiptsRoot:     make([]byte, 32),
+				LogsBloom:        make([]byte, 256),
+				PrevRandao:       make([]byte, 32),
+				BlockNumber:      0,
+				GasLimit:         0,
+				GasUsed:          0,
+				Timestamp:        0,
+				ExtraData:        make([]byte, 32),
+				BaseFeePerGas:    make([]byte, 32),
+				BlockHash:        make([]byte, 32),
+				TransactionsRoot: make([]byte, 32),
+				WithdrawalsRoot:  make([]byte, 32),
+			}
+			executionBranch := make([][]byte, 0)
+
+			result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
+				Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+					HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+						Beacon:          finalizedHeaderBeacon,
+						Execution:       execution,
+						ExecutionBranch: executionBranch,
+					},
+				},
+			}
+
+			result.FinalityBranch = finalityBranch
+			return result, nil
+		default:
+			panic("unsupported block version")
+		}
+	}
+
 }
 
 func NewLightClientUpdateFromFinalityUpdate(update *ethpbv2.LightClientFinalityUpdate) *ethpbv2.LightClientUpdate {
