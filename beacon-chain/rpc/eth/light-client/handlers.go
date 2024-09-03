@@ -376,7 +376,6 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 			httputil.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		println("no optimistic error update")
 		Pubkeys := make([][]byte, 512)
 		for i := range Pubkeys {
 			Pubkeys[i] = make([]byte, 48)
@@ -390,7 +389,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 			Pubkeys:         Pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		}
-		//update.FinalizedHeader = &eth.LightClientHeader{}
+
 		update.FinalizedHeader = &eth.LightClientHeader{
 			Beacon: &v1.BeaconBlockHeader{
 				Slot:          0,
@@ -411,7 +410,6 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 			httputil.HandleError(w, "Could not marshal light client finality update into SSZ: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		println("no marshal error")
 		w.Header().Set(api.VersionHeader, version.String(state.Version()))
 		httputil.WriteSsz(w, ssz_update, "light_client_finality_update.ssz")
 		return
