@@ -3,9 +3,22 @@
 package flags
 
 import (
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
+)
+
+var (
+	DefaultWebDomains        = []string{"http://localhost:4200", "http://127.0.0.1:4200", "http://0.0.0.0:4200"}
+	DefaultHTTPServerDomains = []string{"http://localhost:7500", "http://127.0.0.1:7500", "http://0.0.0.0:7500"}
+	DefaultHTTPCorsDomains   = func() []string {
+		s := []string{"http://localhost:3000", "http://0.0.0.0:3000", "http://127.0.0.1:3000"}
+		s = append(s, DefaultWebDomains...)
+		s = append(s, DefaultHTTPServerDomains...)
+		return s
+	}()
 )
 
 var (
@@ -137,7 +150,7 @@ var (
 	HTTPServerCorsDomain = &cli.StringFlag{
 		Name:    "http-cors-domain",
 		Usage:   "Comma separated list of domains from which to accept cross origin requests.",
-		Value:   "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
+		Value:   strings.Join(DefaultHTTPCorsDomains, ", "),
 		Aliases: []string{"grpc-gateway-corsdomain"},
 	}
 

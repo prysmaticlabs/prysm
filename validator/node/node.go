@@ -606,8 +606,8 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
 
 	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
-		Host:                   host,
-		Port:                   port,
+		HTTPHost:               host,
+		HTTPPort:               port,
 		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		GRPCRetries:            c.cliCtx.Uint(flags.GRPCRetriesFlag.Name),
 		GRPCRetryDelay:         c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name),

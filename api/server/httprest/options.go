@@ -6,8 +6,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Option --.
 type Option func(g *Server) error
 
+// WithMuxHandler --.
 func WithMuxHandler(m httpHandler) Option {
 	return func(g *Server) error {
 		g.cfg.handler = m
@@ -15,6 +17,7 @@ func WithMuxHandler(m httpHandler) Option {
 	}
 }
 
+// WithHTTPAddr --.
 func WithHTTPAddr(addr string) Option {
 	return func(g *Server) error {
 		g.cfg.httpAddr = addr
