@@ -11,14 +11,6 @@ import (
 // Option --.
 type Option func(g *Server) error
 
-// WithMuxHandler --.
-func WithMuxHandler(m httpHandler) Option {
-	return func(g *Server) error {
-		g.cfg.handler = m
-		return nil
-	}
-}
-
 func WithMiddlewares(mw []middleware.Middleware) Option {
 	return func(g *Server) error {
 		g.cfg.middlewares = mw
