@@ -1218,14 +1218,11 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		sta, ok := v.pubkeyToStatus[k]
 		if !ok {
 			validatorStatusUnpopulated = true
-			// skip adding if not found
-			continue
 		}
-		copiedk := k
-		statusRequestKeys = append(statusRequestKeys, copiedk[:])
-		copiedStatus := sta
-		validatorStatuses = append(validatorStatuses, copiedStatus)
+		statusRequestKeys = append(statusRequestKeys, k[:])
+		validatorStatuses = append(validatorStatuses, sta)
 	}
+	// repopulate the statuses if epoch start or if a new key is added missing the cache
 	if isEpochStart || validatorStatusUnpopulated {
 		resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
 			PublicKeys: statusRequestKeys,
@@ -1253,6 +1250,7 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 			// update cache
 			v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = sta
 		}
+		// override the statuses with fresh statuses from the beacon node
 		validatorStatuses = statuses
 	}
 

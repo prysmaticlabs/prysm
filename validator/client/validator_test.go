@@ -2214,6 +2214,148 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	assert.DeepEqual(t, expected, actual)
 }
 
+func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
+	// Public keys
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey4 := pubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
+
+	t.Run("refetch all keys at start of epoch", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		ctx := context.Background()
+		client := validatormock.NewMockValidatorClient(ctrl)
+
+		client.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			gomock.Any()).Return(
+			&ethpb.MultipleValidatorStatusResponse{
+				Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_UNKNOWN_STATUS}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+				PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]},
+				Indices:    []primitives.ValidatorIndex{1, 2, unknownIndex, 4},
+			}, nil)
+		v := validator{
+			validatorClient: client,
+			pubkeyToStatus:  make(map[[48]byte]*validatorStatus),
+		}
+		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 0)
+		require.NoError(t, err)
+		// one key is unknown status
+		require.Equal(t, 3, len(keys))
+	})
+	t.Run("refetch all keys at start of epoch, even with cache", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		ctx := context.Background()
+		client := validatormock.NewMockValidatorClient(ctrl)
+
+		client.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			gomock.Any()).Return(
+			&ethpb.MultipleValidatorStatusResponse{
+				Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_UNKNOWN_STATUS}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+				PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]},
+				Indices:    []primitives.ValidatorIndex{1, 2, unknownIndex, 4},
+			}, nil)
+		v := validator{
+			validatorClient: client,
+			pubkeyToStatus: map[[48]byte]*validatorStatus{
+				pubkey1: {
+					publicKey: pubkey1[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     1,
+				},
+				pubkey2: {
+					publicKey: pubkey2[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     2,
+				},
+				pubkey3: {
+					publicKey: pubkey3[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, // gets overridden
+					index:     3,
+				},
+				pubkey4: {
+					publicKey: pubkey4[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     4,
+				},
+			},
+		}
+		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 0)
+		require.NoError(t, err)
+		// one key is unknown status
+		require.Equal(t, 3, len(keys))
+	})
+	t.Run("mid epoch a new key was added, prompting a refetch ", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		ctx := context.Background()
+		client := validatormock.NewMockValidatorClient(ctrl)
+
+		client.EXPECT().MultipleValidatorStatus(
+			gomock.Any(),
+			gomock.Any()).Return(
+			&ethpb.MultipleValidatorStatusResponse{
+				Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_UNKNOWN_STATUS}, {Status: ethpb.ValidatorStatus_ACTIVE}},
+				PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]},
+				Indices:    []primitives.ValidatorIndex{1, 2, unknownIndex, 4},
+			}, nil)
+		v := validator{
+			validatorClient: client,
+			pubkeyToStatus: map[[48]byte]*validatorStatus{
+				pubkey1: {
+					publicKey: pubkey1[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     1,
+				},
+				pubkey2: {
+					publicKey: pubkey2[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     2,
+				},
+				pubkey3: {
+					publicKey: pubkey3[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, // gets overridden
+					index:     3,
+				},
+			},
+		}
+		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 5)
+		require.NoError(t, err)
+		// one key is unknown status
+		require.Equal(t, 3, len(keys))
+		require.DeepEqual(t, [][48]byte{pubkey1, pubkey2, pubkey4}, keys)
+	})
+	t.Run("cache used mid epoch, no new keys added", func(t *testing.T) {
+		ctx := context.Background()
+		v := validator{
+			pubkeyToStatus: map[[48]byte]*validatorStatus{
+				pubkey1: {
+					publicKey: pubkey1[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     1,
+				},
+				pubkey4: {
+					publicKey: pubkey4[:],
+					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+					index:     4,
+				},
+			},
+		}
+		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey4}, 5)
+		require.NoError(t, err)
+		// one key is unknown status
+		require.Equal(t, 2, len(keys))
+		require.DeepEqual(t, [][48]byte{pubkey1, pubkey4}, keys)
+	})
+
+}
+
 func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	// pubkey1 => feeRecipient1 - Status: active
 	// pubkey2 => feeRecipient2 - Status: active
@@ -2508,17 +2650,20 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
 	assert.Equal(t, uint64(1111), actual[0].Message.GasLimit)
 	assert.DeepEqual(t, pubkey1[:], actual[0].Message.Pubkey)
+
 }
 
 func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	// pubkey1 => feeRecipient1, builder enabled
 	// pubkey2 => feeRecipient2, builder disabled
 	// pubkey3 => Nothing, builder enabled
+	// pubkey4 => added after builder requests built once, used in mid epoch test
 
 	// Public keys
 	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
 	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
 	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	pubkey4 := pubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
 
 	// Fee recipients
 	feeRecipient1 := feeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
@@ -2533,8 +2678,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	client := validatormock.NewMockValidatorClient(ctrl)
 
 	signature := blsmock.NewMockSignature(ctrl)
-	signature.EXPECT().Marshal().Return([]byte{}).Times(2)
-
+	signature.EXPECT().Marshal().Return([]byte{}).AnyTimes()
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
 		validatorClient:              client,
@@ -2610,6 +2754,26 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	assert.DeepEqual(t, defaultFeeRecipient[:], actual[1].Message.FeeRecipient)
 	assert.Equal(t, uint64(9999), actual[1].Message.GasLimit)
 	assert.DeepEqual(t, pubkey3[:], actual[1].Message.Pubkey)
+
+	t.Run("mid epoch only pushes newly added key", func(t *testing.T) {
+		v.pubkeyToStatus[pubkey4] = &validatorStatus{
+			publicKey: pubkey4[:],
+			status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+			index:     4,
+		}
+		pubkeys = append(pubkeys, pubkey4)
+		actual = v.buildSignedRegReqs(ctx, pubkeys, signer, 5, false)
+		assert.Equal(t, 1, len(actual))
+
+		assert.DeepEqual(t, defaultFeeRecipient[:], actual[0].Message.FeeRecipient)
+		assert.Equal(t, uint64(9999), actual[0].Message.GasLimit)
+		assert.DeepEqual(t, pubkey4[:], actual[0].Message.Pubkey)
+	})
+
+	t.Run("force push all keys mid epoch", func(t *testing.T) {
+		actual = v.buildSignedRegReqs(ctx, pubkeys, signer, 5, true)
+		assert.Equal(t, 3, len(actual))
+	})
 }
 
 func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
