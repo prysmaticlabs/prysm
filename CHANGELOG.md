@@ -26,6 +26,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-host` is renamed to http-host. The old name can still be used as an alias.
 - `grpc-gateway-port` is renamed to http-port.
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain.
+- `api-timeout` is changed from int flag to duration flag, default value updated.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.

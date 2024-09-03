@@ -35,9 +35,9 @@ func WithRouter(r *http.ServeMux) Option {
 }
 
 // WithTimeout allows changing the timeout value for API calls.
-func WithTimeout(seconds uint64) Option {
+func WithTimeout(duration time.Duration) Option {
 	return func(g *Server) error {
-		g.cfg.timeout = time.Second * time.Duration(seconds)
+		g.cfg.timeout = duration
 		return nil
 	}
 }
