@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 )
 
-// Option --.
+// Option is a http rest server functional parameter type.
 type Option func(g *Server) error
 
 func WithMiddlewares(mw []middleware.Middleware) Option {
@@ -18,7 +18,7 @@ func WithMiddlewares(mw []middleware.Middleware) Option {
 	}
 }
 
-// WithHTTPAddr --.
+// WithHTTPAddr sets the full address ( host and port ) of the server.
 func WithHTTPAddr(addr string) Option {
 	return func(g *Server) error {
 		g.cfg.httpAddr = addr
