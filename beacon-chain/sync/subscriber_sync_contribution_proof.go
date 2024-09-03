@@ -9,10 +9,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// syncContributionAndProofSubscriber forwards the incoming validated sync contributions and proof to the
+// syncCommitteeContributionAndProofSubscriber forwards the incoming validated sync contributions and proof to the
 // contribution pool for processing.
 // skipcq: SCC-U1000
-func (s *Service) syncContributionAndProofSubscriber(_ context.Context, msg proto.Message) error {
+func (s *Service) syncCommitteeContributionAndProofSubscriber(_ context.Context, msg proto.Message) error {
 	sContr, ok := msg.(*ethpb.SignedContributionAndProof)
 	if !ok {
 		return fmt.Errorf("message was not type *ethpb.SignedContributionAndProof, type=%T", msg)

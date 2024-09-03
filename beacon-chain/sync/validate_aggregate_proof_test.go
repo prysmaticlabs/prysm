@@ -185,7 +185,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		},
 	}
 
-	if res, err := r.validateAggregateAndProof(context.Background(), "", msg); res == pubsub.ValidationAccept {
+	if res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg); res == pubsub.ValidationAccept {
 		_ = err
 		t.Error("Expected validate to fail")
 	}
@@ -255,7 +255,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		},
 	}
 
-	if res, err := r.validateAggregateAndProof(context.Background(), "", msg); res == pubsub.ValidationAccept {
+	if res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg); res == pubsub.ValidationAccept {
 		_ = err
 		t.Error("Expected validate to fail")
 	}
@@ -272,7 +272,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	if res, err := r.validateAggregateAndProof(context.Background(), "", msg); res == pubsub.ValidationAccept {
+	if res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg); res == pubsub.ValidationAccept {
 		_ = err
 		t.Error("Expected validate to fail")
 	}
@@ -338,7 +338,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	}
 
 	require.NoError(t, r.cfg.attPool.SaveBlockAttestation(att))
-	if res, err := r.validateAggregateAndProof(context.Background(), "", msg); res == pubsub.ValidationAccept {
+	if res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg); res == pubsub.ValidationAccept {
 		_ = err
 		t.Error("Expected validate to fail")
 	}
@@ -442,7 +442,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
+	res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg)
 	assert.NoError(t, err)
 	assert.Equal(t, pubsub.ValidationAccept, res, "Validated status is false")
 	assert.NotNil(t, msg.ValidatorData, "Did not set validator data")
@@ -545,7 +545,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
+	res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg)
 	assert.NoError(t, err)
 	require.Equal(t, pubsub.ValidationAccept, res, "Validated status is false")
 
@@ -562,7 +562,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	}
 
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
-	if res, err := r.validateAggregateAndProof(context.Background(), "", msg); res == pubsub.ValidationAccept {
+	if res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg); res == pubsub.ValidationAccept {
 		_ = err
 		t.Fatal("Validated status is true")
 	}
@@ -654,7 +654,7 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
+	res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg)
 	assert.NotNil(t, err)
 	assert.Equal(t, pubsub.ValidationReject, res, "Validated status is true")
 }
@@ -744,7 +744,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAggregateAndProof(context.Background(), "", msg)
+	res, err := r.validateBeaconAggregateAndProofPubSubMsg(context.Background(), "", msg)
 	assert.NotNil(t, err)
 	assert.Equal(t, pubsub.ValidationReject, res)
 }

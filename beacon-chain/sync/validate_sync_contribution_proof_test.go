@@ -44,7 +44,7 @@ import (
 func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 	database := testingdb.SetupDB(t)
 	headRoot, keys := fillUpBlocksAndState(context.Background(), t, database)
-	defaultTopic := p2p.SyncContributionAndProofSubnetTopicFormat
+	defaultTopic := p2p.SyncCommitteeContributionAndProofSubnetTopicFormat
 	defaultTopic = fmt.Sprintf(defaultTopic, []byte{0xAB, 0x00, 0xCC, 0x9E})
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
 	chainService := &mockChain.ChainService{
@@ -878,7 +878,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				}
 			}
 			require.Equal(t, true, svc.chainIsStarted())
-			if got, err := svc.validateSyncContributionAndProof(ctx, tt.args.pid, msg); got != tt.want {
+			if got, err := svc.validateSyncCommitteeContributionAndProofPubSubMsg(ctx, tt.args.pid, msg); got != tt.want {
 				_ = err
 				t.Errorf("validateSyncContributionAndProof() = %v, want %v", got, tt.want)
 			}
@@ -890,7 +890,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 	ctx := context.Background()
 	database := testingdb.SetupDB(t)
 	headRoot, keys := fillUpBlocksAndState(ctx, t, database)
-	defaultTopic := p2p.SyncContributionAndProofSubnetTopicFormat
+	defaultTopic := p2p.SyncCommitteeContributionAndProofSubnetTopicFormat
 	defaultTopic = fmt.Sprintf(defaultTopic, []byte{0xAB, 0x00, 0xCC, 0x9E})
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
 	var emptySig [96]byte
@@ -1004,7 +1004,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 	opSub := s.cfg.operationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
 
-	_, err = s.validateSyncContributionAndProof(ctx, pid, pubsubMsg)
+	_, err = s.validateSyncCommitteeContributionAndProofPubSubMsg(ctx, pid, pubsubMsg)
 	require.NoError(t, err)
 
 	// Ensure the state notification was broadcast.

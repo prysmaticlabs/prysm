@@ -20,7 +20,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-// validateSyncContributionAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
+// validateSyncCommitteeContributionAndProofPubSubMsg verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
 // Gossip Validation Conditions:
 // [IGNORE] The contribution's slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance), i.e. contribution.slot == current_slot.
@@ -38,7 +38,7 @@ import (
 // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
 // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from the participation
 // info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
+func (s *Service) validateSyncCommitteeContributionAndProofPubSubMsg(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSyncContributionAndProof")
 	defer span.End()
 

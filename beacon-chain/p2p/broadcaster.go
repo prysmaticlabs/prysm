@@ -402,7 +402,7 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 }
 
 func attestationToTopic(subnet uint64, forkDigest [fieldparams.VersionLength]byte) string {
-	return fmt.Sprintf(AttestationSubnetTopicFormat, forkDigest, subnet)
+	return fmt.Sprintf(BeaconAttestationSubnetTopicFormat, forkDigest, subnet)
 }
 
 func syncCommitteeToTopic(subnet uint64, forkDigest [fieldparams.VersionLength]byte) string {

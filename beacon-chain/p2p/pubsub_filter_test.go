@@ -35,22 +35,22 @@ func TestService_CanSubscribe(t *testing.T) {
 	tests := []test{
 		{
 			name:  "block topic on current fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix,
+			topic: fmt.Sprintf(BeaconBlockSubnetTopicFormat, digest) + validProtocolSuffix,
 			want:  true,
 		},
 		{
 			name:  "block topic on unknown fork",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}) + validProtocolSuffix,
+			topic: fmt.Sprintf(BeaconBlockSubnetTopicFormat, [4]byte{0xFF, 0xEE, 0x56, 0x21}) + validProtocolSuffix,
 			want:  false,
 		},
 		{
 			name:  "block topic missing protocol suffix",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork),
+			topic: fmt.Sprintf(BeaconBlockSubnetTopicFormat, currentFork),
 			want:  false,
 		},
 		{
 			name:  "block topic wrong protocol suffix",
-			topic: fmt.Sprintf(BlockSubnetTopicFormat, currentFork) + "/foobar",
+			topic: fmt.Sprintf(BeaconBlockSubnetTopicFormat, currentFork) + "/foobar",
 			want:  false,
 		},
 		{
@@ -75,12 +75,12 @@ func TestService_CanSubscribe(t *testing.T) {
 		},
 		{
 			name:  "att subnet topic on current fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, digest, 55 /*subnet*/) + validProtocolSuffix,
+			topic: fmt.Sprintf(BeaconAttestationSubnetTopicFormat, digest, 55 /*subnet*/) + validProtocolSuffix,
 			want:  true,
 		},
 		{
 			name:  "att subnet topic on unknown fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/) + validProtocolSuffix,
+			topic: fmt.Sprintf(BeaconAttestationSubnetTopicFormat, [4]byte{0xCC, 0xBB, 0xAA, 0xA1} /*fork digest*/, 54 /*subnet*/) + validProtocolSuffix,
 			want:  false,
 		},
 	}
@@ -90,7 +90,7 @@ func TestService_CanSubscribe(t *testing.T) {
 		formatting := []interface{}{digest}
 
 		// Special case for attestation subnets which have a second formatting placeholder.
-		if topic == AttestationSubnetTopicFormat || topic == SyncCommitteeSubnetTopicFormat || topic == BlobSubnetTopicFormat || topic == DataColumnSubnetTopicFormat {
+		if topic == BeaconAttestationSubnetTopicFormat || topic == SyncCommitteeSubnetTopicFormat || topic == BlobSubnetTopicFormat || topic == DataColumnSubnetTopicFormat {
 			formatting = append(formatting, 0 /* some subnet ID */)
 		}
 
@@ -252,7 +252,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							s := fmt.Sprintf(BeaconBlockSubnetTopicFormat, digest) + validProtocolSuffix
 							return &s
 						}(),
 					},
@@ -266,7 +266,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 						return &b
 					}(),
 					Topicid: func() *string {
-						s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+						s := fmt.Sprintf(BeaconBlockSubnetTopicFormat, digest) + validProtocolSuffix
 						return &s
 					}(),
 				},
@@ -282,7 +282,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							s := fmt.Sprintf(BeaconBlockSubnetTopicFormat, digest) + validProtocolSuffix
 							return &s
 						}(),
 					},
@@ -292,7 +292,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 							return &b
 						}(),
 						Topicid: func() *string {
-							s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+							s := fmt.Sprintf(BeaconBlockSubnetTopicFormat, digest) + validProtocolSuffix
 							return &s
 						}(),
 					},
@@ -306,7 +306,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 						return &b
 					}(),
 					Topicid: func() *string {
-						s := fmt.Sprintf(BlockSubnetTopicFormat, digest) + validProtocolSuffix
+						s := fmt.Sprintf(BeaconBlockSubnetTopicFormat, digest) + validProtocolSuffix
 						return &s
 					}(),
 				},

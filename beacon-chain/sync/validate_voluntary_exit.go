@@ -17,7 +17,7 @@ import (
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
+func (s *Service) validateVoluntaryExitPubSubMsg(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	// Validation runs on publish (not just subscriptions), so we should approve any message from
 	// ourselves.
 	if pid == s.cfg.p2p.PeerID() {
