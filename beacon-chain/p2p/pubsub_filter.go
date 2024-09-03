@@ -113,7 +113,7 @@ func (s *Service) FilterIncomingSubscriptions(peerID peer.ID, subs []*pubsubpb.R
 			"peerID":             peerID,
 			"subscriptionCounts": subsCount,
 			"subscriptionLimit":  pubsubSubscriptionRequestLimit,
-		}).Error("Too many incoming subscriptions, filtering them")
+		}).Debug("Too many incoming subscriptions, filtering them")
 
 		return nil, pubsub.ErrTooManySubscriptions
 	}
