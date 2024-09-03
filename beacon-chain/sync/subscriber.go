@@ -191,7 +191,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 	// Do not resubscribe already seen subscriptions.
 	ok := s.subHandler.topicExists(topic)
 	if ok {
-		log.Debugf("Provided topic already has an active subscription running: %s", topic)
+		log.WithField("topic", topic).Debug("Provided topic already has an active subscription running")
 		return nil
 	}
 
@@ -208,6 +208,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 		log.WithError(err).Error("Could not subscribe topic")
 		return nil
 	}
+
 	s.subHandler.addTopic(sub.Topic(), sub)
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
@@ -215,6 +216,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 	pipeline := func(msg *pubsub.Message) {
 		ctx, cancel := context.WithTimeout(s.ctx, pubsubMessageTimeout)
 		defer cancel()
+
 		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
 		defer span.End()
 
