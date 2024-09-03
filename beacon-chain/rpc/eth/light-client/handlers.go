@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -352,27 +353,27 @@ func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequ
 	// Get the current state
 	state, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get head state %w", err)
+		return nil, errors.Wrap(err, "could not get head state")
 	}
 
 	// Get the block
 	latestBlockHeader := *state.LatestBlockHeader()
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root %w", err)
+		return nil, errors.Wrap(err, "could not get state root")
 	}
 	latestBlockHeader.StateRoot = stateRoot[:]
 	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get latest block header root %w", err)
+		return nil, errors.Wrap(err, "could not get latest block header root")
 	}
 
 	block, err := s.Blocker.Block(ctx, latestBlockHeaderRoot[:])
 	if err != nil {
-		return nil, fmt.Errorf("could not get latest block %w", err)
+		return nil, errors.Wrap(err, "could not get latest block")
 	}
 	if block == nil {
-		return nil, fmt.Errorf("latest block is nil")
+		return nil, errors.New("latest block is nil")
 	}
 
 	// Loop through the blocks until we find a block that satisfies minSignaturesRequired requirement
@@ -386,10 +387,10 @@ func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequ
 		parentRoot := block.Block().ParentRoot()
 		block, err = s.Blocker.Block(ctx, parentRoot[:])
 		if err != nil {
-			return nil, fmt.Errorf("could not get parent block %w", err)
+			return nil, errors.Wrap(err, "could not get parent block")
 		}
 		if block == nil {
-			return nil, fmt.Errorf("parent block is nil")
+			return nil, errors.New("parent block is nil")
 		}
 
 		// Get the number of sync committee signatures

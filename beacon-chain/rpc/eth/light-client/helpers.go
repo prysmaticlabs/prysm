@@ -2,10 +2,11 @@ package lightclient
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
+
+	"github.com/pkg/errors"
 
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
@@ -36,7 +37,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState, bl
 	case version.Deneb, version.Electra:
 		return createLightClientBootstrapDeneb(ctx, state, blk)
 	}
-	return nil, fmt.Errorf("unsupported block version")
+	return nil, fmt.Errorf("unsupported block version %s", version.String(blk.Version()))
 }
 
 // createLightClientBootstrapAltair - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
@@ -71,14 +72,14 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 	// Prepare data
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get current sync committee")
 	}
 
 	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
 
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
 	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
@@ -97,7 +98,7 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 	// Above shared util function won't calculate state root, so we need to do it manually
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get state root")
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
@@ -126,14 +127,14 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	// Prepare data
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get current sync committee")
 	}
 
 	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
 
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
 	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
@@ -145,31 +146,31 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 
 	payloadInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		transactions, err := payloadInterface.Transactions()
 		if err != nil {
-			return nil, fmt.Errorf("could not get transactions: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get transactions")
 		}
 		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
 		if err != nil {
-			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get transactions root")
 		}
 		transactionsRoot = transactionsRootArray[:]
 	} else if err != nil {
-		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get transactions root")
 	}
 	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		withdrawals, err := payloadInterface.Withdrawals()
 		if err != nil {
-			return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get withdrawals")
 		}
 		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		if err != nil {
-			return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 		withdrawalsRoot = withdrawalsRootArray[:]
 	}
@@ -193,7 +194,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 
 	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get execution payload proof")
 	}
 	executionPayloadProofStr := make([]string, len(executionPayloadProof))
 	for i, proof := range executionPayloadProof {
@@ -208,7 +209,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	// Above shared util function won't calculate state root, so we need to do it manually
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get state root")
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
@@ -237,14 +238,14 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	// Prepare data
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get current sync committee")
 	}
 
 	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
 
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
 	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
@@ -256,31 +257,31 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 
 	payloadInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		transactions, err := payloadInterface.Transactions()
 		if err != nil {
-			return nil, fmt.Errorf("could not get transactions: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get transactions")
 		}
 		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
 		if err != nil {
-			return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get transactions root")
 		}
 		transactionsRoot = transactionsRootArray[:]
 	} else if err != nil {
-		return nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get transactions root")
 	}
 	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		withdrawals, err := payloadInterface.Withdrawals()
 		if err != nil {
-			return nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get withdrawals")
 		}
 		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		if err != nil {
-			return nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 		withdrawalsRoot = withdrawalsRootArray[:]
 	}
@@ -304,7 +305,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 
 	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get execution payload proof")
 	}
 	executionPayloadProofStr := make([]string, len(executionPayloadProof))
 	for i, proof := range executionPayloadProof {
@@ -319,7 +320,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	// Above shared util function won't calculate state root, so we need to do it manually
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get state root")
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
@@ -412,14 +413,14 @@ func createLightClientUpdate(
 	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
 	resultAttestedHeaderBeacon, err := result.AttestedHeader.GetBeacon()
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested header beacon: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get attested header beacon")
 	}
 	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(resultAttestedHeaderBeacon.Slot))
 
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
 		if err != nil {
-			return nil, fmt.Errorf("could not get next sync committee: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get next sync committee")
 		}
 
 		nextSyncCommittee = &v2.SyncCommittee{
@@ -429,7 +430,7 @@ func createLightClientUpdate(
 
 		nextSyncCommitteeBranch, err = attestedState.NextSyncCommitteeProof(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("could not get next sync committee proof: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get next sync committee proof")
 		}
 	} else {
 		syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
@@ -563,11 +564,11 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) (bool, error) {
 
 	newUpdateAttestedHeaderBeacon, err := newUpdate.AttestedHeader.GetBeacon()
 	if err != nil {
-		return false, fmt.Errorf("could not get attested header beacon: %s", err.Error())
+		return false, errors.Wrap(err, "could not get attested header beacon")
 	}
 	oldUpdateAttestedHeaderBeacon, err := oldUpdate.AttestedHeader.GetBeacon()
 	if err != nil {
-		return false, fmt.Errorf("could not get attested header beacon: %s", err.Error())
+		return false, errors.Wrap(err, "could not get attested header beacon")
 	}
 
 	// Compare presence of relevant sync committee
@@ -587,11 +588,11 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) (bool, error) {
 
 	newUpdateFinalizedHeaderBeacon, err := newUpdate.FinalizedHeader.GetBeacon()
 	if err != nil {
-		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
+		return false, errors.Wrap(err, "could not get finalized header beacon")
 	}
 	oldUpdateFinalizedHeaderBeacon, err := oldUpdate.FinalizedHeader.GetBeacon()
 	if err != nil {
-		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
+		return false, errors.Wrap(err, "could not get finalized header beacon")
 	}
 
 	// Compare sync committee finality

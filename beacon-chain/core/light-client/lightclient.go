@@ -2,9 +2,9 @@ package light_client
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -83,7 +83,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	// assert sum(block.message.body.sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
 	syncAggregate, err := block.Block().Body().SyncAggregate()
 	if err != nil {
-		return nil, fmt.Errorf("could not get sync aggregate %w", err)
+		return nil, errors.Wrap(err, "could not get sync aggregate")
 	}
 
 	if syncAggregate.SyncCommitteeBits.Count() < params.BeaconConfig().MinSyncCommitteeParticipants {
@@ -99,18 +99,18 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	header := state.LatestBlockHeader()
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root %w", err)
+		return nil, errors.Wrap(err, "could not get state root")
 	}
 	header.StateRoot = stateRoot[:]
 
 	headerRoot, err := header.HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get header root %w", err)
+		return nil, errors.Wrap(err, "could not get header root")
 	}
 
 	blockRoot, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get block root %w", err)
+		return nil, errors.Wrap(err, "could not get block root")
 	}
 
 	if headerRoot != blockRoot {
@@ -128,14 +128,14 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	// attested_header.state_root = hash_tree_root(attested_state)
 	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested state root %w", err)
+		return nil, errors.Wrap(err, "could not get attested state root")
 	}
 	attestedHeader.StateRoot = attestedStateRoot[:]
 
 	// assert hash_tree_root(attested_header) == block.message.parent_root
 	attestedHeaderRoot, err := attestedHeader.HashTreeRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not get attested header root %w", err)
+		return nil, errors.Wrap(err, "could not get attested header root")
 	}
 
 	if attestedHeaderRoot != block.Block().ParentRoot() {
@@ -170,12 +170,12 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	case version.Capella:
 		executionPayloadHeader, err := getExecutionPayloadHeaderCapella(block)
 		if err != nil {
-			return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get execution payload header")
 		}
 
 		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
 		if err != nil {
-			return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get execution payload proof")
 		}
 
 		result.AttestedHeader = &ethpbv2.LightClientHeaderContainer{
@@ -197,12 +197,12 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	case version.Deneb, version.Electra:
 		executionPayloadHeader, err := getExecutionPayloadHeaderDeneb(block)
 		if err != nil {
-			return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get execution payload header")
 		}
 
 		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
 		if err != nil {
-			return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+			return nil, errors.Wrap(err, "could not get execution payload proof")
 		}
 
 		result.AttestedHeader = &ethpbv2.LightClientHeaderContainer{
@@ -251,13 +251,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		if finalizedBlock.Block().Slot() != 0 {
 			tempFinalizedHeader, err := finalizedBlock.Header()
 			if err != nil {
-				return nil, fmt.Errorf("could not get finalized header %w", err)
+				return nil, errors.Wrap(err, "could not get finalized header")
 			}
 			finalizedHeaderBeacon := migration.V1Alpha1SignedHeaderToV1(tempFinalizedHeader).GetMessage()
 
 			finalizedHeaderRoot, err := finalizedHeaderBeacon.HashTreeRoot()
 			if err != nil {
-				return nil, fmt.Errorf("could not get finalized header root %w", err)
+				return nil, errors.Wrap(err, "could not get finalized header root")
 			}
 
 			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
@@ -281,7 +281,7 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		var bErr error
 		finalityBranch, bErr = attestedState.FinalizedRootProof(ctx)
 		if bErr != nil {
-			return nil, fmt.Errorf("could not get finalized root proof %w", bErr)
+			return nil, errors.Wrap(bErr, "could not get finalized root proof")
 		}
 	} else {
 		finalizedHeaderBeacon = &ethpbv1.BeaconBlockHeader{
@@ -310,11 +310,11 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		if finalizedBlock != nil && !finalizedBlock.IsNil() {
 			execution, err := getExecutionPayloadHeaderCapella(finalizedBlock)
 			if err != nil {
-				return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+				return nil, errors.Wrap(err, "could not get execution payload header")
 			}
 			executionBranch, err := blocks.PayloadProof(ctx, finalizedBlock.Block())
 			if err != nil {
-				return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+				return nil, errors.Wrap(err, "could not get execution payload proof")
 			}
 
 			result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
@@ -347,11 +347,11 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		if finalizedBlock != nil && !finalizedBlock.IsNil() {
 			execution, err := getExecutionPayloadHeaderDeneb(finalizedBlock)
 			if err != nil {
-				return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+				return nil, errors.Wrap(err, "could not get execution payload header")
 			}
 			executionBranch, err := blocks.PayloadProof(ctx, finalizedBlock.Block())
 			if err != nil {
-				return nil, fmt.Errorf("could not get execution payload proof: %s", err.Error())
+				return nil, errors.Wrap(err, "could not get execution payload proof")
 			}
 
 			result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
@@ -430,7 +430,7 @@ func createEmptyExecutionPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDe
 func getExecutionPayloadHeaderCapella(block interfaces.ReadOnlySignedBeaconBlock) (*enginev1.ExecutionPayloadHeaderCapella, error) {
 	payloadInterface, transactionsRoot, withdrawalsRoot, err := getExecutionData(block)
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution data: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get execution data")
 	}
 	execution := &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       payloadInterface.ParentHash(),
@@ -456,7 +456,7 @@ func getExecutionPayloadHeaderCapella(block interfaces.ReadOnlySignedBeaconBlock
 func getExecutionPayloadHeaderDeneb(block interfaces.ReadOnlySignedBeaconBlock) (*enginev1.ExecutionPayloadHeaderDeneb, error) {
 	payloadInterface, transactionsRoot, withdrawalsRoot, err := getExecutionData(block)
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution data: %s", err.Error())
+		return nil, errors.Wrap(err, "could not get execution data")
 	}
 	execution := &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       payloadInterface.ParentHash(),
@@ -482,31 +482,31 @@ func getExecutionPayloadHeaderDeneb(block interfaces.ReadOnlySignedBeaconBlock) 
 func getExecutionData(block interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, []byte, []byte, error) {
 	payloadInterface, err := block.Block().Body().Execution()
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("could not get execution payload: %s", err.Error())
+		return nil, nil, nil, errors.Wrap(err, "could not get execution data")
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		transactions, err := payloadInterface.Transactions()
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("could not get transactions: %s", err.Error())
+			return nil, nil, nil, errors.Wrap(err, "could not get transactions")
 		}
 		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+			return nil, nil, nil, errors.Wrap(err, "could not get transactions root")
 		}
 		transactionsRoot = transactionsRootArray[:]
 	} else if err != nil {
-		return nil, nil, nil, fmt.Errorf("could not get transactions root: %s", err.Error())
+		return nil, nil, nil, errors.Wrap(err, "could not get transactions root")
 	}
 	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
 		withdrawals, err := payloadInterface.Withdrawals()
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("could not get withdrawals: %s", err.Error())
+			return nil, nil, nil, errors.Wrap(err, "could not get withdrawals")
 		}
 		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("could not get withdrawals root: %s", err.Error())
+			return nil, nil, nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 		withdrawalsRoot = withdrawalsRootArray[:]
 	}
