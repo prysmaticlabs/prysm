@@ -69,14 +69,14 @@ const (
 var metricComparisonTests = []comparisonTest{
 	{
 		name:               "beacon aggregate and proof",
-		topic1:             fmt.Sprintf(p2pFailValidationTopic, p2p.AggregateAndProofSubnetTopicFormat),
-		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, p2p.AggregateAndProofSubnetTopicFormat),
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, p2p.BeaconAggregateAndProofSubnetTopicFormat),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, p2p.BeaconAggregateAndProofSubnetTopicFormat),
 		expectedComparison: 0.8,
 	},
 	{
 		name:               "committee index beacon attestations",
-		topic1:             fmt.Sprintf(p2pFailValidationTopic, formatTopic(p2p.AttestationSubnetTopicFormat)),
-		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, formatTopic(p2p.AttestationSubnetTopicFormat)),
+		topic1:             fmt.Sprintf(p2pFailValidationTopic, formatTopic(p2p.BeaconAttestationSubnetTopicFormat)),
+		topic2:             fmt.Sprintf(p2pReceivedTotalTopic, formatTopic(p2p.BeaconAttestationSubnetTopicFormat)),
 		expectedComparison: 0.15,
 	},
 	{

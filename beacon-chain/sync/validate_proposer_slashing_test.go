@@ -140,7 +140,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		},
 	}
 
-	res, err := r.validateProposerSlashing(ctx, "", m)
+	res, err := r.validateProposerSlashingPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, true, valid, "Failed validation")
@@ -183,7 +183,7 @@ func TestValidateProposerSlashing_ValidOldSlashing(t *testing.T) {
 		},
 	}
 
-	res, err := r.validateProposerSlashing(ctx, "", m)
+	res, err := r.validateProposerSlashingPubSubMsg(ctx, "", m)
 	assert.ErrorContains(t, "proposer is already slashed", err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Failed validation")
@@ -220,7 +220,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateProposerSlashing(ctx, "", m)
+	res, err := r.validateProposerSlashingPubSubMsg(ctx, "", m)
 	assert.NotNil(t, err)
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Slashing from the far distant future should have timed out and returned false")
@@ -250,7 +250,7 @@ func TestValidateProposerSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateProposerSlashing(ctx, "", m)
+	res, err := r.validateProposerSlashingPubSubMsg(ctx, "", m)
 	_ = err
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Did not fail validation")

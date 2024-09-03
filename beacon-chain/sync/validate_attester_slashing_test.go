@@ -108,7 +108,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err := r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationAccept
 
@@ -153,7 +153,7 @@ func TestValidateAttesterSlashing_ValidOldSlashing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err := r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	assert.ErrorContains(t, "validators were previously slashed", err)
 	valid := res == pubsub.ValidationIgnore
 
@@ -198,7 +198,7 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err := r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationAccept
 
@@ -211,7 +211,7 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 	}
 
 	require.NoError(t, s.SetValidators(vals))
-	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err = r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	assert.ErrorContains(t, "none of the validators are slashable", err)
 	invalid := res == pubsub.ValidationReject
 
@@ -257,7 +257,7 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err := r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	_ = err
 	ignored := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
@@ -278,7 +278,7 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err = r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err = r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	_ = err
 	ignored = res == pubsub.ValidationIgnore
 	assert.Equal(t, true, ignored)
@@ -315,7 +315,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err := r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	_ = err
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "slashing from the far distant future should have timed out and returned false")
@@ -346,7 +346,7 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateAttesterSlashing(ctx, "foobar", msg)
+	res, err := r.validateAttesterSlashingPubSubMsg(ctx, "foobar", msg)
 	_ = err
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Passed validation")

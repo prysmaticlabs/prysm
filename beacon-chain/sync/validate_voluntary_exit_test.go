@@ -118,7 +118,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	opSub := r.cfg.operationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
 
-	res, err := r.validateVoluntaryExit(ctx, "", m)
+	res, err := r.validateVoluntaryExitPubSubMsg(ctx, "", m)
 	require.NoError(t, err)
 	require.Equal(t, pubsub.ValidationAccept, res, "Failed validation")
 	require.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
@@ -166,7 +166,7 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateVoluntaryExit(ctx, "", m)
+	res, err := r.validateVoluntaryExitPubSubMsg(ctx, "", m)
 	_ = err
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "passed validation")
@@ -197,7 +197,7 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateVoluntaryExit(ctx, "", m)
+	res, err := r.validateVoluntaryExitPubSubMsg(ctx, "", m)
 	_ = err
 	valid := res == pubsub.ValidationAccept
 	assert.Equal(t, false, valid, "Validation should have failed")

@@ -21,7 +21,7 @@ func TestMsgID_HashesCorrectly(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := forks.CreateForkDigest(time.Now(), genesisValidatorsRoot)
 	assert.NoError(t, err)
-	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
+	tpc := fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, d)
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
 	hashedData := hash.Hash(append(params.BeaconConfig().MessageDomainInvalidSnappy[:], pMsg.Data...))
@@ -41,7 +41,7 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
-	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
+	tpc := fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, d)
 	topicLen := uint64(len(tpc))
 	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
@@ -71,7 +71,7 @@ func TestMessageIDFunction_HashesCorrectlyBellatrix(t *testing.T) {
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
-	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
+	tpc := fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, d)
 	topicLen := uint64(len(tpc))
 	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(topicLen)
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}

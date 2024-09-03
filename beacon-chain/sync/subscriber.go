@@ -54,117 +54,173 @@ func (s *Service) noopValidator(_ context.Context, _ peer.ID, msg *pubsub.Messag
 	return pubsub.ValidationAccept, nil
 }
 
-// Register PubSub subscribers
-func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
+// registerSubscribersFromGenesis registers subscribers for subnets needed from genesis.
+// It includes: beacon block, beacon aggregate and proof, voluntary exit, proposer slashing, attester slashing and beacon attestation.
+func (s *Service) registerSubscribersFromGenesis(digest [4]byte) {
+	// Beacon block
 	s.subscribe(
-		p2p.BlockSubnetTopicFormat,
-		s.validateBeaconBlockPubSub,
+		p2p.BeaconBlockSubnetTopicFormat,
+		s.validateBeaconBlockPubSubMsg,
 		s.beaconBlockSubscriber,
 		digest,
 	)
+
+	// Beacon aggregate and proof
 	s.subscribe(
-		p2p.AggregateAndProofSubnetTopicFormat,
-		s.validateAggregateAndProof,
-		s.beaconAggregateProofSubscriber,
+		p2p.BeaconAggregateAndProofSubnetTopicFormat,
+		s.validateBeaconAggregateAndProofPubSubMsg,
+		s.beaconAggregateAndProofSubscriber,
 		digest,
 	)
+
+	// Voluntary exit
 	s.subscribe(
-		p2p.ExitSubnetTopicFormat,
-		s.validateVoluntaryExit,
+		p2p.VoluntaryExitSubnetTopicFormat,
+		s.validateVoluntaryExitPubSubMsg,
 		s.voluntaryExitSubscriber,
 		digest,
 	)
+
+	// Proposer slashing
 	s.subscribe(
 		p2p.ProposerSlashingSubnetTopicFormat,
-		s.validateProposerSlashing,
+		s.validateProposerSlashingPubSubMsg,
 		s.proposerSlashingSubscriber,
 		digest,
 	)
+
+	// Attester slashing
 	s.subscribe(
 		p2p.AttesterSlashingSubnetTopicFormat,
-		s.validateAttesterSlashing,
+		s.validateAttesterSlashingPubSubMsg,
 		s.attesterSlashingSubscriber,
 		digest,
 	)
+
+	// Beacon attestation -- subscribe to all subnets.
 	if flags.Get().SubscribeToAllSubnets {
 		s.subscribeStaticWithSubnets(
-			p2p.AttestationSubnetTopicFormat,
-			s.validateCommitteeIndexBeaconAttestation,   /* validator */
-			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+			p2p.BeaconAttestationSubnetTopicFormat,
+			s.validateBeaconAttestationPubSubMsg,
+			s.beaconAttestationSubscriber,
 			digest,
 			params.BeaconConfig().AttestationSubnetCount,
 		)
-	} else {
-		s.subscribeDynamicWithSubnets(
-			p2p.AttestationSubnetTopicFormat,
-			s.validateCommitteeIndexBeaconAttestation,   /* validator */
-			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
+
+		return
+	}
+
+	// Beacon attestation -- subscribe to required subnets.
+	s.subscribeDynamicWithSubnets(
+		p2p.BeaconAttestationSubnetTopicFormat,
+		s.validateBeaconAttestationPubSubMsg,
+		s.beaconAttestationSubscriber,
+		digest,
+	)
+}
+
+// registerSubscribersFromAltair registers subscribers for subnets needed from the Altair hard fork.
+// It includes: sync committee contribution and proof and sync committee.
+func (s *Service) registerSubscribersFromAltair(digest [4]byte) {
+	// Sync committee contribution and proof
+	s.subscribe(
+		p2p.SyncCommitteeContributionAndProofSubnetTopicFormat,
+		s.validateSyncCommitteeContributionAndProofPubSubMsg,
+		s.syncCommitteeContributionAndProofSubscriber,
+		digest,
+	)
+
+	// Sync committee -- subscribe to all subnets.
+	if flags.Get().SubscribeToAllSubnets {
+		s.subscribeStaticWithSyncSubnets(
+			p2p.SyncCommitteeSubnetTopicFormat,
+			s.validateSyncCommitteeMessage,
+			s.syncCommitteeMessageSubscriber,
 			digest,
 		)
+
+		return
 	}
-	// Altair Fork Version
+
+	// Sync committee -- subscribe to required subnets.
+	s.subscribeDynamicWithSyncSubnets(
+		p2p.SyncCommitteeSubnetTopicFormat,
+		s.validateSyncCommitteeMessage,
+		s.syncCommitteeMessageSubscriber,
+		digest,
+	)
+}
+
+// registerSubscribersFromCapella registers subscribers for subnets needed from the altair fork.
+// It includes: BLS to execution change
+func (s *Service) registerSubscribersFromCapella(digest [4]byte) {
+	// BLS to execution change
+	s.subscribe(
+		p2p.BlsToExecutionChangeSubnetTopicFormat,
+		s.validateBlsToExecutionChange,
+		s.blsToExecutionChangeSubscriber,
+		digest,
+	)
+}
+
+// registerSubscribersFromDeneb registers subscribers for subnets needed from the deneb fork.
+// It includes: Blob sidecar and data column sidecar (depending of the peerDAS status).
+func (s *Service) registerSubscribersFromDeneb(epoch primitives.Epoch, digest [4]byte) {
+	peerDasIsActive := coreTime.PeerDASIsActive(slots.UnsafeEpochStart(epoch))
+
+	if !peerDasIsActive {
+		// PeerDAS is not yet active, blob sidecar
+		s.subscribeStaticWithSubnets(
+			p2p.BlobSubnetTopicFormat,
+			s.validateBlob,
+			s.blobSubscriber,
+			digest,
+			params.BeaconConfig().BlobsidecarSubnetCount,
+		)
+
+		return
+	}
+
+	// PeerDAS is active, data columns sidecar -- subscribe to all subnets.
+	if flags.Get().SubscribeToAllSubnets {
+		s.subscribeStaticWithSubnets(
+			p2p.DataColumnSubnetTopicFormat,
+			s.validateDataColumn,
+			s.dataColumnSubscriber,
+			digest,
+			params.BeaconConfig().DataColumnSidecarSubnetCount,
+		)
+
+		return
+	}
+
+	// PeerDAS is active, data columns sidecar -- subscribe to required subnets.
+	s.subscribeDynamicWithColumnSubnets(
+		p2p.DataColumnSubnetTopicFormat,
+		s.validateDataColumn,
+		s.dataColumnSubscriber,
+		digest,
+	)
+}
+
+// registerSubscribers registers subscribers
+func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
+	// From genesis
+	s.registerSubscribersFromGenesis(digest)
+
+	// From Altair hard fork
 	if epoch >= params.BeaconConfig().AltairForkEpoch {
-		s.subscribe(
-			p2p.SyncContributionAndProofSubnetTopicFormat,
-			s.validateSyncContributionAndProof,
-			s.syncContributionAndProofSubscriber,
-			digest,
-		)
-		if flags.Get().SubscribeToAllSubnets {
-			s.subscribeStaticWithSyncSubnets(
-				p2p.SyncCommitteeSubnetTopicFormat,
-				s.validateSyncCommitteeMessage,   /* validator */
-				s.syncCommitteeMessageSubscriber, /* message handler */
-				digest,
-			)
-		} else {
-			s.subscribeDynamicWithSyncSubnets(
-				p2p.SyncCommitteeSubnetTopicFormat,
-				s.validateSyncCommitteeMessage,   /* validator */
-				s.syncCommitteeMessageSubscriber, /* message handler */
-				digest,
-			)
-		}
+		s.registerSubscribersFromAltair(digest)
 	}
 
-	// New Gossip Topic in Capella
+	// From Capella hard fork
 	if epoch >= params.BeaconConfig().CapellaForkEpoch {
-		s.subscribe(
-			p2p.BlsToExecutionChangeSubnetTopicFormat,
-			s.validateBlsToExecutionChange,
-			s.blsToExecutionChangeSubscriber,
-			digest,
-		)
+		s.registerSubscribersFromCapella(digest)
 	}
 
-	// New Gossip Topic in Deneb
+	// From Debeb hard fork
 	if epoch >= params.BeaconConfig().DenebForkEpoch {
-		if coreTime.PeerDASIsActive(slots.UnsafeEpochStart(epoch)) {
-			if flags.Get().SubscribeToAllSubnets {
-				s.subscribeStaticWithSubnets(
-					p2p.DataColumnSubnetTopicFormat,
-					s.validateDataColumn,   /* validator */
-					s.dataColumnSubscriber, /* message handler */
-					digest,
-					params.BeaconConfig().DataColumnSidecarSubnetCount,
-				)
-			} else {
-				s.subscribeDynamicWithColumnSubnets(
-					p2p.DataColumnSubnetTopicFormat,
-					s.validateDataColumn,   /* validator */
-					s.dataColumnSubscriber, /* message handler */
-					digest,
-				)
-			}
-		} else {
-			s.subscribeStaticWithSubnets(
-				p2p.BlobSubnetTopicFormat,
-				s.validateBlob,   /* validator */
-				s.blobSubscriber, /* message handler */
-				digest,
-				params.BeaconConfig().BlobsidecarSubnetCount,
-			)
-		}
+		s.registerSubscribersFromDeneb(epoch, digest)
 	}
 }
 

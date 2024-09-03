@@ -23,7 +23,7 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	enc := encoder.SszNetworkEncoder{}
 
 	// Valid topic added in.
-	topic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic := fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 	assert.Equal(t, true, h.digestExists(digest))
@@ -36,11 +36,11 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 
 	h = newSubTopicHandler()
 	// Multiple Topics added in.
-	topic = fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.ExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.VoluntaryExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
@@ -52,11 +52,11 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.AggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.BeaconAggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.SyncContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.SyncCommitteeContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.addTopic(topic, new(pubsub.Subscription))
 	assert.Equal(t, true, h.topicExists(topic))
 
@@ -71,7 +71,7 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.ExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.VoluntaryExitSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
@@ -83,15 +83,15 @@ func TestSubTopicHandler_CRUD(t *testing.T) {
 	assert.Equal(t, 4, len(h.allTopics()))
 
 	// Remove remaining topics.
-	topic = fmt.Sprintf(p2p.BlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.AggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.BeaconAggregateAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 
-	topic = fmt.Sprintf(p2p.SyncContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
+	topic = fmt.Sprintf(p2p.SyncCommitteeContributionAndProofSubnetTopicFormat, digest) + enc.ProtocolSuffix()
 	h.removeTopic(topic)
 	assert.Equal(t, false, h.topicExists(topic))
 

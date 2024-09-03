@@ -113,7 +113,7 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 		service.dv5Listener.LocalNode().Set(entry)
 
 		// Join and subscribe to the subnet, needed by libp2p.
-		topic, err := service.pubsub.Join(fmt.Sprintf(AttestationSubnetTopicFormat, bootNodeForkDigest, subnet) + "/ssz_snappy")
+		topic, err := service.pubsub.Join(fmt.Sprintf(BeaconAttestationSubnetTopicFormat, bootNodeForkDigest, subnet) + "/ssz_snappy")
 		require.NoError(t, err)
 
 		_, err = topic.Subscribe()
@@ -155,7 +155,7 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	exists := make([]bool, 0, 3)
 	for i := 1; i <= 3; i++ {
 		subnet := uint64(i)
-		topic := fmt.Sprintf(AttestationSubnetTopicFormat, bootNodeForkDigest, subnet)
+		topic := fmt.Sprintf(BeaconAttestationSubnetTopicFormat, bootNodeForkDigest, subnet)
 
 		exist := false
 

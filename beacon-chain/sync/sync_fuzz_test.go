@@ -108,7 +108,7 @@ func FuzzValidateBeaconBlockPubSub_Phase0(f *testing.F) {
 				Topic: &strTop,
 			},
 		}
-		_, err := r.validateBeaconBlockPubSub(ctx, peer.ID(pid), msg)
+		_, err := r.validateBeaconBlockPubSubMsg(ctx, peer.ID(pid), msg)
 		_ = err
 	})
 }
@@ -190,7 +190,7 @@ func FuzzValidateBeaconBlockPubSub_Altair(f *testing.F) {
 				Topic: &strTop,
 			},
 		}
-		_, err := r.validateBeaconBlockPubSub(ctx, peer.ID(pid), msg)
+		_, err := r.validateBeaconBlockPubSubMsg(ctx, peer.ID(pid), msg)
 		_ = err
 	})
 }
@@ -272,7 +272,7 @@ func FuzzValidateBeaconBlockPubSub_Bellatrix(f *testing.F) {
 				Topic: &strTop,
 			},
 		}
-		_, err := r.validateBeaconBlockPubSub(ctx, peer.ID(pid), msg)
+		_, err := r.validateBeaconBlockPubSubMsg(ctx, peer.ID(pid), msg)
 		_ = err
 	})
 }

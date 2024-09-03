@@ -350,7 +350,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 	}
 	fd, err := forks.CreateForkDigest(mChain.GenesisTime(), mChain.ValidatorsRoot[:])
 	assert.NoError(t, err)
-	mockTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
+	mockTopic := fmt.Sprintf(p2p.BeaconBlockSubnetTopicFormat, fd) + encoder.SszNetworkEncoder{}.ProtocolSuffix()
 	type args struct {
 		topic        string
 		v            wrappedVal

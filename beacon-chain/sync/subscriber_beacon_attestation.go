@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *Service) committeeIndexBeaconAttestationSubscriber(_ context.Context, msg proto.Message) error {
+func (s *Service) beaconAttestationSubscriber(_ context.Context, msg proto.Message) error {
 	a, ok := msg.(eth.Att)
 	if !ok {
 		return fmt.Errorf("message was not type eth.Att, type=%T", msg)

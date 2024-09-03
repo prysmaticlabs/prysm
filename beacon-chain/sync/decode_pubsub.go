@@ -41,7 +41,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
 		// Given that both sync message related subnets have the same message name, we have to
 		// differentiate them below.
-	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
+	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncCommitteeContributionAndProofSubnetTopicFormat):
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
 	case strings.Contains(topic, p2p.GossipBlobSidecarMessage):
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.BlobSidecar{})]
@@ -83,11 +83,11 @@ func (*Service) replaceForkDigest(topic string) (string, error) {
 
 func extractValidDataTypeFromTopic(topic string, digest []byte, clock *startup.Clock) (ssz.Unmarshaler, error) {
 	switch topic {
-	case p2p.BlockSubnetTopicFormat:
+	case p2p.BeaconBlockSubnetTopicFormat:
 		return extractDataTypeFromTypeMap(types.BlockMap, digest, clock)
-	case p2p.AttestationSubnetTopicFormat:
+	case p2p.BeaconAttestationSubnetTopicFormat:
 		return extractDataTypeFromTypeMap(types.AttestationMap, digest, clock)
-	case p2p.AggregateAndProofSubnetTopicFormat:
+	case p2p.BeaconAggregateAndProofSubnetTopicFormat:
 		return extractDataTypeFromTypeMap(types.AggregateAttestationMap, digest, clock)
 	}
 	return nil, nil

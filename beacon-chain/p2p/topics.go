@@ -35,22 +35,22 @@ const (
 
 	// Topic Formats
 	//
-	// AttestationSubnetTopicFormat is the topic format for the attestation subnet.
-	AttestationSubnetTopicFormat = GossipProtocolAndDigest + GossipAttestationMessage + "_%d"
+	// BeaconAttestationSubnetTopicFormat is the topic format for the attestation subnet.
+	BeaconAttestationSubnetTopicFormat = GossipProtocolAndDigest + GossipAttestationMessage + "_%d"
 	// SyncCommitteeSubnetTopicFormat is the topic format for the sync committee subnet.
 	SyncCommitteeSubnetTopicFormat = GossipProtocolAndDigest + GossipSyncCommitteeMessage + "_%d"
-	// BlockSubnetTopicFormat is the topic format for the block subnet.
-	BlockSubnetTopicFormat = GossipProtocolAndDigest + GossipBlockMessage
-	// ExitSubnetTopicFormat is the topic format for the voluntary exit subnet.
-	ExitSubnetTopicFormat = GossipProtocolAndDigest + GossipExitMessage
+	// BeaconBlockSubnetTopicFormat is the topic format for the block subnet.
+	BeaconBlockSubnetTopicFormat = GossipProtocolAndDigest + GossipBlockMessage
+	// VoluntaryExitSubnetTopicFormat is the topic format for the voluntary exit subnet.
+	VoluntaryExitSubnetTopicFormat = GossipProtocolAndDigest + GossipExitMessage
 	// ProposerSlashingSubnetTopicFormat is the topic format for the proposer slashing subnet.
 	ProposerSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipProposerSlashingMessage
 	// AttesterSlashingSubnetTopicFormat is the topic format for the attester slashing subnet.
 	AttesterSlashingSubnetTopicFormat = GossipProtocolAndDigest + GossipAttesterSlashingMessage
-	// AggregateAndProofSubnetTopicFormat is the topic format for the aggregate and proof subnet.
-	AggregateAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipAggregateAndProofMessage
-	// SyncContributionAndProofSubnetTopicFormat is the topic format for the sync aggregate and proof subnet.
-	SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
+	// BeaconAggregateAndProofSubnetTopicFormat is the topic format for the aggregate and proof subnet.
+	BeaconAggregateAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipAggregateAndProofMessage
+	// SyncCommitteeContributionAndProofSubnetTopicFormat is the topic format for the sync aggregate and proof subnet.
+	SyncCommitteeContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
 	// BlsToExecutionChangeSubnetTopicFormat is the topic format for the bls to execution change subnet.
 	BlsToExecutionChangeSubnetTopicFormat = GossipProtocolAndDigest + GossipBlsToExecutionChangeMessage
 	// BlobSubnetTopicFormat is the topic format for the blob subnet.

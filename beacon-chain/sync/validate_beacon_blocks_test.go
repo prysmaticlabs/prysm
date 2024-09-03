@@ -101,7 +101,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.ErrorIs(t, err, signing.ErrSigFailedToVerify)
 	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
@@ -145,7 +145,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block present in DB should be ignored")
 }
@@ -208,7 +208,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
@@ -274,7 +274,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
@@ -340,7 +340,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
@@ -409,7 +409,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
@@ -477,7 +477,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
@@ -520,7 +520,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block is ignored until fully synced")
 }
@@ -586,7 +586,7 @@ func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.ErrorContains(t, "early block, with current slot", err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "early block should be ignored and queued")
 
@@ -637,7 +637,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block from the future should be ignored")
 }
@@ -688,7 +688,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.ErrorContains(t, "greater or equal to block slot", err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block from the past should be ignored")
 }
@@ -750,7 +750,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	}
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.NoError(t, err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "seen proposer block should be ignored")
 }
@@ -801,7 +801,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		},
 	}
 
-	res, err := r.validateBeaconBlockPubSub(context.Background(), "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(context.Background(), "", m)
 	_ = err
 	assert.Equal(t, pubsub.ValidationIgnore, res)
 
@@ -817,7 +817,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 		},
 	}
 
-	res, err = r.validateBeaconBlockPubSub(context.Background(), "", m)
+	res, err = r.validateBeaconBlockPubSubMsg(context.Background(), "", m)
 	assert.NoError(t, err)
 	assert.Equal(t, pubsub.ValidationIgnore, res)
 }
@@ -884,7 +884,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.Equal(t, pubsub.ValidationReject, res, "Wrong validation result returned")
 	require.ErrorContains(t, "not descendant of finalized checkpoint", err)
 }
@@ -950,7 +950,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.ErrorContains(t, "could not unmarshal bytes into signature", err)
 	assert.Equal(t, res, pubsub.ValidationReject, "block with invalid signature should be rejected")
 
@@ -982,7 +982,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	r.cfg.chain = chainService
 	r.cfg.clock = startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)
 
-	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err = r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.ErrorContains(t, "has an invalid parent", err)
 	// Expect block with bad parent to fail too
 	assert.Equal(t, res, pubsub.ValidationReject, "block with invalid parent should be ignored")
@@ -1044,7 +1044,7 @@ func TestValidateBeaconBlockPubSub_InsertValidPendingBlock(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.ErrorContains(t, "unknown parent for block", err)
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block with unknown parent should be ignored")
 	bRoot, err = msg.Block.HashTreeRoot()
@@ -1129,7 +1129,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	assert.ErrorContains(t, "invalid parent", err)
 	assert.Equal(t, res, pubsub.ValidationReject)
 }
@@ -1230,7 +1230,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 		},
 	}
 
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	require.Equal(t, true, result)
@@ -1301,7 +1301,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 			Topic: &topic,
 		},
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.NotNil(t, err)
 	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
@@ -1462,7 +1462,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 		},
 	}
 
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	res, err := r.validateBeaconBlockPubSubMsg(ctx, "", m)
 	require.NoError(t, err)
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)

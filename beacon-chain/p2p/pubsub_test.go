@@ -40,7 +40,7 @@ func TestService_PublishToTopicConcurrentMapWrite(t *testing.T) {
 	s.host = p0.BHost
 	s.pubsub = p0.PubSub()
 
-	topic := fmt.Sprintf(BlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
+	topic := fmt.Sprintf(BeaconBlockSubnetTopicFormat, fd) + "/" + encoder.ProtocolSuffixSSZSnappy
 
 	// Establish the remote peer to be subscribed to the outgoing topic.
 	_, err = p1.SubscribeToTopic(topic)
@@ -95,7 +95,7 @@ func TestExtractGossipDigest(t *testing.T) {
 		},
 		{
 			name:    "short digest",
-			topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f}) + "/" + encoder.ProtocolSuffixSSZSnappy,
+			topic:   fmt.Sprintf(BeaconBlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f}) + "/" + encoder.ProtocolSuffixSSZSnappy,
 			want:    [4]byte{},
 			wantErr: true,
 			error:   errors.New("invalid digest length wanted"),
@@ -109,7 +109,7 @@ func TestExtractGossipDigest(t *testing.T) {
 		},
 		{
 			name:    "valid topic",
-			topic:   fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy,
+			topic:   fmt.Sprintf(BeaconBlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy,
 			want:    [4]byte{0xb5, 0x30, 0x3f, 0x2a},
 			wantErr: false,
 			error:   nil,
@@ -128,7 +128,7 @@ func TestExtractGossipDigest(t *testing.T) {
 }
 
 func BenchmarkExtractGossipDigest(b *testing.B) {
-	topic := fmt.Sprintf(BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
+	topic := fmt.Sprintf(BeaconBlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := ExtractGossipDigest(topic)

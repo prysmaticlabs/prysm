@@ -103,8 +103,8 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 }
 
 func TestService_Attestation_Subnet(t *testing.T) {
-	if gtm := GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]; gtm != AttestationSubnetTopicFormat {
-		t.Errorf("Constant is out of date. Wanted %s, got %s", AttestationSubnetTopicFormat, gtm)
+	if gtm := GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]; gtm != BeaconAttestationSubnetTopicFormat {
+		t.Errorf("Constant is out of date. Wanted %s, got %s", BeaconAttestationSubnetTopicFormat, gtm)
 	}
 
 	tests := []struct {
@@ -170,7 +170,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 	msg := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(7)})
 	subnet := uint64(5)
 
-	topic := AttestationSubnetTopicFormat
+	topic := BeaconAttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
@@ -332,7 +332,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	go p2.listenForNewNodes()
 
 	msg := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.NewBitlist(7)})
-	topic := AttestationSubnetTopicFormat
+	topic := BeaconAttestationSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(msg)] = topic
 	digest, err := p.currentForkDigest()
 	require.NoError(t, err)
