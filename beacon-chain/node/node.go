@@ -1047,11 +1047,12 @@ func (b *BeaconNode) registerHTTPService(router *mux.Router) error {
 	host := b.cliCtx.String(flags.HTTPServerHost.Name)
 	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
 	address := net.JoinHostPort(host, strconv.Itoa(port))
-	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	opts := []httprest.Option{
 		httprest.WithRouter(router),
 		httprest.WithHTTPAddr(address),
-		httprest.WithTimeout(uint64(timeout)),
+	}
+	if b.cliCtx.IsSet(cmd.ApiTimeoutFlag.Name) {
+		opts = append(opts, httprest.WithTimeout(b.cliCtx.Duration(cmd.ApiTimeoutFlag.Name)))
 	}
 	g, err := httprest.New(b.ctx, opts...)
 	if err != nil {
