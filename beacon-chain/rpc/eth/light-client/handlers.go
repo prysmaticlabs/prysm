@@ -390,12 +390,15 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 			Pubkeys:         Pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		}
-		update.FinalizedHeader = &v1.BeaconBlockHeader{
-			Slot:          0,
-			ProposerIndex: 0,
-			ParentRoot:    make([]byte, 32),
-			StateRoot:     make([]byte, 32),
-			BodyRoot:      make([]byte, 32),
+		//update.FinalizedHeader = &eth.LightClientHeader{}
+		update.FinalizedHeader = &eth.LightClientHeader{
+			Beacon: &v1.BeaconBlockHeader{
+				Slot:          0,
+				ProposerIndex: 0,
+				ParentRoot:    make([]byte, 32),
+				StateRoot:     make([]byte, 32),
+				BodyRoot:      make([]byte, 32),
+			},
 		}
 		finalitybranch := make([][]byte, 6)
 		for i := range finalitybranch {

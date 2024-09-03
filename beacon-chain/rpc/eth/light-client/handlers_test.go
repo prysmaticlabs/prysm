@@ -689,7 +689,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 		resp := &structs.LightClientUpdateWithVersion{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, "capella", resp.Version)
-		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
 		require.NotNil(t, resp.Data)
 	})
 	t.Run("SSZ response", func(t *testing.T) {
@@ -702,7 +702,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &eth.LightClientUpdate{}
 		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()), resp)
-		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.BodyRoot))
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.Beacon.BodyRoot))
 		require.NotNil(t, resp)
 	})
 
@@ -813,7 +813,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 		resp := &structs.LightClientUpdateWithVersion{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, "capella", resp.Version)
-		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
 		require.NotNil(t, resp.Data)
 	})
 	t.Run("SSZ response", func(t *testing.T) {
@@ -826,7 +826,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &eth.LightClientUpdate{}
 		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()), resp)
-		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.BodyRoot))
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.Beacon.BodyRoot))
 		require.NotNil(t, resp)
 	})
 }
