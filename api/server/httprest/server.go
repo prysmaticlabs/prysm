@@ -49,7 +49,7 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 		defaultReadHeaderTimeout = g.cfg.timeout
 		handler = http.TimeoutHandler(g.cfg.router, g.cfg.timeout, "request timed out")
 	} else {
-		handler = g.cfg.router
+		handler = middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	}
 	g.server = &http.Server{
 		Addr:              g.cfg.httpAddr,
@@ -64,10 +64,9 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 func (g *Server) Start() {
 	g.ctx, g.cancel = context.WithCancel(g.ctx)
 
-	handler := middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	go func() {
 		log.WithField("address", g.cfg.httpAddr).Info("Starting HTTP server")
-		if err := http.ListenAndServe(g.cfg.httpAddr, handler); err != http.ErrServerClosed {
+		if err := g.server.ListenAndServe(); err != http.ErrServerClosed {
 			log.WithError(err).Error("Failed to start HTTP server")
 			g.startFailure = err
 			return
