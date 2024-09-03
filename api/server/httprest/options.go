@@ -6,18 +6,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Option --.
+// Option is a http rest server functional parameter type.
 type Option func(g *Server) error
 
-// WithMuxHandler --.
-func WithMuxHandler(m httpHandler) Option {
-	return func(g *Server) error {
-		g.cfg.handler = m
-		return nil
-	}
-}
-
-// WithHTTPAddr --.
+// WithHTTPAddr sets the full address ( host and port ) of the server.
 func WithHTTPAddr(addr string) Option {
 	return func(g *Server) error {
 		g.cfg.httpAddr = addr
@@ -25,7 +17,7 @@ func WithHTTPAddr(addr string) Option {
 	}
 }
 
-// WithRouter --.
+// WithRouter sets the internal router of the server, this is required.
 func WithRouter(r *mux.Router) Option {
 	return func(g *Server) error {
 		g.cfg.router = r
