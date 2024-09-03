@@ -19,6 +19,13 @@ func WithMuxHandler(m httpHandler) Option {
 	}
 }
 
+func WithMiddlewares(mw []middleware.Middleware) Option {
+	return func(g *Server) error {
+		g.cfg.middlewares = mw
+		return nil
+	}
+}
+
 // WithHTTPAddr --.
 func WithHTTPAddr(addr string) Option {
 	return func(g *Server) error {

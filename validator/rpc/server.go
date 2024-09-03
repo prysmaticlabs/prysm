@@ -210,6 +210,7 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("POST "+api.WebUrlPrefix+"wallet/create", s.CreateWallet)
 	s.router.HandleFunc("POST "+api.WebUrlPrefix+"wallet/keystores/validate", s.ValidateKeystores)
 	s.router.HandleFunc("POST "+api.WebUrlPrefix+"wallet/recover", s.RecoverWallet)
+	// slashing protection endpoints
 	s.router.HandleFunc("GET "+api.WebUrlPrefix+"slashing-protection/export", s.ExportSlashingProtection)
 	s.router.HandleFunc("POST "+api.WebUrlPrefix+"slashing-protection/import", s.ImportSlashingProtection)
 
