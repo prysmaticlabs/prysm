@@ -39,6 +39,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - E2E: fixed gas limit at genesis
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
 - validator registration changed to debug, and the frequency of validator registration calls are reduced
+- Core: Fix process effective balance update to safe copy validator for Electra.
 
 ### Security
 
@@ -114,6 +115,7 @@ In an upcoming release, we will be deprecating the gRPC gateway and renaming sev
 - Fix Event stream with carriage return support
 - Fix panic on empty block result in REST API
 - engine_getPayloadBodiesByRangeV1 - fix, adding hexutil encoding on request parameters
+- Use sync committee period instead of epoch in `createLightClientUpdate` 
 
 
 ### Security
