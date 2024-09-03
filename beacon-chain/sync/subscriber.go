@@ -673,7 +673,7 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 	// Initialize the subscriptions map.
 	subscriptions := make(map[uint64]*pubsub.Subscription, syncCommiteeSubnetsCount)
 
-	// Retrieve the fenesis validators root.
+	// Retrieve the genesis validators root.
 	genesisValidatorsRoot := s.cfg.clock.GenesisValidatorsRoot()
 
 	// Retrieve the epoch of the fork corresponding to the digest.
