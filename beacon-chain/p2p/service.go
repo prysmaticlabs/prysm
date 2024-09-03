@@ -394,7 +394,7 @@ func (s *Service) AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) er
 	s.pingMethodLock.Unlock()
 }
 
-func (s *Service) pingPeers() {
+func (s *Service) pingPeersAndLogEnr() {
 	s.pingMethodLock.RLock()
 	defer s.pingMethodLock.RUnlock()
 
