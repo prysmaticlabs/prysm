@@ -119,7 +119,7 @@ func (s *Service) RefreshPersistentSubnets() {
 		s.updateSubnetRecordWithMetadata(bitV)
 
 		// Ping all peers.
-		s.pingPeers()
+		s.pingPeersAndLogEnr()
 
 		return
 	}
@@ -157,7 +157,7 @@ func (s *Service) RefreshPersistentSubnets() {
 		s.updateSubnetRecordWithMetadataV2(bitV, bitS)
 
 		// Ping all peers to inform them of new metadata
-		s.pingPeers()
+		s.pingPeersAndLogEnr()
 
 		return
 	}
@@ -186,7 +186,7 @@ func (s *Service) RefreshPersistentSubnets() {
 	s.updateSubnetRecordWithMetadataV3(bitV, bitS, custodySubnetCount)
 
 	// Ping all peers.
-	s.pingPeers()
+	s.pingPeersAndLogEnr()
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
