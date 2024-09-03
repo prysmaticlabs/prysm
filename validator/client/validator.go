@@ -1216,11 +1216,12 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	validatorStatuses := make([]*validatorStatus, 0)
 	for _, k := range pubkeys {
 		sta, ok := v.pubkeyToStatus[k]
-		if !ok {
+		if ok {
+			validatorStatuses = append(validatorStatuses, sta)
+		} else {
 			validatorStatusUnpopulated = true
 		}
 		statusRequestKeys = append(statusRequestKeys, k[:])
-		validatorStatuses = append(validatorStatuses, sta)
 	}
 	// repopulate the statuses if epoch start or if a new key is added missing the cache
 	if isEpochStart || validatorStatusUnpopulated {
