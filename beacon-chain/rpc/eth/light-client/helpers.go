@@ -145,7 +145,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 
 	payloadInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+		return nil, fmt.Errorf("could not get execution payload: %s", err.Error())
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
@@ -256,7 +256,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 
 	payloadInterface, err := block.Body().Execution()
 	if err != nil {
-		return nil, fmt.Errorf("could not get execution payload header: %s", err.Error())
+		return nil, fmt.Errorf("could not get execution payload: %s", err.Error())
 	}
 	transactionsRoot, err := payloadInterface.TransactionsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
