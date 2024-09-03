@@ -1049,10 +1049,11 @@ func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
 	opts := []httprest.Option{
 		httprest.WithRouter(router),
 		httprest.WithHTTPAddr(address),
-		httprest.WithTimeout(uint64(timeout)),
 		httprest.WithMiddlewares(middlewares),
 	}
-
+	if b.cliCtx.IsSet(cmd.ApiTimeoutFlag.Name) {
+		opts = append(opts, httprest.WithTimeout(b.cliCtx.Duration(cmd.ApiTimeoutFlag.Name)))
+	}
 	g, err := httprest.New(b.ctx, opts...)
 	if err != nil {
 		return err
