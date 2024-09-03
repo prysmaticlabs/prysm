@@ -48,11 +48,9 @@ func LightClientBootstrapResponseFromJson(data []byte) (*LightClientBootstrapRes
 			return nil, err
 		}
 		result.Data.Header = &x
-
 	}
 
 	return &result, nil
-
 }
 
 func LightClientUpdateWithVersionFromJson(data []byte) (*LightClientUpdateWithVersion, error) {

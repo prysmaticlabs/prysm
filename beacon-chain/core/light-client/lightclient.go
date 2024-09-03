@@ -39,7 +39,6 @@ const (
 //	    signature_slot=update.signature_slot,
 //	)
 func CreateLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
-
 	finalityUpdate := &ethpbv2.LightClientFinalityUpdate{
 		AttestedHeader:  update.AttestedHeader,
 		FinalizedHeader: update.FinalizedHeader,
@@ -275,7 +274,6 @@ func NewLightClientFinalityUpdateFromBeaconState(
 				StateRoot:     make([]byte, 32),
 				BodyRoot:      make([]byte, 32),
 			}
-
 		}
 
 		var bErr error
