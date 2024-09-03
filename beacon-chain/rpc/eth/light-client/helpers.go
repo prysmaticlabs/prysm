@@ -25,12 +25,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-func createLightClientBootstrapVersionAgnostic(ctx context.Context, state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
+func createLightClientBootstrap(ctx context.Context, state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
 	switch blk.Version() {
 	case version.Phase0:
 		return nil, fmt.Errorf("light client bootstrap is not supported for phase0")
 	case version.Altair, version.Bellatrix:
-		return createLightClientBootstrap(ctx, state)
+		return createLightClientBootstrapAltair(ctx, state)
 	case version.Capella:
 		return createLightClientBootstrapCapella(ctx, state, blk)
 	case version.Deneb, version.Electra:
@@ -39,7 +39,7 @@ func createLightClientBootstrapVersionAgnostic(ctx context.Context, state state.
 	return nil, fmt.Errorf("unsupported block version")
 }
 
-// createLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
+// createLightClientBootstrapAltair - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
 // def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
 //
 //	assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
@@ -56,7 +56,7 @@ func createLightClientBootstrapVersionAgnostic(ctx context.Context, state state.
 //	    current_sync_committee=state.current_sync_committee,
 //	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
 //	)
-func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrap, error) {
+func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
@@ -569,14 +569,6 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("could not get attested header beacon: %s", err.Error())
 	}
-	newUpdateFinalizedHeaderBeacon, err := newUpdate.FinalizedHeader.GetBeacon()
-	if err != nil {
-		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
-	}
-	oldUpdateFinalizedHeaderBeacon, err := oldUpdate.FinalizedHeader.GetBeacon()
-	if err != nil {
-		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
-	}
 
 	// Compare presence of relevant sync committee
 	newHasRelevantSyncCommittee := IsSyncCommitteeUpdate(newUpdate) && (slots.SyncCommitteePeriod(slots.ToEpoch(newUpdateAttestedHeaderBeacon.Slot)) == slots.SyncCommitteePeriod(slots.ToEpoch(newUpdate.SignatureSlot)))
@@ -591,6 +583,15 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) (bool, error) {
 	oldHasFinality := IsFinalityUpdate(oldUpdate)
 	if newHasFinality != oldHasFinality {
 		return newHasFinality, nil
+	}
+
+	newUpdateFinalizedHeaderBeacon, err := newUpdate.FinalizedHeader.GetBeacon()
+	if err != nil {
+		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
+	}
+	oldUpdateFinalizedHeaderBeacon, err := oldUpdate.FinalizedHeader.GetBeacon()
+	if err != nil {
+		return false, fmt.Errorf("could not get finalized header beacon: %s", err.Error())
 	}
 
 	// Compare sync committee finality
