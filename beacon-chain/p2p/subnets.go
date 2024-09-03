@@ -162,29 +162,35 @@ func (s *Service) FindPeersWithSubnet(
 		return false, errors.Wrap(err, "node filter")
 	}
 
-	firstLoop := true
-
-	wg := new(sync.WaitGroup)
-	for {
+	peersSummary := func(topic string, threshold int) (int, int) {
 		// Retrieve how many peers we have for this topic.
 		peerCountForTopic := len(s.pubsub.ListPeers(topic))
 
 		// Compute how many peers we are missing to reach the threshold.
-		missingPeersCount := max(0, threshold-peerCountForTopic)
+		missingPeerCountForTopic := max(0, threshold-peerCountForTopic)
 
+		return peerCountForTopic, missingPeerCountForTopic
+	}
+
+	// Compute how many peers we are missing to reach the threshold.
+	peerCountForTopic, missingPeerCountForTopic := peersSummary(topic, threshold)
+
+	// Exit early if we have enough peers.
+	if missingPeerCountForTopic == 0 {
+		return true, nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"topic":            topic,
+		"currentPeerCount": peerCountForTopic,
+		"targetPeerCount":  threshold,
+	}).Debug("Searching for new peers in the network - Start")
+
+	wg := new(sync.WaitGroup)
+	for {
 		// If we have enough peers, we can exit the loop. This is the happy path.
-		if missingPeersCount == 0 {
+		if missingPeerCountForTopic == 0 {
 			break
-		}
-
-		if firstLoop {
-			firstLoop = false
-
-			log.WithFields(logrus.Fields{
-				"topic":            topic,
-				"currentPeerCount": peerCountForTopic,
-				"targetPeerCount":  threshold,
-			}).Debug("Searching for new peers in the network - Start")
 		}
 
 		// If the context is done, we can exit the loop. This is the unhappy path.
@@ -196,7 +202,7 @@ func (s *Service) FindPeersWithSubnet(
 		}
 
 		// Search for new peers in the network.
-		nodes := searchForPeers(iterator, batchSize, missingPeersCount, filter)
+		nodes := searchForPeers(iterator, batchSize, missingPeerCountForTopic, filter)
 
 		// Restrict dials if limit is applied.
 		maxConcurrentDials := math.MaxInt
@@ -214,6 +220,8 @@ func (s *Service) FindPeersWithSubnet(
 			// Wait for all dials to be completed.
 			wg.Wait()
 		}
+
+		_, missingPeerCountForTopic = peersSummary(topic, threshold)
 	}
 
 	log.WithField("topic", topic).Debug("Searching for new peers in the network - Success")
