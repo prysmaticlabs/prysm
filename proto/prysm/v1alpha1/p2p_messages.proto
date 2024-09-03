@@ -70,3 +70,16 @@ message BlobSidecarsByRangeRequest {
   uint64 start_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
   uint64 count = 2;
 }
+
+/*
+ Spec Definition:
+ (
+  start_period: uint64
+  count: uint64
+ )
+*/
+message LightClientUpdatesByRangeReq {
+  uint64 start_period = 1;
+  uint64 count = 2;
+}
+
