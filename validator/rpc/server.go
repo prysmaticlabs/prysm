@@ -24,8 +24,8 @@ import (
 
 // Config options for the HTTP server.
 type Config struct {
-	Host                   string // http host, not grpc
-	Port                   int    // http port, not grpc
+	HTTPHost               string
+	HTTPPort               int
 	GRPCMaxCallRecvMsgSize int
 	GRPCRetries            uint
 	GRPCRetryDelay         time.Duration
@@ -47,8 +47,8 @@ type Config struct {
 type Server struct {
 	ctx                       context.Context
 	cancel                    context.CancelFunc
-	host                      string // http host, not grpc
-	port                      int    // http port, not grpc
+	httpHost                  string
+	httpPort                  int
 	server                    *httprest.Server
 	grpcMaxCallRecvMsgSize    int
 	grpcRetries               uint
@@ -85,8 +85,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		cancel:                 cancel,
 		logStreamer:            logs.NewStreamServer(),
 		logStreamerBufferSize:  1000, // Enough to handle most bursts of logs in the validator client.
-		host:                   cfg.Host,
-		port:                   cfg.Port,
+		httpHost:               cfg.HTTPHost,
+		httpPort:               cfg.HTTPPort,
 		grpcMaxCallRecvMsgSize: cfg.GRPCMaxCallRecvMsgSize,
 		grpcRetries:            cfg.GRPCRetries,
 		grpcRetryDelay:         cfg.GRPCRetryDelay,
@@ -112,7 +112,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		if err := server.initializeAuthToken(); err != nil {
 			log.WithError(err).Error("Could not initialize web auth token")
 		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", server.host, server.port)
+		validatorWebAddr := fmt.Sprintf("%s:%d", server.httpHost, server.httpPort)
 		logValidatorWebAuth(validatorWebAddr, server.authToken, server.authTokenPath)
 		go server.refreshAuthTokenFromFileChanges(server.ctx, server.authTokenPath)
 	}
@@ -128,7 +128,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 
 	opts := []httprest.Option{
 		httprest.WithRouter(cfg.Router),
-		httprest.WithHTTPAddr(net.JoinHostPort(server.host, fmt.Sprintf("%d", server.port))),
+		httprest.WithHTTPAddr(net.JoinHostPort(server.httpHost, fmt.Sprintf("%d", server.httpPort))),
 	}
 	// create and set a new http server
 	s, err := httprest.New(server.ctx, opts...)

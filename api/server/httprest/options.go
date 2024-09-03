@@ -8,8 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 )
 
+// Option --.
 type Option func(g *Server) error
 
+// WithMuxHandler --.
 func WithMuxHandler(m httpHandler) Option {
 	return func(g *Server) error {
 		g.cfg.handler = m
@@ -17,13 +19,7 @@ func WithMuxHandler(m httpHandler) Option {
 	}
 }
 
-func WithMiddlewares(mw []middleware.Middleware) Option {
-	return func(g *Server) error {
-		g.cfg.middlewares = mw
-		return nil
-	}
-}
-
+// WithHTTPAddr --.
 func WithHTTPAddr(addr string) Option {
 	return func(g *Server) error {
 		g.cfg.httpAddr = addr
