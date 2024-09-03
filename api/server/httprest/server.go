@@ -12,13 +12,6 @@ import (
 
 var _ runtime.Service = (*Server)(nil)
 
-// httpHandler is a functional interface that implements the http handler functionality.
-type httpHandler func(
-	h http.HandlerFunc,
-	w http.ResponseWriter,
-	req *http.Request,
-)
-
 // Config parameters for setting up the http-rest service.
 type config struct {
 	httpAddr string
