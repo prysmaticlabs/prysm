@@ -166,10 +166,10 @@ func createLightClientUpdate(
 	var nextSyncCommitteeBranch [][]byte
 
 	// update_signature_period = compute_sync_committee_period(compute_epoch_at_slot(block.message.slot))
-	updateSignaturePeriod := slots.ToEpoch(block.Block().Slot())
+	updateSignaturePeriod := slots.SyncCommitteePeriod(slots.ToEpoch(block.Block().Slot()))
 
 	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := slots.ToEpoch(result.AttestedHeader.Beacon.Slot)
+	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(result.AttestedHeader.Beacon.Slot))
 
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
