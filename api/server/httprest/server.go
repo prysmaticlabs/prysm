@@ -22,7 +22,6 @@ type httpHandler func(
 // Config parameters for setting up the http-rest service.
 type config struct {
 	httpAddr string
-	handler  httpHandler
 	router   *mux.Router
 	timeout  time.Duration
 }
