@@ -178,7 +178,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 						"direction":   conn.Stat().Direction.String(),
 						"multiAddr":   peerMultiaddrString(conn),
 						"activePeers": len(s.peers.Active()),
-					}).Debug("New peer disconnection")
+					}).Debug("Peer disconnected")
 				}
 			}()
 		},
