@@ -26,7 +26,7 @@ func WithHTTPAddr(addr string) Option {
 	}
 }
 
-// WithRouter --.
+// WithRouter sets the internal router of the server, this is required.
 func WithRouter(r *http.ServeMux) Option {
 	return func(g *Server) error {
 		g.cfg.router = r
