@@ -27,7 +27,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-port` is renamed to http-port.
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
-- Replaced st.GenesisValidatorsRoot() function in some packages with hardcoded value of Genesis validator root
+- Replaced st.GenesisValidatorsRoot() function in p2p and rpc packages with hardcoded value of Genesis validator root
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
