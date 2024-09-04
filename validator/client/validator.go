@@ -1211,32 +1211,18 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	defer span.End()
 	isEpochStart := slots.IsEpochStart(slot)
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
-	validatorStatuses := make([]*validatorStatus, 0)
 	if len(pubkeys) == 0 {
 		return filteredKeys, nil
 	}
 	var err error
 	// repopulate the statuses if epoch start or if a new key is added missing the cache
-	if isEpochStart || len(v.pubkeyToStatus) == 0 /* cache not populated */ {
-		validatorStatuses, err = v.updateValidatorStatusCache(ctx, pubkeys)
+	if isEpochStart || len(v.pubkeyToStatus) != len(pubkeys) /* cache not populated or updated correctly */ {
+		_, err = v.updateValidatorStatusCache(ctx, pubkeys)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to update validator status cache")
 		}
-	} else {
-		// read from cache
-		for _, k := range pubkeys {
-			sta, ok := v.pubkeyToStatus[k]
-			if ok {
-				validatorStatuses = append(validatorStatuses, sta)
-			} else {
-				// should not happen logging just to be safe
-				log.WithFields(logrus.Fields{
-					"pubkey": hexutil.Encode(k[:]),
-				}).Debug("Could not find validator status")
-			}
-		}
 	}
-	for _, s := range validatorStatuses {
+	for k, s := range v.pubkeyToStatus {
 		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 		currActivating := s.status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.status.ActivationEpoch
 
@@ -1244,7 +1230,7 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		exiting := s.status.Status == ethpb.ValidatorStatus_EXITING
 
 		if currActivating || active || exiting {
-			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(s.publicKey))
+			filteredKeys = append(filteredKeys, k)
 		} else {
 			log.WithFields(logrus.Fields{
 				"pubkey": hexutil.Encode(s.publicKey),

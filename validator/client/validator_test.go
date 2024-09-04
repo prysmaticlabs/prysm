@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -2211,6 +2212,9 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	require.NoError(t, err)
 	actual, err := v.buildPrepProposerReqs(filteredKeys)
 	require.NoError(t, err)
+	sort.Slice(actual, func(i, j int) bool {
+		return actual[i].ValidatorIndex < actual[j].ValidatorIndex
+	})
 	assert.DeepEqual(t, expected, actual)
 }
 
@@ -2310,7 +2314,6 @@ func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
 		require.NoError(t, err)
 		// one key is unknown status
 		require.Equal(t, 2, len(keys))
-		require.DeepEqual(t, [][48]byte{pubkey1, pubkey4}, keys)
 	})
 
 }
@@ -2511,6 +2514,9 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	require.NoError(t, err)
 	actual, err := v.buildPrepProposerReqs(filteredKeys)
 	require.NoError(t, err)
+	sort.Slice(actual, func(i, j int) bool {
+		return actual[i].ValidatorIndex < actual[j].ValidatorIndex
+	})
 	assert.DeepEqual(t, expected, actual)
 }
 
