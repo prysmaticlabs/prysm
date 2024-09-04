@@ -102,9 +102,14 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
+	headerJson, err := header.ToRawMessage()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert header to raw message")
+	}
+
 	// Return result
 	result := &structs.LightClientBootstrap{
-		Header:                     header,
+		Header:                     headerJson,
 		CurrentSyncCommittee:       committee,
 		CurrentSyncCommitteeBranch: branch,
 	}
@@ -213,9 +218,14 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
+	headerJson, err := header.ToRawMessage()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert header to raw message")
+	}
+
 	// Return result
 	result := &structs.LightClientBootstrap{
-		Header:                     header,
+		Header:                     headerJson,
 		CurrentSyncCommittee:       committee,
 		CurrentSyncCommitteeBranch: branch,
 	}
@@ -324,9 +334,13 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
+	headerJson, err := header.ToRawMessage()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert header to raw message")
+	}
 	// Return result
 	result := &structs.LightClientBootstrap{
-		Header:                     header,
+		Header:                     headerJson,
 		CurrentSyncCommittee:       committee,
 		CurrentSyncCommitteeBranch: branch,
 	}
@@ -525,11 +539,19 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 	if err != nil {
 		return nil
 	}
+	attestedHeaderJson, err := (&structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputAttestedHeaderBeacon))}).ToRawMessage()
+	if err != nil {
+		return nil
+	}
+	finalizedHeaderJson, err := (&structs.LightClientHeader{Beacon: finalizedHeader}).ToRawMessage()
+	if err != nil {
+		return nil
+	}
 	result := &structs.LightClientUpdate{
-		AttestedHeader:          &structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputAttestedHeaderBeacon))},
+		AttestedHeader:          attestedHeaderJson,
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
-		FinalizedHeader:         &structs.LightClientHeader{Beacon: finalizedHeader},
+		FinalizedHeader:         finalizedHeaderJson,
 		FinalityBranch:          branchToJSON(input.FinalityBranch),
 		SyncAggregate:           syncAggregateToJSON(input.SyncAggregate),
 		SignatureSlot:           strconv.FormatUint(uint64(input.SignatureSlot), 10),
