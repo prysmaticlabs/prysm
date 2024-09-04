@@ -95,7 +95,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 				beaconState.Fork(),
 				0,
 				params.BeaconConfig().DomainBeaconProposer,
-				params.BeaconConfig().GenesisValidatorsRoot[:],
+				beaconState.GenesisValidatorsRoot(),
 			)
 			require.NoError(t, err)
 

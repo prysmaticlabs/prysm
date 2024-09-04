@@ -617,7 +617,7 @@ func Test_processAttestations(t *testing.T) {
 				beaconState.Fork(),
 				0,
 				params.BeaconConfig().DomainBeaconAttester,
-				params.BeaconConfig().GenesisValidatorsRoot[:],
+				beaconState.GenesisValidatorsRoot(),
 			)
 			require.NoError(t, err)
 
