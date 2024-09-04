@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -16,10 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -112,7 +111,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	// initialize router used for endpoints
-	router := newRouter(cliCtx)
+	router := http.NewServeMux()
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
@@ -132,19 +131,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	return validatorClient, nil
-}
-
-func newRouter(cliCtx *cli.Context) *mux.Router {
-	var allowedOrigins []string
-	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
-	}
-	r := mux.NewRouter()
-	r.Use(middleware.NormalizeQueryValuesHandler)
-	r.Use(middleware.CorsHandler(allowedOrigins))
-	return r
 }
 
 // Start every service in the validator client.
@@ -242,7 +228,7 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	return dataDir, dataFile, nil
 }
 
-func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Router) error {
+func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *http.ServeMux) error {
 	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
 	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
 
@@ -286,7 +272,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 	return nil
 }
 
-func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
+func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *http.ServeMux) error {
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		// Custom Check For Web3Signer
 		c.wallet = wallet.NewWalletForWeb3Signer(cliCtx)
@@ -581,7 +567,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*proposer.Sett
 	return l.Load(cliCtx)
 }
 
-func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
+func (c *ValidatorClient) registerRPCService(router *http.ServeMux) error {
 	var vs *client.ValidatorService
 	if err := c.services.FetchService(&vs); err != nil {
 		return err

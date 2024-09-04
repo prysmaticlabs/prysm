@@ -21,7 +21,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
-	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -111,7 +110,7 @@ type Builder struct {
 	prevBeaconRoot []byte
 	currPayload    interfaces.ExecutionData
 	blobBundle     *v1.BlobsBundle
-	mux            *gMux.Router
+	mux            *http.ServeMux
 	validatorMap   map[string]*eth.ValidatorRegistrationV1
 	valLock        sync.RWMutex
 	srv            *http.Server
@@ -141,9 +140,8 @@ func New(opts ...Option) (*Builder, error) {
 	if err != nil {
 		return nil, err
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/", p)
-	router := gMux.NewRouter()
+	router := http.NewServeMux()
+	router.Handle("/", p)
 	router.HandleFunc(statusPath, func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})
@@ -152,7 +150,7 @@ func New(opts ...Option) (*Builder, error) {
 	router.HandleFunc(blindedPath, p.handleBlindedBlock)
 	addr := net.JoinHostPort(p.cfg.builderHost, strconv.Itoa(p.cfg.builderPort))
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           router,
 		Addr:              addr,
 		ReadHeaderTimeout: time.Second,
 	}
@@ -303,13 +301,12 @@ func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
 }
 
 func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) {
-	urlParams := gMux.Vars(req)
-	pHash := urlParams["parent_hash"]
+	pHash := req.PathValue("parent_hash")
 	if pHash == "" {
 		http.Error(w, "no valid parent hash", http.StatusBadRequest)
 		return
 	}
-	reqSlot := urlParams["slot"]
+	reqSlot := req.PathValue("slot")
 	if reqSlot == "" {
 		http.Error(w, "no valid slot provided", http.StatusBadRequest)
 		return

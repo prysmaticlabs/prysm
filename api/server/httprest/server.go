@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 )
 
@@ -14,9 +14,10 @@ var _ runtime.Service = (*Server)(nil)
 
 // Config parameters for setting up the http-rest service.
 type config struct {
-	httpAddr string
-	router   *mux.Router
-	timeout  time.Duration
+	httpAddr    string
+	middlewares []middleware.Middleware
+	router      http.Handler
+	timeout     time.Duration
 }
 
 // Server serves HTTP traffic.
@@ -48,7 +49,7 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 		defaultReadHeaderTimeout = g.cfg.timeout
 		handler = http.TimeoutHandler(g.cfg.router, g.cfg.timeout, "request timed out")
 	} else {
-		handler = g.cfg.router
+		handler = middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	}
 	g.server = &http.Server{
 		Addr:              g.cfg.httpAddr,

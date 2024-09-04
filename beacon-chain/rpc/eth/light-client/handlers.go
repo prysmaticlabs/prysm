@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -27,7 +26,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 	defer span.End()
 
 	// Get the block
-	blockRootParam, err := hexutil.Decode(mux.Vars(req)["block_root"])
+	blockRootParam, err := hexutil.Decode(req.PathValue("block_root"))
 	if err != nil {
 		httputil.HandleError(w, "invalid block root: "+err.Error(), http.StatusBadRequest)
 		return
