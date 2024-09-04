@@ -26,13 +26,13 @@ You can use `bazel run //cmd/prysmctl -- testnet generate-genesis` to create a d
 - **--genesis-time** uint: Unix timestamp used as the genesis time in the generated genesis state (defaults to now)
 - **--num-validators** int: Number of validators to deterministically include in the generated genesis state
 - **--output-ssz** string: Output filename of the SSZ marshaling of the generated genesis state
-- **--config-name=interop** string: name of the beacon chain config to use when generating the state. ex mainnet|minimal|interop
+- **--chain-config-file** string: Filepath to a chain config yaml file.
 
 The example below creates 64 validator keys, instantiates a genesis state with those 64 validators and with genesis unix timestamp 1567542540,
 and finally writes a ssz encoded output to ~/Desktop/genesis.ssz.
 
 ```
-bazel run //cmd/prysmctl -- testnet generate-genesis --config-name interop --output-ssz ~/Desktop/genesis.ssz --num-validators 64 --genesis-time 1567542540
+bazel run //cmd/prysmctl -- testnet generate-genesis --chain-config-file ~/Desktop/interop.yaml --output-ssz ~/Desktop/genesis.ssz --num-validators 64 --genesis-time 1567542540
 ```
 
 ## Launching a Beacon Node + Validator Client
@@ -48,7 +48,8 @@ bazel run //beacon-chain -- \
 --datadir=/tmp/beacon-chain-interop \
 --force-clear-db \
 --min-sync-peers=0 \
---genesis-ssz=~/Desktop/genesis.ssz
+--genesis-ssz=~/Desktop/genesis.ssz \
+--chain-config-file=~/Desktop/interop.yaml
 ```
 
 This will deterministically generate a beacon genesis state and start
