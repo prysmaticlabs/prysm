@@ -106,24 +106,24 @@ var (
 	}
 	// HTTPServerHost specifies a HTTP server host for the validator client.
 	HTTPServerHost = &cli.StringFlag{
-		Name:    "http-host",
+		Name:    "grpc-gateway-host",
 		Usage:   "Host on which the HTTP server runs on.",
 		Value:   DefaultHTTPServerHost,
-		Aliases: []string{"grpc-gateway-host"},
+		Aliases: []string{"http-host"},
 	}
 	// HTTPServerPort enables a HTTP server port to be exposed for the validator client.
 	HTTPServerPort = &cli.IntFlag{
-		Name:    "http-port",
+		Name:    "grpc-gateway-port",
 		Usage:   "Port on which the HTTP server runs on.",
 		Value:   7500,
-		Aliases: []string{"grpc-gateway-port"},
+		Aliases: []string{"http-port"},
 	}
 	// HTTPServerCorsDomain adds accepted cross origin request addresses.
 	HTTPServerCorsDomain = &cli.StringFlag{
-		Name:    "corsdomain",
+		Name:    "grpc-gateway-corsdomain",
 		Usage:   `Comma separated list of domains from which to accept cross origin requests (browser enforced).`,
 		Value:   "http://localhost:7500,http://127.0.0.1:7500,http://0.0.0.0:7500,http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://127.0.0.1:4200,http://0.0.0.0:4200,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
-		Aliases: []string{"grpc-gateway-corsdomain"},
+		Aliases: []string{"corsdomain"},
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
