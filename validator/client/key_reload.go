@@ -6,9 +6,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 )
 
@@ -18,26 +16,9 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 	ctx, span := trace.StartSpan(ctx, "validator.HandleKeyReload")
 	defer span.End()
 
-	statusRequestKeys := make([][]byte, len(currentKeys))
-	for i := range currentKeys {
-		statusRequestKeys[i] = currentKeys[i][:]
-	}
-	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &eth.MultipleValidatorStatusRequest{
-		PublicKeys: statusRequestKeys,
-	})
+	statuses, err := v.updateValidatorStatusCache(ctx, currentKeys)
 	if err != nil {
 		return false, err
-	}
-	statuses := make([]*validatorStatus, len(resp.Statuses))
-	for i, s := range resp.Statuses {
-		status := &validatorStatus{
-			publicKey: resp.PublicKeys[i],
-			status:    s,
-			index:     resp.Indices[i],
-		}
-		statuses[i] = status
-		// update cache
-		v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = status
 	}
 
 	// "-1" indicates that validator count endpoint is not supported by the beacon node.

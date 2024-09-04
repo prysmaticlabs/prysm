@@ -1210,51 +1210,32 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	ctx, span := trace.StartSpan(ctx, "validator.filterAndCacheActiveKeys")
 	defer span.End()
 	isEpochStart := slots.IsEpochStart(slot)
-	validatorStatusUnpopulated := false
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
-	statusRequestKeys := make([][]byte, 0)
 	validatorStatuses := make([]*validatorStatus, 0)
-	for _, k := range pubkeys {
-		sta, ok := v.pubkeyToStatus[k]
-		if ok {
-			validatorStatuses = append(validatorStatuses, sta)
-		} else {
-			validatorStatusUnpopulated = true
-		}
-		statusRequestKeys = append(statusRequestKeys, k[:])
+	if len(pubkeys) == 0 {
+		return filteredKeys, nil
 	}
+	var err error
 	// repopulate the statuses if epoch start or if a new key is added missing the cache
-	if isEpochStart || validatorStatusUnpopulated {
-		resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
-			PublicKeys: statusRequestKeys,
-		})
+	if isEpochStart || len(v.pubkeyToStatus) == 0 /* cache not populated */ {
+		validatorStatuses, err = v.updateValidatorStatusCache(ctx, pubkeys)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to update validator status cache")
 		}
-		if resp == nil {
-			return nil, errors.New("response is nil")
-		}
-		if len(resp.Statuses) != len(resp.PublicKeys) {
-			return nil, fmt.Errorf("expected %d pubkeys in status, received %d", len(resp.Statuses), len(resp.PublicKeys))
-		}
-		if len(resp.Statuses) != len(resp.Indices) {
-			return nil, fmt.Errorf("expected %d indices in status, received %d", len(resp.Statuses), len(resp.Indices))
-		}
-		statuses := make([]*validatorStatus, 0)
-		for i, s := range resp.Statuses {
-			sta := &validatorStatus{
-				publicKey: resp.PublicKeys[i],
-				status:    s,
-				index:     resp.Indices[i],
+	} else {
+		// read from cache
+		for _, k := range pubkeys {
+			sta, ok := v.pubkeyToStatus[k]
+			if ok {
+				validatorStatuses = append(validatorStatuses, sta)
+			} else {
+				// should not happen logging just to be safe
+				log.WithFields(logrus.Fields{
+					"pubkey": hexutil.Encode(k[:]),
+				}).Debug("Could not find validator status")
 			}
-			statuses = append(statuses, sta)
-			// update cache
-			v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = sta
 		}
-		// override the statuses with fresh statuses from the beacon node
-		validatorStatuses = statuses
 	}
-
 	for _, s := range validatorStatuses {
 		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 		currActivating := s.status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.status.ActivationEpoch
@@ -1273,6 +1254,41 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	}
 
 	return filteredKeys, nil
+}
+
+// updateValidatorStatusCache updates the validator statuses cache, a map of keys currently used by the validator client
+func (v *validator) updateValidatorStatusCache(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*validatorStatus, error) {
+	statusRequestKeys := make([][]byte, 0)
+	for _, k := range pubkeys {
+		statusRequestKeys = append(statusRequestKeys, k[:])
+	}
+	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: statusRequestKeys,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, errors.New("response is nil")
+	}
+	if len(resp.Statuses) != len(resp.PublicKeys) {
+		return nil, fmt.Errorf("expected %d pubkeys in status, received %d", len(resp.Statuses), len(resp.PublicKeys))
+	}
+	if len(resp.Statuses) != len(resp.Indices) {
+		return nil, fmt.Errorf("expected %d indices in status, received %d", len(resp.Statuses), len(resp.Indices))
+	}
+	statuses := make([]*validatorStatus, 0)
+	for i, s := range resp.Statuses {
+		sta := &validatorStatus{
+			publicKey: resp.PublicKeys[i],
+			status:    s,
+			index:     resp.Indices[i],
+		}
+		statuses = append(statuses, sta)
+		// update cache
+		v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = sta
+	}
+	return statuses, nil
 }
 
 func (v *validator) buildPrepProposerReqs(activePubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {

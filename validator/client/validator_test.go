@@ -2290,47 +2290,6 @@ func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
 		// one key is unknown status
 		require.Equal(t, 3, len(keys))
 	})
-	t.Run("mid epoch a new key was added, prompting a refetch ", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		ctx := context.Background()
-		client := validatormock.NewMockValidatorClient(ctrl)
-
-		client.EXPECT().MultipleValidatorStatus(
-			gomock.Any(),
-			gomock.Any()).Return(
-			&ethpb.MultipleValidatorStatusResponse{
-				Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_ACTIVE}, {Status: ethpb.ValidatorStatus_UNKNOWN_STATUS}, {Status: ethpb.ValidatorStatus_ACTIVE}},
-				PublicKeys: [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]},
-				Indices:    []primitives.ValidatorIndex{1, 2, unknownIndex, 4},
-			}, nil)
-		v := validator{
-			validatorClient: client,
-			pubkeyToStatus: map[[48]byte]*validatorStatus{
-				pubkey1: {
-					publicKey: pubkey1[:],
-					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
-					index:     1,
-				},
-				pubkey2: {
-					publicKey: pubkey2[:],
-					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
-					index:     2,
-				},
-				pubkey3: {
-					publicKey: pubkey3[:],
-					status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, // gets overridden
-					index:     3,
-				},
-			},
-		}
-		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 5)
-		require.NoError(t, err)
-		// one key is unknown status
-		require.Equal(t, 3, len(keys))
-		require.DeepEqual(t, [][48]byte{pubkey1, pubkey2, pubkey4}, keys)
-	})
 	t.Run("cache used mid epoch, no new keys added", func(t *testing.T) {
 		ctx := context.Background()
 		v := validator{
