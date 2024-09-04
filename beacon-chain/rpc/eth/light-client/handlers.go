@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	light_client "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -26,10 +27,9 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 	ctx, span := trace.StartSpan(req.Context(), "beacon.GetLightClientBootstrap")
 	defer span.End()
 
-	// Get the block
 	blockRootParam, err := hexutil.Decode(mux.Vars(req)["block_root"])
 	if err != nil {
-		httputil.HandleError(w, "invalid block root: "+err.Error(), http.StatusBadRequest)
+		httputil.HandleError(w, "Invalid block root: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -39,22 +39,21 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	// Get the state
-	state, err := s.Stater.StateBySlot(ctx, blk.Block().Slot())
+	st, err := s.Stater.StateBySlot(ctx, blk.Block().Slot())
 	if err != nil {
-		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	bootstrap, err := createLightClientBootstrap(ctx, state)
+	bootstrap, err := light_client.CreateLightClientBootstrap(req.Context(), st)
 	if err != nil {
-		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not create light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	response := &structs.LightClientBootstrapResponse{
 		Version: version.String(blk.Version()),
-		Data:    bootstrap,
+		Data:    structs.LightClientBootstrapFromConsensus(bootstrap),
 	}
 
 	httputil.WriteJson(w, response)

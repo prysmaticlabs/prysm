@@ -2,6 +2,7 @@ package light_client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
@@ -11,8 +12,6 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-
-	"context"
 
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
@@ -55,6 +54,51 @@ func CreateLightClientOptimisticUpdate(update *ethpbv2.LightClientUpdate) *ethpb
 		SyncAggregate:  update.SyncAggregate,
 		SignatureSlot:  update.SignatureSlot,
 	}
+}
+
+// CreateLightClientBootstrap implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
+// def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
+//
+//	assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
+//	assert state.slot == state.latest_block_header.slot
+//
+//	return LightClientBootstrap(
+//	    header=BeaconBlockHeader(
+//	        slot=state.latest_block_header.slot,
+//	        proposer_index=state.latest_block_header.proposer_index,
+//	        parent_root=state.latest_block_header.parent_root,
+//	        state_root=hash_tree_root(state),
+//	        body_root=state.latest_block_header.body_root,
+//	    ),
+//	    current_sync_committee=state.current_sync_committee,
+//	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
+//	)
+func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*ethpbv2.LightClientBootstrap, error) {
+	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
+	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
+		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
+	}
+
+	// assert state.slot == state.latest_block_header.slot
+	latestBlockHeader := state.LatestBlockHeader()
+	if state.Slot() != latestBlockHeader.Slot {
+		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
+	}
+
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
+	}
+	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
+	}
+
+	return &ethpbv2.LightClientBootstrap{
+		Header:                     &ethpbv2.LightClientHeader{Beacon: migration.V1Alpha1HeaderToV1(latestBlockHeader)},
+		CurrentSyncCommittee:       migration.V1Alpha1SyncCommitteeToV2(currentSyncCommittee),
+		CurrentSyncCommitteeBranch: currentSyncCommitteeProof,
+	}, nil
 }
 
 func NewLightClientOptimisticUpdateFromBeaconState(

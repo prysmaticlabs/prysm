@@ -126,7 +126,6 @@ var RPCTopicMappings = map[string]interface{}{
 	// BlobSidecarsByRoot v1 Message
 	RPCBlobSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
 	// Light client
-	// TODO: Handle these in usages of the map
 	RPCLightClientBootstrapTopicV1:        new(p2ptypes.LightClientBootstrapReq),
 	RPCLightClientUpdatesByRangeTopicV1:   new(pb.LightClientUpdatesByRangeReq),
 	RPCLightClientFinalityUpdateTopicV1:   new(interface{}),

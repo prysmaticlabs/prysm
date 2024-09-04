@@ -219,7 +219,7 @@ func init() {
 type LightClientBootstrapReq [fieldparams.RootLength]byte
 
 // MarshalSSZTo marshals the block by roots request with the provided byte slice.
-func (r *LightClientBootstrapReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (r LightClientBootstrapReq) MarshalSSZTo(dst []byte) ([]byte, error) {
 	marshalledObj, err := r.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -228,18 +228,18 @@ func (r *LightClientBootstrapReq) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ Marshals the block by roots request type into the serialized object.
-func (r *LightClientBootstrapReq) MarshalSSZ() ([]byte, error) {
+func (r LightClientBootstrapReq) MarshalSSZ() ([]byte, error) {
 	return r[:], nil
 }
 
 // SizeSSZ returns the size of the serialized representation.
-func (r *LightClientBootstrapReq) SizeSSZ() int {
+func (r LightClientBootstrapReq) SizeSSZ() int {
 	return fieldparams.RootLength
 }
 
 // UnmarshalSSZ unmarshals the provided bytes buffer into the
 // block by roots request object.
-func (r *LightClientBootstrapReq) UnmarshalSSZ(buf []byte) error {
+func (r LightClientBootstrapReq) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
 	if bufLen != fieldparams.RootLength {
 		return errors.Errorf("expected buffer with length of %d but received length %d", fieldparams.RootLength, bufLen)

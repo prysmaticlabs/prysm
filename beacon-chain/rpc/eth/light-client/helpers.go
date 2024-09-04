@@ -38,6 +38,7 @@ import (
 //	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
 //	)
 func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrap, error) {
+
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
