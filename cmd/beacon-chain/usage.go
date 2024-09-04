@@ -186,14 +186,6 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: features.ActiveFlags(features.BeaconChainFlags),
 	},
 	{
-		Name: "interop",
-		Flags: []cli.Flag{
-			genesis.StatePath,
-			flags.InteropGenesisTimeFlag,
-			flags.InteropNumValidatorsFlag,
-		},
-	},
-	{
 		Name: "deprecated",
 		Flags: []cli.Flag{
 			cmd.BackupWebhookOutputDir,

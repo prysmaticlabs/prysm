@@ -27,9 +27,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ### Deprecated
 
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
+- `--interop-genesis-time` and `--interop-num-validators` have been deprecated in the beacon node as the functionality has been removed. These flags have no effect.
 
 ### Removed
 
+- Removed support for starting a beacon node with a determinisitic interop genesis state via interop flags. Alteratively, create a genesis state with prysmctl and use `--genesis-state`.
 
 ### Fixed
 
