@@ -25,14 +25,18 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: Updated block publishing beacon APIs to support Electra.
 - "Submitted builder validator registration settings for custom builders" log message moved to debug level.
 - config: Genesis validator root is now hardcoded in params.BeaconConfig()
+- `grpc-gateway-host` is renamed to http-host. The old name can still be used as an alias.
+- `grpc-gateway-port` is renamed to http-port.
+- `grpc-gateway-corsdomain` is renamed to http-cors-domain.
+- `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
 
 ### Deprecated
-
-- `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out
-  with `--disable-experimental-state`.
+- `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
+- `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
 
 ### Removed
+- removed gRPC Gateway
 
 ### Fixed
 
@@ -41,6 +45,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: build blocks with blobs.
 - E2E: fixed gas limit at genesis
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
+- Core: Fix process effective balance update to safe copy validator for Electra.
 
 ### Security
 
