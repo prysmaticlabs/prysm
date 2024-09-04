@@ -46,12 +46,15 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
+- `--interop-genesis-time` and `--interop-num-validators` have been deprecated in the beacon node as the functionality has been removed. These flags have no effect.
 
 ### Removed
 
 - removed gRPC Gateway
 - Removed unused blobs bundle cache
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
+- Removed support for starting a beacon node with a determinisitic interop genesis state via interop flags. Alteratively, create a genesis state with prysmctl and use `--genesis-state`.
+
 
 ### Fixed
 
