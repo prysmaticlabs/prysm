@@ -11,6 +11,7 @@ import (
 // Option is a http rest server functional parameter type.
 type Option func(g *Server) error
 
+// WithMiddlewares sets the list of middlewares to be applied on routes.
 func WithMiddlewares(mw []middleware.Middleware) Option {
 	return func(g *Server) error {
 		g.cfg.middlewares = mw
