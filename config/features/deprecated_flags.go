@@ -72,6 +72,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedInteropMockEth1DataVotesFlag = &cli.BoolFlag{
+		Name:   "interop-eth1data-votes",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -89,6 +94,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableExperimentalState,
 	deprecatedInteropGenesisTimeFlag,
 	deprecatedInteropNumValidatorsFlag,
+	deprecatedInteropMockEth1DataVotesFlag,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

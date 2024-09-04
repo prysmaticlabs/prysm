@@ -67,7 +67,6 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	BlobReceiver           blockchain.BlobReceiver
-	MockEth1Votes          bool
 	Eth1BlockFetcher       execution.POWBlockFetcher
 	PendingDepositsFetcher depositsnapshot.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier

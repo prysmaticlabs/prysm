@@ -112,7 +112,6 @@ type Config struct {
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
 	GenesisFetcher                blockchain.GenesisFetcher
-	MockEth1Votes                 bool
 	EnableDebugRPCEndpoints       bool
 	AttestationsPool              attestations.Pool
 	ExitPool                      voluntaryexits.PoolManager
@@ -251,7 +250,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		P2P:                    s.cfg.Broadcaster,
 		BlockReceiver:          s.cfg.BlockReceiver,
 		BlobReceiver:           s.cfg.BlobReceiver,
-		MockEth1Votes:          s.cfg.MockEth1Votes,
 		Eth1BlockFetcher:       s.cfg.ExecutionChainService,
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,

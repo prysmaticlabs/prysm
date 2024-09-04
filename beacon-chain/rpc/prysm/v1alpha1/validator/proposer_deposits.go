@@ -79,10 +79,6 @@ func (vs *Server) deposits(
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
 	defer span.End()
 
-	if vs.MockEth1Votes {
-		return []*ethpb.Deposit{}, nil
-	}
-
 	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 		log.Warn("not connected to eth1 node, skip pending deposit insertion")
 		return []*ethpb.Deposit{}, nil
