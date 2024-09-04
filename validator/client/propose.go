@@ -56,7 +56,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
-	span.AddAttributes(trace.StringAttribute("validator", fmtKey))
+	span.SetAttributes(trace.StringAttribute("validator", fmtKey))
 	log := log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	// Sign randao reveal, it's used to request block from beacon node
@@ -171,7 +171,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
 		trace.Int64Attribute("numDeposits", int64(len(blk.Block().Body().Deposits()))),
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
@@ -287,7 +287,7 @@ func ProposeExit(
 		return errors.Wrap(err, "failed to propose voluntary exit")
 	}
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.StringAttribute("exitRoot", fmt.Sprintf("%#x", exitResp.ExitRoot)),
 	)
 	return nil

@@ -149,7 +149,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				"builderBoostFactor":   builderBoostFactor,
 			}).Warn("Proposer: using local execution payload because higher value")
 		}
-		span.AddAttributes(
+		span.SetAttributes(
 			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
 			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),         // lint:ignore uintcast -- This is OK for tracing.
 			trace.Int64Attribute("localBoostPercentage", int64(boost)),            // lint:ignore uintcast -- This is OK for tracing.
@@ -292,7 +292,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 	l.Info("Received header with bid")
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.StringAttribute("value", primitives.WeiToBigInt(v).String()),
 		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
 		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),

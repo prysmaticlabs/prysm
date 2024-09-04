@@ -50,7 +50,7 @@ const (
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	span.SetAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), req.Slot)
 	if err != nil {
