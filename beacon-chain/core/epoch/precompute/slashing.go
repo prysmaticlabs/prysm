@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
@@ -43,17 +44,17 @@ func ProcessSlashingsPrecompute(s state.BeaconState, pBal *Balance) error {
 	}
 
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	validatorFunc := func(idx int, val state.ReadOnlyValidator) error {
+	validatorFunc := func(idx int, val state.ReadOnlyValidator) (newVal *ethpb.Validator, err error) {
 		correctEpoch := epochToWithdraw == val.WithdrawableEpoch()
 		if val.Slashed() && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance() / increment * minSlashing
 			penalty := penaltyNumerator / pBal.ActiveCurrentEpoch * increment
 			if err = helpers.DecreaseBalance(s, primitives.ValidatorIndex(idx), penalty); err != nil {
-				return err
+				return
 			}
 		}
-		return nil
+		return
 	}
 
-	return s.ReadFromEveryValidator(validatorFunc)
+	return s.ApplyToEveryValidator(validatorFunc)
 }
