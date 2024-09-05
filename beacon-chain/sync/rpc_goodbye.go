@@ -67,6 +67,11 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
 		log.WithError(err).Debug("Error when disconnecting with bad peer")
 	}
+
+	log.WithFields(logrus.Fields{
+		"peerID": id,
+		"reason": "bad peer",
+	}).Debug("Peer disconnected")
 }
 
 // A custom goodbye method that is used by our connection handler, in the

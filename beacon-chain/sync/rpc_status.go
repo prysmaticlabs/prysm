@@ -25,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// maintainPeerStatuses by infrequently polling peers for their latest status.
+// maintainPeerStatuses maintain peer statuses by polling peers for their latest status twice per epoch.
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
 	interval := time.Duration(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
@@ -43,6 +43,10 @@ func (s *Service) maintainPeerStatuses() {
 						log.WithError(err).Debug("Error when disconnecting with peer")
 					}
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
+					log.WithFields(logrus.Fields{
+						"peer":   id,
+						"reason": "maintain peer statuses - peer is not connected",
+					}).Debug("Peer disconnected")
 					return
 				}
 				// Disconnect from peers that are considered bad by any of the registered scorers.
@@ -73,6 +77,12 @@ func (s *Service) maintainPeerStatuses() {
 			if err := s.sendGoodByeAndDisconnect(s.ctx, p2ptypes.GoodbyeCodeTooManyPeers, id); err != nil {
 				log.WithField("peer", id).WithError(err).Debug("Could not disconnect with peer")
 			}
+
+			log.WithFields(logrus.Fields{
+				"peer":   id,
+				"reason": "to be pruned",
+			}).Debug("Peer disconnected")
+
 		}
 	})
 }
