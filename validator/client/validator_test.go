@@ -355,6 +355,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		km:               newMockKeymanager(t, kp),
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
@@ -939,8 +940,8 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					},
 				},
 			}
-
-			active := v.checkAndLogValidatorStatus([]*validatorStatus{test.status}, 100)
+			v.pubkeyToStatus[bytesutil.ToBytes48(test.status.publicKey)] = test.status
+			active := v.checkAndLogValidatorStatus(100)
 			require.Equal(t, test.active, active)
 			if test.log != "" {
 				require.LogsContain(t, hook, test.log)
