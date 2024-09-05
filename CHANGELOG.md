@@ -24,8 +24,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - "Submitted builder validator registration settings for custom builders" log message moved to debug level.
 - config: Genesis validator root is now hardcoded in params.BeaconConfig()
 - `grpc-gateway-host` is renamed to http-host. The old name can still be used as an alias.
-- `grpc-gateway-port` is renamed to http-port.
-- `grpc-gateway-corsdomain` is renamed to http-cors-domain.
+- `grpc-gateway-port` is renamed to http-port. The old name can still be used as an alias.
+- `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 
 ### Deprecated
