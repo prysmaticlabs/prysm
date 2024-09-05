@@ -53,7 +53,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - removed gRPC Gateway
 - Removed unused blobs bundle cache
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
-- Removed support for starting a beacon node with a determinisitic interop genesis state via interop flags. Alteratively, create a genesis state with prysmctl and use `--genesis-state`.
+- Removed support for starting a beacon node with a determinisitic interop genesis state via interop flags. Alteratively, create a genesis state with prysmctl and use `--genesis-state`. This removes about 8Mb of unnecessary code and dependencies from the final production binary.
 
 
 ### Fixed
