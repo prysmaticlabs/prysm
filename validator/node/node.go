@@ -6,8 +6,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -19,10 +17,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/gateway"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -35,7 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
-	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"github.com/prysmaticlabs/prysm/v5/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v5/runtime/prereqs"
@@ -50,10 +45,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v5/validator/rpc"
-	"github.com/prysmaticlabs/prysm/v5/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -143,10 +136,10 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
+	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
 	} else {
-		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
+		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 	r := mux.NewRouter()
 	r.Use(middleware.NormalizeQueryValuesHandler)
@@ -289,9 +282,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		if err := c.registerRPCService(router); err != nil {
 			return err
 		}
-		if err := c.registerRPCGatewayService(router); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -332,12 +322,10 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 	if err := c.registerRPCService(router); err != nil {
 		return err
 	}
-	if err := c.registerRPCGatewayService(router); err != nil {
-		return err
-	}
-	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
-	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
-	webAddress := fmt.Sprintf("http://%s:%d", gatewayHost, gatewayPort)
+
+	host := cliCtx.String(flags.HTTPServerHost.Name)
+	port := cliCtx.Int(flags.HTTPServerPort.Name)
+	webAddress := fmt.Sprintf("http://%s:%d", host, port)
 	log.WithField("address", webAddress).Info(
 		"Starting Prysm web UI on address, open in browser to access",
 	)
@@ -560,8 +548,8 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
 		}
-
-		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0 {
+		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
 			if len(publicKeysSlice) == 1 {
 				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
 				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
@@ -608,11 +596,18 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 			authTokenPath = filepath.Join(walletDir, api.AuthTokenFileName)
 		}
 	}
+	host := c.cliCtx.String(flags.HTTPServerHost.Name)
+	if host != flags.DefaultHTTPServerHost {
+		log.WithField("webHost", host).Warn(
+			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
+				"changing this parameter if you are exposing this host to the Internet!",
+		)
+	}
+	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
+
 	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
-		Host:                   c.cliCtx.String(flags.RPCHost.Name),
-		Port:                   fmt.Sprintf("%d", c.cliCtx.Int(flags.RPCPort.Name)),
-		GRPCGatewayHost:        c.cliCtx.String(flags.GRPCGatewayHost.Name),
-		GRPCGatewayPort:        c.cliCtx.Int(flags.GRPCGatewayPort.Name),
+		HTTPHost:               host,
+		HTTPPort:               port,
 		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
 		GRPCRetries:            c.cliCtx.Uint(flags.GRPCRetriesFlag.Name),
 		GRPCRetryDelay:         c.cliCtx.Duration(flags.GRPCRetryDelayFlag.Name),
@@ -630,82 +625,6 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		Router:                 router,
 	})
 	return c.services.RegisterService(s)
-}
-
-func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
-	gatewayHost := c.cliCtx.String(flags.GRPCGatewayHost.Name)
-	if gatewayHost != flags.DefaultGatewayHost {
-		log.WithField("webHost", gatewayHost).Warn(
-			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
-				"changing this parameter if you are exposing this host to the Internet!",
-		)
-	}
-	gatewayPort := c.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	rpcHost := c.cliCtx.String(flags.RPCHost.Name)
-	rpcPort := c.cliCtx.Int(flags.RPCPort.Name)
-	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
-	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
-	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
-	var allowedOrigins []string
-	if c.cliCtx.IsSet(flags.GRPCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(c.cliCtx.String(flags.GRPCGatewayCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.GRPCGatewayCorsDomain.Value, ",")
-	}
-	maxCallSize := c.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-
-	registrations := []gateway.PbHandlerRegistration{
-		pb.RegisterHealthHandler,
-	}
-	gwmux := gwruntime.NewServeMux(
-		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
-			Marshaler: &gwruntime.JSONPb{
-				MarshalOptions: protojson.MarshalOptions{
-					EmitUnpopulated: true,
-					UseProtoNames:   true,
-				},
-				UnmarshalOptions: protojson.UnmarshalOptions{
-					DiscardUnknown: true,
-				},
-			},
-		}),
-		gwruntime.WithMarshalerOption(
-			api.EventStreamMediaType, &gwruntime.EventSourceJSONPb{}, // TODO: remove this
-		),
-		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
-	)
-
-	muxHandler := func(h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
-		// The validator gateway handler requires this special logic as it serves the web APIs and the web UI.
-		if strings.HasPrefix(req.URL.Path, "/api") {
-			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
-			// Else, we handle with the Prysm API gateway without a middleware.
-			h(w, req)
-		} else {
-			// Finally, we handle with the web server.
-			web.Handler(w, req)
-		}
-	}
-
-	pbHandler := &gateway.PbMux{
-		Registrations: registrations,
-		Mux:           gwmux,
-	}
-	opts := []gateway.Option{
-		gateway.WithMuxHandler(muxHandler),
-		gateway.WithRouter(router), // note some routes are registered in server.go
-		gateway.WithRemoteAddr(rpcAddr),
-		gateway.WithGatewayAddr(gatewayAddress),
-		gateway.WithMaxCallRecvMsgSize(maxCallSize),
-		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
-		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithTimeout(uint64(timeout)),
-	}
-	gw, err := gateway.New(c.cliCtx.Context, opts...)
-	if err != nil {
-		return err
-	}
-	return c.services.RegisterService(gw)
 }
 
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {

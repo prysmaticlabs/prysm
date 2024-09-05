@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -42,6 +42,7 @@ func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	genesisTime := uint64(time.Unix(genesis.GenesisTime.Seconds, 0).Unix())
 	address := genesis.DepositContractAddress
+
 	chainHead, err := s.chainClient.ChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "ChainHead").Error(), http.StatusInternalServerError)
