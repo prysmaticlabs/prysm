@@ -39,6 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
@@ -74,6 +75,15 @@ var (
 
 // Common type for functional p2p validation options.
 type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
+
+type lcFinalityUpdateInfo struct {
+	slot             primitives.Slot
+	hasSupermajority bool
+}
+
+type lcOptimisticUpdateInfo struct {
+	slot primitives.Slot
+}
 
 // config to hold dependencies for the sync service.
 type config struct {
@@ -158,6 +168,10 @@ type Service struct {
 	newBlobVerifier                  verification.NewBlobVerifier
 	availableBlocker                 coverage.AvailableBlocker
 	ctxMap                           ContextByteVersions
+	lcFinalityUpdateLock             sync.Mutex
+	lastFCFinalityUpdate             *lcFinalityUpdateInfo
+	lcOptimisticUpdateLock           sync.Mutex
+	lastFCOptimisticUpdate           *lcOptimisticUpdateInfo
 }
 
 // NewService initializes new regular sync service.

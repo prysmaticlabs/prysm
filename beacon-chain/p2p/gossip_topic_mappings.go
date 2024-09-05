@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -22,6 +23,8 @@ var gossipTopicMappings = map[string]func() proto.Message{
 	SyncCommitteeSubnetTopicFormat:            func() proto.Message { return &ethpb.SyncCommitteeMessage{} },
 	BlsToExecutionChangeSubnetTopicFormat:     func() proto.Message { return &ethpb.SignedBLSToExecutionChange{} },
 	BlobSubnetTopicFormat:                     func() proto.Message { return &ethpb.BlobSidecar{} },
+	LightClientFinalityUpdateTopicFormat:      func() proto.Message { return &eth.LightClientFinalityUpdate{} },
+	LightClientOptimisticUpdateTopicFormat:    func() proto.Message { return &eth.LightClientOptimisticUpdate{} },
 }
 
 // GossipTopicMappings is a function to return the assigned data type

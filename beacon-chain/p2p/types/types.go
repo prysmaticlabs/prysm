@@ -5,17 +5,20 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
 	"sort"
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-const rootLength = 32
-
-const maxErrorLength = 256
+const (
+	maxErrorLength                     = 256
+	lightClientUpdatesByRangeReqLength = 16
+)
 
 // SSZBytes is a bytes slice that satisfies the fast-ssz interface.
 type SSZBytes []byte
@@ -34,7 +37,7 @@ func (b *SSZBytes) HashTreeRootWith(hh *ssz.Hasher) error {
 }
 
 // BeaconBlockByRootsReq specifies the block by roots request type.
-type BeaconBlockByRootsReq [][rootLength]byte
+type BeaconBlockByRootsReq [][fieldparams.RootLength]byte
 
 // MarshalSSZTo marshals the block by roots request with the provided byte slice.
 func (r *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {
@@ -59,25 +62,25 @@ func (r *BeaconBlockByRootsReq) MarshalSSZ() ([]byte, error) {
 
 // SizeSSZ returns the size of the serialized representation.
 func (r *BeaconBlockByRootsReq) SizeSSZ() int {
-	return len(*r) * rootLength
+	return len(*r) * fieldparams.RootLength
 }
 
 // UnmarshalSSZ unmarshals the provided bytes buffer into the
 // block by roots request object.
 func (r *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
-	maxLength := int(params.BeaconConfig().MaxRequestBlocks * rootLength)
+	maxLength := int(params.BeaconConfig().MaxRequestBlocks * fieldparams.RootLength)
 	if bufLen > maxLength {
 		return errors.Errorf("expected buffer with length of up to %d but received length %d", maxLength, bufLen)
 	}
-	if bufLen%rootLength != 0 {
+	if bufLen%fieldparams.RootLength != 0 {
 		return ssz.ErrIncorrectByteSize
 	}
-	numOfRoots := bufLen / rootLength
-	roots := make([][rootLength]byte, 0, numOfRoots)
+	numOfRoots := bufLen / fieldparams.RootLength
+	roots := make([][fieldparams.RootLength]byte, 0, numOfRoots)
 	for i := 0; i < numOfRoots; i++ {
-		var rt [rootLength]byte
-		copy(rt[:], buf[i*rootLength:(i+1)*rootLength])
+		var rt [fieldparams.RootLength]byte
+		copy(rt[:], buf[i*fieldparams.RootLength:(i+1)*fieldparams.RootLength])
 		roots = append(roots, rt)
 	}
 	*r = roots
@@ -210,4 +213,77 @@ func (s BlobSidecarsByRootReq) Len() int {
 func init() {
 	sizer := &eth.BlobIdentifier{}
 	blobIdSize = sizer.SizeSSZ()
+}
+
+// LightClientBootstrapReq specifies the light client bootstrap request type.
+type LightClientBootstrapReq [fieldparams.RootLength]byte
+
+// MarshalSSZTo marshals the block by roots request with the provided byte slice.
+func (r LightClientBootstrapReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalledObj, err := r.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalledObj...), nil
+}
+
+// MarshalSSZ Marshals the block by roots request type into the serialized object.
+func (r LightClientBootstrapReq) MarshalSSZ() ([]byte, error) {
+	return r[:], nil
+}
+
+// SizeSSZ returns the size of the serialized representation.
+func (r LightClientBootstrapReq) SizeSSZ() int {
+	return fieldparams.RootLength
+}
+
+// UnmarshalSSZ unmarshals the provided bytes buffer into the
+// block by roots request object.
+func (r LightClientBootstrapReq) UnmarshalSSZ(buf []byte) error {
+	bufLen := len(buf)
+	if bufLen != fieldparams.RootLength {
+		return errors.Errorf("expected buffer with length of %d but received length %d", fieldparams.RootLength, bufLen)
+	}
+	copy(r[:], buf)
+	return nil
+}
+
+// LightClientUpdatesByRangeReq specifies the block by roots request type.
+type LightClientUpdatesByRangeReq struct {
+	startPeriod uint64
+	count       uint64
+}
+
+// MarshalSSZTo marshals the light client updates by range request with the provided byte slice.
+func (r *LightClientUpdatesByRangeReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalledObj, err := r.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, marshalledObj...), nil
+}
+
+// MarshalSSZ Marshals the light client updates by range request type into the serialized object.
+func (r *LightClientUpdatesByRangeReq) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, 0, r.SizeSSZ())
+	binary.LittleEndian.AppendUint64(buf, r.startPeriod)
+	binary.LittleEndian.AppendUint64(buf, r.count)
+	return buf, nil
+}
+
+// SizeSSZ returns the size of the serialized representation.
+func (r *LightClientUpdatesByRangeReq) SizeSSZ() int {
+	return lightClientUpdatesByRangeReqLength
+}
+
+// UnmarshalSSZ unmarshals the provided bytes buffer into the
+// block by roots request object.
+func (r *LightClientUpdatesByRangeReq) UnmarshalSSZ(buf []byte) error {
+	bufLen := len(buf)
+	if bufLen != lightClientUpdatesByRangeReqLength {
+		return errors.Errorf("expected buffer with length of %d but received length %d", lightClientUpdatesByRangeReqLength, bufLen)
+	}
+	r.startPeriod = binary.LittleEndian.Uint64(buf[0:8])
+	r.count = binary.LittleEndian.Uint64(buf[8:16])
+	return nil
 }

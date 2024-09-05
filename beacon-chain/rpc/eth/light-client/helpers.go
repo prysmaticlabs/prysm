@@ -38,6 +38,7 @@ import (
 //	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
 //	)
 func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrap, error) {
+
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
@@ -328,11 +329,10 @@ func IsFinalityUpdate(update *v2.LightClientUpdate) bool {
 }
 
 func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) bool {
-	maxActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Len()
 	newNumActiveParticipants := newUpdate.SyncAggregate.SyncCommitteeBits.Count()
 	oldNumActiveParticipants := oldUpdate.SyncAggregate.SyncCommitteeBits.Count()
-	newHasSupermajority := newNumActiveParticipants*3 >= maxActiveParticipants*2
-	oldHasSupermajority := oldNumActiveParticipants*3 >= maxActiveParticipants*2
+	newHasSupermajority := newUpdate.HasSupermajority()
+	oldHasSupermajority := oldUpdate.HasSupermajority()
 
 	if newHasSupermajority != oldHasSupermajority {
 		return newHasSupermajority
