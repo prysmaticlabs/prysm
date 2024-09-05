@@ -228,3 +228,33 @@ func TestConfigureInterop(t *testing.T) {
 		})
 	}
 }
+
+func TestAliasFlag(t *testing.T) {
+	// Define the flag with an alias
+	myFlag := &cli.StringFlag{
+		Name:    "config",
+		Aliases: []string{"c"},
+		Usage:   "Load configuration from `FILE`",
+	}
+
+	// Create a new app with the flag
+	app := &cli.App{
+		Flags: []cli.Flag{myFlag},
+		Action: func(c *cli.Context) error {
+			// Test if the alias ("c") works and sets the flag correctly
+			if c.IsSet("config") {
+				return nil
+			}
+			return cli.Exit("Alias or flag not set", 1)
+		},
+	}
+
+	// Simulate command line arguments that include the alias
+	args := []string{"app", "--c", "config.yml"}
+
+	// Run the app with the simulated arguments
+	err := app.Run(args)
+
+	// Check if the alias set the flag correctly
+	assert.NoError(t, err)
+}
