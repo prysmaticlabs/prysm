@@ -230,7 +230,6 @@ func TestConfigureInterop(t *testing.T) {
 }
 
 func TestAliasFlag(t *testing.T) {
-
 	// Create a new app with the flag
 	app := &cli.App{
 		Flags: []cli.Flag{flags.HTTPServerHost},
