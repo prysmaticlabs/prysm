@@ -121,10 +121,10 @@ func TestWaitUntilPtcDuty_Reached(t *testing.T) {
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 	timeToSleep := 3 * slots.DivideSlotBy(4)
 
-	twoThirdTime := currentTime.Add(timeToSleep)
+	threeQuartersTime := currentTime.Add(timeToSleep)
 	validator.waitUntilPtcDuty(context.Background(), numOfSlots)
 	currentTime = time.Now()
-	require.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
+	require.Equal(t, threeQuartersTime.Unix(), currentTime.Unix())
 }
 
 func TestWaitUntilPtcDuty_Return(t *testing.T) {
@@ -132,7 +132,7 @@ func TestWaitUntilPtcDuty_Return(t *testing.T) {
 	defer finish()
 	currentTime := time.Now()
 	numOfSlots := primitives.Slot(4)
-	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
+	validator.genesisTime = uint64(currentTime.Unix()) - 2*uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	expectedTime := time.Now()
 	ctx, cancel := context.WithCancel(context.Background())

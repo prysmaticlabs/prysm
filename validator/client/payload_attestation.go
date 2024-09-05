@@ -88,9 +88,9 @@ func (v *validator) signPayloadAttestation(ctx context.Context, p *ethpb.Payload
 	return sig.Marshal(), nil
 }
 
-// waitUntilPtcDuty waits until PTC duty time which is defined as
+// waitUntilPtcDuty waits until PTC duty time which is defined as 3/4 of slot time.
 func (v *validator) waitUntilPtcDuty(ctx context.Context, slot primitives.Slot) {
-	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
+	ctx, span := trace.StartSpan(ctx, "validator.waitUntilPtcDuty")
 	defer span.End()
 
 	startTime := slots.StartTime(v.genesisTime, slot)
