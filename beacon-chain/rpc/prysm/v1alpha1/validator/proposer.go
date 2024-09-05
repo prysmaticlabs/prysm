@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -467,23 +468,22 @@ func (vs *Server) broadcastAndReceiveDataColumns(
 
 	dataColumnsWithholdCount := features.Get().DataColumnsWithholdCount
 
+	withHeldDataColumns := make([]uint64, 0)
+
 	for _, sd := range sidecars {
 		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
 		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
 		sidecar := sd
 
+		if sidecar.ColumnIndex < dataColumnsWithholdCount {
+			withHeldDataColumns = append(withHeldDataColumns, sidecar.ColumnIndex)
+		}
+
 		eg.Go(func() error {
 			// Compute the subnet index based on the column index.
 			subnet := sidecar.ColumnIndex % params.BeaconConfig().DataColumnSidecarSubnetCount
 
-			if sidecar.ColumnIndex < dataColumnsWithholdCount {
-				log.WithFields(logrus.Fields{
-					"root":            fmt.Sprintf("%#x", root),
-					"slot":            slot,
-					"subnet":          subnet,
-					"dataColumnIndex": sidecar.ColumnIndex,
-				}).Warning("Withholding data column")
-			} else {
+			if sidecar.ColumnIndex >= dataColumnsWithholdCount {
 				if err := vs.P2P.BroadcastDataColumn(ctx, subnet, sidecar); err != nil {
 					return errors.Wrap(err, "broadcast data column")
 				}
@@ -503,9 +503,21 @@ func (vs *Server) broadcastAndReceiveDataColumns(
 				Type: operation.DataColumnSidecarReceived,
 				Data: &operation.DataColumnSidecarReceivedData{DataColumn: &verifiedRODataColumn},
 			})
+
 			return nil
 		})
 	}
+
+	if len(withHeldDataColumns) > 0 {
+		slices.Sort[[]uint64](withHeldDataColumns)
+
+		log.WithFields(logrus.Fields{
+			"root":    fmt.Sprintf("%#x", root),
+			"slot":    slot,
+			"indices": withHeldDataColumns,
+		}).Warning("Withholding data columns")
+	}
+
 	return eg.Wait()
 }
 
