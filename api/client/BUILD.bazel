@@ -9,7 +9,10 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/api/client",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_pkg_errors//:go_default_library"],
+    deps = [
+        "@com_github_pkg_errors//:go_default_library",
+        "@io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp//:go_default_library",
+    ],
 )
 
 go_test(
