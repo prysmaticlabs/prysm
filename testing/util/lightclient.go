@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -254,9 +255,9 @@ func (l *TestLightClient) CheckAttestedHeader(update *ethpbv2.LightClientUpdate)
 	require.DeepSSZEqual(l.T, attestedStateRoot[:], updateAttestedHeaderBeacon.StateRoot, "Attested header state root is not equal")
 }
 
-func (l *TestLightClient) CheckSyncAggregate(update *ethpbv2.LightClientUpdate) {
+func (l *TestLightClient) CheckSyncAggregate(sa *ethpbv1.SyncAggregate) {
 	syncAggregate, err := l.Block.Block().Body().SyncAggregate()
 	require.NoError(l.T, err)
-	require.DeepSSZEqual(l.T, syncAggregate.SyncCommitteeBits, update.SyncAggregate.SyncCommitteeBits, "SyncAggregate bits is not equal")
-	require.DeepSSZEqual(l.T, syncAggregate.SyncCommitteeSignature, update.SyncAggregate.SyncCommitteeSignature, "SyncAggregate signature is not equal")
+	require.DeepSSZEqual(l.T, syncAggregate.SyncCommitteeBits, sa.SyncCommitteeBits, "SyncAggregate bits is not equal")
+	require.DeepSSZEqual(l.T, syncAggregate.SyncCommitteeSignature, sa.SyncCommitteeSignature, "SyncAggregate signature is not equal")
 }

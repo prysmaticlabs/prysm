@@ -2004,7 +2004,7 @@ func TestLightClientHandler_GetLightClientEventBlock_NeedFetchParent(t *testing.
 	}
 
 	minSignaturesRequired := uint64(100)
-	eventBlock, err := s.getLightClientEventBlock(ctx, minSignaturesRequired)
+	eventBlock, err := s.suitableBlock(ctx, minSignaturesRequired)
 
 	require.NoError(t, err)
 	require.NotNil(t, eventBlock)

@@ -6,7 +6,6 @@ import (
 	lightClient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -93,8 +92,8 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testin
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
