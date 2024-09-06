@@ -289,7 +289,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinActivationBalance:                  32_000_000_000,
 	MaxConsolidationsRequestsPerPayload:   1,
 	MaxPendingPartialsPerWithdrawalsSweep: 8,
-	MaxPendingDepositsPerEpochProcessing:  16,
+	MaxPendingDepositsPerEpoch:            16,
 	FullExitRequestAmount:                 0,
 	MaxWithdrawalRequestsPerPayload:       16,
 	MaxDepositRequestsPerPayload:          8192, // 2**13 (= 8192)

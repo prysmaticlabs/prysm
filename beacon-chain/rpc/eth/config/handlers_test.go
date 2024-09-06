@@ -150,7 +150,7 @@ func TestGetSpec(t *testing.T) {
 	config.MaxCellsInExtendedMatrix = 91
 	config.UnsetDepositRequestsStartIndex = 92
 	config.MaxDepositRequestsPerPayload = 93
-	config.MaxPendingDepositsPerEpochProcessing = 94
+	config.MaxPendingDepositsPerEpoch = 94
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -530,7 +530,7 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "92", v)
 			case "MAX_DEPOSIT_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "93", v)
-			case "MAX_PENDING_DEPOSITS_PER_EPOCH_PROCESSING":
+			case "MAX_PENDING_DEPOSITS_PER_EPOCH":
 				assert.Equal(t, "94", v)
 			default:
 				t.Errorf("Incorrect key: %s", k)

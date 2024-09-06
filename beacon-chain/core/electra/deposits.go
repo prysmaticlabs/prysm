@@ -186,7 +186,7 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error 
 // Iterating over `pending_deposits` queue this function runs the following checks before applying pending deposit:
 // 1. All Eth1 bridge deposits are processed before the first deposit request gets processed.
 // 2. Deposit position in the queue is finalized.
-// 3. Deposit does not exceed the `MAX_PENDING_DEPOSITS_PER_EPOCH_PROCESSING` limit.
+// 3. Deposit does not exceed the `MAX_PENDING_DEPOSITS_PER_EPOCH` limit.
 // 4. Deposit does not exceed the activation churn limit.
 //
 // Spec definition:
@@ -214,7 +214,7 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, domain []byte) error 
 //	           break
 //
 //	       # Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-//	       if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH_PROCESSING:
+//	       if next_deposit_index >= MAX_PENDING_DEPOSITS_PER_EPOCH:
 //	           break
 //
 //	       # Read validator state
@@ -301,7 +301,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 		}
 
 		// Check if number of processed deposits has not reached the limit, otherwise, stop processing.
-		if nextDepositIndex >= params.BeaconConfig().MaxPendingDepositsPerEpochProcessing {
+		if nextDepositIndex >= params.BeaconConfig().MaxPendingDepositsPerEpoch {
 			break
 		}
 
