@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v5/async"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -55,10 +56,7 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 
 // disconnectBadPeer checks whether peer is considered bad by some scorer, and tries to disconnect
 // the peer, if that is the case. Additionally, disconnection reason is obtained from scorer.
-func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
-	if !s.cfg.p2p.Peers().IsBad(id) {
-		return
-	}
+func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID, peerStatus scorers.PeerStatus) {
 	err := s.cfg.p2p.Peers().Scorers().ValidationError(id)
 	goodbyeCode := p2ptypes.ErrToGoodbyeCode(err)
 	if err == nil {
@@ -68,10 +66,12 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 		log.WithError(err).Debug("Error when disconnecting with bad peer")
 	}
 
-	log.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"peerID": id,
-		"reason": "bad peer",
-	}).Debug("Peer disconnected")
+		"bad":    true,
+	})
+
+	log.WithFields(peerStatus.Details).Debug("Peer disconnected")
 }
 
 // A custom goodbye method that is used by our connection handler, in the

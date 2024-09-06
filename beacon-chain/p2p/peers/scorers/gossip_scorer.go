@@ -50,20 +50,34 @@ func (s *GossipScorer) scoreNoLock(pid peer.ID) float64 {
 	return peerData.GossipScore
 }
 
-// IsBadPeer states if the peer is to be considered bad.
-func (s *GossipScorer) IsBadPeer(pid peer.ID) bool {
+// Status states if the peer is to be considered bad.
+func (s *GossipScorer) Status(pid peer.ID) PeerStatus {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeerNoLock(pid)
+	return s.statusNoLock(pid)
 }
 
-// isBadPeerNoLock is lock-free version of IsBadPeer.
-func (s *GossipScorer) isBadPeerNoLock(pid peer.ID) bool {
+// statusNoLock is lock-free version of IsBadPeer.
+func (s *GossipScorer) statusNoLock(pid peer.ID) PeerStatus {
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
-		return false
+		return PeerStatus{IsBad: false}
 	}
-	return peerData.GossipScore < gossipThreshold
+
+	peerGossipScore := peerData.GossipScore
+	isBad := peerGossipScore < gossipThreshold
+
+	if !isBad {
+		return PeerStatus{IsBad: false}
+	}
+
+	return PeerStatus{
+		IsBad: true,
+		Details: map[string]interface{}{
+			"reason":    "gossip score below threshold",
+			"score":     peerGossipScore,
+			"threshold": gossipThreshold,
+		}}
 }
 
 // BadPeers returns the peers that are considered bad.
@@ -73,7 +87,7 @@ func (s *GossipScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeerNoLock(pid) {
+		if s.statusNoLock(pid).IsBad {
 			badPeers = append(badPeers, pid)
 		}
 	}

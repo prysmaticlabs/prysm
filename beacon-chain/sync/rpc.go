@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
@@ -182,15 +183,22 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
+		remotePeerID := stream.Conn().RemotePeer()
+
 		span.AddAttributes(trace.StringAttribute("topic", topic))
-		span.AddAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().String()))
-		log := log.WithField("peer", stream.Conn().RemotePeer().String()).WithField("topic", string(stream.Protocol()))
+		span.AddAttributes(trace.StringAttribute("peer", remotePeerID.String()))
+		log := log.WithField("peer", remotePeerID).WithField("topic", string(stream.Protocol()))
 
 		// Check before hand that peer is valid.
-		if s.cfg.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
-			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
+		if status := s.cfg.p2p.Peers().Status(remotePeerID); status.IsBad {
+			log = log.WithFields(logrus.Fields{"bad": true, "ban": true}).WithFields(status.Details)
+
+			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, remotePeerID); err != nil {
 				log.WithError(err).Debug("Could not disconnect from peer")
 			}
+
+			log.Debug("Peer disconnected")
+
 			return
 		}
 		// Validate request according to peer limits.

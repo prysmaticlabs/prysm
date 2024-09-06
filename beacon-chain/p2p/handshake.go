@@ -30,7 +30,7 @@ func peerMultiaddrString(conn network.Conn) string {
 func (s *Service) disconnectFromPeer(
 	conn network.Conn,
 	goodByeFunc func(ctx context.Context, id peer.ID) error,
-	reason string,
+	details map[string]interface{},
 ) {
 	// Get the remote peer ID.
 	remotePeerID := conn.RemotePeer()
@@ -53,13 +53,14 @@ func (s *Service) disconnectFromPeer(
 
 	// Get the remaining active peers.
 	activePeerCount := len(s.peers.Active())
-	log.WithFields(logrus.Fields{
+
+	log = log.WithFields(logrus.Fields{
 		"multiaddr":            remotePeerMultiAddr,
 		"direction":            direction,
 		"remainingActivePeers": activePeerCount,
-		"reason":               reason,
-	}).Debug("Peer disconnected")
+	})
 
+	log.WithFields(details).Debug("Peer disconnected")
 	s.peers.SetConnectionState(remotePeerID, peers.PeerDisconnected)
 }
 
@@ -117,8 +118,8 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 				s.peers.Add(nil /* ENR */, remotePeer, conn.RemoteMultiaddr(), conn.Stat().Direction)
 
 				// Defensive check in the event we still get a bad peer.
-				if s.peers.IsBad(remotePeer) {
-					s.disconnectFromPeer(conn, goodByeFunc, "ConnectedF - Bad peer")
+				if status := s.peers.Status(remotePeer); status.IsBad {
+					s.disconnectFromPeer(conn, goodByeFunc, status.Details)
 					return
 				}
 
@@ -149,25 +150,46 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 					// If peer hasn't sent a status request, we disconnect with them
 					if _, err := s.peers.ChainState(remotePeer); errors.Is(err, peerdata.ErrPeerUnknown) || errors.Is(err, peerdata.ErrNoPeerStatus) {
 						statusMessageMissing.Inc()
-						s.disconnectFromPeer(conn, goodByeFunc, fmt.Sprintf("ConnectedF - Chain state: %v", err))
+
+						details := map[string]interface{}{
+							"in":              "ConnectedF",
+							"chainStateError": err,
+						}
+
+						s.disconnectFromPeer(conn, goodByeFunc, details)
 						return
 					}
 
 					if peerExists {
 						updated, err := s.peers.ChainStateLastUpdated(remotePeer)
 						if err != nil {
-							s.disconnectFromPeer(conn, goodByeFunc, fmt.Sprintf("ConnectedF - Chain state last updated: %v", err))
+							details := map[string]interface{}{
+								"in":                         "ConnectedF",
+								"chainStateLastUpdatedError": err,
+							}
+
+							s.disconnectFromPeer(conn, goodByeFunc, details)
 							return
 						}
 
 						// Exit if we don't receive any current status messages from peer.
 						if updated.IsZero() {
-							s.disconnectFromPeer(conn, goodByeFunc, "ConnectedF - Update is zero")
+							details := map[string]interface{}{
+								"in":     "ConnectedF",
+								"reason": "Updated is zero",
+							}
+
+							s.disconnectFromPeer(conn, goodByeFunc, details)
 							return
 						}
 
 						if !updated.After(currentTime) {
-							s.disconnectFromPeer(conn, goodByeFunc, "ConnectedF - Did not update")
+							details := map[string]interface{}{
+								"in":     "ConnectedF",
+								"reason": "Did not update",
+							}
+
+							s.disconnectFromPeer(conn, goodByeFunc, details)
 							return
 						}
 
@@ -178,7 +200,12 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				if err := reqFunc(context.TODO(), conn.RemotePeer()); err != nil && !errors.Is(err, io.EOF) {
-					s.disconnectFromPeer(conn, goodByeFunc, fmt.Sprintf("ConnectedF - Handshake failed: %v", err))
+					details := map[string]interface{}{
+						"in":         "ConnectedF",
+						"reqFuncErr": err,
+					}
+
+					s.disconnectFromPeer(conn, goodByeFunc, details)
 					return
 				}
 				validPeerConnection()
@@ -199,7 +226,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 			log := log.WithFields(logrus.Fields{
 				"multiAddr": remotePeerMultiAddr,
 				"direction": direction,
-				"reason":    "DisconnectedF",
+				"from":      "DisconnectedF",
 			})
 
 			// Must be handled in a goroutine as this callback cannot be blocking.

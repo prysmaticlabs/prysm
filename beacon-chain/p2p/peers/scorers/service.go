@@ -24,7 +24,7 @@ const BadPeerScore = gossipThreshold
 // Scorer defines minimum set of methods every peer scorer must expose.
 type Scorer interface {
 	Score(pid peer.ID) float64
-	IsBadPeer(pid peer.ID) bool
+	Status(pid peer.ID) PeerStatus
 	BadPeers() []peer.ID
 }
 
@@ -47,6 +47,12 @@ type Config struct {
 	BlockProviderScorerConfig *BlockProviderScorerConfig
 	PeerStatusScorerConfig    *PeerStatusScorerConfig
 	GossipScorerConfig        *GossipScorerConfig
+}
+
+// PeerStatus describes if a peer is bad and provides additional details.
+type PeerStatus struct {
+	IsBad   bool
+	Details map[string]interface{}
 }
 
 // NewService provides fully initialized peer scoring service.
@@ -123,27 +129,29 @@ func (s *Service) ScoreNoLock(pid peer.ID) float64 {
 	return math.Round(score*ScoreRoundingFactor) / ScoreRoundingFactor
 }
 
-// IsBadPeer traverses all the scorers to see if any of them classifies peer as bad.
-func (s *Service) IsBadPeer(pid peer.ID) bool {
+// Status traverses all the scorers to see if any of them classifies peer as bad.
+func (s *Service) Status(pid peer.ID) PeerStatus {
 	s.store.RLock()
 	defer s.store.RUnlock()
 	return s.IsBadPeerNoLock(pid)
 }
 
 // IsBadPeerNoLock is a lock-free version of IsBadPeer.
-func (s *Service) IsBadPeerNoLock(pid peer.ID) bool {
-	if s.scorers.badResponsesScorer.isBadPeerNoLock(pid) {
-		return true
+func (s *Service) IsBadPeerNoLock(pid peer.ID) PeerStatus {
+	if status := s.scorers.badResponsesScorer.statusNoLock(pid); status.IsBad {
+		return status
 	}
-	if s.scorers.peerStatusScorer.isBadPeerNoLock(pid) {
-		return true
+
+	if status := s.scorers.peerStatusScorer.statusNoLock(pid); status.IsBad {
+		return status
 	}
+
 	if features.Get().EnablePeerScorer {
-		if s.scorers.gossipScorer.isBadPeerNoLock(pid) {
-			return true
+		if status := s.scorers.gossipScorer.statusNoLock(pid); status.IsBad {
+			return status
 		}
 	}
-	return false
+	return PeerStatus{IsBad: false}
 }
 
 // BadPeers returns the peers that are considered bad by any of registered scorers.
@@ -153,7 +161,7 @@ func (s *Service) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.IsBadPeerNoLock(pid) {
+		if s.IsBadPeerNoLock(pid).IsBad {
 			badPeers = append(badPeers, pid)
 		}
 	}

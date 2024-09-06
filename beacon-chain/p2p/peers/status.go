@@ -341,21 +341,30 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	return prysmTime.Now(), peerdata.ErrPeerUnknown
 }
 
-// IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
+// Status states if the peer is to be considered bad (by *any* of the registered scorers).
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
-func (p *Status) IsBad(pid peer.ID) bool {
+func (p *Status) Status(pid peer.ID) scorers.PeerStatus {
 	p.store.RLock()
 	defer p.store.RUnlock()
-	return p.isBad(pid)
+	return p.status(pid)
 }
 
-// isBad is the lock-free version of IsBad.
-func (p *Status) isBad(pid peer.ID) bool {
-	// Do not disconnect from trusted peers.
+// status is the lock-free version of Status.
+func (p *Status) status(pid peer.ID) scorers.PeerStatus {
+	// Trusted peers are never considered bad.
 	if p.store.IsTrustedPeer(pid) {
-		return false
+		return scorers.PeerStatus{IsBad: false}
 	}
-	return p.isfromBadIP(pid) || p.scorers.IsBadPeerNoLock(pid)
+
+	if status := p.statusFromIP(pid); status.IsBad {
+		return status
+	}
+
+	if status := p.scorers.IsBadPeerNoLock(pid); status.IsBad {
+		return status
+	}
+
+	return scorers.PeerStatus{IsBad: false}
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
@@ -600,7 +609,7 @@ func (p *Status) Prune() {
 		return
 	}
 	notBadPeer := func(pid peer.ID) bool {
-		return !p.isBad(pid)
+		return !p.status(pid).IsBad
 	}
 	notTrustedPeer := func(pid peer.ID) bool {
 		return !p.isTrustedPeers(pid)
@@ -990,24 +999,43 @@ func (p *Status) isTrustedPeers(pid peer.ID) bool {
 
 // this method assumes the store lock is acquired before
 // executing the method.
-func (p *Status) isfromBadIP(pid peer.ID) bool {
+func (p *Status) statusFromIP(pid peer.ID) scorers.PeerStatus {
 	peerData, ok := p.store.PeerData(pid)
 	if !ok {
-		return false
+		return scorers.PeerStatus{IsBad: false}
 	}
+
 	if peerData.Address == nil {
-		return false
+		return scorers.PeerStatus{IsBad: false}
 	}
+
 	ip, err := manet.ToIP(peerData.Address)
 	if err != nil {
-		return true
-	}
-	if val, ok := p.ipTracker[ip.String()]; ok {
-		if val > CollocationLimit {
-			return true
+		return scorers.PeerStatus{
+			IsBad: true,
+			Details: map[string]interface{}{
+				"reason":       "Cannot convert multiaddress to IP",
+				"multiaddress": peerData.Address.String(),
+			},
 		}
 	}
-	return false
+
+	if count, ok := p.ipTracker[ip.String()]; ok {
+		if count > CollocationLimit {
+			return scorers.PeerStatus{
+				IsBad: true,
+				Details: map[string]interface{}{
+					"reason": "Too many peers from the same IP",
+					"ip":     ip.String(),
+					"count":  count,
+					"limit":  CollocationLimit,
+				},
+			}
+
+		}
+	}
+
+	return scorers.PeerStatus{IsBad: false}
 }
 
 func (p *Status) addIpToTracker(pid peer.ID) {

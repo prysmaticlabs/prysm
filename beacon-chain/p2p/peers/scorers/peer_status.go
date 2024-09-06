@@ -46,7 +46,7 @@ func (s *PeerStatusScorer) Score(pid peer.ID) float64 {
 
 // scoreNoLock is a lock-free version of Score.
 func (s *PeerStatusScorer) scoreNoLock(pid peer.ID) float64 {
-	if s.isBadPeerNoLock(pid) {
+	if s.statusNoLock(pid).IsBad {
 		return BadPeerScore
 	}
 	score := float64(0)
@@ -66,31 +66,34 @@ func (s *PeerStatusScorer) scoreNoLock(pid peer.ID) float64 {
 	return score
 }
 
-// IsBadPeer states if the peer is to be considered bad.
-func (s *PeerStatusScorer) IsBadPeer(pid peer.ID) bool {
+// Status states if the peer is to be considered bad.
+func (s *PeerStatusScorer) Status(pid peer.ID) PeerStatus {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeerNoLock(pid)
+	return s.statusNoLock(pid)
 }
 
-// isBadPeerNoLock is lock-free version of IsBadPeer.
-func (s *PeerStatusScorer) isBadPeerNoLock(pid peer.ID) bool {
+// statusNoLock is lock-free version of Status.
+func (s *PeerStatusScorer) statusNoLock(pid peer.ID) PeerStatus {
 	peerData, ok := s.store.PeerData(pid)
 	if !ok {
-		return false
+		return PeerStatus{IsBad: false}
 	}
+
 	// Mark peer as bad, if the latest error is one of the terminal ones.
 	terminalErrs := []error{
 		p2ptypes.ErrWrongForkDigestVersion,
 		p2ptypes.ErrInvalidFinalizedRoot,
 		p2ptypes.ErrInvalidRequest,
 	}
+
 	for _, err := range terminalErrs {
 		if errors.Is(peerData.ChainStateValidationError, err) {
-			return true
+			return PeerStatus{IsBad: true, Details: map[string]interface{}{"error": err.Error()}}
 		}
 	}
-	return false
+
+	return PeerStatus{IsBad: false}
 }
 
 // BadPeers returns the peers that are considered bad.
@@ -100,7 +103,7 @@ func (s *PeerStatusScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeerNoLock(pid) {
+		if s.statusNoLock(pid).IsBad {
 			badPeers = append(badPeers, pid)
 		}
 	}

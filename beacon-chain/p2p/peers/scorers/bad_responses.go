@@ -61,7 +61,7 @@ func (s *BadResponsesScorer) Score(pid peer.ID) float64 {
 
 // scoreNoLock is a lock-free version of Score.
 func (s *BadResponsesScorer) scoreNoLock(pid peer.ID) float64 {
-	if s.isBadPeerNoLock(pid) {
+	if peerStatus := s.statusNoLock(pid); peerStatus.IsBad {
 		return BadPeerScore
 	}
 	score := float64(0)
@@ -114,20 +114,34 @@ func (s *BadResponsesScorer) Increment(pid peer.ID) {
 	peerData.BadResponses++
 }
 
-// IsBadPeer states if the peer is to be considered bad.
+// Status states if the peer is to be considered bad.
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
-func (s *BadResponsesScorer) IsBadPeer(pid peer.ID) bool {
+func (s *BadResponsesScorer) Status(pid peer.ID) PeerStatus {
 	s.store.RLock()
 	defer s.store.RUnlock()
-	return s.isBadPeerNoLock(pid)
+	return s.statusNoLock(pid)
 }
 
-// isBadPeerNoLock is lock-free version of IsBadPeer.
-func (s *BadResponsesScorer) isBadPeerNoLock(pid peer.ID) bool {
+// statusNoLock is lock-free version of IsBadPeer.
+func (s *BadResponsesScorer) statusNoLock(pid peer.ID) PeerStatus {
 	if peerData, ok := s.store.PeerData(pid); ok {
-		return peerData.BadResponses >= s.config.Threshold
+		peerBadResponses := peerData.BadResponses
+		badResponsesThreshold := s.config.Threshold
+
+		if peerBadResponses >= badResponsesThreshold {
+			details := map[string]interface{}{
+				"reason":       "Too many bad responses",
+				"badResponses": peerBadResponses,
+				"threshold":    badResponsesThreshold,
+			}
+
+			return PeerStatus{IsBad: true, Details: details}
+		}
+
+		return PeerStatus{IsBad: false}
 	}
-	return false
+
+	return PeerStatus{IsBad: false}
 }
 
 // BadPeers returns the peers that are considered bad.
@@ -137,7 +151,7 @@ func (s *BadResponsesScorer) BadPeers() []peer.ID {
 
 	badPeers := make([]peer.ID, 0)
 	for pid := range s.store.Peers() {
-		if s.isBadPeerNoLock(pid) {
+		if s.statusNoLock(pid).IsBad {
 			badPeers = append(badPeers, pid)
 		}
 	}
