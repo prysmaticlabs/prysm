@@ -113,7 +113,7 @@ func TestProposeAttestation(t *testing.T) {
 			CommitteeBits: cb,
 		}
 		_, err = attesterServer.ProposeAttestationElectra(context.Background(), req)
-		assert.ErrorContains(t, "Committee index must be set to 0", err)
+		assert.ErrorContains(t, "attestation data's committee index must be 0 but was 1", err)
 	})
 	t.Run("Electra - no committee bit set", func(t *testing.T) {
 		state, err := util.NewBeaconStateElectra()
@@ -131,7 +131,7 @@ func TestProposeAttestation(t *testing.T) {
 			CommitteeBits: primitives.NewAttestationCommitteeBits(),
 		}
 		_, err = attesterServer.ProposeAttestationElectra(context.Background(), req)
-		assert.ErrorContains(t, "Committee bits has no bit set", err)
+		assert.ErrorContains(t, "exactly 1 committee index must be set but 0 were set", err)
 	})
 	t.Run("Electra - multiple committee bits set", func(t *testing.T) {
 		state, err := util.NewBeaconStateElectra()
@@ -152,7 +152,7 @@ func TestProposeAttestation(t *testing.T) {
 			CommitteeBits: cb,
 		}
 		_, err = attesterServer.ProposeAttestationElectra(context.Background(), req)
-		assert.ErrorContains(t, "Committee bits has more than one bit set", err)
+		assert.ErrorContains(t, "exactly 1 committee index must be set but 2 were set", err)
 	})
 }
 

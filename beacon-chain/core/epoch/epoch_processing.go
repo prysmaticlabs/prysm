@@ -20,31 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
-
-// AttestingBalance returns the total balance from all the attesting indices.
-//
-// WARNING: This method allocates a new copy of the attesting validator indices set and is
-// considered to be very memory expensive. Avoid using this unless you really
-// need to get attesting balance from attestations.
-//
-// Spec pseudocode definition:
-//
-//	def get_attesting_balance(state: BeaconState, attestations: Sequence[PendingAttestation]) -> Gwei:
-//	  """
-//	  Return the combined effective balance of the set of unslashed validators participating in ``attestations``.
-//	  Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
-//	  """
-//	  return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
-func AttestingBalance(ctx context.Context, state state.ReadOnlyBeaconState, atts []*ethpb.PendingAttestation) (uint64, error) {
-	indices, err := UnslashedAttestingIndices(ctx, state, atts)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get attesting indices")
-	}
-	return helpers.TotalBalance(state, indices), nil
-}
 
 // ProcessRegistryUpdates rotates validators in and out of active pool.
 // the amount to rotate is determined churn limit.
@@ -454,52 +431,4 @@ func ProcessFinalUpdates(state state.BeaconState) (state.BeaconState, error) {
 	}
 
 	return state, nil
-}
-
-// UnslashedAttestingIndices returns all the attesting indices from a list of attestations,
-// it sorts the indices and filters out the slashed ones.
-//
-// Spec pseudocode definition:
-//
-//	def get_unslashed_attesting_indices(state: BeaconState,
-//	                                  attestations: Sequence[PendingAttestation]) -> Set[ValidatorIndex]:
-//	  output = set()  # type: Set[ValidatorIndex]
-//	  for a in attestations:
-//	      output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
-//	  return set(filter(lambda index: not state.validators[index].slashed, output))
-func UnslashedAttestingIndices(ctx context.Context, state state.ReadOnlyBeaconState, atts []*ethpb.PendingAttestation) ([]primitives.ValidatorIndex, error) {
-	var setIndices []primitives.ValidatorIndex
-	seen := make(map[uint64]bool)
-
-	for _, att := range atts {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
-		if err != nil {
-			return nil, err
-		}
-		attestingIndices, err := attestation.AttestingIndices(att, committee)
-		if err != nil {
-			return nil, err
-		}
-		// Create a set for attesting indices
-		for _, index := range attestingIndices {
-			if !seen[index] {
-				setIndices = append(setIndices, primitives.ValidatorIndex(index))
-			}
-			seen[index] = true
-		}
-	}
-	// Sort the attesting set indices by increasing order.
-	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
-	// Remove the slashed validator indices.
-	for i := 0; i < len(setIndices); i++ {
-		v, err := state.ValidatorAtIndexReadOnly(setIndices[i])
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to look up validator")
-		}
-		if !v.IsNil() && v.Slashed() {
-			setIndices = append(setIndices[:i], setIndices[i+1:]...)
-		}
-	}
-
-	return setIndices, nil
 }

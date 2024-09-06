@@ -3,14 +3,12 @@ package node
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
@@ -24,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -92,7 +89,7 @@ func TestNodeServer_GetImplementedServices(t *testing.T) {
 
 	res, err := ns.ListImplementedServices(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// We verify the services include the node service + the registered reflection service.
+	// We verify the services include the node service  + the 2 registered reflection services.
 	assert.Equal(t, 2, len(res.Services))
 }
 
@@ -128,13 +125,12 @@ func TestNodeServer_GetPeer(t *testing.T) {
 	}
 	ethpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
-	firstPeer := peersProvider.Peers().All()[0]
 
-	res, err := ns.GetPeer(context.Background(), &ethpb.PeerRequest{PeerId: firstPeer.String()})
+	res, err := ns.GetPeer(context.Background(), &ethpb.PeerRequest{PeerId: mockP2p.MockRawPeerId0})
 	require.NoError(t, err)
-	assert.Equal(t, firstPeer.String(), res.PeerId, "Unexpected peer ID")
+	assert.Equal(t, "16Uiu2HAkyWZ4Ni1TpvDS8dPxsozmHY85KaiFjodQuV6Tz5tkHVeR" /* first peer's raw id */, res.PeerId, "Unexpected peer ID")
 	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Direction), "Expected 1st peer to be an inbound connection")
-	assert.Equal(t, ethpb.ConnectionState_CONNECTED, res.ConnectionState, "Expected peer to be connected")
+	assert.Equal(t, int(ethpb.ConnectionState_CONNECTED), int(res.ConnectionState), "Expected peer to be connected")
 }
 
 func TestNodeServer_ListPeers(t *testing.T) {
@@ -149,8 +145,25 @@ func TestNodeServer_ListPeers(t *testing.T) {
 	res, err := ns.ListPeers(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(res.Peers))
-	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(res.Peers[0].Direction))
-	assert.Equal(t, ethpb.PeerDirection_OUTBOUND, res.Peers[1].Direction)
+
+	var (
+		firstPeer  *ethpb.Peer
+		secondPeer *ethpb.Peer
+	)
+
+	for _, p := range res.Peers {
+		if p.PeerId == mockP2p.MockRawPeerId0 {
+			firstPeer = p
+		}
+		if p.PeerId == mockP2p.MockRawPeerId1 {
+			secondPeer = p
+		}
+	}
+
+	assert.NotNil(t, firstPeer)
+	assert.NotNil(t, secondPeer)
+	assert.Equal(t, int(ethpb.PeerDirection_INBOUND), int(firstPeer.Direction))
+	assert.Equal(t, int(ethpb.PeerDirection_OUTBOUND), int(secondPeer.Direction))
 }
 
 func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
@@ -190,11 +203,6 @@ func TestNodeServer_GetHealth(t *testing.T) {
 			input:     &mockSync.Sync{IsSyncing: false},
 			wantedErr: "service unavailable",
 		},
-		{
-			name:         "custom sync status",
-			input:        &mockSync.Sync{IsSyncing: true},
-			customStatus: 206,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -204,20 +212,10 @@ func TestNodeServer_GetHealth(t *testing.T) {
 			}
 			ethpb.RegisterNodeServer(server, ns)
 			reflection.Register(server)
-			ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
-			_, err := ns.GetHealth(ctx, &ethpb.HealthRequest{SyncingStatus: tt.customStatus})
+			_, err := ns.GetHealth(context.Background(), &ethpb.HealthRequest{SyncingStatus: tt.customStatus})
 			if tt.wantedErr == "" {
 				require.NoError(t, err)
 				return
-			}
-			if tt.customStatus != 0 {
-				// Assuming the call was successful, now extract the headers
-				headers, _ := metadata.FromIncomingContext(ctx)
-				// Check for the specific header
-				values, ok := headers["x-http-code"]
-				require.Equal(t, true, ok && len(values) > 0)
-				require.Equal(t, fmt.Sprintf("%d", tt.customStatus), values[0])
-
 			}
 			require.ErrorContains(t, tt.wantedErr, err)
 		})

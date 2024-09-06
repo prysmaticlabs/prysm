@@ -503,6 +503,135 @@ func hydrateBeaconBlockBody() *eth.BeaconBlockBody {
 	}
 }
 
+func hydrateBeaconBlockBodyAltair() *eth.BeaconBlockBodyAltair {
+	return &eth.BeaconBlockBodyAltair{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+	}
+}
+
+func hydrateBeaconBlockBodyBellatrix() *eth.BeaconBlockBodyBellatrix {
+	return &eth.BeaconBlockBodyBellatrix{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &pb.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+		},
+	}
+}
+
+func hydrateBeaconBlockBodyCapella() *eth.BeaconBlockBodyCapella {
+	return &eth.BeaconBlockBodyCapella{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &pb.ExecutionPayloadCapella{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		},
+	}
+}
+
+func hydrateBeaconBlockBodyDeneb() *eth.BeaconBlockBodyDeneb {
+	return &eth.BeaconBlockBodyDeneb{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &pb.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		},
+	}
+}
+
+func hydrateBeaconBlockBodyElectra() *eth.BeaconBlockBodyElectra {
+	return &eth.BeaconBlockBodyElectra{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &pb.ExecutionPayloadElectra{
+			ParentHash:            make([]byte, fieldparams.RootLength),
+			FeeRecipient:          make([]byte, 20),
+			StateRoot:             make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:          make([]byte, fieldparams.RootLength),
+			LogsBloom:             make([]byte, 256),
+			PrevRandao:            make([]byte, fieldparams.RootLength),
+			ExtraData:             make([]byte, 0),
+			BaseFeePerGas:         make([]byte, fieldparams.RootLength),
+			BlockHash:             make([]byte, fieldparams.RootLength),
+			Transactions:          make([][]byte, 0),
+			Withdrawals:           make([]*pb.Withdrawal, 0),
+			DepositRequests:       make([]*pb.DepositRequest, 0),
+			WithdrawalRequests:    make([]*pb.WithdrawalRequest, 0),
+			ConsolidationRequests: make([]*pb.ConsolidationRequest, 0),
+		},
+	}
+}
+
 func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
 	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
 	_, ok := epd.(interfaces.ExecutionDataElectra)

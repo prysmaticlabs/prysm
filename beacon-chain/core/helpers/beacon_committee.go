@@ -337,24 +337,6 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 	return nil
 }
 
-// VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
-// a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(ctx context.Context, state state.ReadOnlyBeaconState, att ethpb.Att) error {
-	committee, err := BeaconCommitteeFromState(ctx, state, att.GetData().Slot, att.GetData().CommitteeIndex)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve beacon committees")
-	}
-
-	if committee == nil {
-		return errors.New("no committee exist for this attestation")
-	}
-
-	if err := VerifyBitfieldLength(att.GetAggregationBits(), uint64(len(committee))); err != nil {
-		return errors.Wrap(err, "failed to verify aggregation bitfield")
-	}
-	return nil
-}
-
 // ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
 func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error) {

@@ -1,6 +1,9 @@
 package eth
 
 import (
+	"fmt"
+
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -21,6 +24,7 @@ type Att interface {
 	GetData() *AttestationData
 	CommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
+	GetCommitteeIndex() (primitives.CommitteeIndex, error)
 }
 
 // IndexedAtt defines common functionality for all indexed attestation types.
@@ -123,6 +127,14 @@ func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
 	return cb
 }
 
+// GetCommitteeIndex --
+func (a *Attestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	return a.Data.CommitteeIndex, nil
+}
+
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
@@ -156,6 +168,14 @@ func (a *PendingAttestation) GetSignature() []byte {
 	return nil
 }
 
+// GetCommitteeIndex --
+func (a *PendingAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	return a.Data.CommitteeIndex, nil
+}
+
 // Version --
 func (a *AttestationElectra) Version() int {
 	return version.Electra
@@ -182,6 +202,24 @@ func (att *AttestationElectra) Copy() *AttestationElectra {
 // CommitteeBitsVal --
 func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 	return a.CommitteeBits
+}
+
+// GetCommitteeIndex --
+func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	if a == nil || a.Data == nil {
+		return 0, errors.New("nil attestation data")
+	}
+	if len(a.CommitteeBits) == 0 {
+		return 0, errors.New("no committee bits found in attestation")
+	}
+	if a.Data.CommitteeIndex != 0 {
+		return 0, fmt.Errorf("attestation data's committee index must be 0 but was %d", a.Data.CommitteeIndex)
+	}
+	indices := a.CommitteeBits.BitIndices()
+	if len(indices) != 1 {
+		return 0, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
+	}
+	return primitives.CommitteeIndex(uint64(indices[0])), nil
 }
 
 // Version --

@@ -1,5 +1,3 @@
-//go:build !minimal
-
 package state_native
 
 import (
