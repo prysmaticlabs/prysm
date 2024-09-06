@@ -402,16 +402,13 @@ func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 
 func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex primitives.ValidatorIndex) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
-	if err != nil {
+	if err != nil || validator.IsNil() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
+
 	currentEpoch := time.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	validatorBalance := validator.EffectiveBalance()
-
-	if validator.IsNil() {
-		return ethpb.ValidatorStatus_UNKNOWN_STATUS
-	}
 	if currentEpoch < validator.ActivationEligibilityEpoch() {
 		return depositStatus(validatorBalance)
 	}

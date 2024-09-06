@@ -46,6 +46,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - E2E: fixed gas limit at genesis
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
 - Core: Fix process effective balance update to safe copy validator for Electra.
+- `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 
 ### Security
 
