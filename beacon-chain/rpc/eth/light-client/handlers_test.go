@@ -60,10 +60,8 @@ func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
-	muxVars := make(map[string]string)
-	muxVars["block_root"] = hexutil.Encode(r[:])
 	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-	request = mux.SetURLVars(request, muxVars)
+	request.SetPathValue("block_root", hexutil.Encode(r[:]))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -168,10 +166,8 @@ func TestLightClientHandler_GetLightClientBootstrap_Deneb(t *testing.T) {
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
-	muxVars := make(map[string]string)
-	muxVars["block_root"] = hexutil.Encode(r[:])
 	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-	request = mux.SetURLVars(request, muxVars)
+	request.SetPathValue("block_root", hexutil.Encode(r[:]))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
