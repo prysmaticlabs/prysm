@@ -246,7 +246,7 @@ func NewLightClientFinalityUpdateFromBeaconState(
 	var finalizedHeaderBeacon *ethpbv1.BeaconBlockHeader
 	var finalityBranch [][]byte
 
-	if finalizedBlock != nil && !finalizedBlock.IsNil() {
+	if !finalizedBlock.IsNil() {
 		if finalizedBlock.Block().Slot() != 0 {
 			tempFinalizedHeader, err := finalizedBlock.Header()
 			if err != nil {
@@ -305,7 +305,7 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		}
 		result.FinalityBranch = finalityBranch
 	case version.Capella:
-		if finalizedBlock != nil && !finalizedBlock.IsNil() {
+		if !finalizedBlock.IsNil() {
 			execution, err := getExecutionPayloadHeaderCapella(finalizedBlock)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get execution payload header")
@@ -342,7 +342,7 @@ func NewLightClientFinalityUpdateFromBeaconState(
 			result.FinalityBranch = finalityBranch
 		}
 	case version.Deneb, version.Electra:
-		if finalizedBlock != nil && !finalizedBlock.IsNil() {
+		if !finalizedBlock.IsNil() {
 			execution, err := getExecutionPayloadHeaderDeneb(finalizedBlock)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get execution payload header")
