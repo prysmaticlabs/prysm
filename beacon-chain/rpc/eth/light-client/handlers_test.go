@@ -70,7 +70,8 @@ func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 
 	s.GetLightClientBootstrap(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientBootstrapResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Data.Header, &respHeader)
@@ -124,7 +125,8 @@ func TestLightClientHandler_GetLightClientBootstrap_Capella(t *testing.T) {
 
 	s.GetLightClientBootstrap(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientBootstrapResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderCapella
 	err = json.Unmarshal(resp.Data.Header, &respHeader)
@@ -178,7 +180,8 @@ func TestLightClientHandler_GetLightClientBootstrap_Deneb(t *testing.T) {
 
 	s.GetLightClientBootstrap(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientBootstrapResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientBootstrapResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
 	err = json.Unmarshal(resp.Data.Header, &respHeader)
@@ -282,7 +285,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeAltair(t *testing.T) {
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -387,7 +391,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderCapella
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -492,7 +497,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -598,7 +604,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountAltair(
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -704,7 +711,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountCapella
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderCapella
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -810,7 +818,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountDeneb(t
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -917,7 +926,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriodAltair(t 
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -1024,7 +1034,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCountAltair(t *te
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdatesByRangeResponseFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
@@ -1231,7 +1242,8 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdateWithVersionFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdateWithVersion
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
@@ -1340,7 +1352,8 @@ func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdateWithVersionFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdateWithVersion
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
@@ -1449,7 +1462,8 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdateWithVersionFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdateWithVersion
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
@@ -1558,7 +1572,8 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateAltair(t *testing.T) {
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdateWithVersionFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdateWithVersion
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
@@ -1667,7 +1682,8 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateCapella(t *testing.T) 
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdateWithVersionFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdateWithVersion
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderCapella
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
@@ -1776,7 +1792,8 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateDeneb(t *testing.T) {
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp, err := structs.LightClientUpdateWithVersionFromJson(writer.Body.Bytes())
+	var resp structs.LightClientUpdateWithVersion
+	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)

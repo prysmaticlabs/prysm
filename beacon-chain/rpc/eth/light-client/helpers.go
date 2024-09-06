@@ -2,6 +2,7 @@ package lightclient
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -102,7 +103,7 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
-	headerJson, err := header.ToRawMessage()
+	headerJson, err := json.Marshal(header)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}
@@ -218,7 +219,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
-	headerJson, err := header.ToRawMessage()
+	headerJson, err := json.Marshal(header)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}
@@ -334,7 +335,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	}
 	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
 
-	headerJson, err := header.ToRawMessage()
+	headerJson, err := json.Marshal(header)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}
@@ -539,11 +540,11 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 	if err != nil {
 		return nil
 	}
-	attestedHeaderJson, err := (&structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputAttestedHeaderBeacon))}).ToRawMessage()
+	attestedHeaderJson, err := json.Marshal(&structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputAttestedHeaderBeacon))})
 	if err != nil {
 		return nil
 	}
-	finalizedHeaderJson, err := (&structs.LightClientHeader{Beacon: finalizedHeader}).ToRawMessage()
+	finalizedHeaderJson, err := json.Marshal(&structs.LightClientHeader{Beacon: finalizedHeader})
 	if err != nil {
 		return nil
 	}
