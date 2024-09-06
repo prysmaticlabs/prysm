@@ -306,21 +306,30 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		for _, b := range updateData.Data.FinalityBranch {
 			finalityBranch = append(finalityBranch, hexutil.Encode(b))
 		}
+
+		attestedBeacon, err := updateData.Data.AttestedHeader.GetBeacon()
+		if err != nil {
+			return errors.Wrap(err, "could not get attested header")
+		}
+		finalizedBeacon, err := updateData.Data.FinalizedHeader.GetBeacon()
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized header")
+		}
 		update := &structs.LightClientFinalityUpdateEvent{
 			Version: version.String(int(updateData.Version)),
 			Data: &structs.LightClientFinalityUpdate{
 				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.Beacon.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.Beacon.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.Beacon.BodyRoot),
+					Slot:          fmt.Sprintf("%d", attestedBeacon.Slot),
+					ProposerIndex: fmt.Sprintf("%d", attestedBeacon.ProposerIndex),
+					ParentRoot:    hexutil.Encode(attestedBeacon.ParentRoot),
+					StateRoot:     hexutil.Encode(attestedBeacon.StateRoot),
+					BodyRoot:      hexutil.Encode(attestedBeacon.BodyRoot),
 				},
 				FinalizedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Beacon.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Beacon.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.Beacon.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.Beacon.StateRoot),
+					Slot:          fmt.Sprintf("%d", finalizedBeacon.Slot),
+					ProposerIndex: fmt.Sprintf("%d", finalizedBeacon.ProposerIndex),
+					ParentRoot:    hexutil.Encode(finalizedBeacon.ParentRoot),
+					StateRoot:     hexutil.Encode(finalizedBeacon.StateRoot),
 				},
 				FinalityBranch: finalityBranch,
 				SyncAggregate: &structs.SyncAggregate{
@@ -339,15 +348,19 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
 		}
+		attestedBeacon, err := updateData.Data.AttestedHeader.GetBeacon()
+		if err != nil {
+			return errors.Wrap(err, "could not get attested header")
+		}
 		update := &structs.LightClientOptimisticUpdateEvent{
 			Version: version.String(int(updateData.Version)),
 			Data: &structs.LightClientOptimisticUpdate{
 				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.Beacon.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.Beacon.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.Beacon.BodyRoot),
+					Slot:          fmt.Sprintf("%d", attestedBeacon.Slot),
+					ProposerIndex: fmt.Sprintf("%d", attestedBeacon.ProposerIndex),
+					ParentRoot:    hexutil.Encode(attestedBeacon.ParentRoot),
+					StateRoot:     hexutil.Encode(attestedBeacon.StateRoot),
+					BodyRoot:      hexutil.Encode(attestedBeacon.BodyRoot),
 				},
 				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
