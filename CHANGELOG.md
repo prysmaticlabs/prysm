@@ -47,6 +47,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
 - validator registration changed to debug, and the frequency of validator registration calls are reduced
 - Core: Fix process effective balance update to safe copy validator for Electra.
+- `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 
 ### Security
 
