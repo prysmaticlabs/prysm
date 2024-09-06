@@ -1315,13 +1315,13 @@ func (v *validator) buildSignedRegReqs(
 	ctx, span := trace.StartSpan(ctx, "validator.buildSignedRegReqs")
 	defer span.End()
 
-	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
+	var signedValRegRequests []*ethpb.SignedValidatorRegistrationV1
 	if v.ProposerSettings() == nil {
-		return signedValRegRegs
+		return signedValRegRequests
 	}
 	// if the timestamp is pre-genesis, don't create registrations
 	if v.genesisTime > uint64(time.Now().UTC().Unix()) {
-		return signedValRegRegs
+		return signedValRegRequests
 	}
 	for i, k := range activePubkeys {
 		// map is populated before this function in buildPrepProposerReq
@@ -1376,7 +1376,7 @@ func (v *validator) buildSignedRegReqs(
 			Pubkey:       activePubkeys[i][:],
 		}
 
-		signedReq, isCached, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
+		signedRequest, isCached, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"pubkey":       fmt.Sprintf("%#x", req.Pubkey),
@@ -1395,10 +1395,10 @@ func (v *validator) buildSignedRegReqs(
 		if slots.IsEpochStart(slot) || forceFullPush || !isCached {
 			// if epoch start (or forced to) send all validator registrations
 			// otherwise if slot is not epoch start then only send new non cached values
-			signedValRegRegs = append(signedValRegRegs, signedReq)
+			signedValRegRequests = append(signedValRegRequests, signedRequest)
 		}
 	}
-	return signedValRegRegs
+	return signedValRegRequests
 }
 
 func (v *validator) aggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {
