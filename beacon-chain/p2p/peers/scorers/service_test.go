@@ -237,7 +237,7 @@ func TestScorers_Service_loop(t *testing.T) {
 	for i := 0; i < s1.Params().Threshold+5; i++ {
 		s1.Increment(pid1)
 	}
-	assert.Equal(t, true, s1.Status(pid1), "Peer should be marked as bad")
+	assert.Equal(t, true, s1.Status(pid1).IsBad, "Peer should be marked as bad")
 
 	s2.IncrementProcessedBlocks("peer1", 221)
 	assert.Equal(t, uint64(221), s2.ProcessedBlocks("peer1"))
@@ -263,7 +263,7 @@ func TestScorers_Service_loop(t *testing.T) {
 	}()
 
 	<-done
-	assert.Equal(t, false, s1.Status(pid1), "Peer should not be marked as bad")
+	assert.Equal(t, false, s1.Status(pid1).IsBad, "Peer should not be marked as bad")
 	assert.Equal(t, uint64(0), s2.ProcessedBlocks("peer1"), "No blocks are expected")
 }
 
@@ -278,10 +278,10 @@ func TestScorers_Service_IsBadPeer(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, false, peerStatuses.Scorers().Status("peer1"))
+	assert.Equal(t, false, peerStatuses.Scorers().Status("peer1").IsBad)
 	peerStatuses.Scorers().BadResponsesScorer().Increment("peer1")
 	peerStatuses.Scorers().BadResponsesScorer().Increment("peer1")
-	assert.Equal(t, true, peerStatuses.Scorers().Status("peer1"))
+	assert.Equal(t, true, peerStatuses.Scorers().Status("peer1").IsBad)
 }
 
 func TestScorers_Service_BadPeers(t *testing.T) {
@@ -295,16 +295,16 @@ func TestScorers_Service_BadPeers(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, false, peerStatuses.Scorers().Status("peer1"))
-	assert.Equal(t, false, peerStatuses.Scorers().Status("peer2"))
-	assert.Equal(t, false, peerStatuses.Scorers().Status("peer3"))
+	assert.Equal(t, false, peerStatuses.Scorers().Status("peer1").IsBad)
+	assert.Equal(t, false, peerStatuses.Scorers().Status("peer2").IsBad)
+	assert.Equal(t, false, peerStatuses.Scorers().Status("peer3").IsBad)
 	assert.Equal(t, 0, len(peerStatuses.Scorers().BadPeers()))
 	for _, pid := range []peer.ID{"peer1", "peer3"} {
 		peerStatuses.Scorers().BadResponsesScorer().Increment(pid)
 		peerStatuses.Scorers().BadResponsesScorer().Increment(pid)
 	}
-	assert.Equal(t, true, peerStatuses.Scorers().Status("peer1"))
-	assert.Equal(t, false, peerStatuses.Scorers().Status("peer2"))
-	assert.Equal(t, true, peerStatuses.Scorers().Status("peer3"))
+	assert.Equal(t, true, peerStatuses.Scorers().Status("peer1").IsBad)
+	assert.Equal(t, false, peerStatuses.Scorers().Status("peer2").IsBad)
+	assert.Equal(t, true, peerStatuses.Scorers().Status("peer3").IsBad)
 	assert.Equal(t, 2, len(peerStatuses.Scorers().BadPeers()))
 }

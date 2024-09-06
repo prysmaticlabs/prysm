@@ -63,6 +63,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		return err
 	}
 	remainingBucketCapacity := blockLimiter.Remaining(remotePeer.String())
+	log = log.WithField("remainingBucketCapacity", remainingBucketCapacity)
+
 	span.AddAttributes(
 		trace.Int64Attribute("start", int64(rp.start)), // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.Int64Attribute("end", int64(rp.end)),     // lint:ignore uintcast -- This conversion is OK for tracing.
@@ -89,13 +91,14 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	for batch, more = batcher.next(ctx, stream); more; batch, more = batcher.next(ctx, stream) {
 		batchStart := time.Now()
 		if err := s.writeBlockBatchToStream(ctx, batch, stream); err != nil {
+			log.WithError(err).Debug("Serving block by range request - writeBlockBatchToStream")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
 		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 	}
 
-	log.WithField("remainingCapacityBucket", remainingBucketCapacity).Debug("Serving block by range request")
+	log.Debug("Serving block by range request")
 
 	if err := batch.error(); err != nil {
 		log.WithError(err).Debug("Serving block by range request - BlocksByRange batch")

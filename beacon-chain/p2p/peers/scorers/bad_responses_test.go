@@ -33,19 +33,19 @@ func TestScorers_BadResponses_Score(t *testing.T) {
 	assert.Equal(t, 0., scorer.Score(pid), "Unexpected score for unregistered peer")
 
 	scorer.Increment(pid)
-	assert.Equal(t, false, scorer.Status(pid))
+	assert.Equal(t, false, scorer.Status(pid).IsBad)
 	assert.Equal(t, -2.5, scorer.Score(pid))
 
 	scorer.Increment(pid)
-	assert.Equal(t, false, scorer.Status(pid))
+	assert.Equal(t, false, scorer.Status(pid).IsBad)
 	assert.Equal(t, float64(-5), scorer.Score(pid))
 
 	scorer.Increment(pid)
-	assert.Equal(t, false, scorer.Status(pid))
+	assert.Equal(t, false, scorer.Status(pid).IsBad)
 	assert.Equal(t, float64(-7.5), scorer.Score(pid))
 
 	scorer.Increment(pid)
-	assert.Equal(t, true, scorer.Status(pid))
+	assert.Equal(t, true, scorer.Status(pid).IsBad)
 	assert.Equal(t, -100.0, scorer.Score(pid))
 }
 
@@ -152,17 +152,17 @@ func TestScorers_BadResponses_IsBadPeer(t *testing.T) {
 	})
 	scorer := peerStatuses.Scorers().BadResponsesScorer()
 	pid := peer.ID("peer1")
-	assert.Equal(t, false, scorer.Status(pid))
+	assert.Equal(t, false, scorer.Status(pid).IsBad)
 
 	peerStatuses.Add(nil, pid, nil, network.DirUnknown)
-	assert.Equal(t, false, scorer.Status(pid))
+	assert.Equal(t, false, scorer.Status(pid).IsBad)
 
 	for i := 0; i < scorers.DefaultBadResponsesThreshold; i++ {
 		scorer.Increment(pid)
 		if i == scorers.DefaultBadResponsesThreshold-1 {
-			assert.Equal(t, true, scorer.Status(pid), "Unexpected peer status")
+			assert.Equal(t, true, scorer.Status(pid).IsBad, "Unexpected peer status")
 		} else {
-			assert.Equal(t, false, scorer.Status(pid), "Unexpected peer status")
+			assert.Equal(t, false, scorer.Status(pid).IsBad, "Unexpected peer status")
 		}
 	}
 }
@@ -185,11 +185,11 @@ func TestScorers_BadResponses_BadPeers(t *testing.T) {
 		scorer.Increment(pids[2])
 		scorer.Increment(pids[4])
 	}
-	assert.Equal(t, false, scorer.Status(pids[0]), "Invalid peer status")
-	assert.Equal(t, true, scorer.Status(pids[1]), "Invalid peer status")
-	assert.Equal(t, true, scorer.Status(pids[2]), "Invalid peer status")
-	assert.Equal(t, false, scorer.Status(pids[3]), "Invalid peer status")
-	assert.Equal(t, true, scorer.Status(pids[4]), "Invalid peer status")
+	assert.Equal(t, false, scorer.Status(pids[0]).IsBad, "Invalid peer status")
+	assert.Equal(t, true, scorer.Status(pids[1]).IsBad, "Invalid peer status")
+	assert.Equal(t, true, scorer.Status(pids[2]).IsBad, "Invalid peer status")
+	assert.Equal(t, false, scorer.Status(pids[3]).IsBad, "Invalid peer status")
+	assert.Equal(t, true, scorer.Status(pids[4]).IsBad, "Invalid peer status")
 	want := []peer.ID{pids[1], pids[2], pids[4]}
 	badPeers := scorer.BadPeers()
 	sort.Slice(badPeers, func(i, j int) bool {

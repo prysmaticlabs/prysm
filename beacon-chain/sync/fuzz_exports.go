@@ -31,7 +31,7 @@ func NewRegularSyncFuzz(opts ...Option) *Service {
 
 // FuzzValidateBeaconBlockPubSub exports private method validateBeaconBlockPubSub for fuzz testing.
 func (s *Service) FuzzValidateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) pubsub.ValidationResult {
-	res, err := s.validateBeaconBlockPubSub(ctx, pid, msg)
+	res, err := s.validateBeaconBlockPubSubMsg(ctx, pid, msg)
 	_ = err
 	return res
 }
