@@ -426,9 +426,35 @@ func createEmptyExecutionPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDe
 }
 
 func getExecutionPayloadHeaderCapella(block interfaces.ReadOnlySignedBeaconBlock) (*enginev1.ExecutionPayloadHeaderCapella, error) {
-	payloadInterface, transactionsRoot, withdrawalsRoot, err := getExecutionData(block)
+	payloadInterface, err := block.Block().Body().Execution()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution data")
+	}
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactions, err := payloadInterface.Transactions()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get transactions")
+		}
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get transactions root")
+		}
+		transactionsRoot = transactionsRootArray[:]
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions root")
+	}
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawals, err := payloadInterface.Withdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals")
+		}
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals root")
+		}
+		withdrawalsRoot = withdrawalsRootArray[:]
 	}
 	execution := &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       payloadInterface.ParentHash(),
@@ -452,9 +478,35 @@ func getExecutionPayloadHeaderCapella(block interfaces.ReadOnlySignedBeaconBlock
 }
 
 func getExecutionPayloadHeaderDeneb(block interfaces.ReadOnlySignedBeaconBlock) (*enginev1.ExecutionPayloadHeaderDeneb, error) {
-	payloadInterface, transactionsRoot, withdrawalsRoot, err := getExecutionData(block)
+	payloadInterface, err := block.Block().Body().Execution()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution data")
+	}
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactions, err := payloadInterface.Transactions()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get transactions")
+		}
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get transactions root")
+		}
+		transactionsRoot = transactionsRootArray[:]
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions root")
+	}
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawals, err := payloadInterface.Withdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals")
+		}
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals root")
+		}
+		withdrawalsRoot = withdrawalsRootArray[:]
 	}
 	execution := &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       payloadInterface.ParentHash(),
@@ -476,42 +528,6 @@ func getExecutionPayloadHeaderDeneb(block interfaces.ReadOnlySignedBeaconBlock) 
 
 	return execution, nil
 }
-
-func getExecutionData(block interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, []byte, []byte, error) {
-	payloadInterface, err := block.Block().Body().Execution()
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "could not get execution data")
-	}
-	transactionsRoot, err := payloadInterface.TransactionsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		transactions, err := payloadInterface.Transactions()
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "could not get transactions")
-		}
-		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "could not get transactions root")
-		}
-		transactionsRoot = transactionsRootArray[:]
-	} else if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "could not get transactions root")
-	}
-	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		withdrawals, err := payloadInterface.Withdrawals()
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		withdrawalsRoot = withdrawalsRootArray[:]
-	}
-
-	return payloadInterface, transactionsRoot, withdrawalsRoot, nil
-}
-
 func NewLightClientUpdateFromFinalityUpdate(update *ethpbv2.LightClientFinalityUpdate) *ethpbv2.LightClientUpdate {
 	return &ethpbv2.LightClientUpdate{
 		AttestedHeader:  update.AttestedHeader,
