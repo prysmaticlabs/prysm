@@ -466,7 +466,11 @@ func createLightClientUpdate(
 
 	result.NextSyncCommittee = nextSyncCommittee
 	result.NextSyncCommitteeBranch = nextSyncCommitteeBranch
-	return newLightClientUpdateToJSON(result), nil
+	res, err := newLightClientUpdateToJSON(result)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert light client update to JSON")
+	}
+	return res, nil
 }
 
 func newLightClientFinalityUpdateFromBeaconState(
@@ -480,7 +484,11 @@ func newLightClientFinalityUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return newLightClientUpdateToJSON(result), nil
+	res, err := newLightClientUpdateToJSON(result)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert light client update to JSON")
+	}
+	return res, nil
 }
 
 func newLightClientOptimisticUpdateFromBeaconState(
@@ -493,7 +501,11 @@ func newLightClientOptimisticUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return newLightClientUpdateToJSON(result), nil
+	res, err := newLightClientUpdateToJSON(result)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert light client update to JSON")
+	}
+	return res, nil
 }
 
 func branchToJSON(branchBytes [][]byte) []string {
@@ -517,9 +529,9 @@ func syncAggregateToJSON(input *v1.SyncAggregate) *structs.SyncAggregate {
 	}
 }
 
-func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClientUpdate {
+func newLightClientUpdateToJSON(input *v2.LightClientUpdate) (*structs.LightClientUpdate, error) {
 	if input == nil {
-		return nil
+		return nil, errors.New("input is nil")
 	}
 
 	var nextSyncCommittee *structs.SyncCommittee
@@ -531,22 +543,22 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 	if input.FinalizedHeader != nil {
 		inputFinalizedHeaderBeacon, err := input.FinalizedHeader.GetBeacon()
 		if err != nil {
-			return nil
+			return nil, errors.Wrap(err, "could not get finalized header beacon")
 		}
 		finalizedHeader = structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputFinalizedHeaderBeacon))
 	}
 
 	inputAttestedHeaderBeacon, err := input.AttestedHeader.GetBeacon()
 	if err != nil {
-		return nil
+		return nil, errors.Wrap(err, "could not get attested header beacon")
 	}
 	attestedHeaderJson, err := json.Marshal(&structs.LightClientHeader{Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(inputAttestedHeaderBeacon))})
 	if err != nil {
-		return nil
+		return nil, errors.Wrap(err, "could not convert attested header to raw message")
 	}
 	finalizedHeaderJson, err := json.Marshal(&structs.LightClientHeader{Beacon: finalizedHeader})
 	if err != nil {
-		return nil
+		return nil, errors.Wrap(err, "could not convert finalized header to raw message")
 	}
 	result := &structs.LightClientUpdate{
 		AttestedHeader:          attestedHeaderJson,
@@ -558,7 +570,7 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClien
 		SignatureSlot:           strconv.FormatUint(uint64(input.SignatureSlot), 10),
 	}
 
-	return result
+	return result, nil
 }
 
 func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
