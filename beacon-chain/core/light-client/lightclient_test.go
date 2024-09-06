@@ -60,7 +60,6 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testi
 }
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestCapella()
-
 	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
