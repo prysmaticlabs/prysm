@@ -55,7 +55,9 @@ func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (ui
 }
 
 func writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream, encoder p2p.EncodingProvider) {
+	log := log.WithField("topic", stream.Protocol())
 	resp, err := createErrorResponse(responseCode, reason, encoder)
+
 	if err != nil {
 		log.WithError(err).Debug("Could not generate a response error")
 	} else if _, err := stream.Write(resp); err != nil {
@@ -114,7 +116,7 @@ func closeStreamAndWait(stream network.Stream, log *logrus.Entry) {
 		_err := stream.Reset()
 		_ = _err
 		if isValidStreamError(err) {
-			log.WithError(err).Debugf("Could not reset stream with protocol %s", stream.Protocol())
+			log.WithError(err).WithField("protocol", stream.Protocol()).Debug("Could not reset stream")
 		}
 		return
 	}

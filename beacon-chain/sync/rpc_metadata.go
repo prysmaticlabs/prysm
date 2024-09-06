@@ -19,6 +19,8 @@ import (
 
 // metaDataHandler reads the incoming metadata rpc request from the peer.
 func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2pcore.Stream) error {
+	log := log.WithField("topic", stream.Protocol())
+
 	SetRPCStreamDeadlines(stream)
 
 	// Validate the incoming request regarding rate limiting.

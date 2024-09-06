@@ -192,8 +192,8 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 							s.disconnectFromPeer(conn, goodByeFunc, details)
 							return
 						}
-
 					}
+
 					validPeerConnection()
 					return
 				}

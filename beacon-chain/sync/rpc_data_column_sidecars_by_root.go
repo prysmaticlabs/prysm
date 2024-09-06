@@ -90,9 +90,7 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 	})
 
 	fields := logrus.Fields{
-		"requested":      requestedColumnsList,
-		"custodiedCount": len(custodiedColumnsList),
-		"requestedCount": len(requestedColumnsList),
+		"requested": requestedColumnsList,
 	}
 
 	if uint64(len(custodiedColumnsList)) == params.BeaconConfig().NumberOfColumns {

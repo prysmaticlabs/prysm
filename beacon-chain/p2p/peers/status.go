@@ -1031,7 +1031,6 @@ func (p *Status) statusFromIP(pid peer.ID) scorers.PeerStatus {
 					"limit":  CollocationLimit,
 				},
 			}
-
 		}
 	}
 

@@ -34,10 +34,11 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
 
-	log = log.WithFields(logrus.Fields{
+	log := log.WithFields(logrus.Fields{
 		"startSlot": m.StartSlot,
 		"count":     m.Count,
 		"peer":      remotePeer,
+		"topic":     stream.Protocol(),
 	})
 
 	rp, err := validateRangeRequest(m, s.cfg.clock.CurrentSlot())

@@ -82,7 +82,6 @@ func (s *Service) maintainPeerStatuses() {
 				"peer":   id,
 				"reason": "to be pruned",
 			}).Debug("Peer disconnected")
-
 		}
 	})
 }
@@ -203,7 +202,12 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
-	log := log.WithField("handler", "status")
+
+	log := log.WithFields(logrus.Fields{
+		"handler": "statusRPCHandler",
+		"topic":   stream.Protocol(),
+	})
+
 	m, ok := msg.(*pb.Status)
 	if !ok {
 		return errors.New("message is not type *pb.Status")
