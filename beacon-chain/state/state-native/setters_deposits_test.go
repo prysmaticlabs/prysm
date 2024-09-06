@@ -15,16 +15,29 @@ func TestAppendPendingDeposit(t *testing.T) {
 	pbd, err := s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(pbd))
-	require.NoError(t, s.AppendPendingDeposit(1, 10))
+	creds := []byte{0xFA, 0xCC}
+	pubkey := []byte{0xAA, 0xBB}
+	sig := []byte{0xCC, 0xDD}
+	require.NoError(t, s.AppendPendingDeposit(&eth.PendingDeposit{
+		PublicKey:             pubkey,
+		WithdrawalCredentials: creds,
+		Amount:                10,
+		Signature:             sig,
+		Slot:                  1,
+	}))
 	pbd, err = s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd))
+	require.Equal(t, pubkey, pbd[0].PublicKey)
 	require.Equal(t, uint64(10), pbd[0].Amount)
+	require.Equal(t, creds, pbd[0].WithdrawalCredentials)
+	require.Equal(t, uint64(1), pbd[0].Slot)
+	require.Equal(t, sig, pbd[0].Signature)
 
 	// Fails for versions older than electra
 	s, err = state_native.InitializeFromProtoDeneb(&eth.BeaconStateDeneb{})
 	require.NoError(t, err)
-	require.ErrorContains(t, "not supported", s.AppendPendingDeposit(1, 1))
+	require.ErrorContains(t, "not supported", s.AppendPendingDeposit(&eth.PendingDeposit{}))
 }
 
 func TestSetPendingDeposits(t *testing.T) {
