@@ -34,22 +34,23 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		return errors.New("message is not type *pb.BeaconBlockByRangeRequest")
 	}
 
-	log.WithFields(logrus.Fields{
+	log = log.WithFields(logrus.Fields{
 		"startSlot": m.StartSlot,
 		"count":     m.Count,
 		"peer":      remotePeer,
-	}).Debug("Serving block by range request")
+	})
 
 	rp, err := validateRangeRequest(m, s.cfg.clock.CurrentSlot())
 	if err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(remotePeer)
 		tracing.AnnotateError(span, err)
+		log.WithError(err).Debug("Serving block by range request - Validate range request")
 		return err
 	}
 	available := s.validateRangeAvailability(rp)
 	if !available {
-		log.Debug("error in validating range availability")
+		log.Debug("Serving block by range request - Not available")
 		s.writeErrorResponseToStream(responseCodeResourceUnavailable, p2ptypes.ErrResourceUnavailable.Error(), stream)
 		tracing.AnnotateError(span, err)
 		return nil
@@ -57,6 +58,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
 	if err != nil {
+		log.WithError(err).Debug("Serving block by range request - Topic collector")
 		return err
 	}
 	remainingBucketCapacity := blockLimiter.Remaining(remotePeer.String())
@@ -73,7 +75,7 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	defer ticker.Stop()
 	batcher, err := newBlockRangeBatcher(rp, s.cfg.beaconDB, s.rateLimiter, s.cfg.chain.IsCanonical, ticker)
 	if err != nil {
-		log.WithError(err).Info("error in BlocksByRange batch")
+		log.WithError(err).Debug("Serving block by range request - newBlockRangeBatcher")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		tracing.AnnotateError(span, err)
 		return err
@@ -91,12 +93,16 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 	}
+
+	log.WithField("remainingCapacityBucket", remainingBucketCapacity).Debug("Serving block by range request")
+
 	if err := batch.error(); err != nil {
-		log.WithError(err).Debug("error in BlocksByRange batch")
+		log.WithError(err).Debug("Serving block by range request - BlocksByRange batch")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		tracing.AnnotateError(span, err)
 		return err
 	}
+
 	closeStream(stream, log)
 	return nil
 }
