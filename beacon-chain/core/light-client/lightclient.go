@@ -455,7 +455,10 @@ func getExecutionPayloadHeaderCapella(block interfaces.ReadOnlySignedBeaconBlock
 			return nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 		withdrawalsRoot = withdrawalsRootArray[:]
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals root")
 	}
+
 	execution := &enginev1.ExecutionPayloadHeaderCapella{
 		ParentHash:       payloadInterface.ParentHash(),
 		FeeRecipient:     payloadInterface.FeeRecipient(),
@@ -507,7 +510,10 @@ func getExecutionPayloadHeaderDeneb(block interfaces.ReadOnlySignedBeaconBlock) 
 			return nil, errors.Wrap(err, "could not get withdrawals root")
 		}
 		withdrawalsRoot = withdrawalsRootArray[:]
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals root")
 	}
+
 	execution := &enginev1.ExecutionPayloadHeaderDeneb{
 		ParentHash:       payloadInterface.ParentHash(),
 		FeeRecipient:     payloadInterface.FeeRecipient(),
