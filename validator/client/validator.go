@@ -1394,9 +1394,9 @@ func (v *validator) buildSignedRegReqs(
 			}).Warn("Fee recipient is burn address")
 		}
 
-		if slots.IsEpochStart(slot) || forceFullPush { // if epoch start (or forced to) send all validator registrations
-			signedValRegRegs = append(signedValRegRegs, signedReq)
-		} else if !isCached { // if slot is not epoch start then only send new non cached values
+		if slots.IsEpochStart(slot) || forceFullPush || !isCached {
+			// if epoch start (or forced to) send all validator registrations
+			// otherwise if slot is not epoch start then only send new non cached values
 			signedValRegRegs = append(signedValRegRegs, signedReq)
 		}
 	}
