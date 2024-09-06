@@ -48,9 +48,8 @@ func New(ctx context.Context, opts ...Option) (*Server, error) {
 	if g.cfg.timeout > 0*time.Second {
 		defaultReadHeaderTimeout = g.cfg.timeout
 		handler = http.TimeoutHandler(g.cfg.router, g.cfg.timeout, "request timed out")
-	} else {
-		handler = middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	}
+	handler = middleware.MiddlewareChain(g.cfg.router, g.cfg.middlewares)
 	g.server = &http.Server{
 		Addr:              g.cfg.httpAddr,
 		Handler:           handler,
@@ -99,4 +98,8 @@ func (g *Server) Stop() error {
 		g.cancel()
 	}
 	return nil
+}
+
+func (g *Server) RegisterMiddlewares(mw middleware.Middleware) {
+	g.cfg.middlewares = append(g.cfg.middlewares, mw)
 }

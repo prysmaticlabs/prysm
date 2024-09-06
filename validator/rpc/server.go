@@ -169,7 +169,7 @@ func (s *Server) InitializeRoutes() error {
 		return errors.New("no router found on server")
 	}
 	// Adding Auth Interceptor for the routes below
-	s.AuthTokenHandler(s.router)
+	s.server.RegisterMiddlewares(s.AuthTokenHandler)
 	// Register all services, HandleFunc calls, etc.
 	// ...
 	s.router.HandleFunc("GET /eth/v1/keystores", s.ListKeystores)

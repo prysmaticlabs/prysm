@@ -8,6 +8,8 @@ import (
 	"github.com/rs/cors"
 )
 
+type Middleware func(http.Handler) http.Handler
+
 // NormalizeQueryValuesHandler normalizes an input query of "key=value1,value2,value3" to "key=value1&key=value2&key=value3"
 func NormalizeQueryValuesHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +22,7 @@ func NormalizeQueryValuesHandler(next http.Handler) http.Handler {
 }
 
 // CorsHandler sets the cors settings on api endpoints
-func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
+func CorsHandler(allowOrigins []string) Middleware {
 	c := cors.New(cors.Options{
 		AllowedOrigins:   allowOrigins,
 		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
@@ -33,7 +35,7 @@ func CorsHandler(allowOrigins []string) func(http.Handler) http.Handler {
 }
 
 // ContentTypeHandler checks request for the appropriate media types otherwise returning a http.StatusUnsupportedMediaType error
-func ContentTypeHandler(acceptedMediaTypes []string) func(http.Handler) http.Handler {
+func ContentTypeHandler(acceptedMediaTypes []string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// skip the GET request
@@ -66,7 +68,7 @@ func ContentTypeHandler(acceptedMediaTypes []string) func(http.Handler) http.Han
 }
 
 // AcceptHeaderHandler checks if the client's response preference is handled
-func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.Handler {
+func AcceptHeaderHandler(serverAcceptedTypes []string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			acceptHeader := r.Header.Get("Accept")
@@ -109,8 +111,6 @@ func AcceptHeaderHandler(serverAcceptedTypes []string) func(http.Handler) http.H
 		})
 	}
 }
-
-type Middleware func(http.Handler) http.Handler
 
 func MiddlewareChain(h http.Handler, mw []Middleware) http.Handler {
 	if len(mw) < 1 {

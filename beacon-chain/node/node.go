@@ -1040,6 +1040,7 @@ func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
 	} else {
 		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
+
 	middlewares := []middleware.Middleware{
 		middleware.NormalizeQueryValuesHandler,
 		middleware.CorsHandler(allowedOrigins),
