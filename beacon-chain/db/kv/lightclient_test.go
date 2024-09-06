@@ -5,26 +5,54 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
-func TestStore_LightclientUpdate_CanSaveRetrieve(t *testing.T) {
+func TestStore_LightclientUpdate_CanSaveRetrieveAltair(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	update := &ethpbv2.LightClientUpdate{
-		AttestedHeader:          nil,
-		NextSyncCommittee:       nil,
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
 		NextSyncCommitteeBranch: nil,
-		FinalizedHeader:         nil,
-		FinalityBranch:          nil,
-		SyncAggregate:           nil,
-		SignatureSlot:           7,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate:  nil,
+		SignatureSlot:  7,
 	}
-
 	period := uint64(1)
 	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
-		Version: 1,
+		Version: version.Altair,
 		Data:    update,
 	})
 	require.NoError(t, err)
@@ -33,7 +61,157 @@ func TestStore_LightclientUpdate_CanSaveRetrieve(t *testing.T) {
 	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
 	require.NoError(t, err)
 	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdate.Version, ethpbv2.Version_ALTAIR, "retrieved update version does not match saved update")
+	retrievedUpdateAttestedBeacon, err := retrievedUpdate.Data.AttestedHeader.GetBeacon()
+	require.NoError(t, err)
+	updateAttestedBeacon, err := update.AttestedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, retrievedUpdateAttestedBeacon.Slot, updateAttestedBeacon.Slot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdateAttestedBeacon.ProposerIndex, updateAttestedBeacon.ProposerIndex, "retrieved update does not match saved update")
+	retrievedUpdateFinalizedBeacon, err := retrievedUpdate.Data.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	updateFinalizedBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
+}
 
+func TestStore_LightclientUpdate_CanSaveRetrieveCapella(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution:       nil,
+					ExecutionBranch: nil,
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution:       nil,
+					ExecutionBranch: nil,
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate:  nil,
+		SignatureSlot:  7,
+	}
+	period := uint64(1)
+	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Capella,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	// Retrieve the update
+	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
+	require.NoError(t, err)
+	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdate.Version, ethpbv2.Version_CAPELLA, "retrieved update version does not match saved update")
+	retrievedUpdateAttestedBeacon, err := retrievedUpdate.Data.AttestedHeader.GetBeacon()
+	require.NoError(t, err)
+	updateAttestedBeacon, err := update.AttestedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, retrievedUpdateAttestedBeacon.Slot, updateAttestedBeacon.Slot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdateAttestedBeacon.ProposerIndex, updateAttestedBeacon.ProposerIndex, "retrieved update does not match saved update")
+	retrievedUpdateFinalizedBeacon, err := retrievedUpdate.Data.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	updateFinalizedBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
+}
+
+func TestStore_LightclientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution:       nil,
+					ExecutionBranch: nil,
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution:       nil,
+					ExecutionBranch: nil,
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate:  nil,
+		SignatureSlot:  7,
+	}
+	period := uint64(1)
+	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Deneb,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	// Retrieve the update
+	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
+	require.NoError(t, err)
+	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdate.Version, ethpbv2.Version_DENEB, "retrieved update version does not match saved update")
+	retrievedUpdateAttestedBeacon, err := retrievedUpdate.Data.AttestedHeader.GetBeacon()
+	require.NoError(t, err)
+	updateAttestedBeacon, err := update.AttestedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, retrievedUpdateAttestedBeacon.Slot, updateAttestedBeacon.Slot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdateAttestedBeacon.ProposerIndex, updateAttestedBeacon.ProposerIndex, "retrieved update does not match saved update")
+	retrievedUpdateFinalizedBeacon, err := retrievedUpdate.Data.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	updateFinalizedBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
+	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
 }
 
 func TestStore_LightclientUpdates_canRetrieveRange(t *testing.T) {
