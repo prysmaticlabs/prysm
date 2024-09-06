@@ -8,13 +8,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
+	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
@@ -268,7 +272,41 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 			finalizedBlock = nil
 		}
 	}
+	// Check if the client requests SSZ format
+	if httputil.RespondWithSsz(req) {
+		update, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx,
+			state,
+			block,
+			attestedState,
+			finalizedBlock)
+		if err != nil {
+			httputil.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 
+		Pubkeys := make([][]byte, 512)
+		for i := range Pubkeys {
+			Pubkeys[i] = make([]byte, 48)
+		}
+		NextSyncCommitteeBranch := make([][]byte, 5)
+		for i := range NextSyncCommitteeBranch {
+			NextSyncCommitteeBranch[i] = make([]byte, 32)
+		}
+		update.NextSyncCommitteeBranch = NextSyncCommitteeBranch
+		update.NextSyncCommittee = &eth.SyncCommittee{
+			Pubkeys:         Pubkeys,
+			AggregatePubkey: make([]byte, 48),
+		}
+		ssz_update, err := update.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal light client finality update into SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set(api.VersionHeader, version.String(state.Version()))
+		httputil.WriteSsz(w, ssz_update, "light_client_finality_update.ssz")
+		return
+	}
 	update, err := newLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		state,
@@ -324,6 +362,56 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 	attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
 		httputil.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Check if the client requests SSZ format
+	if httputil.RespondWithSsz(req) {
+		update, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx,
+			state,
+			block,
+			attestedState,
+		)
+
+		if err != nil {
+			httputil.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		Pubkeys := make([][]byte, 512)
+		for i := range Pubkeys {
+			Pubkeys[i] = make([]byte, 48)
+		}
+		NextSyncCommitteeBranch := make([][]byte, 5)
+		for i := range NextSyncCommitteeBranch {
+			NextSyncCommitteeBranch[i] = make([]byte, 32)
+		}
+		update.NextSyncCommitteeBranch = NextSyncCommitteeBranch
+		update.NextSyncCommittee = &eth.SyncCommittee{
+			Pubkeys:         Pubkeys,
+			AggregatePubkey: make([]byte, 48),
+		}
+
+		update.FinalizedHeader = &eth.LightClientHeader{
+			Beacon: &v1.BeaconBlockHeader{
+				Slot:          0,
+				ProposerIndex: 0,
+				ParentRoot:    make([]byte, 32),
+				StateRoot:     make([]byte, 32),
+				BodyRoot:      make([]byte, 32),
+			},
+		}
+		finalitybranch := make([][]byte, 6)
+		for i := range finalitybranch {
+			finalitybranch[i] = make([]byte, 32)
+		}
+		update.FinalityBranch = finalitybranch
+		ssz_update, err := update.MarshalSSZ()
+
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal light client finality update into SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set(api.VersionHeader, version.String(state.Version()))
+		httputil.WriteSsz(w, ssz_update, "light_client_finality_update.ssz")
 		return
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -679,16 +681,31 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	}
 	request := httptest.NewRequest("GET", "http://foo.com", nil)
 	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
+	t.Run("JSON response", func(t *testing.T) {
 
-	s.GetLightClientFinalityUpdate(writer, request)
+		writer.Body = &bytes.Buffer{}
+		s.GetLightClientFinalityUpdate(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.LightClientUpdateWithVersion{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, "capella", resp.Version)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
+		require.NotNil(t, resp.Data)
+	})
+	t.Run("SSZ response", func(t *testing.T) {
 
-	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &structs.LightClientUpdateWithVersion{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
-	require.NotNil(t, resp.Data)
+		writer.Body = &bytes.Buffer{}
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+
+		s.GetLightClientFinalityUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &eth.LightClientUpdate{}
+		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()), resp)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.Beacon.BodyRoot))
+		require.NotNil(t, resp)
+	})
+
 }
 
 func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
@@ -785,16 +802,33 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	}
 	request := httptest.NewRequest("GET", "http://foo.com", nil)
 	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
 
-	s.GetLightClientOptimisticUpdate(writer, request)
+	t.Run("JSON response", func(t *testing.T) {
 
-	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &structs.LightClientUpdateWithVersion{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "capella", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
-	require.NotNil(t, resp.Data)
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLightClientOptimisticUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.LightClientUpdateWithVersion{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, "capella", resp.Version)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.Beacon.BodyRoot)
+		require.NotNil(t, resp.Data)
+	})
+	t.Run("SSZ response", func(t *testing.T) {
+
+		writer.Body = &bytes.Buffer{}
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+
+		s.GetLightClientOptimisticUpdate(writer, request)
+
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &eth.LightClientUpdate{}
+		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()), resp)
+		require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), hexutil.Encode(resp.AttestedHeader.Beacon.BodyRoot))
+		require.NotNil(t, resp)
+	})
 }
 
 func TestLightClientHandler_GetLightClientEventBlock(t *testing.T) {
