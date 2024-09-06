@@ -1263,13 +1263,11 @@ func (v *validator) updateValidatorStatusCache(ctx context.Context, pubkeys [][f
 		return fmt.Errorf("expected %d indices in status, received %d", len(resp.Statuses), len(resp.Indices))
 	}
 	for i, s := range resp.Statuses {
-		sta := &validatorStatus{
+		v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = &validatorStatus{
 			publicKey: resp.PublicKeys[i],
 			status:    s,
 			index:     resp.Indices[i],
 		}
-		// update cache
-		v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = sta
 	}
 	return nil
 }
