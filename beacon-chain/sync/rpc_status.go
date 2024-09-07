@@ -82,7 +82,6 @@ func (s *Service) maintainPeerStatuses() {
 				"peer":   id,
 				"reason": "to be pruned",
 			}).Debug("Initiate peer disconnection")
-
 		}
 	})
 }

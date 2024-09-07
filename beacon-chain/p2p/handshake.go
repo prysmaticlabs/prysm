@@ -172,7 +172,6 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 							s.disconnectFromPeer(conn, goodByeFunc, errors.New("did not update"))
 							return
 						}
-
 					}
 
 					s.connectToPeer(conn)

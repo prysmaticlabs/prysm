@@ -91,12 +91,21 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 		rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(batchStart).Milliseconds()))
 	}
+
 	if err := batch.error(); err != nil {
-		log.WithError(err).Debug("error in BlocksByRange batch")
-		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		log.WithError(err).Debug("Serving block by range request - BlocksByRange batch")
+
+		// If we hit a rate limit, the error response has already been written, and the stream is already closed.
+		if !errors.Is(err, p2ptypes.ErrRateLimited) {
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		}
+
 		tracing.AnnotateError(span, err)
 		return err
 	}
+
+	log.Debug("Serving block by range request")
+
 	closeStream(stream, log)
 	return nil
 }
