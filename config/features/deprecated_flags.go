@@ -105,9 +105,10 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableGRPCGateway,
 	deprecatedEnableExperimentalState,
 	deprecatedInteropGenesisTimeFlag,
-	deprecatedInteropNumValidatorsFlag,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
 // and therefore cannot be added to deprecatedFlags
-var deprecatedBeaconFlags []cli.Flag
+var deprecatedBeaconFlags = []cli.Flag{
+	deprecatedInteropNumValidatorsFlag,
+}

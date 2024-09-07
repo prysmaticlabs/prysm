@@ -342,7 +342,7 @@ func (s *PremineGenesisConfig) setFork(g state.BeaconState) error {
 	case version.Deneb:
 		pv, cv = params.BeaconConfig().CapellaForkVersion, params.BeaconConfig().DenebForkVersion
 	case version.Electra:
-	  pv, cv = params.BeaconConfig().DenebForkVersion, params.BeaconConfig().ElectraForkVersion
+		pv, cv = params.BeaconConfig().DenebForkVersion, params.BeaconConfig().ElectraForkVersion
 	default:
 		return errUnsupportedVersion
 	}
@@ -544,23 +544,21 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 			},
 			ExecutionPayload: &enginev1.ExecutionPayloadElectra{
-				ParentHash:    make([]byte, 32),
-				FeeRecipient:  make([]byte, 20),
-				StateRoot:     make([]byte, 32),
-				ReceiptsRoot:  make([]byte, 32),
-				LogsBloom:     make([]byte, 256),
-				PrevRandao:    make([]byte, 32),
-				ExtraData:     make([]byte, 0),
-				BaseFeePerGas: make([]byte, 32),
-				BlockHash:     make([]byte, 32),
-				Transactions:  make([][]byte, 0),
-				Withdrawals:   make([]*enginev1.Withdrawal, 0),
-			DepositRequests:       make([]*enginev1.DepositRequest, 0),      
-WithdrawalRequests:    make([]*enginev1.WithdrawalRequest, 0),   
-				ConsolidationRequests: make([]*enginev1.ConsolidationRequest, 0), 
+				ParentHash:            make([]byte, 32),
+				FeeRecipient:          make([]byte, 20),
+				StateRoot:             make([]byte, 32),
+				ReceiptsRoot:          make([]byte, 32),
+				LogsBloom:             make([]byte, 256),
+				PrevRandao:            make([]byte, 32),
+				ExtraData:             make([]byte, 0),
+				BaseFeePerGas:         make([]byte, 32),
+				BlockHash:             make([]byte, 32),
+				Transactions:          make([][]byte, 0),
+				Withdrawals:           make([]*enginev1.Withdrawal, 0),
 			},
 			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
 			BlobKzgCommitments:    make([][]byte, 0),
+			ExecutionRequests:     &enginev1.ExecutionRequests{},
 		}
 
 	default:
@@ -664,8 +662,8 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			BlockHash:     gb.Hash().Bytes(),
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
-			ExcessBlobGas: *gb.ExcessBlobGas(),
-			BlobGasUsed:   *gb.BlobGasUsed(),
+			ExcessBlobGas: unwrapUint64Ptr(gb.ExcessBlobGas()),
+			BlobGasUsed:   unwrapUint64Ptr(gb.BlobGasUsed()),
 		}
 		wep, err := blocks.WrappedExecutionPayloadDeneb(payload)
 		if err != nil {
@@ -696,18 +694,14 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			BlockHash:     gb.Hash().Bytes(),
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
-			ExcessBlobGas: *gb.ExcessBlobGas(),
-			BlobGasUsed:   *gb.BlobGasUsed(),
+			ExcessBlobGas: unwrapUint64Ptr(gb.ExcessBlobGas()),
+			BlobGasUsed:   unwrapUint64Ptr(gb.BlobGasUsed()),
 		}
 		wep, err := blocks.WrappedExecutionPayloadElectra(payload)
 		if err != nil {
 			return err
 		}
-		wep1, ok := wep.(interfaces.ExecutionDataElectra)
-		if !ok {
-			return errors.New("payload is not an ExecutionDataElectra")
-		}
-		eph, err := blocks.PayloadToHeaderElectra(wep1)
+		eph, err := blocks.PayloadToHeaderElectra(wep)
 		if err != nil {
 			return err
 		}
@@ -720,6 +714,13 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 		return errUnsupportedVersion
 	}
 	return g.SetLatestExecutionPayloadHeader(ed)
+}
+
+func unwrapUint64Ptr(u *uint64) uint64 {
+	if u == nil {
+		return 0
+	}
+	return *u
 }
 
 func nZeroRoots(n uint64) [][]byte {

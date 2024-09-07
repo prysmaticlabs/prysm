@@ -19,7 +19,6 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
-	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
