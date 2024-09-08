@@ -12,7 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v5/io/logs"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
@@ -20,6 +22,7 @@ import (
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/prysmaticlabs/prysm/v5/validator/web"
+	"github.com/urfave/cli/v2"
 )
 
 // Config options for the HTTP server.
@@ -78,7 +81,7 @@ type Server struct {
 }
 
 // NewServer instantiates a new HTTP server.
-func NewServer(ctx context.Context, cfg *Config) *Server {
+func NewServer(cliCtx *cli.Context, ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 	server := &Server{
 		ctx:                    ctx,
@@ -122,13 +125,24 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		log.WithError(err).Fatal("Could not register beacon chain gRPC or HTTP client")
 	}
 
-	if err := server.InitializeRoutesWithWebHandler(); err != nil {
-		log.WithError(err).Fatal("Could not initialize routes with web handler")
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
 	}
 
+	middlewares := []middleware.Middleware{
+		middleware.NormalizeQueryValuesHandler,
+		middleware.CorsHandler(allowedOrigins),
+	}
 	opts := []httprest.Option{
 		httprest.WithRouter(cfg.Router),
 		httprest.WithHTTPAddr(net.JoinHostPort(server.httpHost, fmt.Sprintf("%d", server.httpPort))),
+		httprest.WithMiddlewares(middlewares),
+	}
+	if err := server.InitializeRoutesWithWebHandler(); err != nil {
+		log.WithError(err).Fatal("Could not initialize routes with web handler")
 	}
 	// create and set a new http server
 	s, err := httprest.New(server.ctx, opts...)

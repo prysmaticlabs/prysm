@@ -19,8 +19,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
-	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
@@ -76,17 +74,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	); err != nil {
 		return nil, err
 	}
-	var allowedOrigins []string
-	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
-	}
-	middlewares := []middleware.Middleware{
-		middleware.NormalizeQueryValuesHandler,
-		middleware.CorsHandler(allowedOrigins),
-	}
-	httprest.WithMiddlewares(middlewares)
+
 	verbosity := cliCtx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -603,7 +591,7 @@ func (c *ValidatorClient) registerRPCService(router *http.ServeMux) error {
 	}
 	port := c.cliCtx.Int(flags.HTTPServerPort.Name)
 
-	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
+	s := rpc.NewServer(c.cliCtx, c.cliCtx.Context, &rpc.Config{
 		HTTPHost:               host,
 		HTTPPort:               port,
 		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
