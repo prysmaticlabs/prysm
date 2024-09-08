@@ -653,25 +653,22 @@ func IsBetterUpdate(newUpdate, oldUpdate *v2.LightClientUpdate) (bool, error) {
 }
 
 func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientHeader, error) {
-	parentRootArray := block.Block().ParentRoot()
-	parentRoot := parentRootArray[:]
+	parentRoot := block.Block().ParentRoot()
 
-	stateRootArray := block.Block().StateRoot()
-	stateRoot := stateRootArray[:]
+	stateRoot := block.Block().StateRoot()
 
-	bodyRootArray, err := block.Block().Body().HashTreeRoot()
+	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get body root")
 	}
-	bodyRoot := bodyRootArray[:]
 
 	return &structs.LightClientHeader{
 		Beacon: &structs.BeaconBlockHeader{
 			Slot:          hexutil.EncodeUint64(uint64(block.Block().Slot())),
 			ProposerIndex: hexutil.EncodeUint64(uint64(block.Block().ProposerIndex())),
-			ParentRoot:    hexutil.Encode(parentRoot),
-			StateRoot:     hexutil.Encode(stateRoot),
-			BodyRoot:      hexutil.Encode(bodyRoot),
+			ParentRoot:    hexutil.Encode(parentRoot[:]),
+			StateRoot:     hexutil.Encode(stateRoot[:]),
+			BodyRoot:      hexutil.Encode(bodyRoot[:]),
 		},
 	}, nil
 }
@@ -743,25 +740,22 @@ func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 		executionPayloadProofStr[i] = hexutil.Encode(proof)
 	}
 
-	parentRootArray := block.Block().ParentRoot()
-	parentRoot := parentRootArray[:]
+	parentRoot := block.Block().ParentRoot()
 
-	stateRootArray := block.Block().StateRoot()
-	stateRoot := stateRootArray[:]
+	stateRoot := block.Block().StateRoot()
 
-	bodyRootArray, err := block.Block().Body().HashTreeRoot()
+	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get body root")
 	}
-	bodyRoot := bodyRootArray[:]
 
 	return &structs.LightClientHeaderCapella{
 		Beacon: &structs.BeaconBlockHeader{
 			Slot:          hexutil.EncodeUint64(uint64(block.Block().Slot())),
 			ProposerIndex: hexutil.EncodeUint64(uint64(block.Block().ProposerIndex())),
-			ParentRoot:    hexutil.Encode(parentRoot),
-			StateRoot:     hexutil.Encode(stateRoot),
-			BodyRoot:      hexutil.Encode(bodyRoot),
+			ParentRoot:    hexutil.Encode(parentRoot[:]),
+			StateRoot:     hexutil.Encode(stateRoot[:]),
+			BodyRoot:      hexutil.Encode(bodyRoot[:]),
 		},
 		Execution:       executionHeader,
 		ExecutionBranch: executionPayloadProofStr,
@@ -845,25 +839,22 @@ func BlockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnl
 		executionPayloadProofStr[i] = hexutil.Encode(proof)
 	}
 
-	parentRootArray := block.Block().ParentRoot()
-	parentRoot := parentRootArray[:]
+	parentRoot := block.Block().ParentRoot()
 
-	stateRootArray := block.Block().StateRoot()
-	stateRoot := stateRootArray[:]
+	stateRoot := block.Block().StateRoot()
 
-	bodyRootArray, err := block.Block().Body().HashTreeRoot()
+	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get body root")
 	}
-	bodyRoot := bodyRootArray[:]
 
 	return &structs.LightClientHeaderDeneb{
 		Beacon: &structs.BeaconBlockHeader{
 			Slot:          hexutil.EncodeUint64(uint64(block.Block().Slot())),
 			ProposerIndex: hexutil.EncodeUint64(uint64(block.Block().ProposerIndex())),
-			ParentRoot:    hexutil.Encode(parentRoot),
-			StateRoot:     hexutil.Encode(stateRoot),
-			BodyRoot:      hexutil.Encode(bodyRoot),
+			ParentRoot:    hexutil.Encode(parentRoot[:]),
+			StateRoot:     hexutil.Encode(stateRoot[:]),
+			BodyRoot:      hexutil.Encode(bodyRoot[:]),
 		},
 		Execution:       executionHeader,
 		ExecutionBranch: executionPayloadProofStr,
