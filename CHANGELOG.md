@@ -30,6 +30,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
+- Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
