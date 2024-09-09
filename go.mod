@@ -99,8 +99,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	honnef.co/go/tools v0.5.0-0.dev.0.20231205170804-aef76f4feee2
-	k8s.io/apimachinery v0.20.0
-	k8s.io/client-go v0.20.0
+	k8s.io/apimachinery v0.30.4
+	k8s.io/client-go v0.30.4
 )
 
 require (
