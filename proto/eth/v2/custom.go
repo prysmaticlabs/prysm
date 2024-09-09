@@ -3,6 +3,7 @@ package eth
 import (
 	"bytes"
 	"fmt"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"math/bits"
 
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
@@ -63,5 +64,34 @@ func (x *LightClientHeaderContainer) GetBeacon() (*v1.BeaconBlockHeader, error) 
 		return input.HeaderDeneb.Beacon, nil
 	default:
 		return nil, fmt.Errorf("unknown header type: %T", input)
+	}
+}
+
+func (x *LightClientHeaderContainer) GetExecutionHeaderCapella() (*enginev1.ExecutionPayloadHeaderCapella, error) {
+	switch input := x.Header.(type) {
+	case *LightClientHeaderContainer_HeaderCapella:
+		return input.HeaderCapella.Execution, nil
+	default:
+		return nil, fmt.Errorf("header type not capella: %T", input)
+	}
+}
+
+func (x *LightClientHeaderContainer) GetExecutionHeaderDeneb() (*enginev1.ExecutionPayloadHeaderDeneb, error) {
+	switch input := x.Header.(type) {
+	case *LightClientHeaderContainer_HeaderDeneb:
+		return input.HeaderDeneb.Execution, nil
+	default:
+		return nil, fmt.Errorf("header type not deneb: %T", input)
+	}
+}
+
+func (x *LightClientHeaderContainer) GetExecutionBranch() ([][]byte, error) {
+	switch input := x.Header.(type) {
+	case *LightClientHeaderContainer_HeaderCapella:
+		return input.HeaderCapella.ExecutionBranch, nil
+	case *LightClientHeaderContainer_HeaderDeneb:
+		return input.HeaderDeneb.ExecutionBranch, nil
+	default:
+		return nil, fmt.Errorf("wrong header type: %T", input)
 	}
 }

@@ -1,17 +1,19 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
-func TestStore_LightclientUpdate_CanSaveRetrieveAltair(t *testing.T) {
+func TestStore_LightClientUpdate_CanSaveRetrieveAltair(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	update := &ethpbv2.LightClientUpdate{
@@ -76,7 +78,7 @@ func TestStore_LightclientUpdate_CanSaveRetrieveAltair(t *testing.T) {
 	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
 }
 
-func TestStore_LightclientUpdate_CanSaveRetrieveCapella(t *testing.T) {
+func TestStore_LightClientUpdate_CanSaveRetrieveCapella(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	update := &ethpbv2.LightClientUpdate{
@@ -90,8 +92,10 @@ func TestStore_LightclientUpdate_CanSaveRetrieveCapella(t *testing.T) {
 						StateRoot:     []byte{1, 1, 1},
 						BodyRoot:      []byte{1, 1, 1},
 					},
-					Execution:       nil,
-					ExecutionBranch: nil,
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
 		},
@@ -143,9 +147,22 @@ func TestStore_LightclientUpdate_CanSaveRetrieveCapella(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
 	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
+	updateAttestedExecution, err := update.AttestedHeader.GetExecutionHeaderCapella()
+	require.NoError(t, err)
+	retrievedUpdateAttestedExecution, err := retrievedUpdate.Data.AttestedHeader.GetExecutionHeaderCapella()
+	require.NoError(t, err)
+	require.Equal(t, bytes.Equal(updateAttestedExecution.FeeRecipient, retrievedUpdateAttestedExecution.FeeRecipient), true, "retrieved update does not match saved update")
+	updateAttestedExecutionBranch, err := update.AttestedHeader.GetExecutionBranch()
+	require.NoError(t, err)
+	retrievedUpdateAttestedExecutionBranch, err := retrievedUpdate.Data.AttestedHeader.GetExecutionBranch()
+	require.NoError(t, err)
+	require.Equal(t, len(updateAttestedExecutionBranch), len(retrievedUpdateAttestedExecutionBranch), "retrieved update does not match saved update")
+	for i := range updateAttestedExecutionBranch {
+		require.Equal(t, bytes.Equal(updateAttestedExecutionBranch[i], retrievedUpdateAttestedExecutionBranch[i]), true, "retrieved update does not match saved update")
+	}
 }
 
-func TestStore_LightclientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
+func TestStore_LightClientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	update := &ethpbv2.LightClientUpdate{
@@ -159,8 +176,10 @@ func TestStore_LightclientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
 						StateRoot:     []byte{1, 1, 1},
 						BodyRoot:      []byte{1, 1, 1},
 					},
-					Execution:       nil,
-					ExecutionBranch: nil,
+					Execution: &enginev1.ExecutionPayloadHeaderDeneb{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
 		},
@@ -212,9 +231,22 @@ func TestStore_LightclientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
 	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
+	updateAttestedExecution, err := update.AttestedHeader.GetExecutionHeaderDeneb()
+	require.NoError(t, err)
+	retrievedUpdateAttestedExecution, err := retrievedUpdate.Data.AttestedHeader.GetExecutionHeaderDeneb()
+	require.NoError(t, err)
+	require.Equal(t, bytes.Equal(updateAttestedExecution.FeeRecipient, retrievedUpdateAttestedExecution.FeeRecipient), true, "retrieved update does not match saved update")
+	updateAttestedExecutionBranch, err := update.AttestedHeader.GetExecutionBranch()
+	require.NoError(t, err)
+	retrievedUpdateAttestedExecutionBranch, err := retrievedUpdate.Data.AttestedHeader.GetExecutionBranch()
+	require.NoError(t, err)
+	require.Equal(t, len(updateAttestedExecutionBranch), len(retrievedUpdateAttestedExecutionBranch), "retrieved update does not match saved update")
+	for i := range updateAttestedExecutionBranch {
+		require.Equal(t, bytes.Equal(updateAttestedExecutionBranch[i], retrievedUpdateAttestedExecutionBranch[i]), true, "retrieved update does not match saved update")
+	}
 }
 
-func TestStore_LightclientUpdates_canRetrieveRange(t *testing.T) {
+func TestStore_LightClientUpdates_canRetrieveRange(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	updates := []*ethpbv2.LightClientUpdateWithVersion{
