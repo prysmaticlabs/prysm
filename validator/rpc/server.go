@@ -124,6 +124,8 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		log.WithError(err).Fatal("Could not register beacon chain gRPC or HTTP client")
 	}
 
+	// Adding Auth Interceptor for the routes below
+	cfg.Middlewares = append(cfg.Middlewares, server.AuthTokenHandler)
 	opts := []httprest.Option{
 		httprest.WithRouter(cfg.Router),
 		httprest.WithHTTPAddr(net.JoinHostPort(server.httpHost, fmt.Sprintf("%d", server.httpPort))),
@@ -171,8 +173,6 @@ func (s *Server) InitializeRoutes() error {
 	if s.router == nil {
 		return errors.New("no router found on server")
 	}
-	// Adding Auth Interceptor for the routes below
-	s.server.RegisterMiddlewares(s.AuthTokenHandler)
 	// Register all services, HandleFunc calls, etc.
 	// ...
 	s.router.HandleFunc("GET /eth/v1/keystores", s.ListKeystores)
