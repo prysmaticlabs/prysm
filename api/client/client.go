@@ -8,7 +8,6 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Client is a wrapper object around the HTTP client.
@@ -27,9 +26,7 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{
-		hc: &http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
-		},
+		hc:      &http.Client{},
 		baseURL: u,
 	}
 	for _, o := range opts {
