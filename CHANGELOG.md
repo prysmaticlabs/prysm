@@ -1,4 +1,4 @@
-# Changelog 
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -10,26 +10,33 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 - Aggregate and proof committee validation for Electra.
 - More tests for electra field generation.
-- Light client support: implement `ComputeFieldRootsForBlockBody`.
+- Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
+- Light client support: Implement capella and deneb changes.
 
 ### Changed
 
 - `getLocalPayload` has been refactored to enable work in ePBS branch.
-- `TestNodeServer_GetPeer` and `TestNodeServer_ListPeers` test flakes resolved by iterating the whole peer list to find a match rather than taking the first peer in the map.
+- `TestNodeServer_GetPeer` and `TestNodeServer_ListPeers` test flakes resolved by iterating the whole peer list to find
+  a match rather than taking the first peer in the map.
 - Passing spectests v1.5.0-alpha.4 and v1.5.0-alpha.5.
 - Beacon chain now asserts that the external builder block uses the expected gas limit.
 - Electra: Add electra objects to beacon API.
 - Electra: Updated block publishing beacon APIs to support Electra.
 - "Submitted builder validator registration settings for custom builders" log message moved to debug level.
 - config: Genesis validator root is now hardcoded in params.BeaconConfig()
+- `grpc-gateway-host` is renamed to http-host. The old name can still be used as an alias.
+- `grpc-gateway-port` is renamed to http-port. The old name can still be used as an alias.
+- `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
+- `api-timeout` is changed from int flag to duration flag, default value updated.
+- Light client support: abstracted out the light client headers with different versions.
 
 ### Deprecated
-
+- `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
 
 ### Removed
-
+- removed gRPC Gateway
 
 ### Fixed
 
@@ -38,18 +45,24 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: build blocks with blobs.
 - E2E: fixed gas limit at genesis
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
+- Core: Fix process effective balance update to safe copy validator for Electra.
+- `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 - p2p: fixed metadata to be maintained when `--p2p-static-id` is true
 
 ### Security
 
-
 ## [v5.1.0](https://github.com/prysmaticlabs/prysm/compare/v5.0.4...v5.1.0) - 2024-08-20
 
-This release contains 171 new changes and many of these are related to Electra! Along side the Electra changes, there are nearly 100 changes related to bug fixes, feature additions, and other improvements to Prysm. Updating to this release is recommended at your convenience.
+This release contains 171 new changes and many of these are related to Electra! Along side the Electra changes, there
+are nearly 100 changes related to bug fixes, feature additions, and other improvements to Prysm. Updating to this
+release is recommended at your convenience.
 
 ⚠️ Deprecation Notice: Removal of gRPC Gateway and Gateway Flag Renaming ⚠️
 
-In an upcoming release, we will be deprecating the gRPC gateway and renaming several associated flags. This change will result in the removal of access to several internal APIs via REST, though the gRPC endpoints will remain unaffected. We strongly encourage systems to transition to using the beacon API endpoints moving forward. Please refer to PR for more details.
+In an upcoming release, we will be deprecating the gRPC gateway and renaming several associated flags. This change will
+result in the removal of access to several internal APIs via REST, though the gRPC endpoints will remain unaffected. We
+strongly encourage systems to transition to using the beacon API endpoints moving forward. Please refer to PR for more
+details.
 
 ### Added
 
@@ -60,7 +73,8 @@ In an upcoming release, we will be deprecating the gRPC gateway and renaming sev
 - Add middleware for Content-Type and Accept headers
 - Add debug logs for proposer settings
 - Add tracing to beacon api package
-- Add support for persistent validator keys when using remote signer. --validators-external-signer-public-keys and --validators-external-signer-key-file See the docs page for more info.
+- Add support for persistent validator keys when using remote signer. --validators-external-signer-public-keys and
+  --validators-external-signer-key-file See the docs page for more info.
 - Add AggregateKeyFromIndices to beacon state to reduce memory usage when processing attestations
 - Add GetIndividualVotes endpoint
 - Implement is_better_update for light client
@@ -114,7 +128,7 @@ In an upcoming release, we will be deprecating the gRPC gateway and renaming sev
 - Fix Event stream with carriage return support
 - Fix panic on empty block result in REST API
 - engine_getPayloadBodiesByRangeV1 - fix, adding hexutil encoding on request parameters
-
+- Use sync committee period instead of epoch in `createLightClientUpdate`
 
 ### Security
 
@@ -122,7 +136,9 @@ In an upcoming release, we will be deprecating the gRPC gateway and renaming sev
 
 ## [v5.0.4](https://github.com/prysmaticlabs/prysm/compare/v5.0.3...v5.0.4) - 2024-07-21
 
-This release has many wonderful bug fixes and improvements. Some highlights include p2p peer fix for windows users, beacon API fix for retrieving blobs older than the minimum blob retention period, and improvements to initial sync by avoiding redundant blob downloads.
+This release has many wonderful bug fixes and improvements. Some highlights include p2p peer fix for windows users,
+beacon API fix for retrieving blobs older than the minimum blob retention period, and improvements to initial sync by
+avoiding redundant blob downloads.
 
 Updating to this release is recommended at your earliest convenience, especially for windows users.
 
@@ -184,7 +200,9 @@ Updating to this release is recommended at your earliest convenience, especially
 
 ## [v5.0.3](https://github.com/prysmaticlabs/prysm/compare/v5.0.2...v5.0.3) - 2024-04-04
 
-Prysm v5.0.3 is a small patch release with some nice additions and bug fixes. Updating to this release is recommended for users on v5.0.0 or v5.0.1. There aren't many changes since last week's v5.0.2 so upgrading is not strictly required, but there are still improvements in this release so update if you can!
+Prysm v5.0.3 is a small patch release with some nice additions and bug fixes. Updating to this release is recommended
+for users on v5.0.0 or v5.0.1. There aren't many changes since last week's v5.0.2 so upgrading is not strictly required,
+but there are still improvements in this release so update if you can!
 
 ### Added
 
@@ -216,16 +234,19 @@ No security updates in this release.
 
 ## [v5.0.2](https://github.com/prysmaticlabs/prysm/compare/v5.0.1...v5.0.2) - 2024-03-27
 
-This release has many optimizations, UX improvements, and bug fixes. Due to the number of important bug fixes and optimizations, we encourage all operators to update to v5.0.2 at their earliest convenience.
+This release has many optimizations, UX improvements, and bug fixes. Due to the number of important bug fixes and
+optimizations, we encourage all operators to update to v5.0.2 at their earliest convenience.
 
-In this release, there is a notable change to the default value of --local-block-value-boost from 0 to 10. This means that the default behavior of using the builder API / mev-boost requires the builder bid to be 10% better than your local block profit. If you want to preserve the existing behavior, set --local-block-value-boost=0.
-
+In this release, there is a notable change to the default value of --local-block-value-boost from 0 to 10. This means
+that the default behavior of using the builder API / mev-boost requires the builder bid to be 10% better than your local
+block profit. If you want to preserve the existing behavior, set --local-block-value-boost=0.
 
 ### Added
 
 - API: Add support for sync committee selections
 - blobs: call fsync between part file write and rename (feature flag --blob-save-fsync)
-- Implement EIP-3076 minimal slashing protection, using a filesystem database (feature flag --enable-minimal-slashing-protection)
+- Implement EIP-3076 minimal slashing protection, using a filesystem database (feature flag
+  --enable-minimal-slashing-protection)
 - Save invalid block to temp --save-invalid-block-temp
 - Compute unrealized checkpoints with pcli
 - Add gossip blob sidecar verification ms metric
@@ -304,7 +325,8 @@ In this release, there is a notable change to the default value of --local-block
 - Fix Data Race in Epoch Boundary
 - exit blob fetching for cp block if outside retention
 - Do not check parent weight on early FCU
-- Fix VC DB conversion when no proposer settings is defined and add Experimental flag in the --enable-minimal-slashing-protection help.
+- Fix VC DB conversion when no proposer settings is defined and add Experimental flag in the
+  --enable-minimal-slashing-protection help.
 - keymanager api: lowercase statuses
 - Fix unrealized justification
 - fix race condition when pinging peers
@@ -337,9 +359,11 @@ In this release, there is a notable change to the default value of --local-block
 
 ## [v5.0.1](https://github.com/prysmaticlabs/prysm/compare/v5.0.0...v5.0.1) - 2024-03-08
 
-This minor patch release has some nice improvements over the recent v5.0.0 for Deneb. We have minimized this patch release to include only low risk and valuable fixes or features ahead of the upcoming network upgrade on March 13th.
+This minor patch release has some nice improvements over the recent v5.0.0 for Deneb. We have minimized this patch
+release to include only low risk and valuable fixes or features ahead of the upcoming network upgrade on March 13th.
 
-Deneb is scheduled for mainnet epoch 269568 on March 13, 2024 at 01:55:35pm UTC. All operators MUST update their Prysm software to v5.0.0 or later before the upgrade in order to continue following the blockchain.
+Deneb is scheduled for mainnet epoch 269568 on March 13, 2024 at 01:55:35pm UTC. All operators MUST update their Prysm
+software to v5.0.0 or later before the upgrade in order to continue following the blockchain.
 
 ### Added
 
@@ -367,14 +391,19 @@ Prysm version v5.0.0 or later is required to maintain participation in the netwo
 
 Behold the Prysm v5 release with official support for Deneb on Ethereum mainnet!
 
-Deneb is scheduled for mainnet epoch 269568 on March 13, 2024 at 01:55:35pm UTC. All operators MUST update their Prysm software to v5.0.0 or later before the upgrade in order to continue following the blockchain.
+Deneb is scheduled for mainnet epoch 269568 on March 13, 2024 at 01:55:35pm UTC. All operators MUST update their Prysm
+software to v5.0.0 or later before the upgrade in order to continue following the blockchain.
 
-This release brings improvements to the backfill functionality of the beacon node to support backfilling blobs. If running a beacon node with checkpoint sync, we encourage you to test the backfilling functionality and share your feedback. Run with backfill enabled using the flag --enable-experimental-backfill.
+This release brings improvements to the backfill functionality of the beacon node to support backfilling blobs. If
+running a beacon node with checkpoint sync, we encourage you to test the backfilling functionality and share your
+feedback. Run with backfill enabled using the flag --enable-experimental-backfill.
 
 Known Issues
 
 - --backfill-batch-size with a value of 1 or less breaks backfill.
-- Validator client on v4.2.0 or older uses some API methods that are incompatible with beacon node v5. Ensure that you have updated the beacon node and validator client to v4.2.1 and then upgrade to v5 or update both processes at the same time to minimize downtime.
+- Validator client on v4.2.0 or older uses some API methods that are incompatible with beacon node v5. Ensure that you
+  have updated the beacon node and validator client to v4.2.1 and then upgrade to v5 or update both processes at the
+  same time to minimize downtime.
 
 ### Added
 
@@ -414,7 +443,6 @@ The following flags have been removed entirely:
 - --safe-slots-to-import-optimistically
 - --show-deposit-data
 
-
 ### Removed
 
 - Prysm gRPC slasher endpoints are removed
@@ -444,49 +472,50 @@ The following flags have been removed entirely:
 - Check non-zero blob data is written to disk
 - Avoid blob partial filepath collisions with mem addr entropy
 
-
 ### Security
 
 v5.0.0 of Prysm is required to maintain participation in the network after the Deneb upgrade.
 
 ## [v4.2.1](https://github.com/prysmaticlabs/prysm/compare/v4.2.0...v4.2.1) - 2024-01-29
 
-Welcome to Prysm Release v4.2.1! This release is highly recommended for stakers and node operators, possibly being the final update before V5.
+Welcome to Prysm Release v4.2.1! This release is highly recommended for stakers and node operators, possibly being the
+final update before V5.
 
-⚠️ This release will cause failures on Goerli, Sepolia and Holeski testnets, when running on certain older CPUs without AVX support (eg Celeron) after the Deneb fork. This is not an issue for mainnet.
+⚠️ This release will cause failures on Goerli, Sepolia and Holeski testnets, when running on certain older CPUs without
+AVX support (eg Celeron) after the Deneb fork. This is not an issue for mainnet.
 
 ### Added
 
 - Linter: Wastedassign linter enabled to improve code quality.
 - API Enhancements:
-  - Added payload return in Wei for /eth/v3/validator/blocks.
-  - Added Holesky Deneb Epoch for better epoch management.
+    - Added payload return in Wei for /eth/v3/validator/blocks.
+    - Added Holesky Deneb Epoch for better epoch management.
 - Testing Enhancements:
-  - Clear cache in tests of core helpers to ensure test reliability.
-  - Added Debug State Transition Method for improved debugging.
-  - Backfilling test: Enabled backfill in E2E tests for more comprehensive coverage.
+    - Clear cache in tests of core helpers to ensure test reliability.
+    - Added Debug State Transition Method for improved debugging.
+    - Backfilling test: Enabled backfill in E2E tests for more comprehensive coverage.
 - API Updates: Re-enabled jwt on keymanager API for enhanced security.
 - Logging Improvements: Enhanced block by root log for better traceability.
 - Validator Client Improvements:
-  - Added Spans to Core Validator Methods for enhanced monitoring.
-  - Improved readability in validator client code for better maintenance (various commits).
+    - Added Spans to Core Validator Methods for enhanced monitoring.
+    - Improved readability in validator client code for better maintenance (various commits).
 
 ### Changed
 
 - Optimizations and Refinements:
-  - Lowered resource usage in certain processes for efficiency.
-  - Moved blob rpc validation closer to peer read for optimized processing.
-  - Cleaned up validate beacon block code for clarity and efficiency.
-  - Updated Sepolia Deneb fork epoch for alignment with network changes.
-  - Changed blob latency metrics to milliseconds for more precise measurement.
-  - Altered getLegacyDatabaseLocation message for better clarity.
-  - Improved wait for activation method for enhanced performance.
-  - Capitalized Aggregated Unaggregated Attestations Log for consistency.
-  - Modified HistoricalRoots usage for accuracy.
-  - Adjusted checking of attribute emptiness for efficiency.
+    - Lowered resource usage in certain processes for efficiency.
+    - Moved blob rpc validation closer to peer read for optimized processing.
+    - Cleaned up validate beacon block code for clarity and efficiency.
+    - Updated Sepolia Deneb fork epoch for alignment with network changes.
+    - Changed blob latency metrics to milliseconds for more precise measurement.
+    - Altered getLegacyDatabaseLocation message for better clarity.
+    - Improved wait for activation method for enhanced performance.
+    - Capitalized Aggregated Unaggregated Attestations Log for consistency.
+    - Modified HistoricalRoots usage for accuracy.
+    - Adjusted checking of attribute emptiness for efficiency.
 - Database Management:
-  - Moved --db-backup-output-dir as a deprecated flag for database management simplification.
-  - Added the Ability to Defragment the Beacon State for improved database performance.
+    - Moved --db-backup-output-dir as a deprecated flag for database management simplification.
+    - Added the Ability to Defragment the Beacon State for improved database performance.
 - Dependency Update: Bumped quic-go version from 0.39.3 to 0.39.4 for up-to-date dependencies.
 
 ### Removed
@@ -497,12 +526,12 @@ Welcome to Prysm Release v4.2.1! This release is highly recommended for stakers 
 ### Fixed
 
 - Bug Fixes:
-  - Fixed off by one error for improved accuracy.
-  - Resolved small typo in error messages for clarity.
-  - Addressed minor issue in blsToExecChange validator for better validation.
-  - Corrected blobsidecar json tag for commitment inclusion proof.
-  - Fixed ssz post-requests content type check.
-  - Resolved issue with port logging in bootnode.
+    - Fixed off by one error for improved accuracy.
+    - Resolved small typo in error messages for clarity.
+    - Addressed minor issue in blsToExecChange validator for better validation.
+    - Corrected blobsidecar json tag for commitment inclusion proof.
+    - Fixed ssz post-requests content type check.
+    - Resolved issue with port logging in bootnode.
 - Test Fixes: Re-enabled Slasher E2E Test for more comprehensive testing.
 
 ### Security
@@ -511,32 +540,42 @@ No security issues in this release.
 
 ## [v4.2.0](https://github.com/prysmaticlabs/prysm/compare/v4.1.1...v4.2.0) - 2024-01-11
 
-Happy new year! We have an incredibly exciting release to kick off the new year. This release is **strongly recommended** for all operators to update as it has many bug fixes, security patches, and features that will improve the Prysm experience on mainnet. This release has so many wonderful changes that we've deviated from our normal release notes format to aptly categorize the changes.
+Happy new year! We have an incredibly exciting release to kick off the new year. This release is **strongly recommended
+** for all operators to update as it has many bug fixes, security patches, and features that will improve the Prysm
+experience on mainnet. This release has so many wonderful changes that we've deviated from our normal release notes
+format to aptly categorize the changes.
 
 ### Highlights
 
 #### Upgrading / Downgrading Validators
 
-There are some API changes bundled in this release that require you to upgrade or downgrade in particular order. If the validator is updated before the beacon node, it will see repeated 404 errors at start up until the beacon node is updated as it uses a new API endpoint introduced in v4.2.0.
+There are some API changes bundled in this release that require you to upgrade or downgrade in particular order. If the
+validator is updated before the beacon node, it will see repeated 404 errors at start up until the beacon node is
+updated as it uses a new API endpoint introduced in v4.2.0.
 
 :arrow_up_small:  **Upgrading**: Upgrade the beacon node, then the validator.
 :arrow_down_small: **Downgrading**: Downgrade the validator to v4.1.1 then downgrade the beacon node.
 
 #### Deneb Goerli Support
+
 This release adds in full support for the upcoming deneb hard fork on goerli next week on January 17th.
 
 #### Networking Parameter Changes
+
 This release increases the default peer count to 70 from 45. The reason this is done is so that node's running
 with default peer counts can perform their validator duties as expected. Users who want to use the old peer count
 can add in `--p2p-max-peers=45` as a flag.
 
 #### Profile Guided Optimization
-This release has binaries built using PGO, for more information on how it works feel free to look here: https://tip.golang.org/doc/pgo . 
-This allows the go compiler to build more optimized Prysm binaries using production profiles and workloads.  
+
+This release has binaries built using PGO, for more information on how it works feel free to look
+here: https://tip.golang.org/doc/pgo .
+This allows the go compiler to build more optimized Prysm binaries using production profiles and workloads.
 
 #### ARM Supported Docker Images
 
-Our docker images now support amd64 and arm64 architecture! This long awaited feature is finally here for Apple Silicon and Raspberry Pi users. 
+Our docker images now support amd64 and arm64 architecture! This long awaited feature is finally here for Apple Silicon
+and Raspberry Pi users.
 
 ### Deneb
 
@@ -588,18 +627,18 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 - Prune dangling blob
 - Use Afero Walk for Pruning Blob
 - Initialize blob storage without pruning
-- Fix batch pruning errors 
+- Fix batch pruning errors
 - Blob filesystem add pruning during blob write
 - Blob filesystem add pruning at startup
 - Ensure partial blob is deleted if there's an error
 - Split blob pruning into two funcs
 - Use functional options for `--blob-retention-epochs`
-- Blob filesystem: delete blobs 
+- Blob filesystem: delete blobs
 - Fix Blob Storage Path
 - Add blob getters
 - Blob filesystem: Save Blobs
 - Blob filesystem: prune blobs
-- blobstorage: Improve mkdirall error 
+- blobstorage: Improve mkdirall error
 
 #### Beacon-API
 
@@ -617,7 +656,7 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 #### Validator Client
 
 - Validator client: remove blob signing
-- Deneb - web3signer 
+- Deneb - web3signer
 
 #### Testing
 
@@ -635,7 +674,7 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 - Check builder header kzg commitment
 - Add more color to sending blob by range req log
 - Move pruning log to after retention check
-- Enhance Pruning Logs 
+- Enhance Pruning Logs
 - Rename Blob retention epoch flag
 - Check that blobs count is correct when unblinding
 - Log blob's kzg commmitment at sync
@@ -675,7 +714,7 @@ Our docker images now support amd64 and arm64 architecture! This long awaited fe
 - Verify lmd without ancestor
 - Track target in forkchoice
 - Return early from ReceiveBlock if already sycned
- 
+
 #### Builder
 
 - Adding builder boost factor to get block v3
@@ -724,7 +763,7 @@ _Most of the PRs here involve shifting our http endpoints to using vanilla http 
 - http endpoint cleanup
 - Revert "REST VC: Subscribe to Beacon API events "
 - proposer and attester slashing sse
-- REST VC: Subscribe to Beacon API events 
+- REST VC: Subscribe to Beacon API events
 - Simplify error handling for JsonRestHandler
 - Update block publishing to 2.4.2 spec
 - Use `SkipMevBoost` properly during block production
@@ -864,12 +903,12 @@ _Most of the PRs here involve shifting our http endpoints to using vanilla http 
 - Fix missing testnet versions. Issue
 - Update README.md
 - Only run metrics for canonical blocks
-- Relax file permissions check on existing directories 
+- Relax file permissions check on existing directories
 - forkchoice.Getter wrapper with locking wrappers
 - Initialize cancellable root context in main.go
 - Fix forkchoice pkg's comments grammar
 - lock RecentBlockSlot
-- Comment typo 
+- Comment typo
 - Optimize `ReplayBlocks` for Zero Diff
 - Remove default value of circuit breaker flags
 - Fix Withdrawals
@@ -894,7 +933,8 @@ _Most of the PRs here involve shifting our http endpoints to using vanilla http 
 
 ## [v4.1.1](https://github.com/prysmaticlabs/prysm/compare/v4.1.0...v4.1.1) - 2023-10-24
 
-This patch release includes two cherry-picked changes from the develop branch to resolve critical issues that affect a small set of users.
+This patch release includes two cherry-picked changes from the develop branch to resolve critical issues that affect a
+small set of users.
 
 ### Fixed
 
@@ -907,11 +947,17 @@ No security issues in thsi release.
 
 ## [v4.1.0](https://github.com/prysmaticlabs/prysm/compare/v4.0.8...v4.1.0) - 2023-08-22
 
-- **Fundamental Deneb Support**: This release lays the foundation for Deneb support, although features like backwards syncing and filesystem-based blob storage are planned for Q4 2024.
-- **Multi-Value Slices for Beacon State**: Implemented multi-value slices to reduce the memory footprint and optimize certain processing paths. This data structure allows for storing values shared between state instances more efficiently. This feature is controller by the `--enable-experimental-state` flag.
-- **EIP-4881 Deposit Tree**: Integrated the EIP-4881 Deposit Tree into Prysm to optimize runtime block processing and production. This feature is controlled by a flag: `--enable-eip-4881`
-- **BLST version 0.3.11**: Introduced a significant improvement to the portable build's performance. The portable build now features runtime detection, automatically enabling optimized code paths if your CPU supports it.
-- **Multiarch Containers Preview Available**: multiarch (:wave: arm64 support :wave:) containers will be offered for preview at the following locations:
+- **Fundamental Deneb Support**: This release lays the foundation for Deneb support, although features like backwards
+  syncing and filesystem-based blob storage are planned for Q4 2024.
+- **Multi-Value Slices for Beacon State**: Implemented multi-value slices to reduce the memory footprint and optimize
+  certain processing paths. This data structure allows for storing values shared between state instances more
+  efficiently. This feature is controller by the `--enable-experimental-state` flag.
+- **EIP-4881 Deposit Tree**: Integrated the EIP-4881 Deposit Tree into Prysm to optimize runtime block processing and
+  production. This feature is controlled by a flag: `--enable-eip-4881`
+- **BLST version 0.3.11**: Introduced a significant improvement to the portable build's performance. The portable build
+  now features runtime detection, automatically enabling optimized code paths if your CPU supports it.
+- **Multiarch Containers Preview Available**: multiarch (:wave: arm64 support :wave:) containers will be offered for
+  preview at the following locations:
     - Beacon Chain: [gcr.io/prylabs-dev/prysm/beacon-chain:v4.1.0](gcr.io/prylabs-dev/prysm/beacon-chain:v4.1.0)
     - Validator: [gcr.io/prylabs-dev/prysm/validator:v4.1.0](gcr.io/prylabs-dev/prysm/validator:v4.1.0)
     - Please note that in the next cycle, we will exclusively use these containers at the canonical URLs.
@@ -919,13 +965,16 @@ No security issues in thsi release.
 ### Added
 
 #### EIP-4844:
+
 ##### Core:
+
 - **Deneb State & Block Types**: New state and block types added specifically for Deneb.
 - **Deneb Protobufs**: Protocol Buffers designed exclusively for Deneb.
 - **Deneb Engine API**: Specialized API endpoints for Deneb.
 - **Deneb Config/Params**: Deneb-specific configurations and parameters from the deneb-integration branch.
 
 ##### Blob Management:
+
 - **Blob Retention Epoch Period**: Configurable retention periods for blobs.
 - **Blob Arrival Gossip Metric**: Metrics for blob arrivals via gossip protocol.
 - **Blob Merge Function**: Functionality to merge and validate saved/new blobs.
@@ -933,37 +982,45 @@ No security issues in thsi release.
 - **Save Blobs to DB**: Feature to save blobs to the database for subscribers.
 
 ##### Logging and Validation:
+
 - **Logging for Blob Sidecar**: Improved logging functionalities for Blob Sidecar.
 - **Blob Commitment Count Logging**: Introduced logging for blob commitment counts.
 - **Blob Validation**: A feature to validate blobs.
 
 ##### Additional Features and Tests:
+
 - **Deneb Changes & Blobs to Builder**: Deneb-specific changes and blob functionality added to the builder.
 - **Deneb Blob Sidecar Events**: Blob sidecar events added as part of the Deneb release.
 - **KZG Commitments**: Functionality to copy KZG commitments when using the builder block.
 - **Deneb Validator Beacon APIs**: New REST APIs specifically for the Deneb release.
 - **Deneb Tests**: Test cases specific to the Deneb version.
 - **PublishBlockV2 for Deneb**: The `publishblockv2` endpoint implemented specifically for Deneb.
-- **Builder Override & Builder Flow for Deneb**: An override for the builder and a new RPC to handle the builder flow in Deneb.
+- **Builder Override & Builder Flow for Deneb**: An override for the builder and a new RPC to handle the builder flow in
+  Deneb.
 - **SSZ Detection for Deneb**: SSZ detection capabilities added for Deneb.
 - **Validator Signing for Deneb**: Validators can now sign Deneb blocks.
 - **Deneb Upgrade Function**: A function to handle the upgrade to Deneb.
 
 #### Rest of EIPs
+
 - **EIP-4788**: Added support for Beacon block root in the EVM.
-- **EIP-7044** and **EIP-7045**: Implemented support for Perpetually Valid Signed Voluntary Exits and increased the max attestation inclusion slot.
+- **EIP-7044** and **EIP-7045**: Implemented support for Perpetually Valid Signed Voluntary Exits and increased the max
+  attestation inclusion slot.
 
 #### Beacon API:
 
 *Note: All Beacon API work is related with moving endpoints into pure HTTP handlers. This is NOT new functionality.*
 
 ##### Endpoints moved to HTTP:
+
 - `/eth/v1/beacon/blocks` and `/eth/v1/beacon/blinded_blocks`.
 - `/eth/v1/beacon/states/{state_id}/committees`.
 - `/eth/v1/config/deposit_contract`.
 - `/eth/v1/beacon/pool/sync_committees`.
-- `/eth/v1/beacon/states/{state_id}/validators`, `/eth/v1/beacon/states/{state_id}/validators/{validator_id}` and `/eth/v1/beacon/states/{state_id}/validator_balances`.
-- `/eth/v1/validator/duties/attester/{epoch}`, `/eth/v1/validator/duties/proposer/{epoch}` and `/eth/v1/validator/duties/sync/{epoch}`.
+- `/eth/v1/beacon/states/{state_id}/validators`, `/eth/v1/beacon/states/{state_id}/validators/{validator_id}`
+  and `/eth/v1/beacon/states/{state_id}/validator_balances`.
+- `/eth/v1/validator/duties/attester/{epoch}`, `/eth/v1/validator/duties/proposer/{epoch}`
+  and `/eth/v1/validator/duties/sync/{epoch}`.
 - `/eth/v1/validator/register_validator`.
 - `/eth/v1/validator/prepare_beacon_proposer`.
 - `/eth/v1/beacon/headers`.
@@ -976,13 +1033,16 @@ No security issues in thsi release.
 - `/eth/v1/beacon/headers/{block_id}` and `/eth/v1/validator/liveness/{epoch}`.
 
 ##### Miscellaneous:
+
 - **Comma-Separated Query Params**: Support for comma-separated query parameters added to Beacon API.
 - **Middleware for Query Params**: Middleware introduced for handling comma-separated query parameters.
 - **Content-Type Header**: Compliance improved by adding Content-Type header to VC POST requests.
 - **Node Version**: REST-based node version endpoint implemented.
 
 #### Other additions
+
 ##### Protocol:
+
 - **Multi-Value Slice for Beacon State**: Enhanced the beacon state by utilizing a multi-value slice.
 - **EIP-4881 Deposit Tree**: EIP-4881 Deposit Tree integrated into Prysm, controlled by a feature flag.
 - **New Engine Methods**: New engine methods set as the default.
@@ -990,36 +1050,45 @@ No security issues in thsi release.
 - **Block Commitment Checks**: Functionality to reject blocks with excessive commitments added.
 
 ##### State Management:
+
 - **Alloc More Items**: Modified beacon-node/state to allocate an additional item during appends.
-- **GetParentBlockHash Helper**: Refactoring of `getLocalPayloadAndBlobs` with a new helper function for fetching parent block hashes.
+- **GetParentBlockHash Helper**: Refactoring of `getLocalPayloadAndBlobs` with a new helper function for fetching parent
+  block hashes.
 - **RW Lock for Duties**: Read-Write lock mechanism introduced for managing validator duties.
 
 ##### Build and CI/CD Improvements:
+
 - **Manual Build Tag**: A "manual" build tag introduced to expedite CI build times.
 - **Multiarch Docker Containers**: Support for multiple architectures in Docker containers added.
 
 ##### Testing:
+
 - **Init-Sync DA Tests**: Tests for initial sync Data Availability (DA) included.
 - **Fuzz List Timeout**: Github workflow for fuzz testing now includes a timeout setting.
 - **Go Fuzzing Workflow**: New Github workflow for Go fuzzing on a cron schedule.
 
 ##### Logging and Monitoring:
+
 - **FFG-LMD Consistency Logging**: Enhanced logging for Finality Gadget LMD (FFG-LMD) consistency.
 - **Validator Count Endpoint**: New endpoint to count the number of validators.
 
 ##### User Interface and Web:
+
 - **Web UI Release**: Prysm Web UI v2.0.4 released with unspecified updates and improvements.
 
 ##### Testnet support:
+
 - **Holesky Support**: Support for Holesky decompositions integrated into the codebase.
 
 ##### Error Handling and Responses:
+
 - **Validation Error in ForkchoiceUpdatedResponse**: Included validation errors in fork choice update responses.
 - **Wrapped Invalid Block Error**: Improved error handling for cases where an invalid block error is wrapped..
 
 ### Changed
 
 #### General:
+
 - **Skip MEV-Boost Flag**: Updated `GetBlock` RPC to utilize `skip mev-boost` flag.
 - **Portable Version of BLST**: Transitioned to portable BLST version as default.
 - **Teku Mainnet Bootnodes**: Refreshed Teku mainnet bootnodes ENRs.
@@ -1027,6 +1096,7 @@ No security issues in thsi release.
 - **Parallel Block Building**: Deprecated sequential block building path
 
 #### Deneb-Specific Changes:
+
 - **Deneb Spectests Release**: Upgraded to Deneb spectests v1.4.0-beta.2-hotfix.
 - **Deneb API and Builder Cleanup**: Conducted clean-up activities for Deneb-specific API and builder.
 - **Deneb Block Versioning**: Introduced changes related to Deneb produce block version 3.
@@ -1035,23 +1105,28 @@ No security issues in thsi release.
 - **Blob Sidecar Syncing**: Altered behavior when value is 0.
 
 #### Code Cleanup and Refactor:
+
 - **API Types Cleanup**: Reorganized API types for improved readability.
 - **Geth Client Headers**: Simplified code for setting geth client headers.
 - **Bug Report Template**: Revised requirements for more clarity.
 
 #### Flags and Configuration:
+
 - **Safe Slots to Import Flag**: Deprecated this flag for standard alignment.
 - **Holesky Config**: Revised the Holesky configuration for new genesis.
 
 #### Logging:
+
 - **Genesis State Warning**: Will log a warning if the genesis state size is under 1KB.
 - **Debug Log Removal**: Excised debug logs for cleaner output.
 
 #### Miscellaneous:
+
 - **First Aggregation Timing**: Default setting for first aggregation is 7 seconds post-genesis.
 - **Pointer Usage**: Modified execution chain to use pointers, reducing copy operations.
 
 #### Dependency Updates:
+
 - **Go Version Update**: Updated to Go version 1.20.7.
 - **Go Version Update**: Updated to Go version 1.20.9 for better security.
 - **Various Dependencies**: Updated multiple dependencies including Geth, Bazel, rules_go, Gazelle, BLST, and go-libp2p.
@@ -1064,13 +1139,16 @@ No security issues in thsi release.
 - **Go-Playground/Validator**: Removed go-playground/validator from Beacon API.
 - **Reverted Cache Proposer ID**: Reversed the change that cached proposer ID on GetProposerDuties.
 - **Cache Proposer ID**: Reversed the functionality that cached proposer ID on GetProposerDuties.
-- **Quadratic Loops in Exiting**: Eliminated quadratic loops that occurred during voluntary exits, improving performance.
-- **Deprecated Go Embed Rules**: Removed deprecated `go_embed` rules from rules_go, to stay up-to-date with best practices.
+- **Quadratic Loops in Exiting**: Eliminated quadratic loops that occurred during voluntary exits, improving
+  performance.
+- **Deprecated Go Embed Rules**: Removed deprecated `go_embed` rules from rules_go, to stay up-to-date with best
+  practices.
 - **Alpine Images**: Removed Alpine images from the Prysm project.
 
 ### Fixed
 
 #### Deneb-Specific Bug Fixes:
+
 - **Deneb Builder Bid HTR**: Fixed an issue related to HashTreeRoot (HTR) in Deneb builder bid.
 - **PBV2 Condition**: Corrected conditions related to PBV2.
 - **Route Handler and Cleanup**: Updated the route handler and performed minor cleanups.
@@ -1083,11 +1161,13 @@ No security issues in thsi release.
 - **Sync/RPC Blob Usage**: Rectified blob usage when requesting a block by root in Sync/RPC.
 
 #### Cache Fixes:
+
 - **Don't Prune Proposer ID Cache**: Fixed a loop erroneously pruning the proposer ID cache.
 - **LastRoot Adjustment**: Altered `LastRoot` to return the head root.
 - **Last Canonical Root**: Modified forkchoice to return the last canonical root of the epoch.
 
 #### Block Processing fixes:
+
 - **Block Validation**: Fixed an issue where blocks were incorrectly marked as bad during validation.
 - **Churn Limit Helpers**: Improved churn limit calculations through refactoring.
 - **Churn with 0 Exits**: Rectified a bug that calculated churn even when there were 0 exits.
@@ -1095,19 +1175,22 @@ No security issues in thsi release.
 - **Duplicate Block Processing**: Eliminated redundant block processing.
 
 #### Error Handling and Logging:
+
 - **RpcError from Core Service**: Ensured that `RpcError` is returned from core services.
 - **Unhandled Error**: Enhanced error management by handling previously unhandled errors.
 - **Error Handling**: Wrapped `ctx.Err` for improved error handling.
 - **Attestation Error**: Optimized error management in attestation processing.
 
 #### Test and Build Fixes:
+
 - **Racy Tests in Blockchain**: Resolved race conditions in blockchain tests.
 - **TestService_ReceiveBlock**: Modified `TestService_ReceiveBlock` to work as expected.
 - **Build Issue with @com_github_ethereum_c_kzg_4844**: Resolved build issues related to this specific library.
-- **Fuzz Testing**: Addressed fuzz testing issues in the `origin/deneb-integration` 
+- **Fuzz Testing**: Addressed fuzz testing issues in the `origin/deneb-integration`
 - **Long-Running E2E Tests**: Fixed issues that were causing the end-to-end tests to run for an extended period.
 
 #### Additional Fixes:
+
 - **Public Key Copies During Aggregation**: Optimized to avoid unnecessary public key copies during aggregation.
 - **Epoch Participations**: Fixed the setting of current and previous epoch participations.
 - **Verify Attestations**: Resolved an attestation verification issue in proposer logic.
@@ -1116,7 +1199,6 @@ No security issues in thsi release.
 - **Phase0 Block Parsing**: Resolved parsing issues in phase0 blocks on submit.
 - **Hex Handling**: Upgraded the hex handling in various modules.
 - **Initial Sync PreProcessing**: Resolved an issue affecting the initial sync preprocessing.
-
 
 ### Security
 
@@ -1128,7 +1210,8 @@ Welcome to Prysm Release v4.0.8! This release is recommended. Highlights:
 
 - Parallel hashing of validator entries in the beacon state. This results in a faster hash tree root. ~3x reduction
 - Parallel validations of consensus and execution checks. This results in a faster block verification
-- Aggregate parallel is now the default. This results in faster attestation aggregation time if a node is subscribed to multiple beacon attestation subnets. ~3x reduction
+- Aggregate parallel is now the default. This results in faster attestation aggregation time if a node is subscribed to
+  multiple beacon attestation subnets. ~3x reduction
 - Better process block epoch boundary cache usages and bug fixes
 - Beacon-API endpoints optimizations and bug fixes
 
@@ -1210,12 +1293,20 @@ Welcome to the v4.0.7 release of Prysm! This recommended release contains many e
 Highlights:
 
 - The validator proposal time for slot 0 has been reduced by 800ms. Writeup and PR
-- The attestation aggregation time has been reduced by 400ms—roughly 75% with all subnets subscribed. Flag --aggregate-parallel. PR. This is only useful if running more than a dozen validator keys. The more subnets your node subscribe to, the more useful.
-- The usage of fork choice lock has been reduced and optimized, significantly reducing block processing time. This results in a higher proposal and attest rate. PR
-- The block proposal path has been optimized with more efficient copies and a better pruning algorithm for pending deposits. PR and PR
-- Validator Registration cache is enabled by default, this affects users who have used webui along with mevboost. Please review PR for details.
+- The attestation aggregation time has been reduced by 400ms—roughly 75% with all subnets subscribed. Flag
+  --aggregate-parallel. PR. This is only useful if running more than a dozen validator keys. The more subnets your node
+  subscribe to, the more useful.
+- The usage of fork choice lock has been reduced and optimized, significantly reducing block processing time. This
+  results in a higher proposal and attest rate. PR
+- The block proposal path has been optimized with more efficient copies and a better pruning algorithm for pending
+  deposits. PR and PR
+- Validator Registration cache is enabled by default, this affects users who have used webui along with mevboost. Please
+  review PR for details.
 
-Note: We remind our users that there are two versions of the cryptographic library BLST, one is "portable" and less performant, and another is "non-portable" or "modern" and more performant. Most users would want to use the second one. You can set the environment variable USE_PRYSM_MODERN=true when using prysm.sh. The released docker images are using the non-portable version by default.
+Note: We remind our users that there are two versions of the cryptographic library BLST, one is "portable" and less
+performant, and another is "non-portable" or "modern" and more performant. Most users would want to use the second one.
+You can set the environment variable USE_PRYSM_MODERN=true when using prysm.sh. The released docker images are using the
+non-portable version by default.
 
 ### Added
 
@@ -1285,21 +1376,29 @@ No security updates in this release.
 
 ## [v4.0.6](https://github.com/prysmaticlabs/prysm/compare/v4.0.5...v4.0.6) - 2023-07-15
 
-Welcome to v4.0.6 release of Prysm! This recommended release contains many essential optimizations since v4.0.5. Notable highlights:
+Welcome to v4.0.6 release of Prysm! This recommended release contains many essential optimizations since v4.0.5. Notable
+highlights:
 
 Better handling of state field trie under late block scenario. This improves the next slot proposer's proposed time
 Better utilization of next slot cache under various conditions
 
 **Important read:**
 
-1.) We use this opportunity to remind you that two different implementations of the underlying cryptographic library BLST exist.
+1.) We use this opportunity to remind you that two different implementations of the underlying cryptographic library
+BLST exist.
 
 - portable: supports every CPU made in the modern era
 - non-portable: more performant but requires your CPU to support special instructions
 
-Most users will want to use the "non-portable" version since most CPUs support these instructions. Our docker builds are now non-portable by default. Most users will benefit from the performance improvements. You can run with the "portable" versions if your CPU is old or unsupported. For binary distributions and to maintain backward compatibility with older versions of prysm.sh or prysm.bat, users that want to benefit from the non-portable performance improvements need to add an environment variable, like so: USE_PRYSM_MODERN=true prysm.sh beacon-chain prefix, or download the "non-portable" version of the binaries from the github repo.
+Most users will want to use the "non-portable" version since most CPUs support these instructions. Our docker builds are
+now non-portable by default. Most users will benefit from the performance improvements. You can run with the "portable"
+versions if your CPU is old or unsupported. For binary distributions and to maintain backward compatibility with older
+versions of prysm.sh or prysm.bat, users that want to benefit from the non-portable performance improvements need to add
+an environment variable, like so: USE_PRYSM_MODERN=true prysm.sh beacon-chain prefix, or download the "non-portable"
+version of the binaries from the github repo.
 
-2.) A peering bug that led to nodes losing peers gradually and eventually needing a restart has been patched. Nodes previously affected by it can remove the --disable-resource-manager flag from v4.0.6 onwards.
+2.) A peering bug that led to nodes losing peers gradually and eventually needing a restart has been patched. Nodes
+previously affected by it can remove the --disable-resource-manager flag from v4.0.6 onwards.
 
 ### Added
 
@@ -1353,22 +1452,31 @@ No security updates in this release.
 
 ## [v4.0.5](https://github.com/prysmaticlabs/prysm/compare/v4.0.4...v4.0.5) - 2023-05-22
 
-Welcome to v4.0.5 release of Prysm! This release contains many important improvements and bug fixes since v4.0.4, including significant improvements to attestation aggregation. See @potuz's notes [here](https://hackmd.io/TtyFurRJRKuklG3n8lMO9Q). This release is **strongly** recommended for all users.
+Welcome to v4.0.5 release of Prysm! This release contains many important improvements and bug fixes since v4.0.4,
+including significant improvements to attestation aggregation. See @potuz's
+notes [here](https://hackmd.io/TtyFurRJRKuklG3n8lMO9Q). This release is **strongly** recommended for all users.
 
-Note: The released docker images are using the portable version of the blst cryptography library. The Prysm team will release docker images with the non-portable blst library as the default image. In the meantime, you can compile docker images with blst non-portable locally with the `--define=blst_modern=true` bazel flag, use the "-modern-" assets attached to releases, or set environment varaible USE_PRYSM_MODERN=true when using prysm.sh.
+Note: The released docker images are using the portable version of the blst cryptography library. The Prysm team will
+release docker images with the non-portable blst library as the default image. In the meantime, you can compile docker
+images with blst non-portable locally with the `--define=blst_modern=true` bazel flag, use the "-modern-" assets
+attached to releases, or set environment varaible USE_PRYSM_MODERN=true when using prysm.sh.
 
 ### Added
 
 - Added epoch and root to "not a checkpt in forkchoice" log message
 - Added cappella support for eth1voting tool
 - Persist validator proposer settings in the validator db.
-- Add flag to disable p2p resource management. This flag is for debugging purposes and should not be used in production for extended periods of time. Use this flag if you are experiencing significant peering issues. --disable-resource-manager
+- Add flag to disable p2p resource management. This flag is for debugging purposes and should not be used in production
+  for extended periods of time. Use this flag if you are experiencing significant peering issues.
+  --disable-resource-manager
 
 ### Changed
 
 - Improved slot ticker for attestation aggregation
-- Parallel block production enabled by default. Opt out with --disable-build-block-parallel if issues are suspected with this feature.
-- Improve attestation aggregation by not using max cover on unaggregated attestations and not checking subgroup of previously validated signatures.
+- Parallel block production enabled by default. Opt out with --disable-build-block-parallel if issues are suspected with
+  this feature.
+- Improve attestation aggregation by not using max cover on unaggregated attestations and not checking subgroup of
+  previously validated signatures.
 - Improve sync message processing by using forkchoice
 
 ### Fixed
@@ -1383,14 +1491,17 @@ No security updates in this release.
 
 ## [v4.0.4](https://github.com/prysmaticlabs/prysm/compare/v4.0.3...v4.0.4) - 2023-05-15
 
-Welcome to v4.0.4 release of Prysm! This is the first full release following the recent mainnet issues and it is very important that all stakers update to this release as soon as possible.
+Welcome to v4.0.4 release of Prysm! This is the first full release following the recent mainnet issues and it is very
+important that all stakers update to this release as soon as possible.
 
 Aside from the critical fixes for mainnet, this release contains a number of new features and other fixes since v4.0.3.
 
 ### Added
 
-- Feature to build consensus and execution blocks in parallel. This feature has shown a noticeable reduction (~200ms) in block proposal times. Enable with --build-block-parallel
-- An in memory cache for validator registration can be enabled with --enable-registration-cache. See PR description before enabling.
+- Feature to build consensus and execution blocks in parallel. This feature has shown a noticeable reduction (~200ms) in
+  block proposal times. Enable with --build-block-parallel
+- An in memory cache for validator registration can be enabled with --enable-registration-cache. See PR description
+  before enabling.
 - Added new linters
 - Improved tracing data for builder pipeline
 - Improved withdrawal phrasing in validator withdrawal tooling
@@ -1439,7 +1550,8 @@ Aside from the critical fixes for mainnet, this release contains a number of new
 
 ### Security
 
-This release contains some important fixes that improve the resiliency of Ethereum Consensus Layer. See https://github.com/prysmaticlabs/prysm/pull/12387 and https://github.com/prysmaticlabs/prysm/pull/12398.
+This release contains some important fixes that improve the resiliency of Ethereum Consensus Layer.
+See https://github.com/prysmaticlabs/prysm/pull/12387 and https://github.com/prysmaticlabs/prysm/pull/12398.
 
 ## [v4.0.3](https://github.com/prysmaticlabs/prysm/compare/v4.0.2...v4.0.3) - 2023-04-20
 
@@ -1473,21 +1585,27 @@ No security updates in this release.
 
 ## [v4.0.2](https://github.com/prysmaticlabs/prysm/compare/v4.0.1...v4.0.2) - 2023-04-12
 
-This release fixes a critical bug on Prysm interacting with mev-boost / relayer. You MUST upgrade to this release if you run Prysm with mev boost and relayer, or you will be missing block proposals during the first days after the Shapella fork while the block has bls-to-exec changes.
+This release fixes a critical bug on Prysm interacting with mev-boost / relayer. You MUST upgrade to this release if you
+run Prysm with mev boost and relayer, or you will be missing block proposals during the first days after the Shapella
+fork while the block has bls-to-exec changes.
 Post-mortem that describes this incident will be provided by the end of the week.
 
-One of this release's main optimizations is revamping the next slot cache. It has been upgraded to be more performant across edge case re-org scenarios. This can help with the bad head attestation vote.
+One of this release's main optimizations is revamping the next slot cache. It has been upgraded to be more performant
+across edge case re-org scenarios. This can help with the bad head attestation vote.
 
-Minor fixes in this release address a bug that affected certain large operators querying RPC endpoints. This bug caused unexpected behavior and may have impacted the performance of affected operators. To resolve this issue, we have included a patch that ensures proper functionality when querying RPC endpoints.
+Minor fixes in this release address a bug that affected certain large operators querying RPC endpoints. This bug caused
+unexpected behavior and may have impacted the performance of affected operators. To resolve this issue, we have included
+a patch that ensures proper functionality when querying RPC endpoints.
 
 ### Added
 
-- CLI: New beacon node flag local-block-value-boost that allows the local block value to be multiplied by the boost value
+- CLI: New beacon node flag local-block-value-boost that allows the local block value to be multiplied by the boost
+  value
 - Smart caching for square root computation
 - Beacon-API: Implemented Block rewards endpoint
 - Beacon-API client: Implemented GetSyncStatus endpoint
 - Beacon-API client: Implemented GetGenesis endpoint
-- Beacon-API client: Implemented ListValidators  endpoint
+- Beacon-API client: Implemented ListValidators endpoint
 
 ### Changed
 
@@ -1565,7 +1683,6 @@ This is a reissue of v4.0.0. See https://github.com/prysmaticlabs/prysm/issues/1
 - Test: disable e2e slasher test
 - CLI: derecate the following flags
 
-
 ### Deprecated
 
 The following flags have been deprecated.
@@ -1623,10 +1740,12 @@ This release is required to participate in the Capella upgrade.
 
 Gm! ☀️ We are excited to announce our release for upgrading Goerli testnet to Shanghai / Capella! 🚀
 
-This release is MANDATORY for Goerli testnet. You must upgrade your Prysm beacon node and validator client to this release before Shapella hard fork time epoch=162304 or UTC=14/03/2023, 10:25:36 pm.
+This release is MANDATORY for Goerli testnet. You must upgrade your Prysm beacon node and validator client to this
+release before Shapella hard fork time epoch=162304 or UTC=14/03/2023, 10:25:36 pm.
 
 This release is a low-priority for the mainnet.
-This release is the same commit as v3.2.2-rc.3. If you are already running v3.2.2-rc.3, then you do not need to update your client.
+This release is the same commit as v3.2.2-rc.3. If you are already running v3.2.2-rc.3, then you do not need to update
+your client.
 
 ### Added
 
@@ -1667,14 +1786,17 @@ This release is required for Goerli to upgrade to Capella.
 
 We are excited to announce the release of Prysm v3.2.1 🎉
 
-This is the first release to support Capella / Shanghai. The Sepolia testnet Capella upgrade time is currently set to 2/28/2023, 4:04:48 AM UTC. The Goerli testnet and Mainnet upgrade times are still yet to be determined. In Summary:
+This is the first release to support Capella / Shanghai. The Sepolia testnet Capella upgrade time is currently set to
+2/28/2023, 4:04:48 AM UTC. The Goerli testnet and Mainnet upgrade times are still yet to be determined. In Summary:
 
 - This is a mandatory upgrade for Sepolia nodes and validators
 - This is a recommended upgrade for Goerli and Mainnet nodes and validators
 
 There are some known issues with this release.
 
-- mev-boost, relayer, and builder support for Capella upgrade are built in but still need to be tested. Given the lack of testing infrastructure, none of the clients could test this for withdrawals testnet. There may be hiccups when using mev-boost on the Capella upgraded testnets.
+- mev-boost, relayer, and builder support for Capella upgrade are built in but still need to be tested. Given the lack
+  of testing infrastructure, none of the clients could test this for withdrawals testnet. There may be hiccups when
+  using mev-boost on the Capella upgraded testnets.
 
 ### Added
 
@@ -1731,7 +1853,10 @@ There are no security updates in this release.
 
 ## [v3.2.0](https://github.com/prysmaticlabs/prysm/compare/v3.1.2...v3.2.0) - 2022-12-16
 
-This release contains a number of great features and improvements as well as progress towards the upcoming Capella upgrade. This release also includes some API changes which are reflected in the minor version bump. If you are using mev-boost, you will need to update your prysm client to v3.2.0 before updating your mev-boost instance in the future. See [flashbots/mev-boost#404](https://github.com/flashbots/mev-boost/issues/404) for more details.
+This release contains a number of great features and improvements as well as progress towards the upcoming Capella
+upgrade. This release also includes some API changes which are reflected in the minor version bump. If you are using
+mev-boost, you will need to update your prysm client to v3.2.0 before updating your mev-boost instance in the future.
+See [flashbots/mev-boost#404](https://github.com/flashbots/mev-boost/issues/404) for more details.
 
 ### Added
 
@@ -1859,7 +1984,9 @@ This release contains a number of great features and improvements as well as pro
 
 ## [v3.1.1](https://github.com/prysmaticlabs/prysm/compare/v3.1.0...v3.1.1) - 2022-09-09
 
-This is another highly recommended release. It contains a forkchoice pruning fix and a gossipsub optimization. It is recommended to upgrade to this release before the Merge next week, which is currently tracking for Wed Sept 14 (https://bordel.wtf/). Happy staking! See you on the other side!
+This is another highly recommended release. It contains a forkchoice pruning fix and a gossipsub optimization. It is
+recommended to upgrade to this release before the Merge next week, which is currently tracking for Wed Sept
+14 (https://bordel.wtf/). Happy staking! See you on the other side!
 
 ### Fixed
 
@@ -1872,13 +1999,13 @@ No security updates in this release.
 
 ## [v3.1.0](https://github.com/prysmaticlabs/prysm/compare/v3.1.0...v3.0.0) - 2022-09-05
 
-Updating to this release is highly recommended as it contains several important fixes and features for the merge. You must be using Prysm v3 or later before Bellatrix activates on September 6th. 
+Updating to this release is highly recommended as it contains several important fixes and features for the merge. You
+must be using Prysm v3 or later before Bellatrix activates on September 6th.
 
 **Important docs links**
 
 - [How to prepare for the merge](https://docs.prylabs.network/docs/prepare-for-merge)
 - [How to check merge readiness status](https://docs.prylabs.network/docs/monitoring/checking-status)
-
 
 ### Added
 
@@ -1932,16 +2059,21 @@ There are no security updates in this release.
 - Keymanager: Add support for setting the gas limit via API.
 - Merge: Mainnet merge epoch and TTD defined!
 - Validator: Added expected wait time for pending validator activation in log message.
-- Go: Prysm now uses proper versioning suffix v3 for this release. GoDocs and downstream users can now import prysm as expected for go projects.
+- Go: Prysm now uses proper versioning suffix v3 for this release. GoDocs and downstream users can now import prysm as
+  expected for go projects.
 - Builder API: Register validator via HTTP REST Beacon API endpoint /eth/v1/validator/register_validator
 - Cross compilation support for Mac ARM64 chips (Mac M1, M2)
 
 ### Changed
 
-- **Require an execution client** `--execution-endpoint=...`. The default value has changed to `localhost:8551` and you must use the jwt flag `--jwt-secret=...`. Review [the docs](https://docs.prylabs.network/docs/prepare-for-merge) for more information 
-- `--http-web3provider` has been renamed to `--execution-endpoint`. Please update your configuration as `--http-web3provider` will be removed in a future release.
+- **Require an execution client** `--execution-endpoint=...`. The default value has changed to `localhost:8551` and you
+  must use the jwt flag `--jwt-secret=...`. Review [the docs](https://docs.prylabs.network/docs/prepare-for-merge) for
+  more information
+- `--http-web3provider` has been renamed to `--execution-endpoint`. Please update your configuration
+  as `--http-web3provider` will be removed in a future release.
 - Insert attestations into forkchoice sooner
-- Builder API: `gas_limit` changed from int to string to support JSON / YAML configs. `--suggested-gas-limit` changed from int to string.
+- Builder API: `gas_limit` changed from int to string to support JSON / YAML configs. `--suggested-gas-limit` changed
+  from int to string.
 - Fork choice: Improved handling of double locks / deadlocks
 - Lower libp2p log level
 - Improved re-org logs with additional metadata
@@ -1950,25 +2082,31 @@ There are no security updates in this release.
 - Protobuf message renaming (non-breaking changes)
 - Enabled feature to use gohashtree by default. Disable with `--disable-vectorized-htr`
 - Enabled fork choice doubly linked tree feature by default. Disable with `--disable-forkchoice-doubly-linked-tree`
-- Remote signer: Renamed some field names to better represent block types (non-breaking changes for gRPC users, possibly breaking change for JSON API users)
+- Remote signer: Renamed some field names to better represent block types (non-breaking changes for gRPC users, possibly
+  breaking change for JSON API users)
 - Builder API: require header and payload root match.
 - Improved responses for json-rpc requests batching when using blinded beacon blocks.
 - Builder API: Improved error messages
-- Builder API: Issue warning when validator expects builder ready beacon node, but beacon node is not configured with a relay.
+- Builder API: Issue warning when validator expects builder ready beacon node, but beacon node is not configured with a
+  relay.
 - Execution API: Improved payload ID to handle reorg scenarios
 
 ### Deprecated
 
-- Several features have been promoted to stable or removed. The following flags are now deprecated and will be removed in a future release. `--enable-db-backup-webhook`, `--bolt-mmap-initial-size`, `--disable-discv5`, `--disable-attesting-history-db-cache`, `--enable-vectorized-htr`, `--enable-peer-scorer`, `--enable-forkchoice-doubly-linked-tree`, `--enable-duty-count-down`, `--head-sync`, `--enable-gossip-batch-aggregateion`, `--enable-larger-gossip-history`, `--fallback-web3provider`, `--use-check-point-cache`.
+- Several features have been promoted to stable or removed. The following flags are now deprecated and will be removed
+  in a future
+  release. `--enable-db-backup-webhook`, `--bolt-mmap-initial-size`, `--disable-discv5`, `--disable-attesting-history-db-cache`, `--enable-vectorized-htr`, `--enable-peer-scorer`, `--enable-forkchoice-doubly-linked-tree`, `--enable-duty-count-down`, `--head-sync`, `--enable-gossip-batch-aggregateion`, `--enable-larger-gossip-history`, `--fallback-web3provider`, `--use-check-point-cache`.
 - Several beacon API endpoints marked as deprecated
 
 ### Removed
 
 - Logging: Removed phase0 fields from validator performance log messages
 - Deprecated slasher protos have been removed
-- Deprecated beacon API endpoints removed: `GetBeaconState`, `ProduceBlock`, `ListForkChoiceHeads`, `ListBlocks`, `SubmitValidatorRegistration`, `GetBlock`, `ProposeBlock`
+- Deprecated beacon API endpoints
+  removed: `GetBeaconState`, `ProduceBlock`, `ListForkChoiceHeads`, `ListBlocks`, `SubmitValidatorRegistration`, `GetBlock`, `ProposeBlock`
 - API: Forkchoice method `GetForkChoice` has been removed.
-- All previously deprecated feature flags have been removed. `--enable-active-balance-cache`, `--correctly-prune-canonical-atts`, `--correctly-insert-orphaned-atts`, `--enable-next-slot-state-cache`, `--enable-batch-gossip-verification`, `--enable-get-block-optimizations`, `--enable-balance-trie-computation`, `--disable-next-slot-state-cache`, `--attestation-aggregation-strategy`, `--attestation-aggregation-force-opt-maxcover`, `--pyrmont`, `--disable-get-block-optimizations`, `--disable-proposer-atts-selection-using-max-cover`, `--disable-optimized-balance-update`, `--disable-active-balance-cache`, `--disable-balance-trie-computation`, `--disable-batch-gossip-verification`, `--disable-correctly-prune-canonical-atts`, `--disable-correctly-insert-orphaned-atts`, `--enable-native-state`, `--enable-peer-scorer`, `--enable-gossip-batch-aggregation`, `--experimental-disable-boundry-checks`
+- All previously deprecated feature flags have been
+  removed. `--enable-active-balance-cache`, `--correctly-prune-canonical-atts`, `--correctly-insert-orphaned-atts`, `--enable-next-slot-state-cache`, `--enable-batch-gossip-verification`, `--enable-get-block-optimizations`, `--enable-balance-trie-computation`, `--disable-next-slot-state-cache`, `--attestation-aggregation-strategy`, `--attestation-aggregation-force-opt-maxcover`, `--pyrmont`, `--disable-get-block-optimizations`, `--disable-proposer-atts-selection-using-max-cover`, `--disable-optimized-balance-update`, `--disable-active-balance-cache`, `--disable-balance-trie-computation`, `--disable-batch-gossip-verification`, `--disable-correctly-prune-canonical-atts`, `--disable-correctly-insert-orphaned-atts`, `--enable-native-state`, `--enable-peer-scorer`, `--enable-gossip-batch-aggregation`, `--experimental-disable-boundry-checks`
 - Validator Web API: Removed unused ImportAccounts and DeleteAccounts rpc options
 
 ### Fixed
@@ -1985,44 +2123,50 @@ There are no security updates in this release.
 
 ## [v2.1.4](https://github.com/prysmaticlabs/prysm/compare/v2.1.4...v2.1.3) - 2022-08-10
 
-As we prepare our `v3` mainnet release for [The Merge](https://ethereum.org/en/upgrades/merge/), `v2.1.4` marks the end of the `v2` era. Node operators and validators are **highly encouraged** to upgrade to release `v2.1.4` - many bug fixes and improvements have been included in preparation for The Merge. `v3` will contain breaking changes, and will be released within the next few weeks. Using `v2.1.4` in the meantime will give you access to a more streamlined user experience. See our [v2.1.4 doc](https://docs.prylabs.network/docs/vnext/214-rc) to learn how to use v2.1.4 to run a Merge-ready configuration on the Goerli-Prater network pair.
+As we prepare our `v3` mainnet release for [The Merge](https://ethereum.org/en/upgrades/merge/), `v2.1.4` marks the end
+of the `v2` era. Node operators and validators are **highly encouraged** to upgrade to release `v2.1.4` - many bug fixes
+and improvements have been included in preparation for The Merge. `v3` will contain breaking changes, and will be
+released within the next few weeks. Using `v2.1.4` in the meantime will give you access to a more streamlined user
+experience. See our [v2.1.4 doc](https://docs.prylabs.network/docs/vnext/214-rc) to learn how to use v2.1.4 to run a
+Merge-ready configuration on the Goerli-Prater network pair.
 
 ### Added
 
 - Sepolia testnet configs `--sepolia`
-- Goerli as an alias to Prater and testnet configs `--prater` or `--goerli` 
+- Goerli as an alias to Prater and testnet configs `--prater` or `--goerli`
 - Fee recipient API for key manager
 - YML config flag support for web3 signer
-- Validator registration API for web3 signer 
+- Validator registration API for web3 signer
 - JSON tcontent type with optional metadata
-- Flashbots MEV boost support 
-- Store blind block (i.e block with payload header) instead of full block (i.e. block with payload) for storage efficiency (currently only available when the `enable-only-blinded-beacon-blocks` feature flag is enabled) 
-- Pcli utility support to print blinded block 
+- Flashbots MEV boost support
+- Store blind block (i.e block with payload header) instead of full block (i.e. block with payload) for storage
+  efficiency (currently only available when the `enable-only-blinded-beacon-blocks` feature flag is enabled)
+- Pcli utility support to print blinded block
 - New Web v2.0 release into Prysm
 
 ### Changed
 
-- Native state improvement is enabled by default 
-- Use native blocks instead of protobuf blocks 
+- Native state improvement is enabled by default
+- Use native blocks instead of protobuf blocks
 - Peer scorer is enabled by default
-- Enable fastssz to use vectorized HTR hash algorithm improvement 
+- Enable fastssz to use vectorized HTR hash algorithm improvement
 - Forkchoice store refactor and cleanups
-- Update libp2p library dependency 
-- RPC proposer duty is now allowed next epoch query 
+- Update libp2p library dependency
+- RPC proposer duty is now allowed next epoch query
 - Do not print traces with `log.withError(err)`
 - Testnets are running with pre-defined feature flags
 
 ### Removed
 
-- Deprecate Step Parameter from our Block By Range Requests 
+- Deprecate Step Parameter from our Block By Range Requests
 
 ### Fixed
 
-- Ignore nil forkchoice node when saving orphaned atts 
-- Sync: better handling of missing state summary in DB 
-- Validator: creates invalid terminal block using the same timestamp as payload 
-- P2P: uses incorrect goodbye codes 
-- P2p: defaults Incorrectly to using Mplex, which results in losing Teku peers 
+- Ignore nil forkchoice node when saving orphaned atts
+- Sync: better handling of missing state summary in DB
+- Validator: creates invalid terminal block using the same timestamp as payload
+- P2P: uses incorrect goodbye codes
+- P2p: defaults Incorrectly to using Mplex, which results in losing Teku peers
 - Disable returning future state for API
 - Eth1 connection API panic
 
@@ -2036,14 +2180,15 @@ There are no security updates in this release.
 
 - Many fuzz test additions
 - Support bellatrix blocks with web3signer
-- Support for the Sepolia testnet with `--terminal-total-difficulty-override 17000000000000000`. The override flag is required in this release.
+- Support for the Sepolia testnet with `--terminal-total-difficulty-override 17000000000000000`. The override flag is
+  required in this release.
 - Support for the Ropsten testnet. No override flag required
 - JSON API allows SSZ-serialized blocks in `publishBlock`
 - JSON API allows SSZ-serialized blocks in `publishBlindedBlock`
 - JSON API allows SSZ-serialized requests in `produceBlockV2` and `produceBlindedBlock`
 - Progress towards Builder API and MEV boost support (not ready for testing in this release)
 - Support for `DOMAIN_APPLICATION_MARK` configuration
-- Ignore subset aggregates if a better aggregate has been seen already 
+- Ignore subset aggregates if a better aggregate has been seen already
 - Reinsertion of reorg'd attestations
 - Command `beacon-chain generate-auth-secret` to assist with generating a hex encoded secret for engine API
 - Return optimistic status to `ChainHead` related grpc service
@@ -2053,7 +2198,7 @@ There are no security updates in this release.
 ### Changed
 
 - Improvements to forkchoice
-- Invalid checksummed (or no checksum) addresses used for fee recipient will log a warning. fixes, 
+- Invalid checksummed (or no checksum) addresses used for fee recipient will log a warning. fixes,
 - Use cache backed `getBlock` method in several places of blockchain package
 - Reduced log frequency of "beacon node doesn't have a parent in db with root" error
 - Improved nil checks for state management
@@ -2063,26 +2208,27 @@ There are no security updates in this release.
 - Handle connection closing for web3/eth1 nil connection
 - Testing improvements
 - E2E test improvements
-- Increase file descriptor limit up to the maximum by default 
+- Increase file descriptor limit up to the maximum by default
 - Improved classification of "bad blocks"
 - Updated engine API error code handling
 - Improved "Synced new block" message to include minimal information based on the log verbosity.
 - Add nil checks for nil finalized checkpoints
-- Change weak subjectivity sync to use the most recent finalized state rather than the oldest state within the current period.
+- Change weak subjectivity sync to use the most recent finalized state rather than the oldest state within the current
+  period.
 - Ensure a finalized root can't be all zeros
-- Improved db lookup of HighestSlotBlocksBelow to start from the end of the index rather than the beginning. 
+- Improved db lookup of HighestSlotBlocksBelow to start from the end of the index rather than the beginning.
 - Improved packing of state balances for hashtreeroot
 - Improved field trie recomputation
 
 ### Removed
 
--  Removed handling of `INVALID_TERMINAL_BLOCK` response from engine API 
+- Removed handling of `INVALID_TERMINAL_BLOCK` response from engine API
 
 ### Fixed
 
 - `/eth/v1/beacon/blinded_blocks` JSON API endpoint
 - SSZ handling of JSON API payloads
-- Config registry fixes 
+- Config registry fixes
 - Withdrawal epoch overflows
 - Race condition with blockchain service Head()
 - Race condition with validator's highest valid slot accessor
@@ -2115,11 +2261,12 @@ There are no security updates in this release.
 ### Removed
 
 - Prymont testnet support
-- Flag `disable-proposer-atts-selection-using-max-cover` which disables defaulting max cover strategy for proposer selecting attestations
+- Flag `disable-proposer-atts-selection-using-max-cover` which disables defaulting max cover strategy for proposer
+  selecting attestations
 - Flag `disable-get-block-optimizations` which disables optimization with beacon block construction
 - Flag `disable-optimized-balance-update"` which disables optimized effective balance update
 - Flag `disable-active-balance-cache` which disables active balance cache
-- Flag `disable-balance-trie-computation` which disables balance trie optimization for hash tree root 
+- Flag `disable-balance-trie-computation` which disables balance trie optimization for hash tree root
 - Flag `disable-batch-gossip-verification` which disables batch gossip verification
 - Flag `disable-correctly-insert-orphaned-atts` which disables the fix for orphaned attestations insertion
 
@@ -2139,45 +2286,54 @@ This patch release includes 3 cherry picked fixes for regressions found in v2.1.
 
 View the full changelist from v2.1.0: https://github.com/prysmaticlabs/prysm/compare/v2.1.0...v2.1.1
 
-If upgrading from v2.0.6, please review the [full changelist](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.1) of both v2.1.0 and v2.1.1.
+If upgrading from v2.0.6, please review
+the [full changelist](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.1) of both v2.1.0 and v2.1.1.
 
 This release is required for users on v2.1.0 and recommended for anyone on v2.0.6.
 
 The following known issues exist in v2.1.0 and also exist in this release.
-    
-- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and does not affect run time behavior in Phase0/Altair. 
+
+- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and
+  does not affect run time behavior in Phase0/Altair.
 - In Bellatrix/Kiln: Fee recipient flags may not work as expected. See for a fix and more details.
 
 ### Fixed
 
-- Doppelganger false positives may have caused a failure to start in the validator client. 
-- Connections to execution layer clients were not properly cleaned up and lead to resource leaks when using ipc. 
-- Initial sync (or resync when beacon node falls out of sync) could lead to a panic. 
+- Doppelganger false positives may have caused a failure to start in the validator client.
+- Connections to execution layer clients were not properly cleaned up and lead to resource leaks when using ipc.
+- Initial sync (or resync when beacon node falls out of sync) could lead to a panic.
 
 ### Security
 
 There are no security updates in this release.
 
-## [v2.1.0](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.0) - 2022-04-26 
+## [v2.1.0](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.0) - 2022-04-26
 
 There are two known issues with this release:
 
-- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and does not affect run time behavior in Phase0/Altair. 
+- Erroneous warning message in validator client when bellatrix fee recipient is unset. This is a cosmetic message and
+  does not affect run time behavior in Phase0/Altair.
 - In Bellatrix/Kiln: Fee recipient flags may not work as expected. See for a fix and more details.
 
 ### Added
 
-- Web3Signer support. See the [documentation](https://docs.prylabs.network/docs/next/wallet/web3signer) for more details.
+- Web3Signer support. See the [documentation](https://docs.prylabs.network/docs/next/wallet/web3signer) for more
+  details.
 - Bellatrix support. See [kiln testnet instructions](https://hackmd.io/OqIoTiQvS9KOIataIFksBQ?view)
-- Weak subjectivity sync / checkpoint sync. This is an experimental feature and may have unintended side effects for certain operators serving historical data. See the [documentation](https://docs.prylabs.network/docs/next/prysm-usage/checkpoint-sync) for more details.
-- A faster build of blst for beacon chain on linux amd64. Use the environment variable `USE_PRYSM_MODERN=true` with prysm.sh, use the "modern" binary, or bazel build with `--define=blst_modern=true`.
+- Weak subjectivity sync / checkpoint sync. This is an experimental feature and may have unintended side effects for
+  certain operators serving historical data. See
+  the [documentation](https://docs.prylabs.network/docs/next/prysm-usage/checkpoint-sync) for more details.
+- A faster build of blst for beacon chain on linux amd64. Use the environment variable `USE_PRYSM_MODERN=true` with
+  prysm.sh, use the "modern" binary, or bazel build with `--define=blst_modern=true`.
 - Vectorized sha256. This may have performance improvements with use of the new flag `--enable-vectorized-htr`.
-- A new forkchoice structure that uses a doubly linked tree implementation. Try this feature with the flag `--enable-forkchoice-doubly-linked-tree`
+- A new forkchoice structure that uses a doubly linked tree implementation. Try this feature with the
+  flag `--enable-forkchoice-doubly-linked-tree`
 - Fork choice proposer boost is implemented and enabled by default. See PR description for more details.
 
 ### Changed
 
-- **Flag Default Change** The default value for `--http-web3provider` is now `localhost:8545`. Previously was empty string.
+- **Flag Default Change** The default value for `--http-web3provider` is now `localhost:8545`. Previously was empty
+  string.
 - Updated spectest compliance to v1.1.10.
 - Updated to bazel 5.0.0
 - Gossip peer scorer is now part of the `--dev` flag.
@@ -2188,7 +2344,8 @@ There are two known issues with this release:
 
 ### Fixed
 
-Too many bug fixes and improvements to mention all of them. See the [full changelist](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.0)
+Too many bug fixes and improvements to mention all of them. See
+the [full changelist](https://github.com/prysmaticlabs/prysm/compare/v2.0.6...v2.1.0)
 
 ### Security
 
@@ -2280,7 +2437,9 @@ There are no security updates in this release.
 
 ### Deprecated
 
-Please be advised that Prysm's package path naming will change in the next release. If you are a downstream user of Prysm (i.e. import prysm libraries into your project) then you may be impacted. Please see issue https://github.com/prysmaticlabs/prysm/issues/10006.
+Please be advised that Prysm's package path naming will change in the next release. If you are a downstream user of
+Prysm (i.e. import prysm libraries into your project) then you may be impacted. Please see
+issue https://github.com/prysmaticlabs/prysm/issues/10006.
 
 ### Fixed
 
@@ -2309,7 +2468,8 @@ Please be advised that Prysm's package path naming will change in the next relea
 
 ### Fixed
 
-- Revert PR [9830](https://github.com/prysmaticlabs/prysm/pull/9830) to remove performance regression. See: issue [9935](https://github.com/prysmaticlabs/prysm/issues/9935)
+- Revert PR [9830](https://github.com/prysmaticlabs/prysm/pull/9830) to remove performance regression. See:
+  issue [9935](https://github.com/prysmaticlabs/prysm/issues/9935)
 
 ### Security
 
@@ -2317,7 +2477,8 @@ No security updates in this release.
 
 ## [v2.0.3](https://github.com/prysmaticlabs/prysm/compare/v2.0.2...v2.0.3) - 2021-11-22
 
-This release also includes a major update to the web UI. Please review the v1 web UI notes [here](https://github.com/prysmaticlabs/prysm-web-ui/releases/tag/v1.0.0)
+This release also includes a major update to the web UI. Please review the v1 web UI
+notes [here](https://github.com/prysmaticlabs/prysm-web-ui/releases/tag/v1.0.0)
 
 ### Added
 
@@ -2375,7 +2536,8 @@ This release also includes a major update to the web UI. Please review the v1 we
 
 ### Removed
 
-- Prysmatic Labs' [go-ethereum fork](https://github.com/prysmaticlabs/bazel-go-ethereum) removed from build tooling. Upstream go-ethereum is now used with familiar go.mod tooling.
+- Prysmatic Labs' [go-ethereum fork](https://github.com/prysmaticlabs/bazel-go-ethereum) removed from build tooling.
+  Upstream go-ethereum is now used with familiar go.mod tooling.
 - Removed duplicate aggergation validation p2p pipelines.
 - Metrics calculation removed extra condition
 - Removed superflous errors from peer scoring parameters registration
@@ -2386,7 +2548,8 @@ This release also includes a major update to the web UI. Please review the v1 we
 - Ignore validators without committee assignment when fetching attester duties
 - Return "version" field for ssz blocks in beacon API
 - Fixed bazel build transitions for dbg builds. Allows IDEs to hook into debugger again.
-- Fixed case where GetDuties RPC endpoint might return a false positive for sync committee selection for validators that have no deposited yet
+- Fixed case where GetDuties RPC endpoint might return a false positive for sync committee selection for validators that
+  have no deposited yet
 - Fixed validator exits in v1 method, broadcast correct object
 - Fix Altair individual votes endpoint
 - Validator performance calculations fixed
@@ -2395,7 +2558,7 @@ This release also includes a major update to the web UI. Please review the v1 we
 - Fix stategen with genesis state.
 - Fixed multiple typos
 - Fix genesis state registration in interop mode
-- Fix network flags in slashing protection export  
+- Fix network flags in slashing protection export
 
 ### Security
 
@@ -2405,7 +2568,9 @@ This release also includes a major update to the web UI. Please review the v1 we
 
 ### Added
 
-- Optimizations to block proposals. Enabled with `--enable-get-block-optimizations`. See [issue 8943](https://github.com/prysmaticlabs/prysm/issues/8943) and [issue 9708](https://github.com/prysmaticlabs/prysm/issues/9708) before enabling.
+- Optimizations to block proposals. Enabled with `--enable-get-block-optimizations`.
+  See [issue 8943](https://github.com/prysmaticlabs/prysm/issues/8943)
+  and [issue 9708](https://github.com/prysmaticlabs/prysm/issues/9708) before enabling.
 - Beacon Standard API: register v1alpha2 endpoints
 
 ### Changed
@@ -2453,64 +2618,87 @@ We've updated the Prysm base docker images to a more recent build.
 
 ## [v2.0.0](https://github.com/prysmaticlabs/prysm/compare/v1.4.4...v2.0.0)
 
-This release is the largest release of Prysm to date. v2.0.0 includes support for the upcoming Altair hard fork on the mainnet Ethereum Beacon Chain.
-This release consists of [380 changes](https://github.com/prysmaticlabs/prysm/compare/v1.4.4...f7845afa575963302116e673d400d2ab421252ac) to support Altair, improve performance of phase0 beacon nodes, and various bug fixes from v1.4.4.
+This release is the largest release of Prysm to date. v2.0.0 includes support for the upcoming Altair hard fork on the
+mainnet Ethereum Beacon Chain.
+This release consists
+of [380 changes](https://github.com/prysmaticlabs/prysm/compare/v1.4.4...f7845afa575963302116e673d400d2ab421252ac) to
+support Altair, improve performance of phase0 beacon nodes, and various bug fixes from v1.4.4.
 
 ### Upgrading From v1
 
-Please update your beacon node to v2.0.0 prior to updating your validator. The beacon node can serve requests to a v1.4.4 validator, however a v2.0.0 validator will not start against a v1.4.4 beacon node. If you're operating a highly available beacon chain service, ensure that all of your beacon nodes are updated to v2.0.0 before starting the upgrade on your validators.
+Please update your beacon node to v2.0.0 prior to updating your validator. The beacon node can serve requests to a
+v1.4.4 validator, however a v2.0.0 validator will not start against a v1.4.4 beacon node. If you're operating a highly
+available beacon chain service, ensure that all of your beacon nodes are updated to v2.0.0 before starting the upgrade
+on your validators.
 
 ### Added
 
-- Full Altair support. [Learn more about Altair.](https://github.com/ethereum/annotated-spec/blob/8473024d745a3a2b8a84535d57773a8e86b66c9a/altair/beacon-chain.md)
+- Full Altair
+  support. [Learn more about Altair.](https://github.com/ethereum/annotated-spec/blob/8473024d745a3a2b8a84535d57773a8e86b66c9a/altair/beacon-chain.md)
 - Added bootnodes from the Nimbus team.
-- Revamped slasher implementation. The slasher functionality is no longer a standalone binary. Slasher functionality is available from the beacon node with the `--slasher` flag. Note: Running the slasher has considerably increased resource requirements. Be sure to review the latest documentation before enabling this feature. This feature is experimental.
+- Revamped slasher implementation. The slasher functionality is no longer a standalone binary. Slasher functionality is
+  available from the beacon node with the `--slasher` flag. Note: Running the slasher has considerably increased
+  resource requirements. Be sure to review the latest documentation before enabling this feature. This feature is
+  experimental.
 - Support for standard JSON API in the beacon node. Prysm validators continue to use Prysm's API.
-- Configurable subnet peer requirements. Increased minimum desired peers per subnet from 4 to 6. This can be modified with `--minimum-peers-per-subnet` in the beacon node..
+- Configurable subnet peer requirements. Increased minimum desired peers per subnet from 4 to 6. This can be modified
+  with `--minimum-peers-per-subnet` in the beacon node..
 - Support for go build on darwin_arm64 devices (Mac M1 chips). Cross compiling for darwin_arm64 is not yet supported..
 - Batch verification of pubsub objects. This should improve pubsub processing performance on multithreaded machines.
-- Improved attestation pruning. This feature should improve block proposer performance and overall network attestation inclusion rates. Opt-out with `--disable-correctly-prune-canonical-atts` in the beacon node.
+- Improved attestation pruning. This feature should improve block proposer performance and overall network attestation
+  inclusion rates. Opt-out with `--disable-correctly-prune-canonical-atts` in the beacon node.
 - Active balance cache to improve epoch processing. Opt-out with `--disable-active-balance-cache`
-- Experimental database improvements to reduce history state entry space usage in the beaconchain.db. This functionality can be permanently enabled with the flag `--enable-historical-state-representation`. Enabling this feature can realize a 25% improvement in space utilization for the average user , while 70 -80% for power users(archival node operators). Note: once this feature is toggled on, it modifies the structure of the database with a migration and cannot be rolled back. This feature is experimental and should only be used in non-serving beacon nodes in case of database corruption or other critical issue.
+- Experimental database improvements to reduce history state entry space usage in the beaconchain.db. This functionality
+  can be permanently enabled with the flag `--enable-historical-state-representation`. Enabling this feature can realize
+  a 25% improvement in space utilization for the average user , while 70 -80% for power users(archival node operators).
+  Note: once this feature is toggled on, it modifies the structure of the database with a migration and cannot be rolled
+  back. This feature is experimental and should only be used in non-serving beacon nodes in case of database corruption
+  or other critical issue.
 
 #### New Metrics
 
 **Beacon chain node**
 
-| Metric                                           | Description                                                                                           | References  |
-|--------------------------------------------------|-------------------------------------------------------------------------------------------------------|-------------|
-| `p2p_message_ignored_validation_total`           | Count of messages that were ignored in validation                                                     |       |
-| `beacon_current_active_validators`               | Current total active validators                                                                       |       |
-| `beacon_processed_deposits_total`                | Total number of deposits processed                                                                    |       |
-| `sync_head_state_miss`                           | The number of sync head state requests that are not present in the cache                              |       |
-| `sync_head_state_hit`                            | The number of sync head state requests that are present in the cache                                  |       |
-| `total_effective_balance_cache_miss`             | The number of get requests that are not present in the cache                                          |       |
-| `total_effective_balance_cache_hit`              | The number of get requests that are present in the cache                                              |       |
-| `sync_committee_index_cache_miss_total`          | The number of committee requests that aren't present in the sync committee index cache                |       |
-| `sync_committee_index_cache_hit_total`           | The number of committee requests that are present in the sync committee index cache                   |       |
-| `next_slot_cache_hit`                            | The number of cache hits on the next slot state cache                                                 |       |
-| `next_slot_cache_miss`                           | The number of cache misses on the next slot state cache                                               |       |
-| `validator_entry_cache_hit_total`                | The number of cache hits on the validator entry cache                                                 | |
-| `validator_entry_cache_miss_total`               | The number of cache misses on the validator entry cache                                               | |
-| `validator_entry_cache_delete_total`             | The number of cache deletes on the validator entry cache                                              |       |
-| `saved_sync_committee_message_total`             | The number of saved sync committee message total                                                      |       |
-| `saved_sync_committee_contribution_total`        | The number of saved sync committee contribution total                                                 |       |
-| `libp2p_peers`                                   | Tracks the total number of libp2p peers                                                               |       |
-| `p2p_status_message_missing`                     | The number of attempts the connection handler rejects a peer for a missing status message             |       |
-| `p2p_sync_committee_subnet_recovered_broadcasts` | The number of sync committee messages that were attempted to be broadcast with no peers on the subnet |       |
-| `p2p_sync_committee_subnet_attempted_broadcasts` | The number of sync committees that were attempted to be broadcast                                     |       |
-| `p2p_subscribed_topic_peer_total`                | The number of peers subscribed to topics that a host node is also subscribed to                       |       |
-| `saved_orphaned_att_total`                       | Count the number of times an orphaned attestation is saved                                            |       |
+| Metric                                           | Description                                                                                           | References |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------- |
+| `p2p_message_ignored_validation_total`           | Count of messages that were ignored in validation                                                     |            |
+| `beacon_current_active_validators`               | Current total active validators                                                                       |            |
+| `beacon_processed_deposits_total`                | Total number of deposits processed                                                                    |            |
+| `sync_head_state_miss`                           | The number of sync head state requests that are not present in the cache                              |            |
+| `sync_head_state_hit`                            | The number of sync head state requests that are present in the cache                                  |            |
+| `total_effective_balance_cache_miss`             | The number of get requests that are not present in the cache                                          |            |
+| `total_effective_balance_cache_hit`              | The number of get requests that are present in the cache                                              |            |
+| `sync_committee_index_cache_miss_total`          | The number of committee requests that aren't present in the sync committee index cache                |            |
+| `sync_committee_index_cache_hit_total`           | The number of committee requests that are present in the sync committee index cache                   |            |
+| `next_slot_cache_hit`                            | The number of cache hits on the next slot state cache                                                 |            |
+| `next_slot_cache_miss`                           | The number of cache misses on the next slot state cache                                               |            |
+| `validator_entry_cache_hit_total`                | The number of cache hits on the validator entry cache                                                 |            |
+| `validator_entry_cache_miss_total`               | The number of cache misses on the validator entry cache                                               |            |
+| `validator_entry_cache_delete_total`             | The number of cache deletes on the validator entry cache                                              |            |
+| `saved_sync_committee_message_total`             | The number of saved sync committee message total                                                      |            |
+| `saved_sync_committee_contribution_total`        | The number of saved sync committee contribution total                                                 |            |
+| `libp2p_peers`                                   | Tracks the total number of libp2p peers                                                               |            |
+| `p2p_status_message_missing`                     | The number of attempts the connection handler rejects a peer for a missing status message             |            |
+| `p2p_sync_committee_subnet_recovered_broadcasts` | The number of sync committee messages that were attempted to be broadcast with no peers on the subnet |            |
+| `p2p_sync_committee_subnet_attempted_broadcasts` | The number of sync committees that were attempted to be broadcast                                     |            |
+| `p2p_subscribed_topic_peer_total`                | The number of peers subscribed to topics that a host node is also subscribed to                       |            |
+| `saved_orphaned_att_total`                       | Count the number of times an orphaned attestation is saved                                            |            |
 
 ### Changed
 
 - Much refactoring of "util" packages into more canonical packages. Please review Prysm package structure and godocs.
-- Altair object keys in beacon-chain/db/kv are prefixed with "altair". BeaconBlocks and BeaconStates are the only objects affected by database key changes for Altair. This affects any third party tooling directly querying Prysm's beaconchain.db.
+- Altair object keys in beacon-chain/db/kv are prefixed with "altair". BeaconBlocks and BeaconStates are the only
+  objects affected by database key changes for Altair. This affects any third party tooling directly querying Prysm's
+  beaconchain.db.
 - Updated Teku bootnodes.
 - Updated Lighthouse bootnodes.
 - End to end testing now collects jaeger spans
 - Improvements to experimental peer quality scoring. This feature is only enabled with `--enable-peer-scorer`.
-- Validator performance logging behavior has changed in Altair. Post-Altair hardfork has the following changes: Inclusion distance and inclusion slots will no longer be displayed. Correctly voted target will only be true if also included within 32 slots. Correctly voted head will only be true if the attestation was included in the next slot. Correctly voted source will only be true if attestation is included within 5 slots. Inactivity score will be displayed.
+- Validator performance logging behavior has changed in Altair. Post-Altair hardfork has the following changes:
+  Inclusion distance and inclusion slots will no longer be displayed. Correctly voted target will only be true if also
+  included within 32 slots. Correctly voted head will only be true if the attestation was included in the next slot.
+  Correctly voted source will only be true if attestation is included within 5 slots. Inactivity score will be
+  displayed.
 - Increased pubsub message queue size from 256 to 600 to support larger networks and higher message volume.
 - The default attestation aggregation changed to the improved optimized max cover algorithm.
 - Prysm is passing spectests at v1.1.0 (latest available release).
@@ -2524,12 +2712,14 @@ Please update your beacon node to v2.0.0 prior to updating your validator. The b
 
 **Beacon chain node**
 | Metric                | Old Name             | Description                                          | References |
-|-----------------------|----------------------|------------------------------------------------------|------------|
-| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg |      |
+| --------------------- | -------------------- | ---------------------------------------------------- | ---------- |
+| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg |            |
 
 ### Deprecated
 
-These flags are hidden from the help text and no longer modify the behavior of Prysm. These flags should be removed from user runtime configuration as the flags will eventually be removed entirely and Prysm will fail to start if a deleted or unknown flag is provided.
+These flags are hidden from the help text and no longer modify the behavior of Prysm. These flags should be removed from
+user runtime configuration as the flags will eventually be removed entirely and Prysm will fail to start if a deleted or
+unknown flag is provided.
 
 - `--enable-active-balance-cache`
 - `--correctly-prune-canonical-atts`
@@ -2541,17 +2731,24 @@ These flags are hidden from the help text and no longer modify the behavior of P
 Note: Removed flags will block starting up with an error "flag provided but not defined:".
 Please check that you are not using any of the removed flags in this section!
 
-- Prysm's standalone slasher application (cmd/slasher) has been fully removed. Use the `--slasher` flag with a beacon chain node for full slasher functionality.
-- `--disable-blst` (beacon node and validator). [blst](https://github.com/supranational/blst) is the only BLS library offered for Prysm.
-- `--disable-sync-backtracking` and `--enable-sync-backtracking` (beacon node). This feature has been released for some time. See.
+- Prysm's standalone slasher application (cmd/slasher) has been fully removed. Use the `--slasher` flag with a beacon
+  chain node for full slasher functionality.
+- `--disable-blst` (beacon node and validator). [blst](https://github.com/supranational/blst) is the only BLS library
+  offered for Prysm.
+- `--disable-sync-backtracking` and `--enable-sync-backtracking` (beacon node). This feature has been released for some
+  time. See.
 - `--diable-pruning-deposit-proofs` (beacon node). This feature has been released for some time. See.
 - `--disable-eth1-data-majority-vote` (beacon node). This feature is no longer in use in Prysm. See,.
 - `--proposer-atts-selection-using-max-cover` (beacon node). This feature has been released for some time. See.
 - `--update-head-timely` (beacon node). This feature was released in v1.4.4. See.
 - `--enable-optimized-balance-update` (beacon node). This feature was released in v1.4.4. See.
-- Kafka support is no longer available in the beacon node. This functionality was never fully completed and did not fulfill many desirable use cases. This removed the flag `--kafka-url` (beacon node). See.
-- Removed tools/faucet. Use the faucet in [prysmaticlabs/periphery](https://github.com/prysmaticlabs/periphery/tree/c2ac600882c37fc0f2a81b0508039124fb6bcf47/eth-faucet) if operating a testnet faucet server.
-- Tooling for prior testnet contracts has been removed. Any of the old testnet contracts with `drain()` function have been removed as well.
+- Kafka support is no longer available in the beacon node. This functionality was never fully completed and did not
+  fulfill many desirable use cases. This removed the flag `--kafka-url` (beacon node). See.
+- Removed tools/faucet. Use the faucet
+  in [prysmaticlabs/periphery](https://github.com/prysmaticlabs/periphery/tree/c2ac600882c37fc0f2a81b0508039124fb6bcf47/eth-faucet)
+  if operating a testnet faucet server.
+- Tooling for prior testnet contracts has been removed. Any of the old testnet contracts with `drain()` function have
+  been removed as well.
 - Toledo tesnet config is removed.
 - Removed --eth-api-port (beacon node). All APIs interactions have been moved to --grpc-gateway-port. See.
 
@@ -2569,10 +2766,14 @@ Please check that you are not using any of the removed flags in this section!
 
 ### Security
 
-- You MUST update to v2.0.0 or later release before epoch 74240 or your client will fork off from the rest of the network.
-- Prysm's JWT library has been updated to a maintained version of the previous JWT library. JWTs are only used in the UI.
+- You MUST update to v2.0.0 or later release before epoch 74240 or your client will fork off from the rest of the
+  network.
+- Prysm's JWT library has been updated to a maintained version of the previous JWT library. JWTs are only used in the
+  UI.
 
-Please review our newly updated [security reporting policy](https://github.com/prysmaticlabs/prysm/blob/develop/SECURITY.md).
+Please review our newly
+updated [security reporting policy](https://github.com/prysmaticlabs/prysm/blob/develop/SECURITY.md).
+
 - Fix subcommands such as validator accounts list
 
 ### Security
