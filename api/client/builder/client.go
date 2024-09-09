@@ -278,7 +278,11 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	}
 
 	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
-	return err
+	if err != nil {
+		return err
+	}
+	log.WithField("num_registrations", len(svr)).Info("successfully registered validator(s) on builder")
+	return nil
 }
 
 var errResponseVersionMismatch = errors.New("builder API response uses a different version than requested in " + api.VersionHeader + " header")
