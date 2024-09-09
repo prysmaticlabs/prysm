@@ -15,7 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -182,4 +184,53 @@ func (s *Server) GetChainHead(w http.ResponseWriter, r *http.Request) {
 		OptimisticStatus:           ch.OptimisticStatus,
 	}
 	httputil.WriteJson(w, response)
+}
+
+func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.PublishBlobs")
+	defer span.End()
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	var req structs.PublishBlobsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.HandleError(w, "Could not decode JSON request body", http.StatusBadRequest)
+		return
+	}
+	if req.BlobSidecars == nil {
+		httputil.HandleError(w, "Missing blob sidecars", http.StatusBadRequest)
+		return
+	}
+
+	root, err := bytesutil.DecodeHexWithLength(req.BlockRoot, 32)
+	if err != nil {
+		httputil.HandleError(w, "Could not decode block root", http.StatusBadRequest)
+		return
+	}
+
+	for _, blobSidecar := range req.BlobSidecars.Sidecars {
+		sc, err := blobSidecar.ToConsensus()
+		if err != nil {
+			httputil.HandleError(w, "Could not decode blob sidecar", http.StatusBadRequest)
+			return
+		}
+
+		readOnlySc, err := blocks.NewROBlobWithRoot(sc, bytesutil.ToBytes32(root))
+		if err != nil {
+			httputil.HandleError(w, "Could not create read-only blob", http.StatusInternalServerError)
+			return
+		}
+
+		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+		if err := s.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+			httputil.HandleError(w, "Could not receive blob", http.StatusInternalServerError)
+			return
+		}
+
+		if err := s.Broadcaster.BroadcastBlob(ctx, sc.Index, sc); err != nil {
+			httputil.HandleError(w, "Failed to broadcast blob", http.StatusInternalServerError)
+			return
+		}
+	}
 }
