@@ -48,6 +48,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - validator registration log changed to debug, and the frequency of validator registration calls are reduced
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
+- p2p: fixed metadata to be maintained when `--p2p-static-id` is true
 
 ### Security
 
@@ -2660,7 +2661,7 @@ on your validators.
 **Beacon chain node**
 
 | Metric                                           | Description                                                                                           | References |
-|--------------------------------------------------|-------------------------------------------------------------------------------------------------------|------------|
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------- |
 | `p2p_message_ignored_validation_total`           | Count of messages that were ignored in validation                                                     |            |
 | `beacon_current_active_validators`               | Current total active validators                                                                       |            |
 | `beacon_processed_deposits_total`                | Total number of deposits processed                                                                    |            |
@@ -2711,9 +2712,9 @@ on your validators.
 #### Changed Metrics
 
 **Beacon chain node**
-| Metric | Old Name | Description | References |
-|-----------------------|----------------------|------------------------------------------------------|------------|
-| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg | |
+| Metric                | Old Name             | Description                                          | References |
+| --------------------- | -------------------- | ---------------------------------------------------- | ---------- |
+| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg |            |
 
 ### Deprecated
 
