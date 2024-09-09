@@ -358,7 +358,7 @@ func newLightClientUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return structs.LightClientUpdateFromConsensus(result), nil
+	return structs.LightClientUpdateFromConsensus(result)
 }
 
 func newLightClientFinalityUpdateFromBeaconState(
@@ -373,7 +373,7 @@ func newLightClientFinalityUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return structs.LightClientFinalityUpdateFromConsensus(result), nil
+	return structs.LightClientFinalityUpdateFromConsensus(result)
 }
 
 func newLightClientOptimisticUpdateFromBeaconState(
@@ -387,7 +387,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return structs.LightClientOptimisticUpdateFromConsensus(result), nil
+	return structs.LightClientOptimisticUpdateFromConsensus(result)
 }
 
 func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {

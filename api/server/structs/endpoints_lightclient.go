@@ -35,17 +35,17 @@ type LightClientUpdate struct {
 }
 
 type LightClientFinalityUpdate struct {
-	AttestedHeader  *BeaconBlockHeader `json:"attested_header"`
-	FinalizedHeader *BeaconBlockHeader `json:"finalized_header"`
-	FinalityBranch  []string           `json:"finality_branch"`
-	SyncAggregate   *SyncAggregate     `json:"sync_aggregate"`
-	SignatureSlot   string             `json:"signature_slot"`
+	AttestedHeader  json.RawMessage `json:"attested_header"`
+	FinalizedHeader json.RawMessage `json:"finalized_header"`
+	FinalityBranch  []string        `json:"finality_branch"`
+	SyncAggregate   *SyncAggregate  `json:"sync_aggregate"`
+	SignatureSlot   string          `json:"signature_slot"`
 }
 
 type LightClientOptimisticUpdate struct {
-	AttestedHeader *BeaconBlockHeader `json:"attested_header"`
-	SyncAggregate  *SyncAggregate     `json:"sync_aggregate"`
-	SignatureSlot  string             `json:"signature_slot"`
+	AttestedHeader json.RawMessage `json:"attested_header"`
+	SyncAggregate  *SyncAggregate  `json:"sync_aggregate"`
+	SignatureSlot  string          `json:"signature_slot"`
 }
 
 type LightClientBootstrapResponse struct {

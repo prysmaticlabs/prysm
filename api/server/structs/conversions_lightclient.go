@@ -1,42 +1,68 @@
 package structs
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 )
 
-func LightClientUpdateFromConsensus(update *v2.LightClientUpdate) *LightClientUpdate {
+func LightClientUpdateFromConsensus(update *v2.LightClientUpdate) (*LightClientUpdate, error) {
+	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal attested light client header")
+	}
+	finalizedHeader, err := lightClientHeaderContainerToJSON(update.FinalizedHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal finalized light client header")
+	}
+
 	return &LightClientUpdate{
-		AttestedHeader:          &LightClientHeader{Beacon: BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(update.AttestedHeader.Beacon))},
+		AttestedHeader:          attestedHeader,
 		NextSyncCommittee:       SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(update.NextSyncCommittee)),
 		NextSyncCommitteeBranch: branchToJSON(update.NextSyncCommitteeBranch),
-		FinalizedHeader:         &LightClientHeader{Beacon: BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(update.FinalizedHeader.Beacon))},
+		FinalizedHeader:         finalizedHeader,
 		FinalityBranch:          branchToJSON(update.FinalityBranch),
 		SyncAggregate:           syncAggregateToJSON(update.SyncAggregate),
 		SignatureSlot:           strconv.FormatUint(uint64(update.SignatureSlot), 10),
-	}
+	}, nil
 }
 
-func LightClientFinalityUpdateFromConsensus(update *v2.LightClientFinalityUpdate) *LightClientFinalityUpdate {
+func LightClientFinalityUpdateFromConsensus(update *v2.LightClientFinalityUpdate) (*LightClientFinalityUpdate, error) {
+	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal attested light client header")
+	}
+	finalizedHeader, err := lightClientHeaderContainerToJSON(update.FinalizedHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal finalized light client header")
+	}
+
 	return &LightClientFinalityUpdate{
-		AttestedHeader:  BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(update.AttestedHeader.Beacon)),
-		FinalizedHeader: BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(update.FinalizedHeader.Beacon)),
+		AttestedHeader:  attestedHeader,
+		FinalizedHeader: finalizedHeader,
 		FinalityBranch:  branchToJSON(update.FinalityBranch),
 		SyncAggregate:   syncAggregateToJSON(update.SyncAggregate),
 		SignatureSlot:   strconv.FormatUint(uint64(update.SignatureSlot), 10),
-	}
+	}, nil
 }
 
-func LightClientOptimisticUpdateFromConsensus(update *v2.LightClientOptimisticUpdate) *LightClientOptimisticUpdate {
+func LightClientOptimisticUpdateFromConsensus(update *v2.LightClientOptimisticUpdate) (*LightClientOptimisticUpdate, error) {
+	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal attested light client header")
+	}
+
 	return &LightClientOptimisticUpdate{
-		AttestedHeader: BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(update.AttestedHeader.Beacon)),
+		AttestedHeader: attestedHeader,
 		SyncAggregate:  syncAggregateToJSON(update.SyncAggregate),
 		SignatureSlot:  strconv.FormatUint(uint64(update.SignatureSlot), 10),
-	}
+	}, nil
 }
 
 func branchToJSON(branchBytes [][]byte) []string {
@@ -55,4 +81,42 @@ func syncAggregateToJSON(input *v1.SyncAggregate) *SyncAggregate {
 		SyncCommitteeBits:      hexutil.Encode(input.SyncCommitteeBits),
 		SyncCommitteeSignature: hexutil.Encode(input.SyncCommitteeSignature),
 	}
+}
+
+func lightClientHeaderContainerToJSON(container *v2.LightClientHeaderContainer) (json.RawMessage, error) {
+	beacon, err := container.GetBeacon()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get beacon block header")
+	}
+
+	var header any
+
+	switch t := (container.Header).(type) {
+	case *v2.LightClientHeaderContainer_HeaderAltair:
+		header = &LightClientHeader{Beacon: BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(beacon))}
+	case *v2.LightClientHeaderContainer_HeaderCapella:
+		execution, err := ExecutionPayloadHeaderCapellaFromConsensus(t.HeaderCapella.Execution)
+		if err != nil {
+			return nil, err
+		}
+		header = &LightClientHeaderCapella{
+			Beacon:          BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(beacon)),
+			Execution:       execution,
+			ExecutionBranch: branchToJSON(t.HeaderCapella.ExecutionBranch),
+		}
+	case *v2.LightClientHeaderContainer_HeaderDeneb:
+		execution, err := ExecutionPayloadHeaderDenebFromConsensus(t.HeaderDeneb.Execution)
+		if err != nil {
+			return nil, err
+		}
+		header = &LightClientHeaderDeneb{
+			Beacon:          BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(beacon)),
+			Execution:       execution,
+			ExecutionBranch: branchToJSON(t.HeaderDeneb.ExecutionBranch),
+		}
+	default:
+		return nil, fmt.Errorf("unsupported attested hesder type %T", t)
+	}
+
+	return json.Marshal(header)
 }
