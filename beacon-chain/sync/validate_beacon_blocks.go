@@ -345,7 +345,7 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if err != nil {
 		return err
 	}
-	if payload.IsNil() {
+	if payload == nil || payload.IsNil() {
 		return errors.New("execution payload is nil")
 	}
 	if payload.Timestamp() != uint64(t.Unix()) {

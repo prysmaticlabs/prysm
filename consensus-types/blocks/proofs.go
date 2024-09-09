@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
@@ -181,7 +182,7 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 	return fieldRoots, nil
 }
 
-func ComputeBlockFieldRoots(ctx context.Context, block *BeaconBlock) ([][]byte, error) {
+func ComputeBlockFieldRoots(ctx context.Context, block interfaces.ReadOnlyBeaconBlock) ([][]byte, error) {
 	_, span := trace.StartSpan(ctx, "blocks.ComputeBlockFieldRoots")
 	defer span.End()
 
@@ -195,21 +196,23 @@ func ComputeBlockFieldRoots(ctx context.Context, block *BeaconBlock) ([][]byte, 
 	}
 
 	// Slot
-	slotRoot := ssz.Uint64Root(uint64(block.slot))
+	slotRoot := ssz.Uint64Root(uint64(block.Slot()))
 	copy(fieldRoots[0], slotRoot[:])
 
 	// Proposer Index
-	proposerRoot := ssz.Uint64Root(uint64(block.proposerIndex))
+	proposerRoot := ssz.Uint64Root(uint64(block.ProposerIndex()))
 	copy(fieldRoots[1], proposerRoot[:])
 
 	// Parent Root
-	copy(fieldRoots[2], block.parentRoot[:])
+	parentRoot := block.ParentRoot()
+	copy(fieldRoots[2], parentRoot[:])
 
 	// State Root
-	copy(fieldRoots[3], block.stateRoot[:])
+	stateRoot := block.StateRoot()
+	copy(fieldRoots[3], stateRoot[:])
 
 	// block body Root
-	blockBodyRoot, err := block.body.HashTreeRoot()
+	blockBodyRoot, err := block.Body().HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +221,7 @@ func ComputeBlockFieldRoots(ctx context.Context, block *BeaconBlock) ([][]byte, 
 	return fieldRoots, nil
 }
 
-func PayloadProof(ctx context.Context, block *BeaconBlock) ([][]byte, error) {
+func PayloadProof(ctx context.Context, block interfaces.ReadOnlyBeaconBlock) ([][]byte, error) {
 	i := block.Body()
 	blockBody, ok := i.(*BeaconBlockBody)
 	if !ok {

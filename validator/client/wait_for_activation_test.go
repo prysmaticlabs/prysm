@@ -37,6 +37,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 		validatorClient: validatorClient,
 		km:              newMockKeymanager(t, kp),
 		chainClient:     chainClient,
+		pubkeyToStatus:  make(map[[48]byte]*validatorStatus),
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -65,6 +66,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 		km:               newMockKeymanager(t, kp),
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
@@ -96,6 +98,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		km:               newMockKeymanager(t, kp),
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
@@ -133,6 +136,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		genesisTime:      1,
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -168,6 +172,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		km:               newMockKeymanager(t, kp),
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_EXITING
@@ -211,6 +216,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		km:               km,
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -264,6 +270,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			km:               km,
 			chainClient:      chainClient,
 			prysmChainClient: prysmChainClient,
+			pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 		}
 		inactiveResp := generateMockStatusResponse([][]byte{inactive.pub[:]})
 		inactiveResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -355,6 +362,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			genesisTime:      1,
 			chainClient:      chainClient,
 			prysmChainClient: prysmChainClient,
+			pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 		}
 
 		inactiveResp := generateMockStatusResponse([][]byte{inactivePubKey[:]})
@@ -423,6 +431,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		km:               newMockKeymanager(t, kp),
 		chainClient:      chainClient,
 		prysmChainClient: prysmChainClient,
+		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
