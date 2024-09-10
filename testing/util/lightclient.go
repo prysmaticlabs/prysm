@@ -242,8 +242,8 @@ func (l *TestLightClient) SetupTestDeneb() *TestLightClient {
 	return l
 }
 
-func (l *TestLightClient) CheckAttestedHeader(update *ethpbv2.LightClientUpdate) {
-	updateAttestedHeaderBeacon, err := update.AttestedHeader.GetBeacon()
+func (l *TestLightClient) CheckAttestedHeader(container *ethpbv2.LightClientHeaderContainer) {
+	updateAttestedHeaderBeacon, err := container.GetBeacon()
 	require.NoError(l.T, err)
 	require.Equal(l.T, l.AttestedHeader.Slot, updateAttestedHeaderBeacon.Slot, "Attested header slot is not equal")
 	require.Equal(l.T, l.AttestedHeader.ProposerIndex, updateAttestedHeaderBeacon.ProposerIndex, "Attested header proposer index is not equal")

@@ -240,7 +240,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 
 	st, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -257,13 +257,15 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 	}
 
 	var finalizedBlock interfaces.ReadOnlySignedBeaconBlock
-	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
-	if finalizedCheckPoint != nil {
-		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
-		finalizedBlock, err = s.Blocker.Block(ctx, finalizedRoot[:])
-		if err != nil {
-			finalizedBlock = nil
-		}
+	finalizedCheckpoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckpoint == nil {
+		httputil.HandleError(w, "Attested state does not have a finalized checkpoint", http.StatusInternalServerError)
+		return
+	}
+	finalizedRoot := bytesutil.ToBytes32(finalizedCheckpoint.Root)
+	finalizedBlock, err = s.Blocker.Block(ctx, finalizedRoot[:])
+	if !shared.WriteBlockFetchError(w, block, errors.Wrap(err, "could not get finalized block")) {
+		return
 	}
 
 	update, err := newLightClientFinalityUpdateFromBeaconState(ctx, st, block, attestedState, finalizedBlock)
