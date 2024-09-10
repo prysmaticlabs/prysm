@@ -66,6 +66,25 @@ const (
 	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
 )
 
+var (
+	errInvalidTopicName   = errors.New("invalid topic name")
+	errNoValidTopics      = errors.New("no valid topics specified")
+	errSlowReader         = errors.New("client failed to read fast enough to keep outgoing buffer below threshold")
+	errFinished           = errors.New("event received after streamer shut down")
+	errNotRequested       = errors.New("event not requested by client")
+	errUnhandledEventData = errors.New("unable to represent event data in the event stream")
+)
+
+// StreamingResponseWriter defines a type that can be used by the eventStreamer.
+// This must be an http.ResponseWriter that supports flushing and hijacking.
+type StreamingResponseWriter interface {
+	http.ResponseWriter
+	http.Flusher
+}
+
+// The eventStreamer uses lazyReaders to defer serialization until the moment the value is ready to be written to the client.
+type lazyReader func() io.Reader
+
 var opsFeedEventTopics = map[feed.EventType]string{
 	operation.AggregatedAttReceived:             AttestationTopic,
 	operation.UnaggregatedAttReceived:           AttestationTopic,
@@ -98,23 +117,33 @@ func topicsForFeed(em map[feed.EventType]string) map[string]bool {
 	return topics
 }
 
-func validateTopics(topics []string) (bool, bool, map[string]bool, error) {
-	var subState, subOps bool
-	requested := make(map[string]bool)
-	for _, topic := range topics {
-		if topicsForStateFeed[topic] {
-			subState = true
-			requested[topic] = true
-			continue
+type topicRequest struct {
+	topics        map[string]bool
+	needStateFeed bool
+	needOpsFeed   bool
+}
+
+func (req *topicRequest) requested(topic string) bool {
+	return req.topics[topic]
+}
+
+func newTopicRequest(topics []string) (*topicRequest, error) {
+	req := &topicRequest{topics: make(map[string]bool)}
+	for _, name := range topics {
+		if topicsForStateFeed[name] {
+			req.needStateFeed = true
+		} else if topicsForOpsFeed[name] {
+			req.needOpsFeed = true
+		} else {
+			return nil, errors.Wrapf(errInvalidTopicName, name)
 		}
-		if topicsForOpsFeed[topic] {
-			subOps = true
-			requested[topic] = true
-			continue
-		}
-		return false, false, nil, fmt.Errorf("invalid topic: %s", topic)
+		req.topics[name] = true
 	}
-	return subState, subOps, requested, nil
+	if len(req.topics) == 0 || (!req.needStateFeed && !req.needOpsFeed) {
+		return nil, errNoValidTopics
+	}
+
+	return req, nil
 }
 
 // StreamEvents provides an endpoint to subscribe to the beacon node Server-Sent-Events stream.
@@ -125,24 +154,18 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "events.StreamEvents")
 	defer span.End()
 
-	tq := r.URL.Query()["topics"]
-	subState, subOps, requestedTopics, err := validateTopics(tq)
+	topics, err := newTopicRequest(r.URL.Query()["topics"])
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if (!subState && !subOps) || len(requestedTopics) == 0 {
-		httputil.HandleError(w, "No valid topics specified", http.StatusBadRequest)
-		return
-	}
 
-	// Subscribe to event feeds from information received in the beacon node runtime.
 	eventsChan := make(chan *feed.Event, chanBuffer)
-	if subOps {
+	if topics.needOpsFeed {
 		opsSub := s.OperationNotifier.OperationFeed().Subscribe(eventsChan)
 		defer opsSub.Unsubscribe()
 	}
-	if subState {
+	if topics.needStateFeed {
 		stateSub := s.StateNotifier.StateFeed().Subscribe(eventsChan)
 		defer stateSub.Unsubscribe()
 	}
@@ -160,13 +183,19 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case event := <-eventsChan:
-			lr, err := s.lazyReaderForEvent(ctx, event, requestedTopics)
+			lr, err := s.lazyReaderForEvent(ctx, event, topics)
 			if err != nil {
-				if err != ErrNotRequested {
+				if !errors.Is(err, errNotRequested) {
 					log.WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
 				}
 				continue
 			}
+			// If the client can't keep up, the outbox will eventually completely fill, at which
+			// safeWrite will error, and we'll hit the below return statement, at which point the deferred
+			// Unsuscribe calls will be made and the event feed will stop writing to this channel.
+			// Since the outbox and event stream channels are separately buffered, the event subscription
+			// channel should stay relatively empty, which gives this loop time to unsubscribe
+			// and cleanup before the event stream channel fills and disrupts other readers.
 			if err := es.safeWrite(lr); err != nil {
 				log.WithField("event_type", fmt.Sprintf("%v", event.Data)).Warn("Unable to safely write event to stream, shutting down.")
 				return
@@ -175,33 +204,9 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var (
-	ErrSlowReader = errors.New("client failed to read fast enough to keep outgoing buffer below threadhold")
-	ErrFinished   = errors.New("event received after streamer shut down")
-)
-
-// StreamingResponseWriter defines a type that can be used by the eventStreamer.
-// This must be an http.ResponseWriter that supports flushing and hijacking.
-type StreamingResponseWriter interface {
-	http.ResponseWriter
-	http.Flusher
-}
-
-type lazyReader func() io.Reader
-
-type eventStreamer struct {
-	sync.Mutex
-	ctx      context.Context
-	cancel   func()
-	w        StreamingResponseWriter
-	outbox   chan lazyReader
-	finished chan struct{}
-	kaDur    time.Duration
-}
-
-func NewEventStreamer(ctx context.Context, w http.ResponseWriter, buffSize int, kaDur time.Duration) (*eventStreamer, error) {
-	if kaDur == 0 {
-		kaDur = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+func NewEventStreamer(ctx context.Context, w http.ResponseWriter, buffSize int, ka time.Duration) (*eventStreamer, error) {
+	if ka == 0 {
+		ka = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	}
 	f, ok := w.(StreamingResponseWriter)
 	if !ok {
@@ -209,91 +214,127 @@ func NewEventStreamer(ctx context.Context, w http.ResponseWriter, buffSize int, 
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	return &eventStreamer{
-		ctx:    ctx,
-		cancel: cancel,
-		w:      f,
-		outbox: make(chan lazyReader, buffSize),
-		kaDur:  kaDur,
+		ctx:       ctx,
+		cancel:    cancel,
+		w:         f,
+		outbox:    make(chan lazyReader, buffSize),
+		keepAlive: ka,
 	}, nil
+}
+
+type eventStreamer struct {
+	sync.Mutex
+	ctx       context.Context
+	cancel    func()
+	w         StreamingResponseWriter
+	outbox    chan lazyReader
+	finished  chan struct{}
+	keepAlive time.Duration
+}
+
+func (es *eventStreamer) safeWrite(rf func() io.Reader) error {
+	if rf == nil {
+		return nil
+	}
+	select {
+	case <-es.finished:
+		return errFinished
+	case es.outbox <- rf:
+		return nil
+	default:
+		// If this is the case, the select case to write to the outbox could not proceed, meaning the outbox is full.
+		// If a reader can't keep up with the stream, we shut them down.
+		return errSlowReader
+	}
 }
 
 func (es *eventStreamer) Start() {
 	// Set up SSE response headers
 	es.w.Header().Set("Content-Type", api.EventStreamMediaType)
 	es.w.Header().Set("Connection", api.KeepAlive)
-	es.spawnWriteLoop()
+	go es.outboxWriteLoop()
 }
 
 func (es *eventStreamer) Stop() {
 	es.Cleanup(nil)
 }
 
+// newlineReader is used to write keep-alives to the client.
+// keep-alives in the sse protocol are a single ':' colon followed by 2 newlines.
 func newlineReader() io.Reader {
 	return bytes.NewBufferString(":\n\n")
 }
 
-// We main only care about this keep alive value in a real test setups and using a package var allows test
-// to modify it for convenience.
-var keepAliveInterval = time.Duration(12 * time.Second)
+// outboxWriteLoop runs in a separate goroutine. Its job is to write the values in the outbox to
+// the client as fast as the client can read them.
+func (es *eventStreamer) outboxWriteLoop() {
+	// There are multiple points in this loop where we can receive an error and break out of the loop.
+	// In all cases, we need to call Cleanup to ensure:
+	// - any error received is logged.
+	// - the context is cancelled and the .finished channel is closed.
+	//   - this signals the response handler to exit the handler func; stop reading events -> writing to the outbox.
+	var err error
+	defer es.Cleanup(err)
+	// Write a keepalive at the start to test the connection and simplify test setup.
+	if err := es.writeOutbox(nil); err != nil {
+		return
+	}
 
-func (es *eventStreamer) spawnWriteLoop() {
-	go func() {
-		var err error
-		kaT := time.NewTimer(es.kaDur)
-		defer func() {
+	kaT := time.NewTimer(es.keepAlive)
+	// Ensure the keepalive timer is stopped and drained if it has fired.
+	defer func() {
+		if !kaT.Stop() {
+			<-kaT.C
+		}
+	}()
+	for {
+		select {
+		case <-es.ctx.Done():
+			return
+		case <-kaT.C:
+			err = es.writeOutbox(nil)
+			if err != nil {
+				return
+			}
+			// In this case the timer doesn't need to be Stopped before the Reset call after the select statement,
+			// because the timer has already fired.
+		case lr := <-es.outbox:
+			err = es.writeOutbox(lr)
+			if err != nil {
+				return
+			}
+			// We don't know if the timer fired concurrently to this case being ready, so we need to check the return
+			// of Stop and drain the timer channel if it fired. We won't need to do this in go 1.23.
 			if !kaT.Stop() {
 				<-kaT.C
 			}
-		}()
-		defer es.Cleanup(err)
-		// Write a keepalive at the start to test the connection and simplify test setup.
-		if err := es.writeOutbox(nil); err != nil {
-			return
 		}
-		for {
-			select {
-			case <-es.ctx.Done():
-				return
-			case <-kaT.C:
-				err = es.writeOutbox(nil)
-				if err != nil {
-					return
-				}
-				// The timer has already fired here, so a call to Reset is safe.
-			case lr := <-es.outbox:
-				err = es.writeOutbox(lr)
-				if err != nil {
-					return
-				}
-				// We don't know if the timer fired concurrently to this case being ready, so we need to check the return
-				// of Stop and drain the timer channel if it fired.
-				if !kaT.Stop() {
-					<-kaT.C
-				}
-			}
-			kaT.Reset(es.kaDur)
-		}
-	}()
+		kaT.Reset(es.keepAlive)
+	}
 }
 
 func (es *eventStreamer) writeOutbox(first lazyReader) error {
-	written := 0
+	needKeepAlive := true
 	if first != nil {
 		if _, err := io.Copy(es.w, first()); err != nil {
 			return err
 		}
-		written += 1
+		needKeepAlive = false
 	}
+	// While the first event was being read by the client, further events may be queued in the outbox.
+	// We can drain them right away rather than go back out to the outer select statement, where the keepAlive timer
+	// may have fired, triggering an unnecessary extra keep-alive write and flush.
 	for {
 		select {
+		case <-es.ctx.Done():
+			return es.ctx.Err()
 		case rf := <-es.outbox:
 			if _, err := io.Copy(es.w, rf()); err != nil {
 				return err
 			}
-			written += 1
+			needKeepAlive = false
 		default:
-			if written == 0 {
-				// If nothing was written in the write cycle, send a keepalive.
+			if needKeepAlive {
 				if _, err := io.Copy(es.w, newlineReader()); err != nil {
 					return err
 				}
@@ -306,7 +347,7 @@ func (es *eventStreamer) writeOutbox(first lazyReader) error {
 
 func (es *eventStreamer) Cleanup(err error) {
 	if err != nil {
-		log.WithError(err).Error("Event streamer shutting down due to error.")
+		log.WithError(err).Debug("Event streamer shutting down due to error.")
 	}
 	select {
 	case <-es.finished:
@@ -320,22 +361,6 @@ func (es *eventStreamer) Cleanup(err error) {
 	}
 }
 
-func (es *eventStreamer) safeWrite(rf func() io.Reader) error {
-	if rf == nil {
-		return nil
-	}
-	select {
-	case <-es.finished:
-		return ErrFinished
-	case es.outbox <- rf:
-		return nil
-	default:
-		// If this is the case, the select case to write to the outbox could not proceed, meaning the outbox is full.
-		// If a reader can't keep up with the stream, we shut them down.
-		return ErrSlowReader
-	}
-}
-
 func jsonMarshalReader(name string, v any) io.Reader {
 	d, err := json.Marshal(v)
 	if err != nil {
@@ -344,8 +369,6 @@ func jsonMarshalReader(name string, v any) io.Reader {
 	}
 	return bytes.NewBufferString("event: " + name + "\ndata: " + string(d) + "\n\n")
 }
-
-var ErrUnhandledEventData = errors.New("unable to represent event data in the event stream")
 
 func topicForEvent(event *feed.Event) string {
 	switch event.Data.(type) {
@@ -385,12 +408,10 @@ func topicForEvent(event *feed.Event) string {
 	}
 }
 
-var ErrNotRequested = errors.New("event not requested by client")
-
-func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, req map[string]bool) (lazyReader, error) {
+func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topics *topicRequest) (lazyReader, error) {
 	eventName := topicForEvent(event)
-	if !req[eventName] {
-		return nil, ErrNotRequested
+	if !topics.requested(eventName) {
+		return nil, errNotRequested
 	}
 	if eventName == PayloadAttributesTopic {
 		return s.currentPayloadAttributes(ctx)
@@ -403,7 +424,7 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, req 
 			return jsonMarshalReader(eventName, structs.HeadEventFromV1(v))
 		}
 		// Don't do the expensive attr lookup unless the client requested it.
-		if !req[PayloadAttributesTopic] {
+		if !topics.requested(PayloadAttributesTopic) {
 			return headReader, nil
 		}
 		// Since payload attributes could change before the outbox is written, we need to do a blocking operation to
@@ -423,7 +444,7 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, req 
 	case *operation.UnAggregatedAttReceivedData:
 		att, ok := v.Attestation.(*eth.Attestation)
 		if !ok {
-			return nil, errors.Wrapf(ErrUnhandledEventData, "Unexpected type %T for the .Attestation field of UnAggregatedAttReceivedData", v.Attestation)
+			return nil, errors.Wrapf(errUnhandledEventData, "Unexpected type %T for the .Attestation field of UnAggregatedAttReceivedData", v.Attestation)
 		}
 		return func() io.Reader {
 			att := structs.AttFromConsensus(att)
@@ -455,7 +476,7 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, req 
 	case *operation.AttesterSlashingReceivedData:
 		slashing, ok := v.AttesterSlashing.(*eth.AttesterSlashing)
 		if !ok {
-			return nil, errors.Wrapf(ErrUnhandledEventData, "Unexpected type %T for the .AttesterSlashing field of AttesterSlashingReceivedData", v.AttesterSlashing)
+			return nil, errors.Wrapf(errUnhandledEventData, "Unexpected type %T for the .AttesterSlashing field of AttesterSlashingReceivedData", v.AttesterSlashing)
 		}
 		return func() io.Reader {
 			return jsonMarshalReader(eventName, structs.AttesterSlashingFromConsensus(slashing))
@@ -502,7 +523,7 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, req 
 			return jsonMarshalReader(eventName, blk)
 		}, nil
 	default:
-		return nil, errors.Wrapf(ErrUnhandledEventData, "event data type %T unsupported", v)
+		return nil, errors.Wrapf(errUnhandledEventData, "event data type %T unsupported", v)
 	}
 }
 

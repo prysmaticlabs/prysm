@@ -1561,6 +1561,7 @@ func LightClientFinalityUpdateEventFromV2(event *ethv2.LightClientFinalityUpdate
 				ProposerIndex: fmt.Sprintf("%d", finalizedBeacon.ProposerIndex),
 				ParentRoot:    hexutil.Encode(finalizedBeacon.ParentRoot),
 				StateRoot:     hexutil.Encode(finalizedBeacon.StateRoot),
+				BodyRoot:      hexutil.Encode(finalizedBeacon.BodyRoot),
 			},
 			FinalityBranch: finalityBranch,
 			SyncAggregate: &SyncAggregate{

@@ -44,7 +44,7 @@ func NewFlushabaleResponseRecorder() *flushableResponseRecorder {
 	}
 }
 
-func requireAllEventsReceived(t *testing.T, events []*feed.Event, req map[string]bool, s *Server, w *StreamingResponseWriterRecorder) {
+func requireAllEventsReceived(t *testing.T, events []*feed.Event, req *topicRequest, s *Server, w *StreamingResponseWriterRecorder) {
 	// maxBufferSize param copied from sse lib client code
 	sseR := sse.NewEventStreamReader(w.Body(), 1<<24)
 	testTimeout := time.NewTimer(60 * time.Second)
@@ -112,6 +112,14 @@ func requireAllEventsReceived(t *testing.T, events []*feed.Event, req map[string
 	require.Equal(t, 0, len(expected), "expected events not seen")
 }
 
+func (tr *topicRequest) testHttpRequest(_ *testing.T) *http.Request {
+	tq := make([]string, 0, len(tr.topics))
+	for topic := range tr.topics {
+		tq = append(tq, "topics="+topic)
+	}
+	return httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?%s", strings.Join(tq, "&")), nil)
+}
+
 func TestStreamEvents_OperationsEvents(t *testing.T) {
 	t.Run("operations", func(t *testing.T) {
 		s := &Server{
@@ -119,20 +127,17 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			OperationNotifier: &mockChain.MockOperationNotifier{},
 		}
 
-		topics := map[string]bool{
-			AttestationTopic:               true,
-			VoluntaryExitTopic:             true,
-			SyncCommitteeContributionTopic: true,
-			BLSToExecutionChangeTopic:      true,
-			BlobSidecarTopic:               true,
-			AttesterSlashingTopic:          true,
-			ProposerSlashingTopic:          true,
-		}
-		tq := make([]string, 0, len(topics))
-		for topic := range topics {
-			tq = append(tq, "topics="+topic)
-		}
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?%s", strings.Join(tq, "&")), nil)
+		topics, err := newTopicRequest([]string{
+			AttestationTopic,
+			VoluntaryExitTopic,
+			SyncCommitteeContributionTopic,
+			BLSToExecutionChangeTopic,
+			BlobSidecarTopic,
+			AttesterSlashingTopic,
+			ProposerSlashingTopic,
+		})
+		require.NoError(t, err)
+		request := topics.testHttpRequest(t)
 		w := NewStreamingResponseWriterRecorder()
 
 		go func() {
@@ -275,17 +280,14 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			OperationNotifier: &mockChain.MockOperationNotifier{},
 		}
 
-		topics := map[string]bool{
-			HeadTopic:                true,
-			FinalizedCheckpointTopic: true,
-			ChainReorgTopic:          true,
-			BlockTopic:               true,
-		}
-		tq := make([]string, 0, len(topics))
-		for topic := range topics {
-			tq = append(tq, "topics="+topic)
-		}
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?%s", strings.Join(tq, "&")), nil)
+		topics, err := newTopicRequest([]string{
+			HeadTopic,
+			FinalizedCheckpointTopic,
+			ChainReorgTopic,
+			BlockTopic,
+		})
+		require.NoError(t, err)
+		request := topics.testHttpRequest(t)
 		w := NewStreamingResponseWriterRecorder()
 
 		go func() {
@@ -435,16 +437,16 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			if tc.SetTrackedValidatorsCache != nil {
 				tc.SetTrackedValidatorsCache(s.TrackedValidatorsCache)
 			}
-
-			rt := map[string]bool{PayloadAttributesTopic: true}
-			request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?topics=%s", PayloadAttributesTopic), nil)
+			topics, err := newTopicRequest([]string{PayloadAttributesTopic})
+			require.NoError(t, err)
+			request := topics.testHttpRequest(t)
 			w := NewStreamingResponseWriterRecorder()
 			events := []*feed.Event{&feed.Event{Type: statefeed.MissedSlot}}
 
 			go func() {
 				s.StreamEvents(w, request)
 			}()
-			requireAllEventsReceived(t, events, rt, s, w)
+			requireAllEventsReceived(t, events, topics, s, w)
 		}
 	})
 }
