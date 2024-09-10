@@ -192,8 +192,6 @@ func TestLightClientHandler_GetLightClientBootstrap_Deneb(t *testing.T) {
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRangeAltair(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -300,8 +298,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeAltair(t *testing.T) {
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -408,8 +404,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -516,8 +510,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountAltair(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -625,8 +617,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountAltair(
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountCapella(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -734,8 +724,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountCapella
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountDeneb(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -844,8 +832,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountDeneb(t
 
 // TODO - check for not having any blocks from the min period, and startPeriod being too early
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriodAltair(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -954,8 +940,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriodAltair(t 
 
 // TODO - same as above
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCountAltair(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
@@ -1063,8 +1047,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCountAltair(t *te
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_BeforeAltair(t *testing.T) {
-	t.Skip("the tested function will be rewritten")
-
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
