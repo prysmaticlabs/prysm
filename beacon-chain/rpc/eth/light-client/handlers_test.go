@@ -1172,17 +1172,9 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	err = attestedState.SetSlot(slot.Sub(1))
 	require.NoError(t, err)
 
-	finalizedBlock, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
-	require.NoError(t, err)
-	finalizedBlock.SetSlot(1)
-	finalizedHeader, err := finalizedBlock.Header()
-	require.NoError(t, err)
-	finalizedRoot, err := finalizedHeader.Header.HashTreeRoot()
-	require.NoError(t, err)
-
 	require.NoError(t, attestedState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Epoch: config.AltairForkEpoch - 10,
-		Root:  finalizedRoot[:],
+		Root:  make([]byte, 32),
 	}))
 
 	parent := util.NewBeaconBlockAltair()
@@ -1242,9 +1234,8 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 
 	mockBlocker := &testutil.MockBlocker{
 		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
-			parentRoot:    signedParent,
-			root:          signedBlock,
-			finalizedRoot: finalizedBlock,
+			parentRoot: signedParent,
+			root:       signedBlock,
 		},
 		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
 			slot.Sub(1): signedParent,
