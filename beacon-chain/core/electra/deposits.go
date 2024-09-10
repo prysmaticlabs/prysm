@@ -348,6 +348,33 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	return st.SetDepositBalanceToConsume(0)
 }
 
+// ApplyPendingDeposit implements the spec definition below.
+//
+// Spec Definition:
+//
+// def apply_pending_deposit(state: BeaconState, deposit: PendingDeposit) -> None:
+//
+//	"""
+//	Applies ``deposit`` to the ``state``.
+//	"""
+//	validator_pubkeys = [v.pubkey for v in state.validators]
+//	if deposit.pubkey not in validator_pubkeys:
+//	    # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+//	    if is_valid_deposit_signature(
+//	        deposit.pubkey,
+//	        deposit.withdrawal_credentials,
+//	        deposit.amount,
+//	        deposit.signature
+//	    ):
+//	        add_validator_to_registry(state, deposit.pubkey, deposit.withdrawal_credentials, deposit.amount)
+//	else:
+//	    validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
+//	    # Increase balance
+//	    increase_balance(state, validator_index, deposit.amount)
+func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *ethpb.PendingDeposit) error {
+
+}
+
 // ProcessDepositRequests is a function as part of electra to process execution layer deposits
 func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, requests []*enginev1.DepositRequest) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "electra.ProcessDepositRequests")

@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
@@ -13,6 +15,8 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -199,6 +203,35 @@ func TestReplayBlocks_ThroughFutureForkBoundaries(t *testing.T) {
 	assert.Equal(t, version.Electra, newState.Version())
 }
 
+func generatePendingDeposit(t *testing.T, key common.SecretKey, amount uint64, withdrawalCredentials [32]byte, slot primitives.Slot) *ethpb.PendingDeposit {
+	dm := &ethpb.DepositMessage{
+		PublicKey:             key.PublicKey().Marshal(),
+		WithdrawalCredentials: withdrawalCredentials[:],
+		Amount:                amount,
+	}
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(dm, domain)
+	require.NoError(t, err)
+	sig := key.Sign(sr[:])
+	depositData := &ethpb.Deposit_Data{
+		PublicKey:             bytesutil.SafeCopyBytes(dm.PublicKey),
+		WithdrawalCredentials: bytesutil.SafeCopyBytes(dm.WithdrawalCredentials),
+		Amount:                dm.Amount,
+		Signature:             sig.Marshal(),
+	}
+	valid, err := blocks.IsValidDepositSignature(depositData)
+	require.NoError(t, err)
+	require.Equal(t, true, valid)
+	return &ethpb.PendingDeposit{
+		PublicKey:             bytesutil.SafeCopyBytes(dm.PublicKey),
+		WithdrawalCredentials: bytesutil.SafeCopyBytes(dm.WithdrawalCredentials),
+		Amount:                dm.Amount,
+		Signature:             sig.Marshal(),
+		Slot:                  slot,
+	}
+}
+
 func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	bCfg := params.BeaconConfig().Copy()
@@ -209,12 +242,23 @@ func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateElectra(t, 1)
 	require.NoError(t, beaconState.SetDepositBalanceToConsume(100))
 	amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-	require.NoError(t, beaconState.SetPendingDeposits([]*ethpb.PendingDeposit{
-		{
-			Amount: uint64(amountAvailForProcessing) / 10,
-		},
-	}))
 	genesisBlock := util.NewBeaconBlockElectra()
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	ethAddress, err := hexutil.Decode("0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245")
+	require.NoError(t, err)
+	val, err := beaconState.Validators()
+	require.NoError(t, err)
+	val[0].PublicKey = sk.PublicKey().Marshal()
+	val[0].WithdrawalCredentials
+	newCredentials := make([]byte, 12)
+	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	withdrawalCredentials := append(newCredentials, ethAddress...)
+	require.NoError(t, beaconState.SetPendingDeposits([]*ethpb.PendingDeposit{
+		generatePendingDeposit(t, sk, uint64(amountAvailForProcessing)/10, bytesutil.ToBytes32(withdrawalCredentials), genesisBlock.Block.Slot),
+	}))
+
 	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{

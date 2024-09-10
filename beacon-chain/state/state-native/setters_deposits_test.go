@@ -28,11 +28,11 @@ func TestAppendPendingDeposit(t *testing.T) {
 	pbd, err = s.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pbd))
-	require.Equal(t, pubkey, pbd[0].PublicKey)
+	require.DeepEqual(t, pubkey, pbd[0].PublicKey)
 	require.Equal(t, uint64(10), pbd[0].Amount)
-	require.Equal(t, creds, pbd[0].WithdrawalCredentials)
+	require.DeepEqual(t, creds, pbd[0].WithdrawalCredentials)
 	require.Equal(t, uint64(1), pbd[0].Slot)
-	require.Equal(t, sig, pbd[0].Signature)
+	require.DeepEqual(t, sig, pbd[0].Signature)
 
 	// Fails for versions older than electra
 	s, err = state_native.InitializeFromProtoDeneb(&eth.BeaconStateDeneb{})
