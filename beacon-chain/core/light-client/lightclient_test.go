@@ -20,7 +20,7 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *test
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
 	l.CheckSyncAggregate(update.SyncAggregate)
-	l.CheckAttestedHeader(update)
+	l.CheckAttestedHeader(update.AttestedHeader)
 }
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateCapella(t *testing.T) {
@@ -32,8 +32,8 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateCapella(t *tes
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 }
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testing.T) {
@@ -45,8 +45,8 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testi
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 }
 
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testing.T) {
@@ -84,8 +84,8 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testi
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
@@ -111,8 +111,8 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
