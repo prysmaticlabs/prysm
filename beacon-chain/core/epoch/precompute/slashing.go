@@ -44,17 +44,16 @@ func ProcessSlashingsPrecompute(s state.BeaconState, pBal *Balance) error {
 	}
 
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	validatorFunc := func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
-		correctEpoch := epochToWithdraw == val.WithdrawableEpoch
-		if val.Slashed && correctEpoch {
-			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
+	validatorFunc := func(idx int, val state.ReadOnlyValidator) (newVal *ethpb.Validator, err error) {
+		correctEpoch := epochToWithdraw == val.WithdrawableEpoch()
+		if val.Slashed() && correctEpoch {
+			penaltyNumerator := val.EffectiveBalance() / increment * minSlashing
 			penalty := penaltyNumerator / pBal.ActiveCurrentEpoch * increment
-			if err := helpers.DecreaseBalance(s, primitives.ValidatorIndex(idx), penalty); err != nil {
-				return false, val, err
+			if err = helpers.DecreaseBalance(s, primitives.ValidatorIndex(idx), penalty); err != nil {
+				return
 			}
-			return true, val, nil
 		}
-		return false, val, nil
+		return
 	}
 
 	return s.ApplyToEveryValidator(validatorFunc)
