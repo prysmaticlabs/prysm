@@ -421,18 +421,17 @@ func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlo
 			if err := s.cfg.AttestationCache.DeleteCovered(att); err != nil {
 				return errors.Wrap(err, "could not delete attestation")
 			}
+		} else if att.IsAggregated() {
+			if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
 		} else {
-			if att.IsAggregated() {
-				if err := s.cfg.AttPool.DeleteAggregatedAttestation(att); err != nil {
-					return err
-				}
-			} else {
-				if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-					return err
-				}
+			if err := s.cfg.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
 			}
 		}
 	}
+
 	return nil
 }
 
