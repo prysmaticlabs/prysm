@@ -623,6 +623,9 @@ func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 		return nil, err
 	}
 	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+	if err != nil {
+		return nil, err
+	}
 
 	executionHeader := &v11.ExecutionPayloadHeaderCapella{
 		ParentHash:       payload.ParentHash(),
