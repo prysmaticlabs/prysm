@@ -50,6 +50,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 - Core: Fixed slash processing causing extra hashing
+- Core: Fixed extra allocations when processing slashings
 
 ### Security
 
