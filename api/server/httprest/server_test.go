@@ -4,12 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -25,12 +25,13 @@ func TestServer_StartStop(t *testing.T) {
 	ctx := cli.NewContext(&app, set, nil)
 
 	port := ctx.Int(flags.HTTPServerPort.Name)
+	portStr := fmt.Sprintf("%d", port) // Convert port to string
 	host := ctx.String(flags.HTTPServerHost.Name)
-	address := fmt.Sprintf("%s:%d", host, port)
-
+	address := net.JoinHostPort(host, portStr)
+	handler := http.NewServeMux()
 	opts := []Option{
 		WithHTTPAddr(address),
-		WithRouter(mux.NewRouter()),
+		WithRouter(handler),
 	}
 
 	g, err := New(context.Background(), opts...)
@@ -50,13 +51,15 @@ func TestServer_NilHandler_NotFoundHandlerRegistered(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(&app, set, nil)
 
+	handler := http.NewServeMux()
 	port := ctx.Int(flags.HTTPServerPort.Name)
+	portStr := fmt.Sprintf("%d", port) // Convert port to string
 	host := ctx.String(flags.HTTPServerHost.Name)
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, portStr)
 
 	opts := []Option{
 		WithHTTPAddr(address),
-		WithRouter(mux.NewRouter()),
+		WithRouter(handler),
 	}
 
 	g, err := New(context.Background(), opts...)
