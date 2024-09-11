@@ -31,6 +31,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
 - Updated k8s.io/client-go to v0.30.4 and k8s.io/apimachinery to v0.30.4 
+- `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
@@ -49,6 +50,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - validator registration log changed to debug, and the frequency of validator registration calls are reduced
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
+- Core: Fixed slash processing causing extra hashing
+- Core: Fixed extra allocations when processing slashings
 
 ### Security
 
