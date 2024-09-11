@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -260,7 +261,7 @@ func TestCORS(t *testing.T) {
 	require.NoError(t, cliCtx.Set(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com"))
 
 	router := http.NewServeMux()
-
+	allowedOrigins := []string{"http://allowed-example.com"}
 	// Ensure a test route exists
 	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -269,6 +270,7 @@ func TestCORS(t *testing.T) {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
 	})
+	handler := middleware.CorsHandler(allowedOrigins)(router)
 
 	// Define test cases
 	tests := []struct {
@@ -289,7 +291,7 @@ func TestCORS(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			// Serve HTTP
-			router.ServeHTTP(rr, req)
+			handler.ServeHTTP(rr, req)
 
 			// Check the CORS headers based on the expected outcome
 			if tc.expectAllow && rr.Header().Get("Access-Control-Allow-Origin") != tc.origin {
