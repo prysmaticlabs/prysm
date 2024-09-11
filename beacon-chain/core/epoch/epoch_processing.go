@@ -178,20 +178,24 @@ func ProcessSlashings(st state.BeaconState, slashingMultiplier uint64) (state.Be
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := math.Min(totalSlashing*slashingMultiplier, totalBalance)
 	bals := st.Balances()
+	changed := false
 	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch()
 		if val.Slashed() && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance() / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
 			bals[idx] = helpers.DecreaseBalanceWithVal(bals[idx], penalty)
+			changed = true
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if err := st.SetBalances(bals); err != nil {
-		return nil, err
+	if changed {
+		if err := st.SetBalances(bals); err != nil {
+			return nil, err
+		}
 	}
 	return st, nil
 }
