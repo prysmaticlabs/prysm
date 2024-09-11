@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -32,7 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const chanBuffer = 1000
+const eventFeedDepth = 1000
 
 const (
 	InvalidTopic = "__invalid__"
@@ -70,7 +69,6 @@ var (
 	errInvalidTopicName   = errors.New("invalid topic name")
 	errNoValidTopics      = errors.New("no valid topics specified")
 	errSlowReader         = errors.New("client failed to read fast enough to keep outgoing buffer below threshold")
-	errFinished           = errors.New("event received after streamer shut down")
 	errNotRequested       = errors.New("event not requested by client")
 	errUnhandledEventData = errors.New("unable to represent event data in the event stream")
 )
@@ -160,30 +158,61 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventsChan := make(chan *feed.Event, chanBuffer)
-	if topics.needOpsFeed {
-		opsSub := s.OperationNotifier.OperationFeed().Subscribe(eventsChan)
-		defer opsSub.Unsubscribe()
+	sw, ok := w.(StreamingResponseWriter)
+	if !ok {
+		msg := "beacon node misconfiguration: http stack may not support required response handling features, like flushing"
+		httputil.HandleError(w, msg, http.StatusInternalServerError)
+		return
 	}
-	if topics.needStateFeed {
-		stateSub := s.StateNotifier.StateFeed().Subscribe(eventsChan)
-		defer stateSub.Unsubscribe()
-	}
-
-	es, err := NewEventStreamer(ctx, w, chanBuffer, s.KeepAliveInterval)
+	es, err := NewEventStreamer(eventFeedDepth, s.KeepAliveInterval)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	es.Start()
+	if err := es.StreamEvents(ctx, sw, topics, s); err != nil {
+		log.WithError(err).Debug("Event streamer shutting down due to error.")
+	}
+}
+
+func NewEventStreamer(buffSize int, ka time.Duration) (*eventStreamer, error) {
+	if ka == 0 {
+		ka = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	}
+	return &eventStreamer{
+		outbox:    make(chan lazyReader, buffSize),
+		keepAlive: ka,
+	}, nil
+}
+
+type eventStreamer struct {
+	outbox    chan lazyReader
+	keepAlive time.Duration
+}
+
+func (es *eventStreamer) StreamEvents(ctx context.Context, w StreamingResponseWriter, req *topicRequest, s *Server) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go es.recvEventLoop(ctx, cancel, req, s)
+	api.SetSSEHeaders(w)
+	return es.outboxWriteLoop(ctx, w)
+}
+
+func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.CancelFunc, req *topicRequest, s *Server) {
+	eventsChan := make(chan *feed.Event, len(es.outbox))
+	if req.needOpsFeed {
+		opsSub := s.OperationNotifier.OperationFeed().Subscribe(eventsChan)
+		defer opsSub.Unsubscribe()
+	}
+	if req.needStateFeed {
+		stateSub := s.StateNotifier.StateFeed().Subscribe(eventsChan)
+		defer stateSub.Unsubscribe()
+	}
 	for {
 		select {
-		case <-es.finished: // The finished channel is closed when the streamer hits an unrecoverable error state.
-			return
 		case <-ctx.Done():
 			return
 		case event := <-eventsChan:
-			lr, err := s.lazyReaderForEvent(ctx, event, topics)
+			lr, err := s.lazyReaderForEvent(ctx, event, req)
 			if err != nil {
 				if !errors.Is(err, errNotRequested) {
 					log.WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
@@ -196,7 +225,11 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 			// Since the outbox and event stream channels are separately buffered, the event subscription
 			// channel should stay relatively empty, which gives this loop time to unsubscribe
 			// and cleanup before the event stream channel fills and disrupts other readers.
-			if err := es.safeWrite(lr); err != nil {
+			if err := es.safeWrite(ctx, lr); err != nil {
+				cancel()
+				// note: we could hijack the connection and close it here. Does that cause issues? What are the benefits?
+				// A benefit of hijack and close is that it may force an error on the remote end, however just closing the context of the
+				// http handler may be sufficient to cause the remote http response reader to close.
 				log.WithField("event_type", fmt.Sprintf("%v", event.Data)).Warn("Unable to safely write event to stream, shutting down.")
 				return
 			}
@@ -204,41 +237,13 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewEventStreamer(ctx context.Context, w http.ResponseWriter, buffSize int, ka time.Duration) (*eventStreamer, error) {
-	if ka == 0 {
-		ka = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-	}
-	f, ok := w.(StreamingResponseWriter)
-	if !ok {
-		return nil, errors.New("beacon node misconfiguration: http stack may not support required response handling features, like flushing")
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	return &eventStreamer{
-		ctx:       ctx,
-		cancel:    cancel,
-		w:         f,
-		outbox:    make(chan lazyReader, buffSize),
-		keepAlive: ka,
-	}, nil
-}
-
-type eventStreamer struct {
-	sync.Mutex
-	ctx       context.Context
-	cancel    func()
-	w         StreamingResponseWriter
-	outbox    chan lazyReader
-	finished  chan struct{}
-	keepAlive time.Duration
-}
-
-func (es *eventStreamer) safeWrite(rf func() io.Reader) error {
+func (es *eventStreamer) safeWrite(ctx context.Context, rf func() io.Reader) error {
 	if rf == nil {
 		return nil
 	}
 	select {
-	case <-es.finished:
-		return errFinished
+	case <-ctx.Done():
+		return ctx.Err()
 	case es.outbox <- rf:
 		return nil
 	default:
@@ -246,17 +251,6 @@ func (es *eventStreamer) safeWrite(rf func() io.Reader) error {
 		// If a reader can't keep up with the stream, we shut them down.
 		return errSlowReader
 	}
-}
-
-func (es *eventStreamer) Start() {
-	// Set up SSE response headers
-	es.w.Header().Set("Content-Type", api.EventStreamMediaType)
-	es.w.Header().Set("Connection", api.KeepAlive)
-	go es.outboxWriteLoop()
-}
-
-func (es *eventStreamer) Stop() {
-	es.Cleanup(nil)
 }
 
 // newlineReader is used to write keep-alives to the client.
@@ -267,17 +261,10 @@ func newlineReader() io.Reader {
 
 // outboxWriteLoop runs in a separate goroutine. Its job is to write the values in the outbox to
 // the client as fast as the client can read them.
-func (es *eventStreamer) outboxWriteLoop() {
-	// There are multiple points in this loop where we can receive an error and break out of the loop.
-	// In all cases, we need to call Cleanup to ensure:
-	// - any error received is logged.
-	// - the context is cancelled and the .finished channel is closed.
-	//   - this signals the response handler to exit the handler func; stop reading events -> writing to the outbox.
-	var err error
-	defer es.Cleanup(err)
+func (es *eventStreamer) outboxWriteLoop(ctx context.Context, w StreamingResponseWriter) error {
 	// Write a keepalive at the start to test the connection and simplify test setup.
-	if err := es.writeOutbox(nil); err != nil {
-		return
+	if err := es.writeOutbox(ctx, w, nil); err != nil {
+		return err
 	}
 
 	kaT := time.NewTimer(es.keepAlive)
@@ -289,19 +276,17 @@ func (es *eventStreamer) outboxWriteLoop() {
 	}()
 	for {
 		select {
-		case <-es.ctx.Done():
-			return
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-kaT.C:
-			err = es.writeOutbox(nil)
-			if err != nil {
-				return
+			if err := es.writeOutbox(ctx, w, nil); err != nil {
+				return err
 			}
 			// In this case the timer doesn't need to be Stopped before the Reset call after the select statement,
 			// because the timer has already fired.
 		case lr := <-es.outbox:
-			err = es.writeOutbox(lr)
-			if err != nil {
-				return
+			if err := es.writeOutbox(ctx, w, lr); err != nil {
+				return err
 			}
 			// We don't know if the timer fired concurrently to this case being ready, so we need to check the return
 			// of Stop and drain the timer channel if it fired. We won't need to do this in go 1.23.
@@ -313,10 +298,10 @@ func (es *eventStreamer) outboxWriteLoop() {
 	}
 }
 
-func (es *eventStreamer) writeOutbox(first lazyReader) error {
+func (es *eventStreamer) writeOutbox(ctx context.Context, w StreamingResponseWriter, first lazyReader) error {
 	needKeepAlive := true
 	if first != nil {
-		if _, err := io.Copy(es.w, first()); err != nil {
+		if _, err := io.Copy(w, first()); err != nil {
 			return err
 		}
 		needKeepAlive = false
@@ -326,38 +311,22 @@ func (es *eventStreamer) writeOutbox(first lazyReader) error {
 	// may have fired, triggering an unnecessary extra keep-alive write and flush.
 	for {
 		select {
-		case <-es.ctx.Done():
-			return es.ctx.Err()
+		case <-ctx.Done():
+			return ctx.Err()
 		case rf := <-es.outbox:
-			if _, err := io.Copy(es.w, rf()); err != nil {
+			if _, err := io.Copy(w, rf()); err != nil {
 				return err
 			}
 			needKeepAlive = false
 		default:
 			if needKeepAlive {
-				if _, err := io.Copy(es.w, newlineReader()); err != nil {
+				if _, err := io.Copy(w, newlineReader()); err != nil {
 					return err
 				}
 			}
-			es.w.Flush()
+			w.Flush()
 			return nil
 		}
-	}
-}
-
-func (es *eventStreamer) Cleanup(err error) {
-	if err != nil {
-		log.WithError(err).Debug("Event streamer shutting down due to error.")
-	}
-	select {
-	case <-es.finished:
-		return
-	default:
-		es.cancel()
-		close(es.finished)
-		// note: we could hijack the connection and close it here. Does that cause issues? What are the benefits?
-		// A benefit of hijack and close is that it may force an error on the remote end, however just closing the context of the
-		// http handler may be sufficient to cause the remote http response reader to close.
 	}
 }
 
