@@ -31,7 +31,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
--  Removed gorilla mux library and replaced it with net/http updates in go 1.22
+- Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
