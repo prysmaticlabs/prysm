@@ -175,32 +175,8 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	es.Start()
-	for {
-		select {
-		case <-es.finished: // The finished channel is closed when the streamer hits an unrecoverable error state.
-			return
-		case <-ctx.Done():
-			return
-		case event := <-eventsChan:
-			lr, err := s.lazyReaderForEvent(ctx, event, topics)
-			if err != nil {
-				if !errors.Is(err, errNotRequested) {
-					log.WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
-				}
-				continue
-			}
-			// If the client can't keep up, the outbox will eventually completely fill, at which
-			// safeWrite will error, and we'll hit the below return statement, at which point the deferred
-			// Unsuscribe calls will be made and the event feed will stop writing to this channel.
-			// Since the outbox and event stream channels are separately buffered, the event subscription
-			// channel should stay relatively empty, which gives this loop time to unsubscribe
-			// and cleanup before the event stream channel fills and disrupts other readers.
-			if err := es.safeWrite(lr); err != nil {
-				log.WithField("event_type", fmt.Sprintf("%v", event.Data)).Warn("Unable to safely write event to stream, shutting down.")
-				return
-			}
-		}
+	if err := es.Run(); err != nil {
+		es.Cleanup(err)
 	}
 }
 
@@ -232,6 +208,35 @@ type eventStreamer struct {
 	keepAlive time.Duration
 }
 
+func (es *eventStreamer) bufferEvents() {
+	for {
+		select {
+		case <-es.finished: // The finished channel is closed when the streamer hits an unrecoverable error state.
+			return
+		case <-es.ctx.Done():
+			return
+		case event := <-eventsChan:
+			lr, err := s.lazyReaderForEvent(ctx, event, topics)
+			if err != nil {
+				if !errors.Is(err, errNotRequested) {
+					log.WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
+				}
+				continue
+			}
+			// If the client can't keep up, the outbox will eventually completely fill, at which
+			// safeWrite will error, and we'll hit the below return statement, at which point the deferred
+			// Unsuscribe calls will be made and the event feed will stop writing to this channel.
+			// Since the outbox and event stream channels are separately buffered, the event subscription
+			// channel should stay relatively empty, which gives this loop time to unsubscribe
+			// and cleanup before the event stream channel fills and disrupts other readers.
+			if err := es.safeWrite(lr); err != nil {
+				log.WithField("event_type", fmt.Sprintf("%v", event.Data)).Warn("Unable to safely write event to stream, shutting down.")
+				return
+			}
+		}
+	}
+}
+
 func (es *eventStreamer) safeWrite(rf func() io.Reader) error {
 	if rf == nil {
 		return nil
@@ -248,15 +253,11 @@ func (es *eventStreamer) safeWrite(rf func() io.Reader) error {
 	}
 }
 
-func (es *eventStreamer) Start() {
+func (es *eventStreamer) Run() error {
 	// Set up SSE response headers
 	es.w.Header().Set("Content-Type", api.EventStreamMediaType)
 	es.w.Header().Set("Connection", api.KeepAlive)
-	go es.outboxWriteLoop()
-}
-
-func (es *eventStreamer) Stop() {
-	es.Cleanup(nil)
+	return es.outboxWriteLoop()
 }
 
 // newlineReader is used to write keep-alives to the client.
@@ -267,7 +268,7 @@ func newlineReader() io.Reader {
 
 // outboxWriteLoop runs in a separate goroutine. Its job is to write the values in the outbox to
 // the client as fast as the client can read them.
-func (es *eventStreamer) outboxWriteLoop() {
+func (es *eventStreamer) outboxWriteLoop() error {
 	// There are multiple points in this loop where we can receive an error and break out of the loop.
 	// In all cases, we need to call Cleanup to ensure:
 	// - any error received is logged.
@@ -277,7 +278,7 @@ func (es *eventStreamer) outboxWriteLoop() {
 	defer es.Cleanup(err)
 	// Write a keepalive at the start to test the connection and simplify test setup.
 	if err := es.writeOutbox(nil); err != nil {
-		return
+		return err
 	}
 
 	kaT := time.NewTimer(es.keepAlive)
@@ -290,18 +291,18 @@ func (es *eventStreamer) outboxWriteLoop() {
 	for {
 		select {
 		case <-es.ctx.Done():
-			return
+			return es.ctx.Err()
 		case <-kaT.C:
 			err = es.writeOutbox(nil)
 			if err != nil {
-				return
+				return err
 			}
 			// In this case the timer doesn't need to be Stopped before the Reset call after the select statement,
 			// because the timer has already fired.
 		case lr := <-es.outbox:
 			err = es.writeOutbox(lr)
 			if err != nil {
-				return
+				return err
 			}
 			// We don't know if the timer fired concurrently to this case being ready, so we need to check the return
 			// of Stop and drain the timer channel if it fired. We won't need to do this in go 1.23.
