@@ -253,15 +253,7 @@ func Test_hasNetworkFlag(t *testing.T) {
 }
 
 func TestCORS(t *testing.T) {
-	// Mock CLI context with a test CORS domain
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com", "")
-	cliCtx := cli.NewContext(&app, set, nil)
-	require.NoError(t, cliCtx.Set(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com"))
-
 	router := http.NewServeMux()
-
 	// Ensure a test route exists
 	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
