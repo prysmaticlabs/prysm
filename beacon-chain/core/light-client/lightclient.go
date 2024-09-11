@@ -553,11 +553,45 @@ func NewLightClientUpdateFromOptimisticUpdate(update *ethpbv2.LightClientOptimis
 	}
 }
 
+func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
+	transactionsRoot, err := payload.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactions, err := payload.Transactions()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get transactions")
+		}
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get transactions root")
+		}
+		transactionsRoot = transactionsRootArray[:]
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions root")
+	}
+	return transactionsRoot, nil
+}
+
+func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
+	withdrawalsRoot, err := payload.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawals, err := payload.Withdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals")
+		}
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get withdrawals root")
+		}
+		withdrawalsRoot = withdrawalsRootArray[:]
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals root")
+	}
+	return withdrawalsRoot, nil
+}
+
 func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
 	parentRoot := block.Block().ParentRoot()
-
 	stateRoot := block.Block().StateRoot()
-
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get body root")
@@ -575,8 +609,7 @@ func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) 
 }
 
 func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderCapella, error) {
-	epoch := slots.ToEpoch(block.Block().Slot())
-	if epoch < params.BeaconConfig().CapellaForkEpoch {
+	if block.Version() != version.Capella {
 		return nil, fmt.Errorf("creating Capella light client header is not supported before Capella, invalid slot %d", block.Block().Slot())
 	}
 
@@ -585,34 +618,11 @@ func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 
-	transactionsRoot, err := payload.TransactionsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		transactions, err := payload.Transactions()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions")
-		}
-		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions root")
-		}
-		transactionsRoot = transactionsRootArray[:]
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions root")
+	transactionsRoot, err := ComputeTransactionsRoot(payload)
+	if err != nil {
+		return nil, err
 	}
-	withdrawalsRoot, err := payload.WithdrawalsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		withdrawals, err := payload.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		withdrawalsRoot = withdrawalsRootArray[:]
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not get withdrawals root")
-	}
+	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
 
 	executionHeader := &v11.ExecutionPayloadHeaderCapella{
 		ParentHash:       payload.ParentHash(),
@@ -638,9 +648,7 @@ func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 	}
 
 	parentRoot := block.Block().ParentRoot()
-
 	stateRoot := block.Block().StateRoot()
-
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get body root")
@@ -670,33 +678,13 @@ func BlockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnl
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 
-	transactionsRoot, err := payload.TransactionsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		transactions, err := payload.Transactions()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions")
-		}
-		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions root")
-		}
-		transactionsRoot = transactionsRootArray[:]
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions root")
+	transactionsRoot, err := ComputeTransactionsRoot(payload)
+	if err != nil {
+		return nil, err
 	}
-	withdrawalsRoot, err := payload.WithdrawalsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		withdrawals, err := payload.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		withdrawalsRoot = withdrawalsRootArray[:]
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not get withdrawals root")
+	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+	if err != nil {
+		return nil, err
 	}
 	blobGasUsed, err := payload.BlobGasUsed()
 	if err != nil {
@@ -733,9 +721,7 @@ func BlockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnl
 	}
 
 	parentRoot := block.Block().ParentRoot()
-
 	stateRoot := block.Block().StateRoot()
-
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get body root")
