@@ -38,6 +38,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Removed
 - removed gRPC Gateway
+- Removed unused blobs bundle cache
 
 ### Fixed
 
