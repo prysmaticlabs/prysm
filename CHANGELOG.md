@@ -32,6 +32,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: abstracted out the light client headers with different versions.
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
 - Removed gorilla mux library and replaced it with net/http updates in go 1.22.
+- Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
