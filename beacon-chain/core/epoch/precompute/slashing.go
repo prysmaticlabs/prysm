@@ -52,9 +52,8 @@ func ProcessSlashingsPrecompute(s state.BeaconState, pBal *Balance) error {
 		}
 		return nil
 	}
-	if err := s.SetBalances(bals); err != nil {
+	if err := s.ReadFromEveryValidator(validatorFunc); err != nil {
 		return err
 	}
-
-	return s.ReadFromEveryValidator(validatorFunc)
+	return s.SetBalances(bals)
 }
