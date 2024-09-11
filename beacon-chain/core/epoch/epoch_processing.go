@@ -177,18 +177,23 @@ func ProcessSlashings(st state.BeaconState, slashingMultiplier uint64) (state.Be
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := math.Min(totalSlashing*slashingMultiplier, totalBalance)
-	err = st.ApplyToEveryValidator(func(idx int, val state.ReadOnlyValidator) (newVal *ethpb.Validator, err error) {
+	bals := st.Balances()
+	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch()
 		if val.Slashed() && correctEpoch {
 			penaltyNumerator := val.EffectiveBalance() / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
-			if err = helpers.DecreaseBalance(st, primitives.ValidatorIndex(idx), penalty); err != nil {
-				return
-			}
+			bals[idx] = helpers.DecreaseBalanceWithVal(bals[idx], penalty)
 		}
-		return
+		return nil
 	})
-	return st, err
+	if err != nil {
+		return nil, err
+	}
+	if err := st.SetBalances(bals); err != nil {
+		return nil, err
+	}
+	return st, nil
 }
 
 // ProcessEth1DataReset processes updates to ETH1 data votes during epoch processing.
