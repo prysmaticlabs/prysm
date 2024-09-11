@@ -31,7 +31,7 @@ func TestAppendPendingDeposit(t *testing.T) {
 	require.DeepEqual(t, pubkey, pbd[0].PublicKey)
 	require.Equal(t, uint64(10), pbd[0].Amount)
 	require.DeepEqual(t, creds, pbd[0].WithdrawalCredentials)
-	require.Equal(t, uint64(1), pbd[0].Slot)
+	require.Equal(t, primitives.Slot(1), pbd[0].Slot)
 	require.DeepEqual(t, sig, pbd[0].Signature)
 
 	// Fails for versions older than electra
