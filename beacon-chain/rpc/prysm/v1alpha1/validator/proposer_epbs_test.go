@@ -12,6 +12,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -44,6 +45,30 @@ func TestServer_SubmitSignedExecutionPayloadEnvelope(t *testing.T) {
 		}
 		_, err := s.SubmitSignedExecutionPayloadEnvelope(context.Background(), env)
 		require.ErrorContains(t, "failed to receive execution payload envelope: receive failed", err)
+	})
+}
+
+func TestServer_SubmitSignedExecutionPayloadHeader(t *testing.T) {
+	h := &enginev1.SignedExecutionPayloadHeader{
+		Message: &enginev1.ExecutionPayloadHeaderEPBS{
+			Slot: 1,
+		},
+	}
+	slot := primitives.Slot(1)
+	server := &Server{
+		TimeFetcher: &mockChain.ChainService{Slot: &slot},
+	}
+
+	t.Run("Happy case", func(t *testing.T) {
+		_, err := server.SubmitSignedExecutionPayloadHeader(context.Background(), h)
+		require.NoError(t, err)
+		require.DeepEqual(t, server.signedExecutionPayloadHeader, h)
+	})
+
+	t.Run("Incorrect slot", func(t *testing.T) {
+		h.Message.Slot = 2
+		_, err := server.SubmitSignedExecutionPayloadHeader(context.Background(), h)
+		require.ErrorContains(t, "current slot mismatch: expected 1, got 2", err)
 	})
 }
 
