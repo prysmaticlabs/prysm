@@ -271,6 +271,7 @@ func TestCORS(t *testing.T) {
 		}
 	})
 
+	// Register the CORS middleware on mux Router
 	allowedOrigins := []string{"http://allowed-example.com"}
 	handler := middleware.CorsHandler(allowedOrigins)(router)
 
