@@ -261,7 +261,7 @@ func TestCORS(t *testing.T) {
 	require.NoError(t, cliCtx.Set(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com"))
 
 	router := http.NewServeMux()
-	allowedOrigins := []string{"http://allowed-example.com"}
+
 	// Ensure a test route exists
 	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -270,6 +270,8 @@ func TestCORS(t *testing.T) {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	allowedOrigins := []string{"http://allowed-example.com"}
 	handler := middleware.CorsHandler(allowedOrigins)(router)
 
 	// Define test cases
