@@ -554,39 +554,27 @@ func NewLightClientUpdateFromOptimisticUpdate(update *ethpbv2.LightClientOptimis
 }
 
 func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
-	transactionsRoot, err := payload.TransactionsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		transactions, err := payload.Transactions()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions")
-		}
-		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions root")
-		}
-		transactionsRoot = transactionsRootArray[:]
-	} else if err != nil {
+	transactions, err := payload.Transactions()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions")
+	}
+	transactionsRoot, err := ssz.TransactionsRoot(transactions)
+	if err != nil {
 		return nil, errors.Wrap(err, "could not get transactions root")
 	}
-	return transactionsRoot, nil
+	return transactionsRoot[:], nil
 }
 
 func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
-	withdrawalsRoot, err := payload.WithdrawalsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		withdrawals, err := payload.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		withdrawalsRoot = withdrawalsRootArray[:]
-	} else if err != nil {
+	withdrawals, err := payload.Withdrawals()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals")
+	}
+	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	if err != nil {
 		return nil, errors.Wrap(err, "could not get withdrawals root")
 	}
-	return withdrawalsRoot, nil
+	return withdrawalsRoot[:], nil
 }
 
 func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
@@ -618,11 +606,24 @@ func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 
-	transactionsRoot, err := ComputeTransactionsRoot(payload)
-	if err != nil {
-		return nil, err
+	transactionsRoot, err := payload.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactionsRoot, err = ComputeTransactionsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions root")
 	}
-	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+	withdrawalsRoot, err := payload.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawalsRoot, err = ComputeWithdrawalsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals root")
+	}
 
 	executionHeader := &v11.ExecutionPayloadHeaderCapella{
 		ParentHash:       payload.ParentHash(),
@@ -678,14 +679,25 @@ func BlockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnl
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 
-	transactionsRoot, err := ComputeTransactionsRoot(payload)
-	if err != nil {
-		return nil, err
+	transactionsRoot, err := payload.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactionsRoot, err = ComputeTransactionsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions root")
 	}
-	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
-	if err != nil {
-		return nil, err
+	withdrawalsRoot, err := payload.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawalsRoot, err = ComputeWithdrawalsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, errors.Wrap(err, "could not get withdrawals root")
 	}
+
 	blobGasUsed, err := payload.BlobGasUsed()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blob gas used")

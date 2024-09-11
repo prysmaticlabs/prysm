@@ -177,11 +177,23 @@ func TestLightClient_BlockToLightClientHeaderCapella(t *testing.T) {
 	payload, err := l.Block.Block().Body().Execution()
 	require.NoError(t, err)
 
-	transactionsRoot, err := light_client.ComputeTransactionsRoot(payload)
-	require.NoError(t, err)
+	var transactionsRoot []byte
+	if !l.Block.Block().IsBlinded() {
+		transactionsRoot, err = light_client.ComputeTransactionsRoot(payload)
+		require.NoError(t, err)
+	} else {
+		transactionsRoot, err = payload.TransactionsRoot()
+		require.NoError(t, err)
+	}
 
-	withdrawalsRoot, err := light_client.ComputeWithdrawalsRoot(payload)
-	require.NoError(t, err)
+	var withdrawalsRoot []byte
+	if !l.Block.Block().IsBlinded() {
+		withdrawalsRoot, err = light_client.ComputeWithdrawalsRoot(payload)
+		require.NoError(t, err)
+	} else {
+		withdrawalsRoot, err = payload.WithdrawalsRoot()
+		require.NoError(t, err)
+	}
 
 	executionHeader := &v11.ExecutionPayloadHeaderCapella{
 		ParentHash:       payload.ParentHash(),
@@ -230,11 +242,23 @@ func TestLightClient_BlockToLightClientHeaderDeneb(t *testing.T) {
 	payload, err := l.Block.Block().Body().Execution()
 	require.NoError(t, err)
 
-	transactionsRoot, err := light_client.ComputeTransactionsRoot(payload)
-	require.NoError(t, err)
+	var transactionsRoot []byte
+	if !l.Block.Block().IsBlinded() {
+		transactionsRoot, err = light_client.ComputeTransactionsRoot(payload)
+		require.NoError(t, err)
+	} else {
+		transactionsRoot, err = payload.TransactionsRoot()
+		require.NoError(t, err)
+	}
 
-	withdrawalsRoot, err := light_client.ComputeWithdrawalsRoot(payload)
-	require.NoError(t, err)
+	var withdrawalsRoot []byte
+	if !l.Block.Block().IsBlinded() {
+		withdrawalsRoot, err = light_client.ComputeWithdrawalsRoot(payload)
+		require.NoError(t, err)
+	} else {
+		withdrawalsRoot, err = payload.WithdrawalsRoot()
+		require.NoError(t, err)
+	}
 
 	blobGasUsed, err := payload.BlobGasUsed()
 	require.NoError(t, err)
