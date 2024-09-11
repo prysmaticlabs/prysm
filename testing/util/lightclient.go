@@ -275,7 +275,6 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 
 		return l
 	} else {
-
 		block := NewBeaconBlockDeneb()
 		block.Block.Slot = slot
 		block.Block.ParentRoot = parentRoot[:]
