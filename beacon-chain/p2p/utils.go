@@ -164,7 +164,7 @@ func resolveMetaDataPath(cfg *Config) (string, bool) {
 		mdPath = path.Join(cfg.DataDir, metaDataPath)
 	}
 
-	// Return path if it exists, or return empty string.
+	// Return path and existence of the file.
 	_, err := os.Stat(mdPath)
 	if !os.IsNotExist(err) {
 		return mdPath, true
@@ -185,7 +185,7 @@ func metaDataFromFile(path string) (metadata.Metadata, error) {
 	err = md.UnmarshalSSZ(src)
 	if err != nil {
 		// If unmarshal failed, try to unmarshal for V0
-		log.WithError(err).Error("Error unmarshalling V1 metadata from file, try to unmarshal for V0.")
+		log.WithError(err).Info("Error unmarshalling V1 metadata from file, try to unmarshal for V0.")
 		md0 := &pb.MetaDataV0{}
 		md0Err := md0.UnmarshalSSZ(src)
 		if md0Err != nil {
