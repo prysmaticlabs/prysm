@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -59,23 +58,9 @@ func TestStore_LightClientUpdate_CanSaveRetrieveAltair(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Retrieve the update
 	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
 	require.NoError(t, err)
-	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdate.Version, ethpbv2.Version_ALTAIR, "retrieved update version does not match saved update")
-	retrievedUpdateAttestedBeacon, err := retrievedUpdate.Data.AttestedHeader.GetBeacon()
-	require.NoError(t, err)
-	updateAttestedBeacon, err := update.AttestedHeader.GetBeacon()
-	require.NoError(t, err)
-	require.Equal(t, retrievedUpdateAttestedBeacon.Slot, updateAttestedBeacon.Slot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdateAttestedBeacon.ProposerIndex, updateAttestedBeacon.ProposerIndex, "retrieved update does not match saved update")
-	retrievedUpdateFinalizedBeacon, err := retrievedUpdate.Data.FinalizedHeader.GetBeacon()
-	require.NoError(t, err)
-	updateFinalizedBeacon, err := update.FinalizedHeader.GetBeacon()
-	require.NoError(t, err)
-	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
+	require.DeepEqual(t, update, retrievedUpdate.Data, "retrieved update does not match saved update")
 }
 
 func TestStore_LightClientUpdate_CanSaveRetrieveCapella(t *testing.T) {
@@ -130,36 +115,9 @@ func TestStore_LightClientUpdate_CanSaveRetrieveCapella(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Retrieve the update
 	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
 	require.NoError(t, err)
-	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdate.Version, ethpbv2.Version_CAPELLA, "retrieved update version does not match saved update")
-	retrievedUpdateAttestedBeacon, err := retrievedUpdate.Data.AttestedHeader.GetBeacon()
-	require.NoError(t, err)
-	updateAttestedBeacon, err := update.AttestedHeader.GetBeacon()
-	require.NoError(t, err)
-	require.Equal(t, retrievedUpdateAttestedBeacon.Slot, updateAttestedBeacon.Slot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdateAttestedBeacon.ProposerIndex, updateAttestedBeacon.ProposerIndex, "retrieved update does not match saved update")
-	retrievedUpdateFinalizedBeacon, err := retrievedUpdate.Data.FinalizedHeader.GetBeacon()
-	require.NoError(t, err)
-	updateFinalizedBeacon, err := update.FinalizedHeader.GetBeacon()
-	require.NoError(t, err)
-	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
-	updateAttestedExecution, err := update.AttestedHeader.GetExecutionHeaderCapella()
-	require.NoError(t, err)
-	retrievedUpdateAttestedExecution, err := retrievedUpdate.Data.AttestedHeader.GetExecutionHeaderCapella()
-	require.NoError(t, err)
-	require.Equal(t, bytes.Equal(updateAttestedExecution.FeeRecipient, retrievedUpdateAttestedExecution.FeeRecipient), true, "retrieved update does not match saved update")
-	updateAttestedExecutionBranch, err := update.AttestedHeader.GetExecutionBranch()
-	require.NoError(t, err)
-	retrievedUpdateAttestedExecutionBranch, err := retrievedUpdate.Data.AttestedHeader.GetExecutionBranch()
-	require.NoError(t, err)
-	require.Equal(t, len(updateAttestedExecutionBranch), len(retrievedUpdateAttestedExecutionBranch), "retrieved update does not match saved update")
-	for i := range updateAttestedExecutionBranch {
-		require.Equal(t, bytes.Equal(updateAttestedExecutionBranch[i], retrievedUpdateAttestedExecutionBranch[i]), true, "retrieved update does not match saved update")
-	}
+	require.DeepEqual(t, update, retrievedUpdate.Data, "retrieved update does not match saved update")
 }
 
 func TestStore_LightClientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
@@ -214,36 +172,9 @@ func TestStore_LightClientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Retrieve the update
 	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
 	require.NoError(t, err)
-	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdate.Version, ethpbv2.Version_DENEB, "retrieved update version does not match saved update")
-	retrievedUpdateAttestedBeacon, err := retrievedUpdate.Data.AttestedHeader.GetBeacon()
-	require.NoError(t, err)
-	updateAttestedBeacon, err := update.AttestedHeader.GetBeacon()
-	require.NoError(t, err)
-	require.Equal(t, retrievedUpdateAttestedBeacon.Slot, updateAttestedBeacon.Slot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdateAttestedBeacon.ProposerIndex, updateAttestedBeacon.ProposerIndex, "retrieved update does not match saved update")
-	retrievedUpdateFinalizedBeacon, err := retrievedUpdate.Data.FinalizedHeader.GetBeacon()
-	require.NoError(t, err)
-	updateFinalizedBeacon, err := update.FinalizedHeader.GetBeacon()
-	require.NoError(t, err)
-	require.Equal(t, retrievedUpdateFinalizedBeacon.Slot, updateFinalizedBeacon.Slot, "retrieved update does not match saved update")
-	require.Equal(t, retrievedUpdateFinalizedBeacon.ProposerIndex, updateFinalizedBeacon.ProposerIndex, "retrieved update does not match saved update")
-	updateAttestedExecution, err := update.AttestedHeader.GetExecutionHeaderDeneb()
-	require.NoError(t, err)
-	retrievedUpdateAttestedExecution, err := retrievedUpdate.Data.AttestedHeader.GetExecutionHeaderDeneb()
-	require.NoError(t, err)
-	require.Equal(t, bytes.Equal(updateAttestedExecution.FeeRecipient, retrievedUpdateAttestedExecution.FeeRecipient), true, "retrieved update does not match saved update")
-	updateAttestedExecutionBranch, err := update.AttestedHeader.GetExecutionBranch()
-	require.NoError(t, err)
-	retrievedUpdateAttestedExecutionBranch, err := retrievedUpdate.Data.AttestedHeader.GetExecutionBranch()
-	require.NoError(t, err)
-	require.Equal(t, len(updateAttestedExecutionBranch), len(retrievedUpdateAttestedExecutionBranch), "retrieved update does not match saved update")
-	for i := range updateAttestedExecutionBranch {
-		require.Equal(t, bytes.Equal(updateAttestedExecutionBranch[i], retrievedUpdateAttestedExecutionBranch[i]), true, "retrieved update does not match saved update")
-	}
+	require.DeepEqual(t, update, retrievedUpdate.Data, "retrieved update does not match saved update")
 }
 
 func TestStore_LightClientUpdates_canRetrieveRange(t *testing.T) {
