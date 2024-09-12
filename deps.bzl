@@ -799,12 +799,6 @@ def prysm_deps():
         version = "v0.9.3",
     )
     go_repository(
-        name = "com_github_felixge_httpsnoop",
-        importpath = "github.com/felixge/httpsnoop",
-        sum = "h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=",
-        version = "v1.0.4",
-    )
-    go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
         sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
@@ -4529,12 +4523,6 @@ def prysm_deps():
         importpath = "go.opencensus.io",
         sum = "h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=",
         version = "v0.24.0",
-    )
-    go_repository(
-        name = "io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp",
-        importpath = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-        sum = "h1:TT4fX+nBOA/+LUkobKGW1ydGcn+G3vRw9+g5HwCphpk=",
-        version = "v0.54.0",
     )
     go_repository(
         name = "io_opentelemetry_go_otel",
