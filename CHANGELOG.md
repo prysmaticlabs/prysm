@@ -31,6 +31,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
+- `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
+- Removed gorilla mux library and replaced it with net/http updates in go 1.22.
+- Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
+- Updated k8s-io/client-go to v0.30.4 and k8s-io/apimachinery to v0.30.4
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
@@ -38,6 +42,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Removed
 - removed gRPC Gateway
+- Removed unused blobs bundle cache
 
 ### Fixed
 
@@ -46,8 +51,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Electra: build blocks with blobs.
 - E2E: fixed gas limit at genesis
 - Light client support: use LightClientHeader instead of BeaconBlockHeader.
+- validator registration log changed to debug, and the frequency of validator registration calls are reduced
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
+- Core: Fixed slash processing causing extra hashing
+- Core: Fixed extra allocations when processing slashings
 
 ### Security
 

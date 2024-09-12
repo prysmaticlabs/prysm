@@ -177,11 +177,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
 	)
 
+	if err := logProposedBlock(log, blk, blkResp.BlockRoot); err != nil {
+		log.WithError(err).Error("Failed to log proposed block")
+	}
+
+	if v.emitAccountMetrics {
+		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
+}
+
+func logProposedBlock(log *logrus.Entry, blk interfaces.SignedBeaconBlock, blkRoot []byte) error {
 	if blk.Version() >= version.Bellatrix {
 		p, err := blk.Block().Body().Execution()
 		if err != nil {
-			log.WithError(err).Error("Failed to get execution payload")
-			return
+			return errors.Wrap(err, "failed to get execution payload")
 		}
 		log = log.WithFields(logrus.Fields{
 			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())),
@@ -191,8 +200,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		if !blk.IsBlinded() {
 			txs, err := p.Transactions()
 			if err != nil {
-				log.WithError(err).Error("Failed to get execution payload transactions")
-				return
+				return errors.Wrap(err, "failed to get execution payload transactions")
 			}
 			log = log.WithField("txCount", len(txs))
 		}
@@ -202,36 +210,32 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		if blk.Version() >= version.Capella && !blk.IsBlinded() {
 			withdrawals, err := p.Withdrawals()
 			if err != nil {
-				log.WithError(err).Error("Failed to get execution payload withdrawals")
-				return
+				return errors.Wrap(err, "failed to get execution payload withdrawals")
 			}
 			log = log.WithField("withdrawalCount", len(withdrawals))
 		}
 		if blk.Version() >= version.Deneb {
 			kzgs, err := blk.Block().Body().BlobKzgCommitments()
 			if err != nil {
-				log.WithError(err).Error("Failed to get blob KZG commitments")
-				return
+				return errors.Wrap(err, "failed to get kzg commitments")
 			} else if len(kzgs) != 0 {
 				log = log.WithField("kzgCommitmentCount", len(kzgs))
 			}
 		}
 	}
 
-	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
+	br := fmt.Sprintf("%#x", bytesutil.Trunc(blkRoot))
 	graffiti := blk.Block().Body().Graffiti()
 	log.WithFields(logrus.Fields{
 		"slot":             blk.Block().Slot(),
-		"blockRoot":        blkRoot,
+		"blockRoot":        br,
 		"attestationCount": len(blk.Block().Body().Attestations()),
 		"depositCount":     len(blk.Block().Body().Deposits()),
 		"graffiti":         string(graffiti[:]),
 		"fork":             version.String(blk.Block().Version()),
 	}).Info("Submitted new block")
 
-	if v.emitAccountMetrics {
-		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
-	}
+	return nil
 }
 
 func buildGenericSignedBlockDenebWithBlobs(pb proto.Message, b *ethpb.GenericBeaconBlock) (*ethpb.GenericSignedBeaconBlock, error) {

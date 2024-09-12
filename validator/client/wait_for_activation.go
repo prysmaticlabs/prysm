@@ -109,9 +109,8 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 				return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 			}
 
-			statuses := make([]*validatorStatus, len(res.Statuses))
-			for i, s := range res.Statuses {
-				statuses[i] = &validatorStatus{
+			for _, s := range res.Statuses {
+				v.pubkeyToStatus[bytesutil.ToBytes48(s.PublicKey)] = &validatorStatus{
 					publicKey: s.PublicKey,
 					status:    s.Status,
 					index:     s.Index,
@@ -129,7 +128,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 				valCount = int64(valCounts[0].Count)
 			}
 
-			someAreActive = v.checkAndLogValidatorStatus(statuses, valCount)
+			someAreActive = v.checkAndLogValidatorStatus(valCount)
 		}
 	}
 
