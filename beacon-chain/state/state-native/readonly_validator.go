@@ -92,3 +92,19 @@ func (v readOnlyValidator) Slashed() bool {
 func (v readOnlyValidator) IsNil() bool {
 	return v.validator == nil
 }
+
+// Copy returns a new validator from the read only validator
+func (v readOnlyValidator) Copy() *ethpb.Validator {
+	pubKey := v.PublicKey()
+	withdrawalCreds := v.GetWithdrawalCredentials()
+	return &ethpb.Validator{
+		PublicKey:                  pubKey[:],
+		WithdrawalCredentials:      withdrawalCreds,
+		EffectiveBalance:           v.EffectiveBalance(),
+		Slashed:                    v.Slashed(),
+		ActivationEligibilityEpoch: v.ActivationEligibilityEpoch(),
+		ActivationEpoch:            v.ActivationEpoch(),
+		ExitEpoch:                  v.ExitEpoch(),
+		WithdrawableEpoch:          v.WithdrawableEpoch(),
+	}
+}
