@@ -169,16 +169,12 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 			if err = s.AttestationCache.Add(att); err != nil {
 				log.WithError(err).Error("could not save attestation")
 			}
-		} else {
-			if att.IsAggregated() {
-				if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
-					log.WithError(err).Error("could not save aggregated attestation")
-				}
-			} else {
-				if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-					log.WithError(err).Error("could not save unaggregated attestation")
-				}
+		} else if att.IsAggregated() {
+			if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("could not save aggregated attestation")
 			}
+		} else if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+			log.WithError(err).Error("could not save unaggregated attestation")
 		}
 	}
 	if len(failedBroadcasts) > 0 {

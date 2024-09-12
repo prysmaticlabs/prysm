@@ -58,7 +58,7 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 
 	local := c.atts[id].local
 	if local == nil {
-		local = att.Clone()
+		c.atts[id].local = att.Clone()
 		return nil
 	}
 	bit := att.GetAggregationBits().BitIndices()[0]
@@ -202,11 +202,6 @@ func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
 	}
 
 	return false, nil
-}
-
-// SaveForkchoiceAttestation saves a forkchoice attestation.
-func (c *AttestationCache) SaveForkchoiceAttestation(att ethpb.Att) error {
-	return c.forkchoiceAtts.SaveForkchoiceAttestation(att)
 }
 
 // SaveForkchoiceAttestations saves forkchoice attestations.

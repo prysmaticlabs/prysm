@@ -44,8 +44,8 @@ func NewAttCaches() *AttCaches {
 	return pool
 }
 
-// SaveForkchoiceAttestation saves a forkchoice attestation.
-func (c *AttCaches) SaveForkchoiceAttestation(att ethpb.Att) error {
+// saveForkchoiceAttestation saves a forkchoice attestation.
+func (c *AttCaches) saveForkchoiceAttestation(att ethpb.Att) error {
 	return c.forkchoiceAtt.SaveForkchoiceAttestation(att)
 }
 

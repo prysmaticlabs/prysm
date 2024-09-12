@@ -431,7 +431,6 @@ func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlo
 			}
 		}
 	}
-
 	return nil
 }
 

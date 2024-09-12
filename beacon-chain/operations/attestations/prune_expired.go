@@ -114,7 +114,8 @@ func (s *Service) expirySlot() (primitives.Slot, error) {
 		return 0, nil
 	}
 	if currEpoch < params.BeaconConfig().DenebForkEpoch {
-		currSlot.SubSlot(params.BeaconConfig().SlotsPerEpoch).Add(1)
+		// Safe to subtract because we exited early for epoch 0.
+		return currSlot - 31, nil
 	}
 	return slots.EpochStart(currEpoch - 1)
 }

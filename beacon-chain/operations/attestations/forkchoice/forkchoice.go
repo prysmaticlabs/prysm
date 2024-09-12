@@ -54,8 +54,10 @@ func (a *Attestations) ForkchoiceAttestations() []ethpb.Att {
 	defer a.RUnlock()
 
 	atts := make([]ethpb.Att, 0, len(a.atts))
+	i := 0
 	for _, att := range a.atts {
-		atts = append(atts, att.Clone())
+		atts[i] = att.Clone()
+		i++
 	}
 
 	return atts
