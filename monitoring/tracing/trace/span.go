@@ -19,7 +19,7 @@ func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) 
 		// Return an empty span if tracing has been disabled.
 		return ctx, noop.Span{}
 	}
-	tracer := otel.Tracer("otel-tracer")
+	tracer := otel.Tracer("")
 	ctx, span := tracer.Start(ctx, name, opts...)
 	return ctx, span
 }
