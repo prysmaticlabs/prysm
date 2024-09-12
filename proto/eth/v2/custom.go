@@ -81,7 +81,7 @@ func (x *LightClientHeaderContainer) GetExecutionHeaderDeneb() (*enginev1.Execut
 	case *LightClientHeaderContainer_HeaderDeneb:
 		return input.HeaderDeneb.Execution, nil
 	default:
-		return nil, fmt.Errorf("header type not deneb: %T", input)
+		return nil, fmt.Errorf("header type %T not Deneb", input)
 	}
 }
 
