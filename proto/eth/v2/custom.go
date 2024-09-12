@@ -72,7 +72,7 @@ func (x *LightClientHeaderContainer) GetExecutionHeaderCapella() (*enginev1.Exec
 	case *LightClientHeaderContainer_HeaderCapella:
 		return input.HeaderCapella.Execution, nil
 	default:
-		return nil, fmt.Errorf("header type not capella: %T", input)
+		return nil, fmt.Errorf("header type %T not Capella", input)
 	}
 }
 
