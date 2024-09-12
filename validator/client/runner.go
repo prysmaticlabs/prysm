@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
+	prysmTrace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	goTrace "go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -66,7 +66,7 @@ func run(ctx context.Context, v iface.Validator) {
 		log.WithError(err).Fatal("Failed to update proposer settings")
 	}
 	for {
-		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
+		ctx, span := prysmTrace.StartSpan(ctx, "validator.processSlot")
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
@@ -78,7 +78,7 @@ func run(ctx context.Context, v iface.Validator) {
 			if !healthTracker.IsHealthy() {
 				continue
 			}
-			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
+			span.SetAttributes(prysmTrace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
@@ -151,7 +151,7 @@ func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byt
 }
 
 func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.initializeValidatorAndGetHeadSlot")
+	ctx, span := prysmTrace.StartSpan(ctx, "validator.initializeValidatorAndGetHeadSlot")
 	defer span.End()
 
 	ticker := time.NewTicker(backOffPeriod)
@@ -226,7 +226,7 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 	return headSlot, nil
 }
 
-func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *goTrace.Span) {
+func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span trace.Span) {
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
 		for _, role := range roles {

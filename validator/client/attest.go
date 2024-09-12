@@ -35,7 +35,7 @@ var failedAttLocalProtectionErr = "attempted to make slashable attestation, reje
 func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
-	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	span.SetAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
@@ -193,7 +193,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.Int64Attribute("slot", int64(slot)), // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
@@ -202,9 +202,9 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		trace.StringAttribute("aggregationBitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
 	if postElectra {
-		span.AddAttributes(trace.StringAttribute("committeeBitfield", fmt.Sprintf("%#x", committeeBits)))
+		span.SetAttributes(trace.StringAttribute("committeeBitfield", fmt.Sprintf("%#x", committeeBits)))
 	} else {
-		span.AddAttributes(trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)))
+		span.SetAttributes(trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)))
 	}
 
 	if v.emitAccountMetrics {
