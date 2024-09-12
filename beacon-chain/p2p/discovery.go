@@ -192,6 +192,8 @@ func (s *Service) RefreshPersistentSubnets() {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
+	const minLogInterval = 1 * time.Minute
+
 	peersSummary := func(threshold uint) (uint, uint) {
 		// Retrieve how many active peers we have.
 		activePeers := s.Peers().Active()
@@ -208,6 +210,7 @@ func (s *Service) listenForNewNodes() {
 	}
 
 	searchInProgress := false
+	var lastLogTime time.Time
 
 	iterator := s.dv5Listener.RandomNodes()
 	defer iterator.Close()
@@ -248,13 +251,16 @@ func (s *Service) listenForNewNodes() {
 			continue
 		}
 
-		if searchInProgress {
+		if searchInProgress && time.Since(lastLogTime) > minLogInterval {
+			lastLogTime = time.Now()
 			log.WithFields(fields).Debug("Searching for new active peers - continue")
-		} else {
-			log.WithFields(fields).Debug("Searching for new active peers - start")
 		}
 
-		searchInProgress = true
+		if !searchInProgress {
+			searchInProgress = true
+			lastLogTime = time.Now()
+			log.WithFields(fields).Debug("Searching for new active peers - start")
+		}
 
 		// Restrict dials if limit is applied.
 		if flags.MaxDialIsActive() {
