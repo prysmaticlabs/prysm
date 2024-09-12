@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
@@ -30,7 +29,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -179,12 +178,12 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidator")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-	valId := mux.Vars(r)["validator_id"]
+	valId := r.PathValue("validator_id")
 	if valId == "" {
 		httputil.HandleError(w, "validator_id is required in URL params", http.StatusBadRequest)
 		return
@@ -244,7 +243,7 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -21,7 +20,7 @@ import (
 // ExpectedWithdrawals get the withdrawals computed from the specified state, that will be included in the block that gets built on the specified state.
 func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Retrieve beacon state
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: "state_id is required in URL params",

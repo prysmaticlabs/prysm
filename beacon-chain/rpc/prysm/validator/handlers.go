@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -22,7 +21,7 @@ func (s *Server) GetParticipation(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetParticipation")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -67,7 +66,7 @@ func (s *Server) GetActiveSetChanges(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetActiveSetChanges")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
