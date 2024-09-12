@@ -92,6 +92,6 @@ func (x *LightClientHeaderContainer) GetExecutionBranch() ([][]byte, error) {
 	case *LightClientHeaderContainer_HeaderDeneb:
 		return input.HeaderDeneb.ExecutionBranch, nil
 	default:
-		return nil, fmt.Errorf("wrong header type: %T", input)
+		return nil, fmt.Errorf("wrong header type %T", input)
 	}
 }
