@@ -31,6 +31,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
+- Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 - Replaced st.GenesisValidatorsRoot() function in p2p and rpc packages with hardcoded value of Genesis validator root
 
 ### Deprecated
@@ -39,6 +40,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Removed
 - removed gRPC Gateway
+- Removed unused blobs bundle cache
 
 ### Fixed
 
@@ -51,6 +53,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 - Core: Fixed slash processing causing extra hashing
+- Core: Fixed extra allocations when processing slashings
 
 ### Security
 
