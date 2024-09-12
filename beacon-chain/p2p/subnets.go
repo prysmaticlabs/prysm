@@ -141,8 +141,6 @@ func (s *Service) FindPeersWithSubnet(
 	index uint64,
 	threshold int,
 ) (bool, error) {
-	const batchSize = 40_000
-
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
