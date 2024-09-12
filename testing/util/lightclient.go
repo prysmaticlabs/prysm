@@ -66,6 +66,7 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 	parentRoot, err := signedParent.Block().HashTreeRoot()
 	require.NoError(l.T, err)
 
+	var signedBlock interfaces.SignedBeaconBlock
 	if blinded {
 		block := NewBlindedBeaconBlockCapella()
 		block.Block.Slot = slot
@@ -75,7 +76,7 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 			block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
 		}
 
-		signedBlock, err := blocks.NewSignedBeaconBlock(block)
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
 
 		h, err := signedBlock.Header()
@@ -90,14 +91,6 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 		block.Block.StateRoot = stateRoot[:]
 		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
-
-		l.State = state
-		l.AttestedState = attestedState
-		l.AttestedHeader = attestedHeader
-		l.Block = signedBlock
-		l.Ctx = ctx
-
-		return l
 	} else {
 		block := NewBeaconBlockCapella()
 		block.Block.Slot = slot
@@ -107,7 +100,7 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 			block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
 		}
 
-		signedBlock, err := blocks.NewSignedBeaconBlock(block)
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
 
 		h, err := signedBlock.Header()
@@ -122,15 +115,15 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 		block.Block.StateRoot = stateRoot[:]
 		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
-
-		l.State = state
-		l.AttestedState = attestedState
-		l.AttestedHeader = attestedHeader
-		l.Block = signedBlock
-		l.Ctx = ctx
-
-		return l
 	}
+
+	l.State = state
+	l.AttestedState = attestedState
+	l.AttestedHeader = attestedHeader
+	l.Block = signedBlock
+	l.Ctx = ctx
+
+	return l
 }
 
 func (l *TestLightClient) SetupTestAltair() *TestLightClient {
@@ -242,6 +235,7 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 	parentRoot, err := signedParent.Block().HashTreeRoot()
 	require.NoError(l.T, err)
 
+	var signedBlock interfaces.SignedBeaconBlock
 	if blinded {
 		block := NewBlindedBeaconBlockDeneb()
 		block.Message.Slot = slot
@@ -251,7 +245,7 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 			block.Message.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
 		}
 
-		signedBlock, err := blocks.NewSignedBeaconBlock(block)
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
 
 		h, err := signedBlock.Header()
@@ -266,14 +260,6 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 		block.Message.StateRoot = stateRoot[:]
 		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
-
-		l.State = state
-		l.AttestedState = attestedState
-		l.AttestedHeader = attestedHeader
-		l.Block = signedBlock
-		l.Ctx = ctx
-
-		return l
 	} else {
 		block := NewBeaconBlockDeneb()
 		block.Block.Slot = slot
@@ -283,7 +269,7 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 			block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
 		}
 
-		signedBlock, err := blocks.NewSignedBeaconBlock(block)
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
 
 		h, err := signedBlock.Header()
@@ -298,15 +284,15 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 		block.Block.StateRoot = stateRoot[:]
 		signedBlock, err = blocks.NewSignedBeaconBlock(block)
 		require.NoError(l.T, err)
-
-		l.State = state
-		l.AttestedState = attestedState
-		l.AttestedHeader = attestedHeader
-		l.Block = signedBlock
-		l.Ctx = ctx
-
-		return l
 	}
+
+	l.State = state
+	l.AttestedState = attestedState
+	l.AttestedHeader = attestedHeader
+	l.Block = signedBlock
+	l.Ctx = ctx
+
+	return l
 }
 
 func (l *TestLightClient) CheckAttestedHeader(update *ethpbv2.LightClientUpdate) {
