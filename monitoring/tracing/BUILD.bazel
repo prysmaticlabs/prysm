@@ -20,5 +20,6 @@ go_library(
         "@io_opentelemetry_go_otel_sdk//resource:go_default_library",
         "@io_opentelemetry_go_otel_sdk//trace:go_default_library",
         "@io_opentelemetry_go_otel_trace//:go_default_library",
+        "@io_opentelemetry_go_otel_trace//noop:go_default_library",
     ],
 )
