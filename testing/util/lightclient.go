@@ -29,7 +29,7 @@ func NewTestLightClient(t *testing.T) *TestLightClient {
 	return &TestLightClient{T: t}
 }
 
-func (l *TestLightClient) SetupTestCapella() *TestLightClient {
+func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 	ctx := context.Background()
 
 	slot := primitives.Slot(params.BeaconConfig().CapellaForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
@@ -67,29 +67,56 @@ func (l *TestLightClient) SetupTestCapella() *TestLightClient {
 	parentRoot, err := signedParent.Block().HashTreeRoot()
 	require.NoError(l.T, err)
 
-	block := NewBeaconBlockCapella()
-	block.Block.Slot = slot
-	block.Block.ParentRoot = parentRoot[:]
+	var signedBlock interfaces.SignedBeaconBlock
+	if blinded {
+		block := NewBlindedBeaconBlockCapella()
+		block.Block.Slot = slot
+		block.Block.ParentRoot = parentRoot[:]
 
-	for i := uint64(0); i < params.BeaconConfig().MinSyncCommitteeParticipants; i++ {
-		block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+		for i := uint64(0); i < params.BeaconConfig().MinSyncCommitteeParticipants; i++ {
+			block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+		}
+
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
+
+		h, err := signedBlock.Header()
+		require.NoError(l.T, err)
+
+		err = state.SetLatestBlockHeader(h.Header)
+		require.NoError(l.T, err)
+		stateRoot, err := state.HashTreeRoot(ctx)
+		require.NoError(l.T, err)
+
+		// get a new signed block so the root is updated with the new state root
+		block.Block.StateRoot = stateRoot[:]
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
+	} else {
+		block := NewBeaconBlockCapella()
+		block.Block.Slot = slot
+		block.Block.ParentRoot = parentRoot[:]
+
+		for i := uint64(0); i < params.BeaconConfig().MinSyncCommitteeParticipants; i++ {
+			block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+		}
+
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
+
+		h, err := signedBlock.Header()
+		require.NoError(l.T, err)
+
+		err = state.SetLatestBlockHeader(h.Header)
+		require.NoError(l.T, err)
+		stateRoot, err := state.HashTreeRoot(ctx)
+		require.NoError(l.T, err)
+
+		// get a new signed block so the root is updated with the new state root
+		block.Block.StateRoot = stateRoot[:]
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
 	}
-
-	signedBlock, err := blocks.NewSignedBeaconBlock(block)
-	require.NoError(l.T, err)
-
-	h, err := signedBlock.Header()
-	require.NoError(l.T, err)
-
-	err = state.SetLatestBlockHeader(h.Header)
-	require.NoError(l.T, err)
-	stateRoot, err := state.HashTreeRoot(ctx)
-	require.NoError(l.T, err)
-
-	// get a new signed block so the root is updated with the new state root
-	block.Block.StateRoot = stateRoot[:]
-	signedBlock, err = blocks.NewSignedBeaconBlock(block)
-	require.NoError(l.T, err)
 
 	l.State = state
 	l.AttestedState = attestedState
@@ -171,7 +198,7 @@ func (l *TestLightClient) SetupTestAltair() *TestLightClient {
 	return l
 }
 
-func (l *TestLightClient) SetupTestDeneb() *TestLightClient {
+func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 	ctx := context.Background()
 
 	slot := primitives.Slot(params.BeaconConfig().DenebForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
@@ -209,29 +236,56 @@ func (l *TestLightClient) SetupTestDeneb() *TestLightClient {
 	parentRoot, err := signedParent.Block().HashTreeRoot()
 	require.NoError(l.T, err)
 
-	block := NewBeaconBlockDeneb()
-	block.Block.Slot = slot
-	block.Block.ParentRoot = parentRoot[:]
+	var signedBlock interfaces.SignedBeaconBlock
+	if blinded {
+		block := NewBlindedBeaconBlockDeneb()
+		block.Message.Slot = slot
+		block.Message.ParentRoot = parentRoot[:]
 
-	for i := uint64(0); i < params.BeaconConfig().MinSyncCommitteeParticipants; i++ {
-		block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+		for i := uint64(0); i < params.BeaconConfig().MinSyncCommitteeParticipants; i++ {
+			block.Message.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+		}
+
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
+
+		h, err := signedBlock.Header()
+		require.NoError(l.T, err)
+
+		err = state.SetLatestBlockHeader(h.Header)
+		require.NoError(l.T, err)
+		stateRoot, err := state.HashTreeRoot(ctx)
+		require.NoError(l.T, err)
+
+		// get a new signed block so the root is updated with the new state root
+		block.Message.StateRoot = stateRoot[:]
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
+	} else {
+		block := NewBeaconBlockDeneb()
+		block.Block.Slot = slot
+		block.Block.ParentRoot = parentRoot[:]
+
+		for i := uint64(0); i < params.BeaconConfig().MinSyncCommitteeParticipants; i++ {
+			block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+		}
+
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
+
+		h, err := signedBlock.Header()
+		require.NoError(l.T, err)
+
+		err = state.SetLatestBlockHeader(h.Header)
+		require.NoError(l.T, err)
+		stateRoot, err := state.HashTreeRoot(ctx)
+		require.NoError(l.T, err)
+
+		// get a new signed block so the root is updated with the new state root
+		block.Block.StateRoot = stateRoot[:]
+		signedBlock, err = blocks.NewSignedBeaconBlock(block)
+		require.NoError(l.T, err)
 	}
-
-	signedBlock, err := blocks.NewSignedBeaconBlock(block)
-	require.NoError(l.T, err)
-
-	h, err := signedBlock.Header()
-	require.NoError(l.T, err)
-
-	err = state.SetLatestBlockHeader(h.Header)
-	require.NoError(l.T, err)
-	stateRoot, err := state.HashTreeRoot(ctx)
-	require.NoError(l.T, err)
-
-	// get a new signed block so the root is updated with the new state root
-	block.Block.StateRoot = stateRoot[:]
-	signedBlock, err = blocks.NewSignedBeaconBlock(block)
-	require.NoError(l.T, err)
 
 	l.State = state
 	l.AttestedState = attestedState

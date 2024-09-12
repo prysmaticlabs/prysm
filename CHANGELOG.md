@@ -13,6 +13,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
+- Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
 
 ### Changed
 
@@ -31,6 +32,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
+- Removed gorilla mux library and replaced it with net/http updates in go 1.22.
+- Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
+- Updated k8s-io/client-go to v0.30.4 and k8s-io/apimachinery to v0.30.4
 - Refactored light client code to make it more readable and make future PRs easier.
 
 ### Deprecated
@@ -39,6 +43,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Removed
 - removed gRPC Gateway
+- Removed unused blobs bundle cache
 
 ### Fixed
 
@@ -51,6 +56,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 - Core: Fixed slash processing causing extra hashing
+- Core: Fixed extra allocations when processing slashings
 
 ### Security
 

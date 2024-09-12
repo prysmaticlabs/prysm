@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -53,7 +52,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorCount")
 	defer span.End()
 
-	stateID := mux.Vars(r)["state_id"]
+	stateID := r.PathValue("state_id")
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateID), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
