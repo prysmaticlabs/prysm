@@ -115,7 +115,7 @@ func lightClientHeaderContainerToJSON(container *v2.LightClientHeaderContainer) 
 			ExecutionBranch: branchToJSON(t.HeaderDeneb.ExecutionBranch),
 		}
 	default:
-		return nil, fmt.Errorf("unsupported hesder type %T", t)
+		return nil, fmt.Errorf("unsupported header type %T", t)
 	}
 
 	return json.Marshal(header)
