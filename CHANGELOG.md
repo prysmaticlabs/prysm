@@ -56,6 +56,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
 - Core: Fixed slash processing causing extra hashing
 - Core: Fixed extra allocations when processing slashings
+- remove unneeded container in blob sidecar ssz response
 
 ### Security
 
