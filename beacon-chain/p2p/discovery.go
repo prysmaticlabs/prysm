@@ -209,7 +209,6 @@ func (s *Service) listenForNewNodes() {
 		return activePeerCount, missingPeerCount
 	}
 
-	searchInProgress := false
 	var lastLogTime time.Time
 
 	iterator := s.dv5Listener.RandomNodes()
@@ -226,10 +225,6 @@ func (s *Service) listenForNewNodes() {
 			// for new peers.
 			log.Trace("Not looking for peers, at peer limit")
 			time.Sleep(pollingPeriod)
-			if searchInProgress {
-				log.Debug("Searching for new active peers - success")
-			}
-			searchInProgress = false
 			continue
 		}
 
@@ -243,23 +238,13 @@ func (s *Service) listenForNewNodes() {
 
 		if missingPeerCount == 0 {
 			log.Trace("Not looking for peers, at peer limit")
-			if searchInProgress {
-				log.WithFields(fields).Debug("Searching for new active peers - success")
-			}
 			time.Sleep(pollingPeriod)
-			searchInProgress = false
 			continue
 		}
 
-		if searchInProgress && time.Since(lastLogTime) > minLogInterval {
+		if time.Since(lastLogTime) > minLogInterval {
 			lastLogTime = time.Now()
-			log.WithFields(fields).Debug("Searching for new active peers - continue")
-		}
-
-		if !searchInProgress {
-			searchInProgress = true
-			lastLogTime = time.Now()
-			log.WithFields(fields).Debug("Searching for new active peers - start")
+			log.WithFields(fields).Debug("Searching for new active peers")
 		}
 
 		// Restrict dials if limit is applied.
