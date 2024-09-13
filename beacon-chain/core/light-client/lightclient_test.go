@@ -10,26 +10,9 @@ import (
 	light_client "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
-
-func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateCapella(t *testing.T) {
-	l := util.NewTestLightClient(t).SetupTestCapella(false)
-
-	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState)
-	require.NoError(t, err)
-	require.NotNil(t, update, "update is nil")
-
-	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
-
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
-
-	require.Equal(t, (*v2.LightClientHeaderContainer)(nil), update.FinalizedHeader, "Finalized header is not nil")
-	require.DeepSSZEqual(t, ([][]byte)(nil), update.FinalityBranch, "Finality branch is not nil")
-}
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
@@ -40,11 +23,21 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *test
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
+}
 
-	require.Equal(t, (*v2.LightClientHeaderContainer)(nil), update.FinalizedHeader, "Finalized header is not nil")
-	require.DeepSSZEqual(t, ([][]byte)(nil), update.FinalityBranch, "Finality branch is not nil")
+func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateCapella(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestCapella(false)
+
+	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState)
+	require.NoError(t, err)
+	require.NotNil(t, update, "update is nil")
+
+	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 }
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testing.T) {
@@ -56,22 +49,21 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testi
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
-
-	require.Equal(t, (*v2.LightClientHeaderContainer)(nil), update.FinalizedHeader, "Finalized header is not nil")
-	require.DeepSSZEqual(t, ([][]byte)(nil), update.FinalityBranch, "Finality branch is not nil")
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 }
-func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testing.T) {
-	l := util.NewTestLightClient(t).SetupTestCapella(false)
+
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestAltair()
+
 	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
@@ -88,17 +80,16 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testi
 	}
 }
 
-func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testing.T) {
-	l := util.NewTestLightClient(t).SetupTestAltair()
-
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestCapella(false)
 	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
@@ -124,8 +115,8 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing
 
 	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
 
-	l.CheckSyncAggregate(update)
-	l.CheckAttestedHeader(update)
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
