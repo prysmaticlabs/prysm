@@ -15,6 +15,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
@@ -191,7 +192,26 @@ func (s *Service) RefreshPersistentSubnets() {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	iterator := filterNodes(s.ctx, s.dv5Listener.RandomNodes(), s.filterPeer)
+	const minLogInterval = 1 * time.Minute
+
+	peersSummary := func(threshold uint) (uint, uint) {
+		// Retrieve how many active peers we have.
+		activePeers := s.Peers().Active()
+		activePeerCount := uint(len(activePeers))
+
+		// Compute how many peers we are missing to reach the threshold.
+		if activePeerCount >= threshold {
+			return activePeerCount, 0
+		}
+
+		missingPeerCount := threshold - activePeerCount
+
+		return activePeerCount, missingPeerCount
+	}
+
+	var lastLogTime time.Time
+
+	iterator := s.dv5Listener.RandomNodes()
 	defer iterator.Close()
 
 	for {
@@ -207,17 +227,35 @@ func (s *Service) listenForNewNodes() {
 			time.Sleep(pollingPeriod)
 			continue
 		}
-		wantedCount := s.wantedPeerDials()
-		if wantedCount == 0 {
+
+		// Compute the number of new peers we want to dial.
+		activePeerCount, missingPeerCount := peersSummary(s.cfg.MaxPeers)
+
+		fields := logrus.Fields{
+			"currentPeerCount": activePeerCount,
+			"targetPeerCount":  s.cfg.MaxPeers,
+		}
+
+		if missingPeerCount == 0 {
 			log.Trace("Not looking for peers, at peer limit")
 			time.Sleep(pollingPeriod)
 			continue
 		}
+
+		if time.Since(lastLogTime) > minLogInterval {
+			lastLogTime = time.Now()
+			log.WithFields(fields).Debug("Searching for new active peers")
+		}
+
 		// Restrict dials if limit is applied.
 		if flags.MaxDialIsActive() {
-			wantedCount = min(wantedCount, flags.Get().MaxConcurrentDials)
+			maxConcurrentDials := uint(flags.Get().MaxConcurrentDials)
+			missingPeerCount = min(missingPeerCount, maxConcurrentDials)
 		}
-		wantedNodes := enode.ReadNodes(iterator, wantedCount)
+
+		// Search for new peers.
+		wantedNodes := searchForPeers(iterator, batchSize, missingPeerCount, s.filterPeer)
+
 		wg := new(sync.WaitGroup)
 		for i := 0; i < len(wantedNodes); i++ {
 			node := wantedNodes[i]
@@ -485,17 +523,6 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	}
 	activePeers := len(s.Peers().Active())
 	return activePeers >= maxPeers || numOfConns >= maxPeers
-}
-
-func (s *Service) wantedPeerDials() int {
-	maxPeers := int(s.cfg.MaxPeers)
-
-	activePeers := len(s.Peers().Active())
-	wantedCount := 0
-	if maxPeers > activePeers {
-		wantedCount = maxPeers - activePeers
-	}
-	return wantedCount
 }
 
 // PeersFromStringAddrs converts peer raw ENRs into multiaddrs for p2p.
