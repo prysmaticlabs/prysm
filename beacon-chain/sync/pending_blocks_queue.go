@@ -339,6 +339,20 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	// Fetch best peers to request blocks from.
 	bestPeers := s.getBestPeers()
 
+	// Filter out peers that do not custody a superset of our columns.
+	// (Very likely, keep only supernode peers)
+	// TODO: Change this to be able to fetch from all peers.
+	headSlot := s.cfg.chain.HeadSlot()
+	peerDASIsActive := coreTime.PeerDASIsActive(headSlot)
+
+	if peerDASIsActive {
+		var err error
+		bestPeers, err = s.cfg.p2p.GetValidCustodyPeers(bestPeers)
+		if err != nil {
+			return errors.Wrap(err, "get valid custody peers")
+		}
+	}
+
 	// No suitable peer, exit early.
 	if len(bestPeers) == 0 {
 		log.WithField("roots", fmt.Sprintf("%#x", roots)).Debug("Send batch root request: No suited peers")
