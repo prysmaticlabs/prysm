@@ -371,7 +371,7 @@ func (s *Server) suitableBlock(ctx context.Context, minSignaturesRequired uint64
 
 		// Get the number of sync committee signatures
 		numOfSyncCommitteeSignatures = 0
-		if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil && syncAggregate != nil {
+		if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil {
 			numOfSyncCommitteeSignatures = syncAggregate.SyncCommitteeBits.Count()
 		}
 	}
