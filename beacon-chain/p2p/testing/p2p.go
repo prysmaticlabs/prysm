@@ -139,7 +139,7 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 
 	// PubSub requires some delay after connecting for the (*PubSub).processLoop method to
 	// pick up the newly connected peer.
-	time.Sleep(time.Millisecond * 1000)
+	time.Sleep(time.Millisecond * 100)
 
 	castedMsg, ok := msg.(ssz.Marshaler)
 	if !ok {

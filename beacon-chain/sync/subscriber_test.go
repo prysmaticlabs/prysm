@@ -264,11 +264,10 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		panic("bad")
 	}, p.Digest)
 	r.markForChainStart()
-	t.Logf("%v", r.cfg.p2p.PubSub().GetTopics())
 	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 
 	if util.WaitTimeout(&wg, time.Second) {
-		t.Fatalf("Did not receive PubSub in 1 second: %v", r.cfg.p2p.PubSub().ListPeers(topic))
+		t.Fatal("Did not receive PubSub in 1 second")
 	}
 }
 
