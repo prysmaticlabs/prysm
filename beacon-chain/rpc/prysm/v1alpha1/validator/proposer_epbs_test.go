@@ -10,11 +10,9 @@ import (
 	mockExecution "github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
-	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -62,20 +60,20 @@ func TestProposer_ComputePostPayloadStateRoot(t *testing.T) {
 
 	bh := [32]byte{'h'}
 	root := [32]byte{'r'}
+	expectedStateRoot := [32]byte{22, 85, 188, 95, 44, 156, 240, 10, 30, 106, 216, 244, 24, 39, 130, 196, 151, 118, 200, 94, 28, 42, 13, 170, 109, 206, 33, 83, 97, 154, 53, 251}
 	p := &enginev1.ExecutionPayloadEnvelope{
-		Payload: &enginev1.ExecutionPayloadElectra{},
+		Payload:            &enginev1.ExecutionPayloadElectra{},
+		BeaconBlockRoot:    root[:],
+		BlobKzgCommitments: make([][]byte, 0),
+		StateRoot:          expectedStateRoot[:],
 	}
 	p.Payload.BlockHash = bh[:]
-	p.BeaconBlockRoot = root[:]
 	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
-	validators := make([]*ethpb.Validator, 0)
-	stpb := &ethpb.BeaconStateEPBS{Slot: 3, Validators: validators}
-	st, err := state_native.InitializeFromProtoUnsafeEpbs(stpb)
-	require.NoError(t, err)
 
+	st, _ := util.DeterministicGenesisStateEpbs(t, 64)
 	require.NoError(t, db.SaveState(ctx, st, e.BeaconBlockRoot()))
-	_, err = proposerServer.computePostPayloadStateRoot(ctx, e)
+	stateRoot, err := proposerServer.computePostPayloadStateRoot(ctx, e)
 	require.NoError(t, err)
-	require.DeepEqual(t, e.StateRoot(), root[:])
+	require.DeepEqual(t, expectedStateRoot[:], stateRoot)
 }
