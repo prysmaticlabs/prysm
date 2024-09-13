@@ -548,6 +548,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if coreTime.PeerDASIsActive(signed.Block().Slot()) {
 		return s.isDataColumnsAvailable(ctx, root, signed)
 	}
+
 	if signed.Version() < version.Deneb {
 		return nil
 	}
@@ -653,7 +654,12 @@ func (s *Service) isDataColumnsAvailable(ctx context.Context, root [32]byte, sig
 		return nil
 	}
 
-	colMap, err := peerdas.CustodyColumns(s.cfg.P2P.NodeID(), peerdas.CustodySubnetCount())
+	// All columns to sample need to be available for the block to be considered available.
+	// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#subnet-sampling
+	nodeID := s.cfg.P2P.NodeID()
+	subnetSamplingSize := peerdas.SubnetSamplingSize()
+
+	colMap, err := peerdas.CustodyColumns(nodeID, subnetSamplingSize)
 	if err != nil {
 		return errors.Wrap(err, "custody columns")
 	}
