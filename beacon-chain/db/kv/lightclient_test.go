@@ -5,38 +5,179 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
-func TestStore_LightclientUpdate_CanSaveRetrieve(t *testing.T) {
+func TestStore_LightClientUpdate_CanSaveRetrieveAltair(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	update := &ethpbv2.LightClientUpdate{
-		AttestedHeader:          nil,
-		NextSyncCommittee:       nil,
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
 		NextSyncCommitteeBranch: nil,
-		FinalizedHeader:         nil,
-		FinalityBranch:          nil,
-		SyncAggregate:           nil,
-		SignatureSlot:           7,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate:  nil,
+		SignatureSlot:  7,
 	}
-
 	period := uint64(1)
 	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
-		Version: 1,
+		Version: version.Altair,
 		Data:    update,
 	})
 	require.NoError(t, err)
 
-	// Retrieve the update
 	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
 	require.NoError(t, err)
-	require.Equal(t, update.SignatureSlot, retrievedUpdate.Data.SignatureSlot, "retrieved update does not match saved update")
-
+	require.DeepEqual(t, update, retrievedUpdate.Data, "retrieved update does not match saved update")
 }
 
-func TestStore_LightclientUpdates_canRetrieveRange(t *testing.T) {
+func TestStore_LightClientUpdate_CanSaveRetrieveCapella(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution:       nil,
+					ExecutionBranch: nil,
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate:  nil,
+		SignatureSlot:  7,
+	}
+	period := uint64(1)
+	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Capella,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
+	require.NoError(t, err)
+	require.DeepEqual(t, update, retrievedUpdate.Data, "retrieved update does not match saved update")
+}
+
+func TestStore_LightClientUpdate_CanSaveRetrieveDeneb(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution: &enginev1.ExecutionPayloadHeaderDeneb{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          1,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution:       nil,
+					ExecutionBranch: nil,
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate:  nil,
+		SignatureSlot:  7,
+	}
+	period := uint64(1)
+	err := db.SaveLightClientUpdate(ctx, period, &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Deneb,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	retrievedUpdate, err := db.LightClientUpdate(ctx, period)
+	require.NoError(t, err)
+	require.DeepEqual(t, update, retrievedUpdate.Data, "retrieved update does not match saved update")
+}
+
+func TestStore_LightClientUpdates_canRetrieveRange(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	updates := []*ethpbv2.LightClientUpdateWithVersion{
