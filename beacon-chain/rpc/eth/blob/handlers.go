@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/network/httputil"
-	"go.opencensus.io/trace"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // Blobs is an HTTP handler for Beacon API getBlobs.
