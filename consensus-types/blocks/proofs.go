@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash/htr"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"go.opencensus.io/trace"
 )
 
 const (
