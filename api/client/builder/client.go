@@ -146,7 +146,7 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 
-	span.AddAttributes(trace.StringAttribute("url", u.String()),
+	span.SetAttributes(trace.StringAttribute("url", u.String()),
 		trace.StringAttribute("method", method))
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
@@ -259,7 +259,7 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "builder.client.RegisterValidator")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("num_reqs", int64(len(svr))))
+	span.SetAttributes(trace.Int64Attribute("num_reqs", int64(len(svr))))
 
 	if len(svr) == 0 {
 		err := errors.Wrap(errMalformedRequest, "empty validator registration list")
