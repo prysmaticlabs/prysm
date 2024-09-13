@@ -42,8 +42,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
 
 ### Removed
+
 - removed gRPC Gateway
 - Removed unused blobs bundle cache
+- Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
 
 ### Fixed
 
