@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -252,19 +253,19 @@ func Test_hasNetworkFlag(t *testing.T) {
 }
 
 func TestCORS(t *testing.T) {
-	// Mock CLI context with a test CORS domain
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com", "")
-	cliCtx := cli.NewContext(&app, set, nil)
-	require.NoError(t, cliCtx.Set(flags.HTTPServerCorsDomain.Name, "http://allowed-example.com"))
-
-	router := newRouter(cliCtx)
-
+	router := http.NewServeMux()
 	// Ensure a test route exists
-	router.HandleFunc("/some-path", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}).Methods(http.MethodGet)
+	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Register the CORS middleware on mux Router
+	allowedOrigins := []string{"http://allowed-example.com"}
+	handler := middleware.CorsHandler(allowedOrigins)(router)
 
 	// Define test cases
 	tests := []struct {
@@ -285,7 +286,7 @@ func TestCORS(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			// Serve HTTP
-			router.ServeHTTP(rr, req)
+			handler.ServeHTTP(rr, req)
 
 			// Check the CORS headers based on the expected outcome
 			if tc.expectAllow && rr.Header().Get("Access-Control-Allow-Origin") != tc.origin {

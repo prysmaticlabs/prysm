@@ -21,7 +21,7 @@ import (
 func (vs *Server) SubmitAggregateSelectionProof(ctx context.Context, req *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProof")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	span.SetAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	indexInCommittee, validatorIndex, err := vs.processAggregateSelection(ctx, req)
 	if err != nil {
@@ -53,7 +53,7 @@ func (vs *Server) SubmitAggregateSelectionProofElectra(
 ) (*ethpb.AggregateSelectionElectraResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregateSelectionProofElectra")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	span.SetAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	indexInCommittee, validatorIndex, err := vs.processAggregateSelection(ctx, req)
 	if err != nil {

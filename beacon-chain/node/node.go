@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -17,7 +18,6 @@ import (
 	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
@@ -361,7 +361,7 @@ func registerServices(cliCtx *cli.Context, beacon *BeaconNode, synchronizer *sta
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := newRouter(cliCtx)
+	router := http.NewServeMux()
 	if err := beacon.registerRPCService(router); err != nil {
 		return errors.Wrap(err, "could not register RPC service")
 	}
@@ -395,19 +395,6 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 			return ctx.Err()
 		}
 	}
-}
-
-func newRouter(cliCtx *cli.Context) *mux.Router {
-	var allowedOrigins []string
-	if cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
-	}
-	r := mux.NewRouter()
-	r.Use(middleware.NormalizeQueryValuesHandler)
-	r.Use(middleware.CorsHandler(allowedOrigins))
-	return r
 }
 
 // StateFeed implements statefeed.Notifier.
@@ -916,7 +903,7 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func (b *BeaconNode) registerRPCService(router *mux.Router) error {
+func (b *BeaconNode) registerRPCService(router *http.ServeMux) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -1043,13 +1030,26 @@ func (b *BeaconNode) registerPrometheusService(_ *cli.Context) error {
 	return b.services.RegisterService(service)
 }
 
-func (b *BeaconNode) registerHTTPService(router *mux.Router) error {
+func (b *BeaconNode) registerHTTPService(router *http.ServeMux) error {
 	host := b.cliCtx.String(flags.HTTPServerHost.Name)
 	port := b.cliCtx.Int(flags.HTTPServerPort.Name)
 	address := net.JoinHostPort(host, strconv.Itoa(port))
+	var allowedOrigins []string
+	if b.cliCtx.IsSet(flags.HTTPServerCorsDomain.Name) {
+		allowedOrigins = strings.Split(b.cliCtx.String(flags.HTTPServerCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.HTTPServerCorsDomain.Value, ",")
+	}
+
+	middlewares := []middleware.Middleware{
+		middleware.NormalizeQueryValuesHandler,
+		middleware.CorsHandler(allowedOrigins),
+	}
+
 	opts := []httprest.Option{
 		httprest.WithRouter(router),
 		httprest.WithHTTPAddr(address),
+		httprest.WithMiddlewares(middlewares),
 	}
 	if b.cliCtx.IsSet(cmd.ApiTimeoutFlag.Name) {
 		opts = append(opts, httprest.WithTimeout(b.cliCtx.Duration(cmd.ApiTimeoutFlag.Name)))

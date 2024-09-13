@@ -6,6 +6,7 @@ go_library(
         "block.go",
         "conversions.go",
         "conversions_block.go",
+        "conversions_lightclient.go",
         "conversions_state.go",
         "endpoints_beacon.go",
         "endpoints_blob.go",

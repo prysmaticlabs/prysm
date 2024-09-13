@@ -276,7 +276,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 }
 
 func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
-	if e.IsNil() {
+	if e == nil || e.IsNil() {
 		return errors.New("cannot unblind with nil execution data")
 	}
 	if !b.IsBlinded() {

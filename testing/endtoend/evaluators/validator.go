@@ -233,7 +233,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
 
-		if b.IsNil() {
+		if b == nil || b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkStartSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
@@ -274,7 +274,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
 
-		if b.IsNil() {
+		if b == nil || b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
