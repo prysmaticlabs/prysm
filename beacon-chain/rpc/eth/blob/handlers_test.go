@@ -366,7 +366,11 @@ func TestBlobs(t *testing.T) {
 		}
 		s.Blobs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		require.Equal(t, len(writer.Body.Bytes()), 131932)
+		require.Equal(t, len(writer.Body.Bytes()), 131928) // size of each sidecar
+		// can directly unmarshal to sidecar since there's only 1
+		var sidecar eth.BlobSidecar
+		require.NoError(t, sidecar.UnmarshalSSZ(writer.Body.Bytes()))
+		require.NotNil(t, sidecar.Blob)
 	})
 }
 
