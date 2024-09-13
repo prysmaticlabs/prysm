@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -1243,7 +1245,27 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "altair", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
-	require.NotNil(t, resp.Data)
+	require.Equal(t, hexutil.Encode(attestedHeader.ParentRoot), respHeader.Beacon.ParentRoot)
+	require.Equal(t, hexutil.Encode(parent.Block.StateRoot), respHeader.Beacon.StateRoot)
+	require.Equal(t, strconv.FormatUint(uint64(attestedHeader.Slot), 10), respHeader.Beacon.Slot)
+	require.Equal(t, strconv.FormatUint(uint64(attestedHeader.ProposerIndex), 10), respHeader.Beacon.ProposerIndex)
+	require.Equal(t, len(resp.Data.FinalityBranch), lightclient.FinalityBranchNumOfLeaves)
+	// var finalizedHeader structs.LightClientHeader
+	// err = json.Unmarshal(resp.Data.FinalizedHeader, &finalizedHeader)
+	// require.NoError(t, err)
+	// require.Equal(t, finalizedHeader.Beacon, nil)
+	//require.Equal(t, finalizedHeader, finalizedHeader.Beacon.BodyRoot)
+	//require.Equal(t, finalizedHeader.Beacon.ParentRoot, hexutil.Encode(parentHeader.Header.ParentRoot))
+	//require.Equal(t, finalizedHeader.Beacon.StateRoot, nil)
+	// require.Equal(t, finalizedHeader.Beacon.ProposerIndex, strconv.FormatUint(uint64(parentHeader.Header.ProposerIndex), 10))
+	// require.NoError(t, err)
+	//require.Equal(t, finalizedHeader.Beacon.BodyRoot, expectedBodyRoot)
+	//require.Equal(t, finalizedHeader.Beacon.Slot, strconv.FormatUint(uint64(signedParent.Block().Slot()), 10))
+	require.Equal(t, resp.Data.SignatureSlot, strconv.FormatUint(uint64(signedBlock.Block().Slot()), 10))
+	SyncAggregate, err := signedBlock.Block().Body().SyncAggregate()
+	require.NoError(t, err)
+	require.Equal(t, resp.Data.SyncAggregate.SyncCommitteeBits, hexutil.Encode(SyncAggregate.SyncCommitteeBits))
+	require.Equal(t, resp.Data.SyncAggregate.SyncCommitteeSignature, hexutil.Encode(SyncAggregate.SyncCommitteeSignature))
 }
 
 func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
