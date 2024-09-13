@@ -53,6 +53,6 @@ func (vs *Server) computePostPayloadStateRoot(ctx context.Context, envelope inte
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not calculate post payload state root at slot %d", beaconState.Slot())
 	}
-	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
+	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root at execution stage")
 	return root[:], nil
 }
