@@ -112,13 +112,13 @@ func buildSidecarsJsonResponse(verifiedBlobs []*blocks.VerifiedROBlob) *structs.
 }
 
 func buildSidecarsSSZResponse(verifiedBlobs []*blocks.VerifiedROBlob) ([]byte, error) {
-	ssz := make([]byte, 0)
-	for _, sidecar := range verifiedBlobs {
+	ssz := make([]byte, field_params.BlobSidecarSize*len(verifiedBlobs))
+	for i, sidecar := range verifiedBlobs {
 		sszrep, err := sidecar.MarshalSSZ()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal sidecar ssz")
 		}
-		ssz = append(ssz, sszrep...)
+		copy(ssz[i*field_params.BlobSidecarSize:(i+1)*field_params.BlobSidecarSize], sszrep)
 	}
 	return ssz, nil
 }

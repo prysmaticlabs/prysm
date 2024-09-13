@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -366,11 +367,32 @@ func TestBlobs(t *testing.T) {
 		}
 		s.Blobs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		require.Equal(t, len(writer.Body.Bytes()), 131928) // size of each sidecar
+		require.Equal(t, len(writer.Body.Bytes()), fieldparams.BlobSidecarSize) // size of each sidecar
 		// can directly unmarshal to sidecar since there's only 1
 		var sidecar eth.BlobSidecar
 		require.NoError(t, sidecar.UnmarshalSSZ(writer.Body.Bytes()))
 		require.NotNil(t, sidecar.Blob)
+	})
+	t.Run("ssz multiple blobs", func(t *testing.T) {
+		u := "http://foo.example/finalized"
+		request := httptest.NewRequest("GET", u, nil)
+		request.Header.Add("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		blocker := &lookup.BeaconDbBlocker{
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
+		}
+		s := &Server{
+			Blocker: blocker,
+		}
+		s.Blobs(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		require.Equal(t, len(writer.Body.Bytes()), fieldparams.BlobSidecarSize*4) // size of each sidecar
 	})
 }
 
