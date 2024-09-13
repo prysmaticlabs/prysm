@@ -28,13 +28,13 @@ func ValidatePayloadStateTransition(
 	if err := validateAgainstCommittedBid(committedHeader, envelope); err != nil {
 		return err
 	}
-	if err := processPayloadStateTransition(ctx, preState, envelope); err != nil {
+	if err := ProcessPayloadStateTransition(ctx, preState, envelope); err != nil {
 		return err
 	}
 	return checkPostStateRoot(ctx, preState, envelope)
 }
 
-func processPayloadStateTransition(
+func ProcessPayloadStateTransition(
 	ctx context.Context,
 	preState state.BeaconState,
 	envelope interfaces.ROExecutionPayloadEnvelope,
