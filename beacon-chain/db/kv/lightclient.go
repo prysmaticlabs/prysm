@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 func (s *Store) SaveLightClientUpdate(ctx context.Context, period uint64, update *ethpbv2.LightClientUpdateWithVersion) error {

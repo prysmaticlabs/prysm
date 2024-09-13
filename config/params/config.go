@@ -125,7 +125,6 @@ type BeaconChainConfig struct {
 	DomainApplicationMask             [4]byte `yaml:"DOMAIN_APPLICATION_MASK" spec:"true"`               // DomainApplicationMask defines the BLS signature domain for application mask.
 	DomainApplicationBuilder          [4]byte `yaml:"DOMAIN_APPLICATION_BUILDER" spec:"true"`            // DomainApplicationBuilder defines the BLS signature domain for application builder.
 	DomainBLSToExecutionChange        [4]byte `yaml:"DOMAIN_BLS_TO_EXECUTION_CHANGE" spec:"true"`        // DomainBLSToExecutionChange defines the BLS signature domain to change withdrawal addresses to ETH1 prefix
-	DomainConsolidation               [4]byte `yaml:"DOMAIN_CONSOLIDATION" spec:"true"`
 
 	// Prysm constants.
 	GenesisValidatorsRoot          [32]byte        // GenesisValidatorsRoot is the root hash of the genesis validators.

@@ -35,6 +35,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 - Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
 - Updated k8s-io/client-go to v0.30.4 and k8s-io/apimachinery to v0.30.4
+- Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 - Replaced st.GenesisValidatorsRoot() function in p2p and rpc packages with hardcoded value of Genesis validator root
 
 ### Deprecated
@@ -42,8 +43,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
 
 ### Removed
+
 - removed gRPC Gateway
 - Removed unused blobs bundle cache
+- Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
 
 ### Fixed
 

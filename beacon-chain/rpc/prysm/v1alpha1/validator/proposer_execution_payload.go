@@ -251,7 +251,7 @@ func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to check if we can use the builder")
 	}
-	span.AddAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
+	span.SetAttributes(trace.BoolAttribute("canUseBuilder", canUseBuilder))
 	if !canUseBuilder {
 		return nil, nil
 	}
