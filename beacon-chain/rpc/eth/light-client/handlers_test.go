@@ -1433,10 +1433,17 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 	require.NoError(t, err)
 	err = attestedState.SetSlot(slot.Sub(1))
 	require.NoError(t, err)
+	finalizedBlock, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
+	require.NoError(t, err)
+	finalizedBlock.SetSlot(1)
+	finalizedHeader, err := finalizedBlock.Header()
+	require.NoError(t, err)
+	finalizedRoot, err := finalizedHeader.Header.HashTreeRoot()
+	require.NoError(t, err)
 
 	require.NoError(t, attestedState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Epoch: config.AltairForkEpoch - 10,
-		Root:  make([]byte, 32),
+		Root:  finalizedRoot[:],
 	}))
 
 	parent := util.NewBeaconBlockDeneb()
@@ -1496,8 +1503,9 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 
 	mockBlocker := &testutil.MockBlocker{
 		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
-			parentRoot: signedParent,
-			root:       signedBlock,
+			parentRoot:    signedParent,
+			root:          signedBlock,
+			finalizedRoot: finalizedBlock,
 		},
 		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
 			slot.Sub(1): signedParent,
@@ -1530,7 +1538,32 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "deneb", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
-	require.NotNil(t, resp.Data)
+	require.Equal(t, strconv.FormatUint(uint64(attestedHeader.Slot), 10), respHeader.Beacon.Slot)
+	require.Equal(t, strconv.FormatUint(uint64(attestedHeader.ProposerIndex), 10), respHeader.Beacon.ProposerIndex)
+	require.Equal(t, hexutil.Encode(attestedHeader.ParentRoot), respHeader.Beacon.ParentRoot)
+	require.Equal(t, hexutil.Encode(parent.Block.StateRoot), respHeader.Beacon.StateRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
+	require.Equal(t, len(resp.Data.FinalityBranch), lightclient.FinalityBranchNumOfLeaves)
+
+	var finalizedHeaderresp structs.LightClientHeader
+	err = json.Unmarshal(resp.Data.FinalizedHeader, &finalizedHeaderresp)
+	require.NoError(t, err)
+	require.Equal(t, finalizedHeaderresp.Beacon.Slot, strconv.FormatUint(uint64(finalizedBlock.Block().Slot()), 10))
+	require.Equal(t, finalizedHeaderresp.Beacon.ProposerIndex, strconv.FormatUint(uint64(finalizedBlock.Block().ProposerIndex()), 10))
+	parentRootresp := finalizedBlock.Block().ParentRoot()
+	require.Equal(t, finalizedHeaderresp.Beacon.ParentRoot, hexutil.Encode(parentRootresp[:]))
+	StateRootResp := finalizedBlock.Block().StateRoot()
+	require.Equal(t, finalizedHeaderresp.Beacon.StateRoot, hexutil.Encode(StateRootResp[:]))
+	BodyRootResp, err := finalizedBlock.Block().Body().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, finalizedHeaderresp.Beacon.BodyRoot, hexutil.Encode(BodyRootResp[:]))
+
+	require.Equal(t, resp.Data.SignatureSlot, strconv.FormatUint(uint64(signedBlock.Block().Slot()), 10))
+
+	SyncAggregate, err := signedBlock.Block().Body().SyncAggregate()
+	require.NoError(t, err)
+	require.Equal(t, resp.Data.SyncAggregate.SyncCommitteeBits, hexutil.Encode(SyncAggregate.SyncCommitteeBits))
+	require.Equal(t, resp.Data.SyncAggregate.SyncCommitteeSignature, hexutil.Encode(SyncAggregate.SyncCommitteeSignature))
 }
 
 func TestLightClientHandler_GetLightClientOptimisticUpdateAltair(t *testing.T) {
