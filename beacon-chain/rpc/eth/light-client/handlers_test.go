@@ -1148,10 +1148,17 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	require.NoError(t, err)
 	err = attestedState.SetSlot(slot.Sub(1))
 	require.NoError(t, err)
+	finalizedBlock, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
+	require.NoError(t, err)
+	finalizedBlock.SetSlot(1)
+	finalizedHeader, err := finalizedBlock.Header()
+	require.NoError(t, err)
+	finalizedRoot, err := finalizedHeader.Header.HashTreeRoot()
+	require.NoError(t, err)
 
 	require.NoError(t, attestedState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Epoch: config.AltairForkEpoch - 10,
-		Root:  make([]byte, 32),
+		Root:  finalizedRoot[:],
 	}))
 
 	parent := util.NewBeaconBlockAltair()
@@ -1211,8 +1218,9 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 
 	mockBlocker := &testutil.MockBlocker{
 		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
-			parentRoot: signedParent,
-			root:       signedBlock,
+			parentRoot:    signedParent,
+			root:          signedBlock,
+			finalizedRoot: finalizedBlock,
 		},
 		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
 			slot.Sub(1): signedParent,
@@ -1244,24 +1252,28 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
 	require.NoError(t, err)
 	require.Equal(t, "altair", resp.Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
-	require.Equal(t, hexutil.Encode(attestedHeader.ParentRoot), respHeader.Beacon.ParentRoot)
-	require.Equal(t, hexutil.Encode(parent.Block.StateRoot), respHeader.Beacon.StateRoot)
 	require.Equal(t, strconv.FormatUint(uint64(attestedHeader.Slot), 10), respHeader.Beacon.Slot)
 	require.Equal(t, strconv.FormatUint(uint64(attestedHeader.ProposerIndex), 10), respHeader.Beacon.ProposerIndex)
+	require.Equal(t, hexutil.Encode(attestedHeader.ParentRoot), respHeader.Beacon.ParentRoot)
+	require.Equal(t, hexutil.Encode(parent.Block.StateRoot), respHeader.Beacon.StateRoot)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
 	require.Equal(t, len(resp.Data.FinalityBranch), lightclient.FinalityBranchNumOfLeaves)
-	// var finalizedHeader structs.LightClientHeader
-	// err = json.Unmarshal(resp.Data.FinalizedHeader, &finalizedHeader)
-	// require.NoError(t, err)
-	// require.Equal(t, finalizedHeader.Beacon, nil)
-	//require.Equal(t, finalizedHeader, finalizedHeader.Beacon.BodyRoot)
-	//require.Equal(t, finalizedHeader.Beacon.ParentRoot, hexutil.Encode(parentHeader.Header.ParentRoot))
-	//require.Equal(t, finalizedHeader.Beacon.StateRoot, nil)
-	// require.Equal(t, finalizedHeader.Beacon.ProposerIndex, strconv.FormatUint(uint64(parentHeader.Header.ProposerIndex), 10))
-	// require.NoError(t, err)
-	//require.Equal(t, finalizedHeader.Beacon.BodyRoot, expectedBodyRoot)
-	//require.Equal(t, finalizedHeader.Beacon.Slot, strconv.FormatUint(uint64(signedParent.Block().Slot()), 10))
+
+	var finalizedHeaderresp structs.LightClientHeader
+	err = json.Unmarshal(resp.Data.FinalizedHeader, &finalizedHeaderresp)
+	require.NoError(t, err)
+	require.Equal(t, finalizedHeaderresp.Beacon.Slot, strconv.FormatUint(uint64(finalizedBlock.Block().Slot()), 10))
+	require.Equal(t, finalizedHeaderresp.Beacon.ProposerIndex, strconv.FormatUint(uint64(finalizedBlock.Block().ProposerIndex()), 10))
+	parentRootresp := finalizedBlock.Block().ParentRoot()
+	require.Equal(t, finalizedHeaderresp.Beacon.ParentRoot, hexutil.Encode(parentRootresp[:]))
+	StateRootResp := finalizedBlock.Block().StateRoot()
+	require.Equal(t, finalizedHeaderresp.Beacon.StateRoot, hexutil.Encode(StateRootResp[:]))
+	BodyRootResp, err := finalizedBlock.Block().Body().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, finalizedHeaderresp.Beacon.BodyRoot, hexutil.Encode(BodyRootResp[:]))
+
 	require.Equal(t, resp.Data.SignatureSlot, strconv.FormatUint(uint64(signedBlock.Block().Slot()), 10))
+
 	SyncAggregate, err := signedBlock.Block().Body().SyncAggregate()
 	require.NoError(t, err)
 	require.Equal(t, resp.Data.SyncAggregate.SyncCommitteeBits, hexutil.Encode(SyncAggregate.SyncCommitteeBits))
