@@ -1245,7 +1245,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp *structs.LightClientUpdateResponse
+	var resp *structs.LightClientFinalityUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
@@ -1387,10 +1387,10 @@ func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp *structs.LightClientUpdateResponse
+	var resp *structs.LightClientFinalityUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
-	var respHeader structs.LightClientHeader
+	var respHeader structs.LightClientHeaderCapella
 	err = json.Unmarshal(resp.Data.AttestedHeader, &respHeader)
 	require.NoError(t, err)
 	require.Equal(t, "capella", resp.Version)
@@ -1402,7 +1402,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
 	require.Equal(t, len(resp.Data.FinalityBranch), lightclient.FinalityBranchNumOfLeaves)
 
-	var finalizedHeaderresp structs.LightClientHeader
+	var finalizedHeaderresp structs.LightClientHeaderCapella
 	err = json.Unmarshal(resp.Data.FinalizedHeader, &finalizedHeaderresp)
 	require.NoError(t, err)
 	require.Equal(t, finalizedHeaderresp.Beacon.Slot, strconv.FormatUint(uint64(finalizedBlock.Block().Slot()), 10))
@@ -1545,7 +1545,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
 	require.Equal(t, len(resp.Data.FinalityBranch), lightclient.FinalityBranchNumOfLeaves)
 
-	var finalizedHeaderresp structs.LightClientHeader
+	var finalizedHeaderresp structs.LightClientHeaderDeneb
 	err = json.Unmarshal(resp.Data.FinalizedHeader, &finalizedHeaderresp)
 	require.NoError(t, err)
 	require.Equal(t, finalizedHeaderresp.Beacon.Slot, strconv.FormatUint(uint64(finalizedBlock.Block().Slot()), 10))
