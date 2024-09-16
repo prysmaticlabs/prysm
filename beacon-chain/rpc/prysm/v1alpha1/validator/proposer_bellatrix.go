@@ -149,7 +149,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				"builderBoostFactor":   builderBoostFactor,
 			}).Warn("Proposer: using local execution payload because higher value")
 		}
-		span.AddAttributes(
+		span.SetAttributes(
 			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
 			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),         // lint:ignore uintcast -- This is OK for tracing.
 			trace.Int64Attribute("localBoostPercentage", int64(boost)),            // lint:ignore uintcast -- This is OK for tracing.
@@ -198,7 +198,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, err
 	}
-	if signedBid.IsNil() {
+	if signedBid == nil || signedBid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
 	fork, err := forks.Fork(slots.ToEpoch(slot))
@@ -217,7 +217,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get bid")
 	}
-	if bid.IsNil() {
+	if bid == nil || bid.IsNil() {
 		return nil, errors.New("builder returned nil bid")
 	}
 
@@ -292,7 +292,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 	l.Info("Received header with bid")
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.StringAttribute("value", primitives.WeiToBigInt(v).String()),
 		trace.StringAttribute("builderPubKey", fmt.Sprintf("%#x", bid.Pubkey())),
 		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
@@ -309,14 +309,14 @@ func validateBuilderSignature(signedBid builder.SignedBid) error {
 	if err != nil {
 		return err
 	}
-	if signedBid.IsNil() {
+	if signedBid == nil || signedBid.IsNil() {
 		return errors.New("nil builder bid")
 	}
 	bid, err := signedBid.Message()
 	if err != nil {
 		return errors.Wrap(err, "could not get bid")
 	}
-	if bid.IsNil() {
+	if bid == nil || bid.IsNil() {
 		return errors.New("builder returned nil bid")
 	}
 	return signing.VerifySigningRoot(bid, bid.Pubkey(), signedBid.Signature(), d)

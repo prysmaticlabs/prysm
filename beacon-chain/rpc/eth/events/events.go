@@ -301,36 +301,15 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, LightClientFinalityUpdateTopic)
 		}
-
-		var finalityBranch []string
-		for _, b := range updateData.Data.FinalityBranch {
-			finalityBranch = append(finalityBranch, hexutil.Encode(b))
+		update, err := structs.LightClientFinalityUpdateFromConsensus(updateData.Data)
+		if err != nil {
+			return err
 		}
-		update := &structs.LightClientFinalityUpdateEvent{
+		updateEvent := &structs.LightClientFinalityUpdateEvent{
 			Version: version.String(int(updateData.Version)),
-			Data: &structs.LightClientFinalityUpdate{
-				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.Beacon.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.Beacon.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.Beacon.BodyRoot),
-				},
-				FinalizedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Beacon.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Beacon.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.Beacon.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.Beacon.StateRoot),
-				},
-				FinalityBranch: finalityBranch,
-				SyncAggregate: &structs.SyncAggregate{
-					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
-					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
-				},
-				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
-			},
+			Data:    update,
 		}
-		return send(w, flusher, LightClientFinalityUpdateTopic, update)
+		return send(w, flusher, LightClientFinalityUpdateTopic, updateEvent)
 	case statefeed.LightClientOptimisticUpdate:
 		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
 			return nil
@@ -339,24 +318,15 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
 		}
-		update := &structs.LightClientOptimisticUpdateEvent{
-			Version: version.String(int(updateData.Version)),
-			Data: &structs.LightClientOptimisticUpdate{
-				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.Beacon.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.Beacon.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.Beacon.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.Beacon.BodyRoot),
-				},
-				SyncAggregate: &structs.SyncAggregate{
-					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
-					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
-				},
-				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
-			},
+		update, err := structs.LightClientOptimisticUpdateFromConsensus(updateData.Data)
+		if err != nil {
+			return err
 		}
-		return send(w, flusher, LightClientOptimisticUpdateTopic, update)
+		updateEvent := &structs.LightClientOptimisticUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data:    update,
+		}
+		return send(w, flusher, LightClientOptimisticUpdateTopic, updateEvent)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil

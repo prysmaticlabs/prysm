@@ -228,3 +228,26 @@ func TestConfigureInterop(t *testing.T) {
 		})
 	}
 }
+
+func TestAliasFlag(t *testing.T) {
+	// Create a new app with the flag
+	app := &cli.App{
+		Flags: []cli.Flag{flags.HTTPServerHost},
+		Action: func(c *cli.Context) error {
+			// Test if the alias works and sets the flag correctly
+			if c.IsSet("grpc-gateway-host") && c.IsSet("http-host") {
+				return nil
+			}
+			return cli.Exit("Alias or flag not set", 1)
+		},
+	}
+
+	// Simulate command line arguments that include the alias
+	args := []string{"app", "--grpc-gateway-host", "config.yml"}
+
+	// Run the app with the simulated arguments
+	err := app.Run(args)
+
+	// Check if the alias set the flag correctly
+	assert.NoError(t, err)
+}

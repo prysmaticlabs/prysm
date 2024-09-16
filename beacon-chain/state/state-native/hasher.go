@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"go.opencensus.io/trace"
 )
 
 // ComputeFieldRootsWithHasher hashes the provided state and returns its respective field roots.

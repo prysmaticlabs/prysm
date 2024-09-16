@@ -23,7 +23,7 @@ import (
 func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.RequestAttestation")
 	defer span.End()
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
