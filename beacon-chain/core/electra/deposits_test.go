@@ -36,7 +36,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "no deposits resets balance to consume",
 			state: func() state.BeaconState {
-				st := stateTesting.StateWithActiveBalanceETH(t, 1_000)
+				st := stateWithActiveBalanceETH(t, 1_000)
 				require.NoError(t, st.SetDepositBalanceToConsume(100))
 				return st
 			}(),
@@ -51,7 +51,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 			state: func() state.BeaconState {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
 				depositAmount := uint64(amountAvailForProcessing) / 10
-				st := stateTesting.StateWithPendingDeposits(t, 1_000, 20, depositAmount)
+				st := stateWithPendingDeposits(t, 1_000, 20, depositAmount)
 				require.NoError(t, st.SetDepositBalanceToConsume(100))
 				return st
 			}(),
@@ -78,7 +78,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 			state: func() state.BeaconState {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
 				depositAmount := uint64(amountAvailForProcessing) / 5
-				st := stateTesting.StateWithPendingDeposits(t, 1_000, 5, depositAmount)
+				st := stateWithPendingDeposits(t, 1_000, 5, depositAmount)
 				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				return st
 			}(),
@@ -105,7 +105,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 			state: func() state.BeaconState {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
 				depositAmount := uint64(amountAvailForProcessing) / 5
-				st := stateTesting.StateWithPendingDeposits(t, 1_000, 5, depositAmount)
+				st := stateWithPendingDeposits(t, 1_000, 5, depositAmount)
 				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				v, err := st.ValidatorAtIndex(0)
 				require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "exited validator balance increased",
 			state: func() state.BeaconState {
-				st := stateTesting.StateWithPendingDeposits(t, 1_000, 1, 1_000_000)
+				st := stateWithPendingDeposits(t, 1_000, 1, 1_000_000)
 				v, err := st.ValidatorAtIndex(0)
 				require.NoError(t, err)
 				v.ExitEpoch = 2
@@ -369,4 +369,63 @@ func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
 	require.Equal(t, 2, len(pbd))
 	require.Equal(t, uint64(1000), pbd[0].Amount)
 	require.Equal(t, uint64(2000), pbd[1].Amount)
+}
+
+// stateWithActiveBalanceETH generates a mock beacon state given a balance in eth
+func stateWithActiveBalanceETH(t *testing.T, balETH uint64) state.BeaconState {
+	gwei := balETH * 1_000_000_000
+	balPerVal := params.BeaconConfig().MinActivationBalance
+	numVals := gwei / balPerVal
+
+	vals := make([]*eth.Validator, numVals)
+	bals := make([]uint64, numVals)
+	for i := uint64(0); i < numVals; i++ {
+		wc := make([]byte, 32)
+		wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		wc[31] = byte(i)
+		vals[i] = &eth.Validator{
+			ActivationEpoch:       0,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:      balPerVal,
+			WithdrawalCredentials: wc,
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+		}
+		bals[i] = balPerVal
+	}
+	st, err := state_native.InitializeFromProtoUnsafeElectra(&eth.BeaconStateElectra{
+		Slot:       10 * params.BeaconConfig().SlotsPerEpoch,
+		Validators: vals,
+		Balances:   bals,
+		Fork: &eth.Fork{
+			CurrentVersion: params.BeaconConfig().ElectraForkVersion,
+		},
+	})
+	require.NoError(t, err)
+	// set some fake finalized checkpoint
+	require.NoError(t, st.SetFinalizedCheckpoint(&eth.Checkpoint{
+		Epoch: 0,
+		Root:  make([]byte, 32),
+	}))
+	return st
+}
+
+// stateWithPendingDeposits with pending deposits and existing ethbalance
+func stateWithPendingDeposits(t *testing.T, balETH uint64, numDeposits, amount uint64) state.BeaconState {
+	st := stateWithActiveBalanceETH(t, balETH)
+	deps := make([]*eth.PendingDeposit, numDeposits)
+	validators := st.Validators()
+	for i := 0; i < len(deps); i += 1 {
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		wc := make([]byte, 32)
+		wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		wc[31] = byte(i)
+		validators[i].PublicKey = sk.PublicKey().Marshal()
+		validators[i].WithdrawalCredentials = wc
+		deps[i] = stateTesting.GeneratePendingDeposit(t, sk, amount, bytesutil.ToBytes32(wc), 0)
+	}
+	require.NoError(t, st.SetValidators(validators))
+	st.SaveValidatorIndices()
+	require.NoError(t, st.SetPendingDeposits(deps))
+	return st
 }
