@@ -1477,15 +1477,10 @@ func (m *PrepareBeaconProposerRequestMatcher) Matches(x interface{}) bool {
 		expectedMap[recipient.ValidatorIndex] = recipient.FeeRecipient
 	}
 
-	actualMap := make(map[primitives.ValidatorIndex][]byte)
-	for _, recipient := range req.Recipients {
-		actualMap[recipient.ValidatorIndex] = recipient.FeeRecipient
-	}
-
 	// Compare the maps
-	for index, expectedFeeRecipient := range expectedMap {
-		actualFeeRecipient, exists := actualMap[index]
-		if !exists || !bytes.Equal(expectedFeeRecipient, actualFeeRecipient) {
+	for _, fc := range req.Recipients {
+		expectedFeeRecipient, exists := expectedMap[fc.ValidatorIndex]
+		if !exists || !bytes.Equal(expectedFeeRecipient, fc.FeeRecipient) {
 			return false
 		}
 	}
