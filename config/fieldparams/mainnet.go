@@ -31,6 +31,7 @@ const (
 	LogMaxBlobCommitments                 = 12            // Log_2 of MaxBlobCommitmentsPerBlock
 	BlobLength                            = 131072        // BlobLength defines the byte length of a blob.
 	BlobSize                              = 131072        // defined to match blob.size in bazel ssz codegen
+	BlobSidecarSize                       = 131928        // defined to match blob sidecar size in bazel ssz codegen
 	KzgCommitmentInclusionProofDepth      = 17            // Merkle proof depth for blob_kzg_commitments list item
 	NextSyncCommitteeBranchDepth          = 5             // NextSyncCommitteeBranchDepth defines the depth of the next sync committee branch.
 	PendingDepositsLimit                  = 134217728     // Maximum number of pending balance deposits in the beacon state.

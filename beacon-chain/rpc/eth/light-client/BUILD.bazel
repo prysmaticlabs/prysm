@@ -25,16 +25,14 @@ go_library(
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/ssz:go_default_library",
+        "//monitoring/tracing/trace:go_default_library",
         "//network/httputil:go_default_library",
-        "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
-        "//proto/migration:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_wealdtech_go_bytesutil//:go_default_library",
-        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 

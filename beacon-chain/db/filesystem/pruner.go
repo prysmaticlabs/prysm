@@ -21,7 +21,6 @@ import (
 )
 
 const retentionBuffer primitives.Epoch = 2
-const bytesPerSidecar = 131928
 
 var (
 	errPruningFailures = errors.New("blobs could not be pruned for some roots")

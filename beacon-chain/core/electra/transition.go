@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"go.opencensus.io/trace"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 )
 
 // Re-exports for methods that haven't changed in Electra.

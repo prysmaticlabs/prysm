@@ -33,7 +33,6 @@ go_test(
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",
-        "//proto/eth/v2:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
     ],
