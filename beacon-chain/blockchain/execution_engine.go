@@ -39,7 +39,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
-	if arg.headBlock.IsNil() {
+	if arg.headBlock == nil || arg.headBlock.IsNil() {
 		log.Error("Head block is nil")
 		return nil, nil
 	}

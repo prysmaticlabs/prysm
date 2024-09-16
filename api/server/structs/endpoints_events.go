@@ -96,21 +96,7 @@ type LightClientFinalityUpdateEvent struct {
 	Data    *LightClientFinalityUpdate `json:"data"`
 }
 
-type LightClientFinalityUpdate struct {
-	AttestedHeader  *BeaconBlockHeader `json:"attested_header"`
-	FinalizedHeader *BeaconBlockHeader `json:"finalized_header"`
-	FinalityBranch  []string           `json:"finality_branch"`
-	SyncAggregate   *SyncAggregate     `json:"sync_aggregate"`
-	SignatureSlot   string             `json:"signature_slot"`
-}
-
 type LightClientOptimisticUpdateEvent struct {
 	Version string                       `json:"version"`
 	Data    *LightClientOptimisticUpdate `json:"data"`
-}
-
-type LightClientOptimisticUpdate struct {
-	AttestedHeader *BeaconBlockHeader `json:"attested_header"`
-	SyncAggregate  *SyncAggregate     `json:"sync_aggregate"`
-	SignatureSlot  string             `json:"signature_slot"`
 }

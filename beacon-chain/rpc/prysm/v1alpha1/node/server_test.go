@@ -89,8 +89,9 @@ func TestNodeServer_GetImplementedServices(t *testing.T) {
 
 	res, err := ns.ListImplementedServices(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// We verify the services include the node service  + the 2 registered reflection services.
-	assert.Equal(t, 2, len(res.Services))
+	// Expecting node service and Server reflect. As of grpc, v1.65.0, there are two version of server reflection
+	// Services: [ethereum.eth.v1alpha1.Node grpc.reflection.v1.ServerReflection grpc.reflection.v1alpha.ServerReflection]
+	assert.Equal(t, 3, len(res.Services))
 }
 
 func TestNodeServer_GetHost(t *testing.T) {

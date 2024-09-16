@@ -526,7 +526,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 func fullPayloadFromPayloadBody(
 	header interfaces.ExecutionData, body *pb.ExecutionPayloadBody, bVersion int,
 ) (interfaces.ExecutionData, error) {
-	if header.IsNil() || body == nil {
+	if header == nil || header.IsNil() || body == nil {
 		return nil, errors.New("execution block and header cannot be nil")
 	}
 

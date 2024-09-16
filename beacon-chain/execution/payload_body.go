@@ -67,7 +67,7 @@ func (r *blindedBlockReconstructor) addToBatch(b interfaces.ReadOnlySignedBeacon
 	if err != nil {
 		return err
 	}
-	if header.IsNil() {
+	if header == nil || header.IsNil() {
 		return errors.New("execution payload header in blinded block was nil")
 	}
 	r.orderedBlocks = append(r.orderedBlocks, &blockWithHeader{block: b, header: header})

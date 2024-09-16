@@ -193,7 +193,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    lightclient.CreateLightClientFinalityUpdate(update),
+		Data:    update,
 	}
 
 	// Send event
@@ -227,7 +227,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    lightclient.CreateLightClientOptimisticUpdate(update),
+		Data:    update,
 	}
 
 	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
