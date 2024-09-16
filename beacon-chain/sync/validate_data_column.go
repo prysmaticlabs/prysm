@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -57,6 +58,19 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 	ds, err := blocks.NewRODataColumn(dspb)
 	if err != nil {
 		return pubsub.ValidationReject, errors.Wrap(err, "roDataColumn conversion failure")
+	}
+
+	// Voluntary ignore messages (for debugging purposes).
+	dataColumnsIgnoreSlotMultiple := features.Get().DataColumnsIgnoreSlotMultiple
+	blockSlot := uint64(ds.SignedBlockHeader.Header.Slot)
+
+	if dataColumnsIgnoreSlotMultiple != 0 && blockSlot%dataColumnsIgnoreSlotMultiple == 0 {
+		log.WithFields(logrus.Fields{
+			"slot":  blockSlot,
+			"topic": msg.Topic,
+		}).Warning("Voluntary ignore data column sidecar gossip")
+
+		return pubsub.ValidationIgnore, err
 	}
 
 	verifier := s.newColumnVerifier(ds, verification.GossipColumnSidecarRequirements)
@@ -134,12 +148,14 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	validationTime := s.cfg.clock.Now().Sub(receivedTime)
 
+	peerGossipScore := s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid)
 	log.
 		WithFields(logging.DataColumnFields(ds)).
 		WithFields(logrus.Fields{
 			"sinceSlotStartTime": sinceSlotStartTime,
 			"validationTime":     validationTime,
-			"peer":               pid,
+			"peer":               pid[len(pid)-6:],
+			"peerGossipScore":    peerGossipScore,
 		}).
 		Debug("Accepted data column sidecar gossip")
 
