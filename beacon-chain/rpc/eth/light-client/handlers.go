@@ -118,7 +118,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	}
 
 	// Populate updates
-	var updates []*structs.LightClientUpdateWithVersion
+	var updates []*structs.LightClientUpdateResponse
 	for period := startPeriod; period <= endPeriod; period++ {
 		// Get the last known state of the period,
 		//    1. We wish the block has a parent in the same period if possible
@@ -199,7 +199,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 			}
 		}
 
-		update, err := createLightClientUpdate(
+		update, err := newLightClientUpdateFromBeaconState(
 			ctx,
 			state,
 			block,
@@ -208,7 +208,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		)
 
 		if err == nil {
-			updates = append(updates, &structs.LightClientUpdateWithVersion{
+			updates = append(updates, &structs.LightClientUpdateResponse{
 				Version: version.String(attestedState.Version()),
 				Data:    update,
 			})
@@ -225,7 +225,6 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
 func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.Request) {
-	// Prepare
 	ctx, span := trace.StartSpan(req.Context(), "beacon.GetLightClientFinalityUpdate")
 	defer span.End()
 
@@ -233,56 +232,48 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 	minSyncCommitteeParticipants := float64(params.BeaconConfig().MinSyncCommitteeParticipants)
 	minSignatures := uint64(math.Ceil(minSyncCommitteeParticipants * 2 / 3))
 
-	block, err := s.getLightClientEventBlock(ctx, minSignatures)
+	block, err := s.suitableBlock(ctx, minSignatures)
 	if !shared.WriteBlockFetchError(w, block, err) {
 		return
 	}
 
-	state, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
+	st, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
-	if err != nil || attestedBlock == nil {
-		httputil.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
+	if !shared.WriteBlockFetchError(w, block, errors.Wrap(err, "could not get attested block")) {
 		return
 	}
-
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		httputil.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Get finalized block
 	var finalizedBlock interfaces.ReadOnlySignedBeaconBlock
-	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
-	if finalizedCheckPoint != nil {
-		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
-		finalizedBlock, err = s.Blocker.Block(ctx, finalizedRoot[:])
-		if err != nil {
-			finalizedBlock = nil
-		}
+	finalizedCheckpoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckpoint == nil {
+		httputil.HandleError(w, "Attested state does not have a finalized checkpoint", http.StatusInternalServerError)
+		return
 	}
-
-	update, err := newLightClientFinalityUpdateFromBeaconState(
-		ctx,
-		state,
-		block,
-		attestedState,
-		finalizedBlock,
-	)
-	if err != nil {
-		httputil.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
+	finalizedRoot := bytesutil.ToBytes32(finalizedCheckpoint.Root)
+	finalizedBlock, err = s.Blocker.Block(ctx, finalizedRoot[:])
+	if !shared.WriteBlockFetchError(w, block, errors.Wrap(err, "could not get finalized block")) {
 		return
 	}
 
-	response := &structs.LightClientUpdateWithVersion{
+	update, err := newLightClientFinalityUpdateFromBeaconState(ctx, st, block, attestedState, finalizedBlock)
+	if err != nil {
+		httputil.HandleError(w, "Could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := &structs.LightClientFinalityUpdateResponse{
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
@@ -292,54 +283,42 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 
 // GetLightClientOptimisticUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/optimistic_update.yaml
 func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http.Request) {
-	// Prepare
 	ctx, span := trace.StartSpan(req.Context(), "beacon.GetLightClientOptimisticUpdate")
 	defer span.End()
 
-	minSignatures := params.BeaconConfig().MinSyncCommitteeParticipants
-
-	block, err := s.getLightClientEventBlock(ctx, minSignatures)
+	block, err := s.suitableBlock(ctx, params.BeaconConfig().MinSyncCommitteeParticipants)
 	if !shared.WriteBlockFetchError(w, block, err) {
 		return
 	}
-
-	state, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
+	st, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
 		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
 	if err != nil {
-		httputil.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if attestedBlock == nil {
-		httputil.HandleError(w, "attested block is nil", http.StatusInternalServerError)
+		httputil.HandleError(w, "Attested block is nil", http.StatusInternalServerError)
 		return
 	}
-
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		httputil.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	update, err := newLightClientOptimisticUpdateFromBeaconState(
-		ctx,
-		state,
-		block,
-		attestedState,
-	)
+	update, err := newLightClientOptimisticUpdateFromBeaconState(ctx, st, block, attestedState)
 	if err != nil {
-		httputil.HandleError(w, "could not get light client optimistic update: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get light client optimistic update: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	response := &structs.LightClientUpdateWithVersion{
+	response := &structs.LightClientOptimisticUpdateResponse{
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
@@ -347,17 +326,15 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 	httputil.WriteJson(w, response)
 }
 
-// getLightClientEventBlock - returns the block that should be used for light client events, which satisfies the minimum number of signatures from sync committee
-func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequired uint64) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	// Get the current state
-	state, err := s.HeadFetcher.HeadState(ctx)
+// suitableBlock returns the latest block that satisfies all criteria required for creating a new update
+func (s *Server) suitableBlock(ctx context.Context, minSignaturesRequired uint64) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	st, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 
-	// Get the block
-	latestBlockHeader := *state.LatestBlockHeader()
-	stateRoot, err := state.HashTreeRoot(ctx)
+	latestBlockHeader := st.LatestBlockHeader()
+	stateRoot, err := st.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state root")
 	}
@@ -377,7 +354,7 @@ func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequ
 
 	// Loop through the blocks until we find a block that satisfies minSignaturesRequired requirement
 	var numOfSyncCommitteeSignatures uint64
-	if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil && syncAggregate != nil {
+	if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil {
 		numOfSyncCommitteeSignatures = syncAggregate.SyncCommitteeBits.Count()
 	}
 
@@ -394,7 +371,7 @@ func (s *Server) getLightClientEventBlock(ctx context.Context, minSignaturesRequ
 
 		// Get the number of sync committee signatures
 		numOfSyncCommitteeSignatures = 0
-		if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil && syncAggregate != nil {
+		if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil {
 			numOfSyncCommitteeSignatures = syncAggregate.SyncCommitteeBits.Count()
 		}
 	}
