@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/p2p-interface.md#the-gossip-domain-gossipsub
@@ -130,13 +131,18 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 
 	msg.ValidatorData = verifiedRODataColumn
 
-	fields := logging.DataColumnFields(ds)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	validationTime := s.cfg.clock.Now().Sub(receivedTime)
-	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = validationTime
 
-	log.WithFields(fields).Debug("Accepted data column sidecar gossip")
+	log.
+		WithFields(logging.DataColumnFields(ds)).
+		WithFields(logrus.Fields{
+			"sinceSlotStartTime": sinceSlotStartTime,
+			"validationTime":     validationTime,
+			"peer":               pid,
+		}).
+		Debug("Accepted data column sidecar gossip")
+
 	return pubsub.ValidationAccept, nil
 }
 
