@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
+	stateTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -35,7 +36,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "no deposits resets balance to consume",
 			state: func() state.BeaconState {
-				st := stateWithActiveBalanceETH(t, 1_000)
+				st := stateTesting.StateWithActiveBalanceETH(t, 1_000)
 				require.NoError(t, st.SetDepositBalanceToConsume(100))
 				return st
 			}(),
@@ -48,16 +49,10 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "more deposits than balance to consume processes partial deposits",
 			state: func() state.BeaconState {
-				st := stateWithActiveBalanceETH(t, 1_000)
-				require.NoError(t, st.SetDepositBalanceToConsume(100))
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-				deps := make([]*eth.PendingDeposit, 20)
-				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingDeposit{
-						Amount: uint64(amountAvailForProcessing) / 10,
-					}
-				}
-				require.NoError(t, st.SetPendingDeposits(deps))
+				depositAmount := uint64(amountAvailForProcessing) / 10
+				st := stateTesting.StateWithPendingDeposits(t, 1_000, 20, depositAmount)
+				require.NoError(t, st.SetDepositBalanceToConsume(100))
 				return st
 			}(),
 			check: func(t *testing.T, st state.BeaconState) {
@@ -81,16 +76,10 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "less deposits than balance to consume processes all deposits",
 			state: func() state.BeaconState {
-				st := stateWithActiveBalanceETH(t, 1_000)
-				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-				deps := make([]*eth.PendingDeposit, 5)
-				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingDeposit{
-						Amount: uint64(amountAvailForProcessing) / 5,
-					}
-				}
-				require.NoError(t, st.SetPendingDeposits(deps))
+				depositAmount := uint64(amountAvailForProcessing) / 5
+				st := stateTesting.StateWithPendingDeposits(t, 1_000, 5, depositAmount)
+				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				return st
 			}(),
 			check: func(t *testing.T, st state.BeaconState) {
@@ -114,16 +103,10 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "exiting validator deposit postponed",
 			state: func() state.BeaconState {
-				st := stateWithActiveBalanceETH(t, 1_000)
-				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-				deps := make([]*eth.PendingDeposit, 5)
-				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingDeposit{
-						Amount: uint64(amountAvailForProcessing) / 5,
-					}
-				}
-				require.NoError(t, st.SetPendingDeposits(deps))
+				depositAmount := uint64(amountAvailForProcessing) / 5
+				st := stateTesting.StateWithPendingDeposits(t, 1_000, 5, depositAmount)
+				require.NoError(t, st.SetDepositBalanceToConsume(0))
 				v, err := st.ValidatorAtIndex(0)
 				require.NoError(t, err)
 				v.ExitEpoch = 10
@@ -153,14 +136,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 		{
 			name: "exited validator balance increased",
 			state: func() state.BeaconState {
-				st := stateWithActiveBalanceETH(t, 1_000)
-				deps := make([]*eth.PendingDeposit, 1)
-				for i := 0; i < len(deps); i += 1 {
-					deps[i] = &eth.PendingDeposit{
-						Amount: 1_000_000,
-					}
-				}
-				require.NoError(t, st.SetPendingDeposits(deps))
+				st := stateTesting.StateWithPendingDeposits(t, 1_000, 1, 1_000_000)
 				v, err := st.ValidatorAtIndex(0)
 				require.NoError(t, err)
 				v.ExitEpoch = 2
