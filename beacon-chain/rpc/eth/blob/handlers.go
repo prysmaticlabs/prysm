@@ -8,19 +8,19 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
-	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
 // Blobs is an HTTP handler for Beacon API getBlobs.
 func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.Blobs")
 	defer span.End()
-	var sidecars []*eth.BlobSidecar
 
 	indices, err := parseIndices(r.URL)
 	if err != nil {
@@ -48,14 +48,9 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	for i := range verifiedBlobs {
-		sidecars = append(sidecars, verifiedBlobs[i].BlobSidecar)
-	}
+
 	if httputil.RespondWithSsz(r) {
-		sidecarResp := &eth.BlobSidecars{
-			Sidecars: sidecars,
-		}
-		sszResp, err := sidecarResp.MarshalSSZ()
+		sszResp, err := buildSidecarsSSZResponse(verifiedBlobs)
 		if err != nil {
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -64,7 +59,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteJson(w, buildSidecarsResponse(sidecars))
+	httputil.WriteJson(w, buildSidecarsJsonResponse(verifiedBlobs))
 }
 
 // parseIndices filters out invalid and duplicate blob indices
@@ -97,9 +92,9 @@ loop:
 	return indices, nil
 }
 
-func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *structs.SidecarsResponse {
-	resp := &structs.SidecarsResponse{Data: make([]*structs.Sidecar, len(sidecars))}
-	for i, sc := range sidecars {
+func buildSidecarsJsonResponse(verifiedBlobs []*blocks.VerifiedROBlob) *structs.SidecarsResponse {
+	resp := &structs.SidecarsResponse{Data: make([]*structs.Sidecar, len(verifiedBlobs))}
+	for i, sc := range verifiedBlobs {
 		proofs := make([]string, len(sc.CommitmentInclusionProof))
 		for j := range sc.CommitmentInclusionProof {
 			proofs[j] = hexutil.Encode(sc.CommitmentInclusionProof[j])
@@ -114,4 +109,16 @@ func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *structs.SidecarsRespons
 		}
 	}
 	return resp
+}
+
+func buildSidecarsSSZResponse(verifiedBlobs []*blocks.VerifiedROBlob) ([]byte, error) {
+	ssz := make([]byte, field_params.BlobSidecarSize*len(verifiedBlobs))
+	for i, sidecar := range verifiedBlobs {
+		sszrep, err := sidecar.MarshalSSZ()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal sidecar ssz")
+		}
+		copy(ssz[i*field_params.BlobSidecarSize:(i+1)*field_params.BlobSidecarSize], sszrep)
+	}
+	return ssz, nil
 }
