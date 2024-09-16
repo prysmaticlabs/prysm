@@ -1235,7 +1235,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp structs.LightClientUpdateWithVersion
+	var resp *structs.LightClientUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
@@ -1345,7 +1345,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp structs.LightClientUpdateWithVersion
+	var resp *structs.LightClientUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
@@ -1455,7 +1455,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 	s.GetLightClientFinalityUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp structs.LightClientUpdateWithVersion
+	var resp *structs.LightClientUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
@@ -1565,7 +1565,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateAltair(t *testing.T) {
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp structs.LightClientUpdateWithVersion
+	var resp *structs.LightClientUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeader
@@ -1675,7 +1675,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateCapella(t *testing.T) 
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp structs.LightClientUpdateWithVersion
+	var resp *structs.LightClientUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderCapella
@@ -1785,7 +1785,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateDeneb(t *testing.T) {
 	s.GetLightClientOptimisticUpdate(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	var resp structs.LightClientUpdateWithVersion
+	var resp *structs.LightClientUpdateResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	var respHeader structs.LightClientHeaderDeneb
@@ -1890,7 +1890,7 @@ func TestLightClientHandler_GetLightClientEventBlock(t *testing.T) {
 	}
 
 	minSignaturesRequired := uint64(100)
-	eventBlock, err := s.getLightClientEventBlock(ctx, minSignaturesRequired)
+	eventBlock, err := s.suitableBlock(ctx, minSignaturesRequired)
 
 	require.NoError(t, err)
 	require.NotNil(t, eventBlock)
@@ -1997,7 +1997,7 @@ func TestLightClientHandler_GetLightClientEventBlock_NeedFetchParent(t *testing.
 	}
 
 	minSignaturesRequired := uint64(100)
-	eventBlock, err := s.getLightClientEventBlock(ctx, minSignaturesRequired)
+	eventBlock, err := s.suitableBlock(ctx, minSignaturesRequired)
 
 	require.NoError(t, err)
 	require.NotNil(t, eventBlock)
