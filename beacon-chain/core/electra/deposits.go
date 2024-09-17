@@ -460,6 +460,20 @@ func processDepositRequest(beaconState state.BeaconState, request *enginev1.Depo
 			return nil, errors.Wrap(err, "could not set deposit requests start index")
 		}
 	}
+	if verifySignature {
+		valid, err := IsValidDepositSignature(&ethpb.Deposit_Data{
+			PublicKey:             bytesutil.SafeCopyBytes(request.Pubkey),
+			WithdrawalCredentials: bytesutil.SafeCopyBytes(request.WithdrawalCredentials),
+			Amount:                request.Amount,
+			Signature:             bytesutil.SafeCopyBytes(request.Signature),
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "could not verify deposit signature")
+		}
+		if !valid {
+			return beaconState, nil
+		}
+	}
 	if err := beaconState.AppendPendingDeposit(&ethpb.PendingDeposit{
 		PublicKey:             bytesutil.SafeCopyBytes(request.Pubkey),
 		Amount:                request.Amount,
