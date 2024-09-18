@@ -464,3 +464,64 @@ func stateWithPendingDeposits(t *testing.T, balETH uint64, numDeposits, amount u
 	require.NoError(t, st.SetPendingDeposits(deps))
 	return st
 }
+
+func TestApplyPendingDeposit_TopUp(t *testing.T) {
+	excessBalance := uint64(100)
+	st := stateWithActiveBalanceETH(t, 32)
+	validators := st.Validators()
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	wc := make([]byte, 32)
+	wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	wc[31] = byte(0)
+	validators[0].PublicKey = sk.PublicKey().Marshal()
+	validators[0].WithdrawalCredentials = wc
+	dep := stateTesting.GeneratePendingDeposit(t, sk, excessBalance, bytesutil.ToBytes32(wc), 0)
+	dep.Signature = common.InfiniteSignature[:]
+	require.NoError(t, st.SetValidators(validators))
+	st.SaveValidatorIndices()
+
+	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
+
+	b, err := st.BalanceAtIndex(0)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance+uint64(excessBalance), b)
+}
+
+func TestApplyPendingDeposit_UnknownKey(t *testing.T) {
+	st := stateWithActiveBalanceETH(t, 0)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	wc := make([]byte, 32)
+	wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	wc[31] = byte(0)
+	dep := stateTesting.GeneratePendingDeposit(t, sk, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(wc), 0)
+	require.Equal(t, 0, len(st.Validators()))
+	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
+	// activates new validator
+	require.Equal(t, 1, len(st.Validators()))
+	b, err := st.BalanceAtIndex(0)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, b)
+}
+
+func TestApplyPendingDeposit_InvalidSignature(t *testing.T) {
+	st := stateWithActiveBalanceETH(t, 0)
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	wc := make([]byte, 32)
+	wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	wc[31] = byte(0)
+	dep := &eth.PendingDeposit{
+		PublicKey:             sk.PublicKey().Marshal(),
+		WithdrawalCredentials: wc,
+		Amount:                100,
+	}
+	require.Equal(t, 0, len(st.Validators()))
+	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
+	// no validator added
+	require.Equal(t, 0, len(st.Validators()))
+	// no topup either
+	require.Equal(t, 0, len(st.Balances()))
+}
