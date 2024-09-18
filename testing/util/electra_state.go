@@ -238,6 +238,11 @@ func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconSta
 			BlockHash:     make([]byte, 32),
 			Transactions:  make([][]byte, 0),
 		},
+		ExecutionRequests: &enginev1.ExecutionRequests{
+			Deposits:       make([]*enginev1.DepositRequest, 0),
+			Withdrawals:    make([]*enginev1.WithdrawalRequest, 0),
+			Consolidations: make([]*enginev1.ConsolidationRequest, 0),
+		},
 	}).HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")

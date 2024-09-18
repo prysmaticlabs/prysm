@@ -506,7 +506,12 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 				attSlashings[i] = s
 			}
 		}
-		// TODO: add requests
+
+		er, err := b.Body().ExecutionRequests()
+		if err != nil {
+			return nil, err
+		}
+
 		fullBlock = &eth.SignedBeaconBlockElectra{
 			Block: &eth.BeaconBlockElectra{
 				Slot:          b.Slot(),
@@ -526,6 +531,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 					ExecutionPayload:      p,
 					BlsToExecutionChanges: blsToExecutionChanges,
 					BlobKzgCommitments:    commitments,
+					ExecutionRequests:     er,
 				},
 			},
 			Signature: sig[:],
