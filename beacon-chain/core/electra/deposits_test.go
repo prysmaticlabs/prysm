@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -93,6 +94,40 @@ func TestProcessPendingDeposits(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, params.BeaconConfig().MinActivationBalance+uint64(amountAvailForProcessing)/5, b)
 				}
+
+				// All of the balance deposits should have been processed.
+				remaining, err := st.PendingDeposits()
+				require.NoError(t, err)
+				require.Equal(t, 0, len(remaining))
+			},
+		},
+		{
+			name: "process excess balance that uses a point to infinity signature, processed as a topup",
+			state: func() state.BeaconState {
+				excessBalance := uint64(100)
+				st := stateWithActiveBalanceETH(t, 32)
+				validators := st.Validators()
+				sk, err := bls.RandKey()
+				require.NoError(t, err)
+				wc := make([]byte, 32)
+				wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+				wc[31] = byte(0)
+				validators[0].PublicKey = sk.PublicKey().Marshal()
+				validators[0].WithdrawalCredentials = wc
+				dep := stateTesting.GeneratePendingDeposit(t, sk, excessBalance, bytesutil.ToBytes32(wc), 0)
+				dep.Signature = common.InfiniteSignature[:]
+				require.NoError(t, st.SetValidators(validators))
+				st.SaveValidatorIndices()
+				require.NoError(t, st.SetPendingDeposits([]*eth.PendingDeposit{dep}))
+				return st
+			}(),
+			check: func(t *testing.T, st state.BeaconState) {
+				res, err := st.DepositBalanceToConsume()
+				require.NoError(t, err)
+				require.Equal(t, primitives.Gwei(0), res)
+				b, err := st.BalanceAtIndex(0)
+				require.NoError(t, err)
+				require.Equal(t, params.BeaconConfig().MinActivationBalance+uint64(100), b)
 
 				// All of the balance deposits should have been processed.
 				remaining, err := st.PendingDeposits()
