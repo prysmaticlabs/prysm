@@ -674,11 +674,11 @@ func BeaconStateElectraFromConsensus(st beaconState.BeaconState) (*BeaconStateEl
 	if err != nil {
 		return nil, err
 	}
-	srcPayload, ok := execData.Proto().(*enginev1.ExecutionPayloadHeaderElectra)
+	srcPayload, ok := execData.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
 	if !ok {
 		return nil, errPayloadHeaderNotFound
 	}
-	payload, err := ExecutionPayloadHeaderElectraFromConsensus(srcPayload)
+	payload, err := ExecutionPayloadHeaderDenebFromConsensus(srcPayload)
 	if err != nil {
 		return nil, err
 	}

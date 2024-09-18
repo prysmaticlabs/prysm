@@ -510,14 +510,15 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.Electra:
 		if b.IsBlinded() {
-			var ph *enginev1.ExecutionPayloadHeaderElectra
+			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
-				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderElectra)
+				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
 				if !ok {
 					return nil, errPayloadHeaderWrongType
 				}
 			}
+			// TODO: add requests
 			return &eth.BlindedBeaconBlockBodyElectra{
 				RandaoReveal:           b.randaoReveal[:],
 				Eth1Data:               b.eth1Data,
@@ -533,14 +534,15 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				BlobKzgCommitments:     b.blobKzgCommitments,
 			}, nil
 		}
-		var p *enginev1.ExecutionPayloadElectra
+		var p *enginev1.ExecutionPayloadDeneb
 		var ok bool
 		if b.executionPayload != nil {
-			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadElectra)
+			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadDeneb)
 			if !ok {
 				return nil, errPayloadWrongType
 			}
 		}
+		// TODO: add requests
 		return &eth.BeaconBlockBodyElectra{
 			RandaoReveal:          b.randaoReveal[:],
 			Eth1Data:              b.eth1Data,
@@ -1137,7 +1139,7 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadElectra(pb.ExecutionPayload)
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload)
 	// We allow the payload to be nil
 	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
@@ -1165,11 +1167,12 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderElectra(pb.ExecutionPayloadHeader)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
 	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
+	// TODO: Add requests
 	b := &BeaconBlockBody{
 		version:                  version.Electra,
 		randaoReveal:             bytesutil.ToBytes96(pb.RandaoReveal),

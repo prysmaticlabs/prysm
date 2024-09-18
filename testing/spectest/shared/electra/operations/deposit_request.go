@@ -18,7 +18,8 @@ func blockWithDepositRequest(ssz []byte) (interfaces.SignedBeaconBlock, error) {
 		return nil, err
 	}
 	b := util.NewBeaconBlockElectra()
-	b.Block.Body = &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadElectra{DepositRequests: []*enginev1.DepositRequest{dr}}}
+	// TODO: add requests
+	b.Block.Body = &ethpb.BeaconBlockBodyElectra{}
 	return blocks.NewSignedBeaconBlock(b)
 }
 

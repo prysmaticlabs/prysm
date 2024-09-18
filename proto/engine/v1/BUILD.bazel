@@ -42,14 +42,13 @@ ssz_gen_marshal(
         "ExecutionPayloadHeaderCapella",
         "ExecutionPayloadHeaderDeneb",
         "ExecutionPayloadDeneb",
-        "ExecutionPayloadHeaderElectra",
-        "ExecutionPayloadElectra",
         "BlindedBlobsBundle",
         "BlobsBundle",
         "Withdrawal",
         "WithdrawalRequest",
         "DepositRequest",
         "ConsolidationRequest",
+	"ExecutionRequests",
     ],
 )
 
@@ -111,6 +110,7 @@ ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
         "execution_engine.proto",
+	"electra.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

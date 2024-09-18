@@ -613,22 +613,20 @@ func hydrateBeaconBlockBodyElectra() *eth.BeaconBlockBodyElectra {
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		},
-		ExecutionPayload: &pb.ExecutionPayloadElectra{
-			ParentHash:            make([]byte, fieldparams.RootLength),
-			FeeRecipient:          make([]byte, 20),
-			StateRoot:             make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:          make([]byte, fieldparams.RootLength),
-			LogsBloom:             make([]byte, 256),
-			PrevRandao:            make([]byte, fieldparams.RootLength),
-			ExtraData:             make([]byte, 0),
-			BaseFeePerGas:         make([]byte, fieldparams.RootLength),
-			BlockHash:             make([]byte, fieldparams.RootLength),
-			Transactions:          make([][]byte, 0),
-			Withdrawals:           make([]*pb.Withdrawal, 0),
-			DepositRequests:       make([]*pb.DepositRequest, 0),
-			WithdrawalRequests:    make([]*pb.WithdrawalRequest, 0),
-			ConsolidationRequests: make([]*pb.ConsolidationRequest, 0),
+		ExecutionPayload: &pb.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
 		},
+		// TODO: hydrate requests
 	}
 }
 

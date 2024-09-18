@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -103,7 +102,7 @@ func TestUpgradeToElectra(t *testing.T) {
 
 	header, err := mSt.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
-	protoHeader, ok := header.Proto().(*enginev1.ExecutionPayloadHeaderElectra)
+	protoHeader, ok := header.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
 	require.Equal(t, true, ok)
 	prevHeader, err := preForkState.LatestExecutionPayloadHeader()
 	require.NoError(t, err)
@@ -112,25 +111,22 @@ func TestUpgradeToElectra(t *testing.T) {
 
 	wdRoot, err := prevHeader.WithdrawalsRoot()
 	require.NoError(t, err)
-	wanted := &enginev1.ExecutionPayloadHeaderElectra{
-		ParentHash:                prevHeader.ParentHash(),
-		FeeRecipient:              prevHeader.FeeRecipient(),
-		StateRoot:                 prevHeader.StateRoot(),
-		ReceiptsRoot:              prevHeader.ReceiptsRoot(),
-		LogsBloom:                 prevHeader.LogsBloom(),
-		PrevRandao:                prevHeader.PrevRandao(),
-		BlockNumber:               prevHeader.BlockNumber(),
-		GasLimit:                  prevHeader.GasLimit(),
-		GasUsed:                   prevHeader.GasUsed(),
-		Timestamp:                 prevHeader.Timestamp(),
-		ExtraData:                 prevHeader.ExtraData(),
-		BaseFeePerGas:             prevHeader.BaseFeePerGas(),
-		BlockHash:                 prevHeader.BlockHash(),
-		TransactionsRoot:          txRoot,
-		WithdrawalsRoot:           wdRoot,
-		DepositRequestsRoot:       bytesutil.Bytes32(0),
-		WithdrawalRequestsRoot:    bytesutil.Bytes32(0),
-		ConsolidationRequestsRoot: bytesutil.Bytes32(0),
+	wanted := &enginev1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       prevHeader.ParentHash(),
+		FeeRecipient:     prevHeader.FeeRecipient(),
+		StateRoot:        prevHeader.StateRoot(),
+		ReceiptsRoot:     prevHeader.ReceiptsRoot(),
+		LogsBloom:        prevHeader.LogsBloom(),
+		PrevRandao:       prevHeader.PrevRandao(),
+		BlockNumber:      prevHeader.BlockNumber(),
+		GasLimit:         prevHeader.GasLimit(),
+		GasUsed:          prevHeader.GasUsed(),
+		Timestamp:        prevHeader.Timestamp(),
+		ExtraData:        prevHeader.ExtraData(),
+		BaseFeePerGas:    prevHeader.BaseFeePerGas(),
+		BlockHash:        prevHeader.BlockHash(),
+		TransactionsRoot: txRoot,
+		WithdrawalsRoot:  wdRoot,
 	}
 	require.DeepEqual(t, wanted, protoHeader)
 
