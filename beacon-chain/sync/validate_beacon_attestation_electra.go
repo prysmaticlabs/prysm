@@ -11,7 +11,6 @@ import (
 )
 
 // validateCommitteeIndexElectra implements the following checks from the spec:
-//   - [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(attestation).
 //   - [REJECT] attestation.data.index == 0
 func validateCommitteeIndexElectra(ctx context.Context, a ethpb.Att) (primitives.CommitteeIndex, pubsub.ValidationResult, error) {
 	_, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexElectra")
@@ -23,6 +22,9 @@ func validateCommitteeIndexElectra(ctx context.Context, a ethpb.Att) (primitives
 	committeeIndex, err := a.GetCommitteeIndex()
 	if err != nil {
 		return 0, pubsub.ValidationReject, err
+	}
+	if committeeIndex == 0 {
+		return 0, pubsub.ValidationReject, fmt.Errorf("attestation.data.index is 0")
 	}
 	return committeeIndex, pubsub.ValidationAccept, nil
 }

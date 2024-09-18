@@ -25,6 +25,7 @@ type Att interface {
 	CommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
 	GetCommitteeIndex() (primitives.CommitteeIndex, error)
+	GetAttestingIndex() (primitives.ValidatorIndex, error)
 }
 
 // IndexedAtt defines common functionality for all indexed attestation types.
@@ -135,6 +136,11 @@ func (a *Attestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
 	return a.Data.CommitteeIndex, nil
 }
 
+// GetAttestingIndex --
+func (a *Attestation) GetAttestingIndex() (primitives.ValidatorIndex, error) {
+	return 0, errors.New("attestation does not have attesting index field")
+}
+
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
@@ -174,6 +180,11 @@ func (a *PendingAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, err
 		return 0, errors.New("nil attestation data")
 	}
 	return a.Data.CommitteeIndex, nil
+}
+
+// GetAttestingIndex --
+func (a *PendingAttestation) GetAttestingIndex() (primitives.ValidatorIndex, error) {
+	return 0, errors.New("pending attestation does not have attesting index field")
 }
 
 // Version --
@@ -220,6 +231,11 @@ func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, err
 		return 0, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
 	}
 	return primitives.CommitteeIndex(uint64(indices[0])), nil
+}
+
+// GetAttestingIndex --
+func (a *AttestationElectra) GetAttestingIndex() (primitives.ValidatorIndex, error) {
+	return 0, errors.New("attestation electra does not have attesting index field")
 }
 
 // Version --
@@ -353,4 +369,65 @@ func (a *SignedAggregateAttestationAndProofElectra) Version() int {
 // AggregateAttestationAndProof --
 func (a *SignedAggregateAttestationAndProofElectra) AggregateAttestationAndProof() AggregateAttAndProof {
 	return a.Message
+}
+
+// Version --
+func (a *SingleAttestation) Version() int {
+	return version.Electra
+}
+
+// Clone --
+func (a *SingleAttestation) Clone() Att {
+	return a.Copy()
+}
+
+// Copy --
+func (a *SingleAttestation) Copy() *SingleAttestation {
+	if a == nil {
+		return nil
+	}
+	return &SingleAttestation{
+		CommitteeId:   a.CommitteeId,
+		AttesterIndex: a.AttesterIndex,
+		Data:          a.Data.Copy(),
+		Signature:     bytesutil.SafeCopyBytes(a.Signature),
+	}
+}
+
+// CommitteeBitsVal --
+func (a *SingleAttestation) CommitteeBitsVal() bitfield.Bitfield {
+	cb := primitives.NewAttestationCommitteeBits()
+	cb.SetBitAt(uint64(a.CommitteeId), true)
+	return cb
+}
+
+// GetAggregationBits --
+func (a *SingleAttestation) GetAggregationBits() bitfield.Bitlist {
+	return nil
+}
+
+// GetCommitteeIndex --
+func (a *SingleAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+	return a.CommitteeId, nil
+}
+
+// GetAttestingIndex --
+func (a *SingleAttestation) GetAttestingIndex() (primitives.ValidatorIndex, error) {
+	return a.AttesterIndex, nil
+}
+
+type PendingSyncAttestation interface {
+	IsAttestation()
+	AggregateAttestationAndProof() AggregateAttAndProof
+	SignedAggregateAttAndProof() SignedAggregateAttAndProof
+}
+
+// IsAttestation Implement the interface for SignedAggregateAttAndProof
+func (s *SignedAggregateAttestationAndProof) IsAttestation() {}
+
+// IsAttestation Implement the interface for SingleAttestation
+func (s *SingleAttestation) IsAttestation() {}
+
+func (a *SingleAttestation) AggregateAttestationAndProof() AggregateAttAndProof {
+	panic("implement me")
 }

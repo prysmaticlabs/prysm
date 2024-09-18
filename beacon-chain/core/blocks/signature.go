@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -192,25 +193,38 @@ func createAttestationSignatureBatch(
 	descs := make([]string, len(atts))
 	for i, a := range atts {
 		sigs[i] = a.GetSignature()
-		committees, err := helpers.AttestationCommittees(ctx, beaconState, a)
-		if err != nil {
-			return nil, err
-		}
-		ia, err := attestation.ConvertToIndexed(ctx, a, committees...)
-		if err != nil {
-			return nil, err
-		}
-		if err := attestation.IsValidAttestationIndices(ctx, ia); err != nil {
-			return nil, err
-		}
-		indices := ia.GetAttestingIndices()
-		aggP, err := beaconState.AggregateKeyFromIndices(indices)
-		if err != nil {
-			return nil, err
-		}
-		pks[i] = aggP
 
-		root, err := signing.ComputeSigningRoot(ia.GetData(), domain)
+		if a.Version() >= version.Electra {
+			attestingIndex, err := a.GetAttestingIndex()
+			if err != nil {
+				return nil, err
+			}
+			pubkey := beaconState.PubkeyAtIndex(attestingIndex)
+			pks[i], err = bls.PublicKeyFromBytes(pubkey[:])
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert bytes to public key")
+			}
+		} else {
+			committees, err := helpers.AttestationCommittees(ctx, beaconState, a)
+			if err != nil {
+				return nil, err
+			}
+			ia, err := attestation.ConvertToIndexed(ctx, a, committees...)
+			if err != nil {
+				return nil, err
+			}
+			if err := attestation.IsValidAttestationIndices(ctx, ia); err != nil {
+				return nil, err
+			}
+			indices := ia.GetAttestingIndices()
+			aggP, err := beaconState.AggregateKeyFromIndices(indices)
+			if err != nil {
+				return nil, err
+			}
+			pks[i] = aggP
+		}
+
+		root, err := signing.ComputeSigningRoot(a.GetData(), domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signing root of object")
 		}

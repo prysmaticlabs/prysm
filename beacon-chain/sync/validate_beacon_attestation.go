@@ -94,6 +94,13 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	var validationRes pubsub.ValidationResult
 
+	if att.Version() >= version.Electra {
+		_, ok := att.(*eth.SingleAttestation)
+		if !ok {
+			return pubsub.ValidationReject, fmt.Errorf("electra attestation has wrong type (expected %T, got %T)", &eth.SingleAttestation{}, att)
+		}
+	}
+
 	committeeIndex, result, err := s.validateCommitteeIndex(ctx, att)
 	if result != pubsub.ValidationAccept {
 		wrappedErr := errors.Wrapf(err, "could not validate committee index for %s version", version.String(att.Version()))
@@ -101,9 +108,19 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return result, wrappedErr
 	}
 
+	var attestorIndexBytes []byte
 	if !features.Get().EnableSlasher {
 		// Verify this the first attestation received for the participating validator for the slot.
-		if s.hasSeenCommitteeIndicesSlot(data.Slot, committeeIndex, att.GetAggregationBits()) {
+		if att.Version() >= version.Electra {
+			attestorIndex, err := att.GetAttestingIndex()
+			if err != nil {
+				return pubsub.ValidationIgnore, err
+			}
+			attestorIndexBytes = bytesutil.Bytes32(uint64(attestorIndex))
+		} else {
+			attestorIndexBytes = att.GetAggregationBits()
+		}
+		if s.hasSeenCommitteeIndicesSlot(data.Slot, committeeIndex, attestorIndexBytes) {
 			return pubsub.ValidationIgnore, nil
 		}
 
@@ -121,12 +138,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if !s.hasBlockAndState(ctx, blockRoot) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		if att.Version() >= version.Electra {
-			a, ok := att.(*eth.AttestationElectra)
+			a, ok := att.(*eth.SingleAttestation)
 			// This will never fail in practice because we asserted the version
 			if !ok {
-				return pubsub.ValidationIgnore, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
+				return pubsub.ValidationIgnore, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
 			}
-			s.savePendingAtt(&eth.SignedAggregateAttestationAndProofElectra{Message: &eth.AggregateAttestationAndProofElectra{Aggregate: a}})
+			s.savePendingAtt(a)
 		} else {
 			a, ok := att.(*eth.Attestation)
 			// This will never fail in practice because we asserted the version
@@ -193,7 +210,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		}()
 	}
 
-	s.setSeenCommitteeIndicesSlot(data.Slot, committeeIndex, att.GetAggregationBits())
+	s.setSeenCommitteeIndicesSlot(data.Slot, committeeIndex, attestorIndexBytes)
 
 	msg.ValidatorData = att
 
@@ -256,21 +273,23 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a eth.At
 	ctx, span := trace.StartSpan(ctx, "sync.validateUnaggregatedAttWithState")
 	defer span.End()
 
-	committeeIndex, err := a.GetCommitteeIndex()
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
+	if a.Version() < version.Electra {
+		committeeIndex, err := a.GetCommitteeIndex()
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
 
-	committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())
-	if result != pubsub.ValidationAccept {
-		return result, err
-	}
+		committee, result, err := s.validateBitLength(ctx, bs, a.GetData().Slot, committeeIndex, a.GetAggregationBits())
+		if result != pubsub.ValidationAccept {
+			return result, err
+		}
 
-	// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
-	// Note: The Ethereum Beacon chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
-	// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
-	if a.GetAggregationBits().Count() != 1 || a.GetAggregationBits().BitIndices()[0] >= len(committee) {
-		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
+		// Attestation must be unaggregated and the bit index must exist in the range of committee indices.
+		// Note: The Ethereum Beacon chain spec suggests (len(get_attesting_indices(state, attestation.data, attestation.aggregation_bits)) == 1)
+		// however this validation can be achieved without use of get_attesting_indices which is an O(n) lookup.
+		if a.GetAggregationBits().Count() != 1 || a.GetAggregationBits().BitIndices()[0] >= len(committee) {
+			return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
+		}
 	}
 
 	set, err := blocks.AttestationSignatureBatch(ctx, bs, []eth.Att{a})
