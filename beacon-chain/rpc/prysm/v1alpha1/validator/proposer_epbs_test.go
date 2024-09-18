@@ -49,6 +49,7 @@ func TestServer_SubmitSignedExecutionPayloadEnvelope(t *testing.T) {
 }
 
 func TestServer_SubmitSignedExecutionPayloadHeader(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateEpbs(t, 1)
 	h := &enginev1.SignedExecutionPayloadHeader{
 		Message: &enginev1.ExecutionPayloadHeaderEPBS{
 			Slot: 1,
@@ -57,18 +58,21 @@ func TestServer_SubmitSignedExecutionPayloadHeader(t *testing.T) {
 	slot := primitives.Slot(1)
 	server := &Server{
 		TimeFetcher: &mockChain.ChainService{Slot: &slot},
+		HeadFetcher: &mockChain.ChainService{State: st},
+		P2P:         p2ptest.NewTestP2P(t),
 	}
 
 	t.Run("Happy case", func(t *testing.T) {
+		h.Message.BuilderIndex = 1
 		_, err := server.SubmitSignedExecutionPayloadHeader(context.Background(), h)
 		require.NoError(t, err)
 		require.DeepEqual(t, server.signedExecutionPayloadHeader, h)
 	})
 
 	t.Run("Incorrect slot", func(t *testing.T) {
-		h.Message.Slot = 2
+		h.Message.Slot = 3
 		_, err := server.SubmitSignedExecutionPayloadHeader(context.Background(), h)
-		require.ErrorContains(t, "current slot mismatch: expected 1, got 2", err)
+		require.ErrorContains(t, "invalid slot: current slot 1, got 3", err)
 	})
 }
 

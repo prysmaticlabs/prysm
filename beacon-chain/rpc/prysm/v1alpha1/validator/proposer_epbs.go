@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/epbs"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
@@ -34,11 +35,25 @@ func (vs *Server) SubmitSignedExecutionPayloadEnvelope(ctx context.Context, env 
 
 // SubmitSignedExecutionPayloadHeader submits a signed execution payload header to the beacon node.
 func (vs *Server) SubmitSignedExecutionPayloadHeader(ctx context.Context, h *enginev1.SignedExecutionPayloadHeader) (*emptypb.Empty, error) {
-	if vs.TimeFetcher.CurrentSlot() != h.Message.Slot {
-		return nil, status.Errorf(codes.InvalidArgument, "current slot mismatch: expected %d, got %d", vs.TimeFetcher.CurrentSlot(), h.Message.Slot)
+	if vs.TimeFetcher.CurrentSlot() != h.Message.Slot && vs.TimeFetcher.CurrentSlot() != h.Message.Slot-1 {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid slot: current slot %d, got %d", vs.TimeFetcher.CurrentSlot(), h.Message.Slot)
 	}
 
 	vs.signedExecutionPayloadHeader = h
+
+	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve head state: %v", err)
+	}
+	proposerIndex, err := helpers.BeaconProposerIndexAtSlot(ctx, headState, h.Message.Slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve proposer index: %v", err)
+	}
+	if proposerIndex != h.Message.BuilderIndex {
+		if err := vs.P2P.Broadcast(ctx, h); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to broadcast signed execution payload header: %v", err)
+		}
+	}
 
 	return nil, nil
 }
