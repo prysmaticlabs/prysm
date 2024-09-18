@@ -35,7 +35,8 @@ func (vs *Server) SubmitSignedExecutionPayloadEnvelope(ctx context.Context, env 
 
 // SubmitSignedExecutionPayloadHeader submits a signed execution payload header to the beacon node.
 func (vs *Server) SubmitSignedExecutionPayloadHeader(ctx context.Context, h *enginev1.SignedExecutionPayloadHeader) (*emptypb.Empty, error) {
-	if vs.TimeFetcher.CurrentSlot() != h.Message.Slot && vs.TimeFetcher.CurrentSlot() != h.Message.Slot-1 {
+	currentSlot := vs.TimeFetcher.CurrentSlot()
+	if currentSlot != h.Message.Slot && currentSlot != h.Message.Slot-1 {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid slot: current slot %d, got %d", vs.TimeFetcher.CurrentSlot(), h.Message.Slot)
 	}
 
