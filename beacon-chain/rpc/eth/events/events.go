@@ -164,17 +164,17 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, msg, http.StatusInternalServerError)
 		return
 	}
-	es, err := NewEventStreamer(eventFeedDepth, s.KeepAliveInterval)
+	es, err := newEventStreamer(eventFeedDepth, s.KeepAliveInterval)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := es.StreamEvents(ctx, sw, topics, s); err != nil {
+	if err := es.streamEvents(ctx, sw, topics, s); err != nil {
 		log.WithError(err).Debug("Event streamer shutting down due to error.")
 	}
 }
 
-func NewEventStreamer(buffSize int, ka time.Duration) (*eventStreamer, error) {
+func newEventStreamer(buffSize int, ka time.Duration) (*eventStreamer, error) {
 	if ka == 0 {
 		ka = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	}
@@ -189,7 +189,7 @@ type eventStreamer struct {
 	keepAlive time.Duration
 }
 
-func (es *eventStreamer) StreamEvents(ctx context.Context, w StreamingResponseWriter, req *topicRequest, s *Server) error {
+func (es *eventStreamer) streamEvents(ctx context.Context, w StreamingResponseWriter, req *topicRequest, s *Server) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go es.recvEventLoop(ctx, cancel, req, s)

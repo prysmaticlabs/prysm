@@ -44,21 +44,11 @@ func NewFlushabaleResponseRecorder() *flushableResponseRecorder {
 	}
 }
 
-func requireAllEventsReceived(t *testing.T, events []*feed.Event, req *topicRequest, s *Server, w *StreamingResponseWriterRecorder) {
+func requireAllEventsReceived(t *testing.T, stn, opn *mockChain.EventFeedWrapper, events []*feed.Event, req *topicRequest, s *Server, w *StreamingResponseWriterRecorder) {
 	// maxBufferSize param copied from sse lib client code
 	sseR := sse.NewEventStreamReader(w.Body(), 1<<24)
-	testTimeout := time.NewTimer(60 * time.Second)
-	// Wait for the initial write and flush which will write the http header.
-	// This is also a signal that the server side has subscribed to the feed,
-	// so the setup code below can proceed with writing events.
-	select {
-	case status := <-w.StatusChan():
-		if status != http.StatusOK {
-			t.Fatalf("expected status OK, got %d", status)
-		}
-	case <-testTimeout.C:
-		t.Fatal("timed out waiting for events")
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 
 	expected := make(map[string]bool)
 	for i := range events {
@@ -72,12 +62,14 @@ func requireAllEventsReceived(t *testing.T, events []*feed.Event, req *topicRequ
 		exs := string(exb[0 : len(exb)-2]) // remove trailing double newline
 
 		if topicsForOpsFeed[top] {
+			opn.WaitForSubscription(ctx)
 			// Send the event on the feed.
 			s.OperationNotifier.OperationFeed().Send(ev)
 		} else {
 			if !topicsForStateFeed[top] {
 				t.Fatalf("could not determine feed for topic: %s", top)
 			}
+			stn.WaitForSubscription(ctx)
 			// Send the event on the feed.
 			s.StateNotifier.StateFeed().Send(ev)
 		}
@@ -102,12 +94,8 @@ func requireAllEventsReceived(t *testing.T, events []*feed.Event, req *topicRequ
 	select {
 	case <-done:
 		break
-	case <-testTimeout.C:
-		t.Fatal("timed out waiting for events")
-	}
-	// Clean up the timeout timer.
-	if !testTimeout.Stop() {
-		<-testTimeout.C
+	case <-ctx.Done():
+		t.Fatalf("context canceled / timed out waiting for events, err=%v", ctx.Err())
 	}
 	require.Equal(t, 0, len(expected), "expected events not seen")
 }
@@ -122,9 +110,11 @@ func (tr *topicRequest) testHttpRequest(_ *testing.T) *http.Request {
 
 func TestStreamEvents_OperationsEvents(t *testing.T) {
 	t.Run("operations", func(t *testing.T) {
+		stn := mockChain.NewEventFeedWrapper()
+		opn := mockChain.NewEventFeedWrapper()
 		s := &Server{
-			StateNotifier:     mockChain.NewSimpleStateNotifier(),
-			OperationNotifier: &mockChain.MockOperationNotifier{},
+			StateNotifier:     &mockChain.SimpleNotifier{Feed: stn},
+			OperationNotifier: &mockChain.SimpleNotifier{Feed: opn},
 		}
 
 		topics, err := newTopicRequest([]string{
@@ -272,12 +262,14 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				},
 			},
 		}
-		requireAllEventsReceived(t, events, topics, s, w)
+		requireAllEventsReceived(t, stn, opn, events, topics, s, w)
 	})
 	t.Run("state", func(t *testing.T) {
+		stn := mockChain.NewEventFeedWrapper()
+		opn := mockChain.NewEventFeedWrapper()
 		s := &Server{
-			StateNotifier:     mockChain.NewSimpleStateNotifier(),
-			OperationNotifier: &mockChain.MockOperationNotifier{},
+			StateNotifier:     &mockChain.SimpleNotifier{Feed: stn},
+			OperationNotifier: &mockChain.SimpleNotifier{Feed: opn},
 		}
 
 		topics, err := newTopicRequest([]string{
@@ -342,7 +334,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				},
 			},
 		}
-		requireAllEventsReceived(t, events, topics, s, w)
+		requireAllEventsReceived(t, stn, opn, events, topics, s, w)
 	})
 	t.Run("payload attributes", func(t *testing.T) {
 		type testCase struct {
@@ -427,9 +419,11 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Slot:  &currentSlot,
 			}
 
+			stn := mockChain.NewEventFeedWrapper()
+			opn := mockChain.NewEventFeedWrapper()
 			s := &Server{
-				StateNotifier:          mockChain.NewSimpleStateNotifier(),
-				OperationNotifier:      &mockChain.MockOperationNotifier{},
+				StateNotifier:          &mockChain.SimpleNotifier{Feed: stn},
+				OperationNotifier:      &mockChain.SimpleNotifier{Feed: opn},
 				HeadFetcher:            mockChainService,
 				ChainInfoFetcher:       mockChainService,
 				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
@@ -446,7 +440,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			go func() {
 				s.StreamEvents(w, request)
 			}()
-			requireAllEventsReceived(t, events, topics, s, w)
+			requireAllEventsReceived(t, stn, opn, events, topics, s, w)
 		}
 	})
 }

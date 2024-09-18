@@ -73,7 +73,7 @@ type goodNotifier struct {
 	MockStateFeed *event.Feed
 }
 
-func (g *goodNotifier) StateFeed() *event.Feed {
+func (g *goodNotifier) StateFeed() event.SubscriberSender {
 	if g.MockStateFeed == nil {
 		g.MockStateFeed = new(event.Feed)
 	}
