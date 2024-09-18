@@ -792,9 +792,6 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch primitives.Epoch) (
 // bad response count. In the future scoring will be used
 // to determine the most suitable peers to take out.
 func (p *Status) PeersToPrune() []peer.ID {
-	if !features.Get().EnablePeerScorer {
-		return p.deprecatedPeersToPrune()
-	}
 	connLimit := p.ConnectedPeerLimit()
 	inBoundLimit := uint64(p.InboundLimit())
 	activePeers := p.Active()
@@ -808,26 +805,37 @@ func (p *Status) PeersToPrune() []peer.ID {
 	defer p.store.Unlock()
 
 	type peerResp struct {
-		pid   peer.ID
-		score float64
+		pid     peer.ID
+		score   float64
+		badResp int
 	}
+
 	peersToPrune := make([]*peerResp, 0)
 	// Select connected and inbound peers to prune.
 	for pid, peerData := range p.store.Peers() {
 		if peerData.ConnState == PeerConnected &&
 			peerData.Direction == network.DirInbound && !p.store.IsTrustedPeer(pid) {
 			peersToPrune = append(peersToPrune, &peerResp{
-				pid:   pid,
-				score: p.scorers.ScoreNoLock(pid),
+				pid:     pid,
+				score:   p.scorers.ScoreNoLock(pid),
+				badResp: peerData.BadResponses,
 			})
+		}
+	}
+
+	sortFunc := func(i, j int) bool {
+		return peersToPrune[i].badResp > peersToPrune[j].badResp
+	}
+
+	if features.Get().EnablePeerScorer {
+		sortFunc = func(i, j int) bool {
+			return peersToPrune[i].score < peersToPrune[j].score
 		}
 	}
 
 	// Sort in ascending order to favour pruning peers with a
 	// lower score.
-	sort.Slice(peersToPrune, func(i, j int) bool {
-		return peersToPrune[i].score < peersToPrune[j].score
-	})
+	sort.Slice(peersToPrune, sortFunc)
 
 	// Determine amount of peers to prune using our
 	// max connection limit.
@@ -842,71 +850,6 @@ func (p *Status) PeersToPrune() []peer.ID {
 	excessInbound := uint64(0)
 	if numInboundPeers > inBoundLimit {
 		excessInbound = numInboundPeers - inBoundLimit
-	}
-	// Prune the largest amount between excess peers and
-	// excess inbound peers.
-	if excessInbound > amountToPrune {
-		amountToPrune = excessInbound
-	}
-	if amountToPrune < uint64(len(peersToPrune)) {
-		peersToPrune = peersToPrune[:amountToPrune]
-	}
-	ids := make([]peer.ID, 0, len(peersToPrune))
-	for _, pr := range peersToPrune {
-		ids = append(ids, pr.pid)
-	}
-	return ids
-}
-
-// Deprecated: Is used to represent the older method
-// of pruning which utilized bad response counts.
-func (p *Status) deprecatedPeersToPrune() []peer.ID {
-	connLimit := p.ConnectedPeerLimit()
-	inBoundLimit := p.InboundLimit()
-	activePeers := p.Active()
-	numInboundPeers := len(p.InboundConnected())
-	// Exit early if we are still below our max
-	// limit.
-	if uint64(len(activePeers)) <= connLimit {
-		return []peer.ID{}
-	}
-	p.store.Lock()
-	defer p.store.Unlock()
-
-	type peerResp struct {
-		pid     peer.ID
-		badResp int
-	}
-	peersToPrune := make([]*peerResp, 0)
-	// Select connected and inbound peers to prune.
-	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected &&
-			peerData.Direction == network.DirInbound && !p.store.IsTrustedPeer(pid) {
-			peersToPrune = append(peersToPrune, &peerResp{
-				pid:     pid,
-				badResp: peerData.BadResponses,
-			})
-		}
-	}
-
-	// Sort in descending order to favour pruning peers with a
-	// higher bad response count.
-	sort.Slice(peersToPrune, func(i, j int) bool {
-		return peersToPrune[i].badResp > peersToPrune[j].badResp
-	})
-
-	// Determine amount of peers to prune using our
-	// max connection limit.
-	amountToPrune, err := pmath.Sub64(uint64(len(activePeers)), connLimit)
-	if err != nil {
-		// This should never happen
-		log.WithError(err).Error("Failed to determine amount of peers to prune")
-		return []peer.ID{}
-	}
-	// Also check for inbound peers above our limit.
-	excessInbound := uint64(0)
-	if numInboundPeers > inBoundLimit {
-		excessInbound = uint64(numInboundPeers - inBoundLimit)
 	}
 	// Prune the largest amount between excess peers and
 	// excess inbound peers.
