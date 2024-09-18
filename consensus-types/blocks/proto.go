@@ -518,7 +518,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 					return nil, errPayloadHeaderWrongType
 				}
 			}
-			// TODO: add requests
 			return &eth.BlindedBeaconBlockBodyElectra{
 				RandaoReveal:           b.randaoReveal[:],
 				Eth1Data:               b.eth1Data,
@@ -532,6 +531,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				ExecutionPayloadHeader: ph,
 				BlsToExecutionChanges:  b.blsToExecutionChanges,
 				BlobKzgCommitments:     b.blobKzgCommitments,
+				ExecutionRequests:      b.executionRequests,
 			}, nil
 		}
 		var p *enginev1.ExecutionPayloadDeneb
@@ -542,7 +542,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				return nil, errPayloadWrongType
 			}
 		}
-		// TODO: add requests
 		return &eth.BeaconBlockBodyElectra{
 			RandaoReveal:          b.randaoReveal[:],
 			Eth1Data:              b.eth1Data,
@@ -556,6 +555,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:      p,
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 			BlobKzgCommitments:    b.blobKzgCommitments,
+			ExecutionRequests:     b.executionRequests,
 		}, nil
 
 	default:
@@ -1158,6 +1158,7 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 		executionPayload:         p,
 		blsToExecutionChanges:    pb.BlsToExecutionChanges,
 		blobKzgCommitments:       pb.BlobKzgCommitments,
+		executionRequests:        pb.ExecutionRequests,
 	}
 	return b, nil
 }
@@ -1172,7 +1173,6 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
 	}
-	// TODO: Add requests
 	b := &BeaconBlockBody{
 		version:                  version.Electra,
 		randaoReveal:             bytesutil.ToBytes96(pb.RandaoReveal),
@@ -1187,6 +1187,7 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 		executionPayloadHeader:   ph,
 		blsToExecutionChanges:    pb.BlsToExecutionChanges,
 		blobKzgCommitments:       pb.BlobKzgCommitments,
+		executionRequests:        pb.ExecutionRequests,
 	}
 	return b, nil
 }

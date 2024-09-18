@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
@@ -626,12 +627,16 @@ func hydrateBeaconBlockBodyElectra() *eth.BeaconBlockBodyElectra {
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		},
-		// TODO: hydrate requests
+		ExecutionRequests: &enginev1.ExecutionRequests{
+			Deposits:       make([]*enginev1.DepositRequest, 0),
+			Withdrawals:    make([]*enginev1.WithdrawalRequest, 0),
+			Consolidations: make([]*enginev1.ConsolidationRequest, 0),
+		},
 	}
 }
 
 func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
 	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
-	_, ok := epd.(interfaces.ExecutionDataElectra)
+	_, ok := epd.(interfaces.ExecutionData)
 	require.Equal(t, false, ok)
 }

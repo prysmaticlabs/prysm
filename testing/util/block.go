@@ -1419,7 +1419,26 @@ func HydrateBeaconBlockBodyElectra(b *ethpb.BeaconBlockBodyElectra) *ethpb.Beaco
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		}
 	}
+	b.ExecutionRequests = HydrateExecutionRequests(b.ExecutionRequests)
 	return b
+}
+
+// HydrateExecutionRequests fills the exectution requests with the correct field
+// lengths
+func HydrateExecutionRequests(e *enginev1.ExecutionRequests) *enginev1.ExecutionRequests {
+	if e == nil {
+		e = &enginev1.ExecutionRequests{}
+	}
+	if e.Deposits == nil {
+		e.Deposits = make([]*enginev1.DepositRequest, 0)
+	}
+	if e.Withdrawals == nil {
+		e.Withdrawals = make([]*enginev1.WithdrawalRequest, 0)
+	}
+	if e.Consolidations == nil {
+		e.Consolidations = make([]*enginev1.ConsolidationRequest, 0)
+	}
+	return e
 }
 
 // HydrateV2BeaconBlockBodyDeneb hydrates a v2 beacon block body with correct field length sizes
