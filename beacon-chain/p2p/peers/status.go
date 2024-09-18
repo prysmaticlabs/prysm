@@ -794,13 +794,14 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch primitives.Epoch) (
 func (p *Status) PeersToPrune() []peer.ID {
 	connLimit := p.ConnectedPeerLimit()
 	inBoundLimit := uint64(p.InboundLimit())
-	activePeers := p.Active()
-	numInboundPeers := uint64(len(p.InboundConnected()))
-	// Exit early if we are still below our max
-	// limit.
-	if uint64(len(activePeers)) <= connLimit {
+	activePeerCount := uint64(len(p.Active()))
+	inboundPeerCount := uint64(len(p.InboundConnected()))
+
+	// Exit early if we are still below our max limit.
+	if activePeerCount <= connLimit {
 		return []peer.ID{}
 	}
+
 	p.store.Lock()
 	defer p.store.Unlock()
 
@@ -811,15 +812,23 @@ func (p *Status) PeersToPrune() []peer.ID {
 	}
 
 	peersToPrune := make([]*peerResp, 0)
-	// Select connected and inbound peers to prune.
+	// A peer is a candidate for pruning if:
+	// - it is connected, and
+	// - it is an inbound peer, and
+	// - it is not a trusted peer
 	for pid, peerData := range p.store.Peers() {
-		if peerData.ConnState == PeerConnected &&
-			peerData.Direction == network.DirInbound && !p.store.IsTrustedPeer(pid) {
-			peersToPrune = append(peersToPrune, &peerResp{
+		isConnected := peerData.ConnState == PeerConnected
+		isInbound := peerData.Direction == network.DirInbound
+		isTrusted := p.store.IsTrustedPeer(pid)
+
+		if isInbound && isConnected && !isTrusted {
+			peerToPrune := &peerResp{
 				pid:     pid,
 				score:   p.scorers.ScoreNoLock(pid),
 				badResp: peerData.BadResponses,
-			})
+			}
+
+			peersToPrune = append(peersToPrune, peerToPrune)
 		}
 	}
 
@@ -833,13 +842,11 @@ func (p *Status) PeersToPrune() []peer.ID {
 		}
 	}
 
-	// Sort in ascending order to favour pruning peers with a
-	// lower score.
+	// Sort in ascending order to favour pruning peers with a lower score.
 	sort.Slice(peersToPrune, sortFunc)
 
-	// Determine amount of peers to prune using our
-	// max connection limit.
-	amountToPrune, err := pmath.Sub64(uint64(len(activePeers)), connLimit)
+	// Determine amount of peers to prune using our max connection limit.
+	amountToPrune, err := pmath.Sub64(activePeerCount, connLimit)
 	if err != nil {
 		// This should never happen.
 		log.WithError(err).Error("Failed to determine amount of peers to prune")
@@ -848,21 +855,24 @@ func (p *Status) PeersToPrune() []peer.ID {
 
 	// Also check for inbound peers above our limit.
 	excessInbound := uint64(0)
-	if numInboundPeers > inBoundLimit {
-		excessInbound = numInboundPeers - inBoundLimit
+	if inboundPeerCount > inBoundLimit {
+		excessInbound = inboundPeerCount - inBoundLimit
 	}
-	// Prune the largest amount between excess peers and
-	// excess inbound peers.
+
+	// Prune the largest amount between excess peers and excess inbound peers.
 	if excessInbound > amountToPrune {
 		amountToPrune = excessInbound
 	}
+
 	if amountToPrune < uint64(len(peersToPrune)) {
 		peersToPrune = peersToPrune[:amountToPrune]
 	}
+
 	ids := make([]peer.ID, 0, len(peersToPrune))
 	for _, pr := range peersToPrune {
 		ids = append(ids, pr.pid)
 	}
+
 	return ids
 }
 
