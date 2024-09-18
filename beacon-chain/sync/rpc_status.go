@@ -28,34 +28,44 @@ import (
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
-	interval := time.Duration(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	interval := time.Duration(slotsPerEpoch.Div(2).Mul(secondsPerSlot)) * time.Second
+
 	async.RunEvery(s.ctx, interval, func() {
 		wg := new(sync.WaitGroup)
+
 		for _, pid := range s.cfg.p2p.Peers().Connected() {
 			wg.Add(1)
+
 			go func(id peer.ID) {
 				defer wg.Done()
 				// If our peer status has not been updated correctly we disconnect over here
 				// and set the connection state over here instead.
-				if s.cfg.p2p.Host().Network().Connectedness(id) != network.Connected {
+				isNotConnected := s.cfg.p2p.Host().Network().Connectedness(id) != network.Connected
+				if isNotConnected {
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.cfg.p2p.Disconnect(id); err != nil {
 						log.WithError(err).Debug("Error when disconnecting with peer")
 					}
+
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
 				}
+
 				// Disconnect from peers that are considered bad by any of the registered scorers.
 				if s.cfg.p2p.Peers().IsBad(id) {
 					s.disconnectBadPeer(s.ctx, id)
 					return
 				}
+
 				// If the status hasn't been updated in the recent interval time.
 				lastUpdated, err := s.cfg.p2p.Peers().ChainStateLastUpdated(id)
 				if err != nil {
 					// Peer has vanished; nothing to do.
 					return
 				}
+
 				if prysmTime.Now().After(lastUpdated.Add(interval)) {
 					if err := s.reValidatePeer(s.ctx, id); err != nil {
 						log.WithField("peer", id).WithError(err).Debug("Could not revalidate peer")
@@ -64,9 +74,11 @@ func (s *Service) maintainPeerStatuses() {
 				}
 			}(pid)
 		}
-		// Wait for all status checks to finish and then proceed onwards to
-		// pruning excess peers.
+
+		// Wait for all status checks to finish.
 		wg.Wait()
+
+		// Proceed onwards to pruning excess peers.
 		peerIds := s.cfg.p2p.Peers().PeersToPrune()
 		peerIds = s.filterNeededPeers(peerIds)
 		for _, id := range peerIds {
