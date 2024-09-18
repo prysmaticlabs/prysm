@@ -3,7 +3,11 @@ package light_client_test
 import (
 	"testing"
 
+	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 
 	lightClient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
@@ -13,6 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
+
+// NewLightClientOptimisticUpdateFromBeaconState tests
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
@@ -53,7 +59,186 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testi
 	l.CheckAttestedHeader(update.AttestedHeader)
 }
 
+// NewLightClientFinalityUpdateFromBeaconState tests
+
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestAltair()
+
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	require.NoError(t, err)
+	require.NotNil(t, update, "update is nil")
+
+	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
+
+	finalizedBlockHeader, err := l.FinalizedBlock.Header()
+	require.NoError(t, err)
+
+	//zeroHash := params.BeaconConfig().ZeroHash[:]
+	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, finalizedBlockHeader.Header.Slot, updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not equal")
+	require.Equal(t, finalizedBlockHeader.Header.ProposerIndex, updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.ParentRoot, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.StateRoot, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.BodyRoot, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not equal")
+	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
+
+	finalityBranch, err := l.AttestedState.FinalizedRootProof(l.Ctx)
+	require.NoError(t, err)
+	for i, leaf := range update.FinalityBranch {
+		require.DeepSSZEqual(t, finalityBranch[i], leaf, "Leaf is not equal")
+	}
+}
+
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestCapella(false)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	require.NoError(t, err)
+	require.NotNil(t, update, "update is nil")
+
+	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
+
+	finalizedBlockHeader, err := l.FinalizedBlock.Header()
+	require.NoError(t, err)
+	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, finalizedBlockHeader.Header.Slot, updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not equal")
+	require.Equal(t, finalizedBlockHeader.Header.ProposerIndex, updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.ParentRoot, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.StateRoot, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.BodyRoot, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not equal")
+	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
+	finalityBranch, err := l.AttestedState.FinalizedRootProof(l.Ctx)
+	require.NoError(t, err)
+	for i, leaf := range update.FinalityBranch {
+		require.DeepSSZEqual(t, finalityBranch[i], leaf, "Leaf is not equal")
+	}
+
+	// Check Execution BlockHash
+	payloadInterface, err := l.FinalizedBlock.Block().Body().Execution()
+	require.NoError(t, err)
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactions, err := payloadInterface.Transactions()
+		require.NoError(t, err)
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		require.NoError(t, err)
+		transactionsRoot = transactionsRootArray[:]
+	} else {
+		require.NoError(t, err)
+	}
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawals, err := payloadInterface.Withdrawals()
+		require.NoError(t, err)
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		withdrawalsRoot = withdrawalsRootArray[:]
+	} else {
+		require.NoError(t, err)
+	}
+	execution := &v11.ExecutionPayloadHeaderCapella{
+		ParentHash:       payloadInterface.ParentHash(),
+		FeeRecipient:     payloadInterface.FeeRecipient(),
+		StateRoot:        payloadInterface.StateRoot(),
+		ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+		LogsBloom:        payloadInterface.LogsBloom(),
+		PrevRandao:       payloadInterface.PrevRandao(),
+		BlockNumber:      payloadInterface.BlockNumber(),
+		GasLimit:         payloadInterface.GasLimit(),
+		GasUsed:          payloadInterface.GasUsed(),
+		Timestamp:        payloadInterface.Timestamp(),
+		ExtraData:        payloadInterface.ExtraData(),
+		BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+		BlockHash:        payloadInterface.BlockHash(),
+		TransactionsRoot: transactionsRoot,
+		WithdrawalsRoot:  withdrawalsRoot,
+	}
+	require.DeepSSZEqual(t, execution, update.FinalizedHeader.GetHeaderCapella().Execution, "Finalized Block Execution is not equal")
+}
+
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestDeneb(false)
+
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	require.NoError(t, err)
+	require.NotNil(t, update, "update is nil")
+
+	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
+
+	//zeroHash := params.BeaconConfig().ZeroHash[:]
+	finalizedBlockHeader, err := l.FinalizedBlock.Header()
+	require.NoError(t, err)
+	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, finalizedBlockHeader.Header.Slot, updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not equal")
+	require.Equal(t, finalizedBlockHeader.Header.ProposerIndex, updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.ParentRoot, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.StateRoot, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.BodyRoot, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not equal")
+	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
+	finalityBranch, err := l.AttestedState.FinalizedRootProof(l.Ctx)
+	require.NoError(t, err)
+	for i, leaf := range update.FinalityBranch {
+		require.DeepSSZEqual(t, finalityBranch[i], leaf, "Leaf is not equal")
+	}
+
+	// Check Execution BlockHash
+	payloadInterface, err := l.FinalizedBlock.Block().Body().Execution()
+	require.NoError(t, err)
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactions, err := payloadInterface.Transactions()
+		require.NoError(t, err)
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		require.NoError(t, err)
+		transactionsRoot = transactionsRootArray[:]
+	} else {
+		require.NoError(t, err)
+	}
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawals, err := payloadInterface.Withdrawals()
+		require.NoError(t, err)
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		withdrawalsRoot = withdrawalsRootArray[:]
+	} else {
+		require.NoError(t, err)
+	}
+	execution := &v11.ExecutionPayloadHeaderDeneb{
+		ParentHash:       payloadInterface.ParentHash(),
+		FeeRecipient:     payloadInterface.FeeRecipient(),
+		StateRoot:        payloadInterface.StateRoot(),
+		ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+		LogsBloom:        payloadInterface.LogsBloom(),
+		PrevRandao:       payloadInterface.PrevRandao(),
+		BlockNumber:      payloadInterface.BlockNumber(),
+		GasLimit:         payloadInterface.GasLimit(),
+		GasUsed:          payloadInterface.GasUsed(),
+		Timestamp:        payloadInterface.Timestamp(),
+		ExtraData:        payloadInterface.ExtraData(),
+		BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+		BlockHash:        payloadInterface.BlockHash(),
+		TransactionsRoot: transactionsRoot,
+		WithdrawalsRoot:  withdrawalsRoot,
+	}
+	require.DeepSSZEqual(t, execution, update.FinalizedHeader.GetHeaderDeneb().Execution, "Finalized Block Execution is not equal")
+}
+
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltairFinalizedBlockNil(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
 
 	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
@@ -80,7 +265,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testin
 	}
 }
 
-func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testing.T) {
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapellaFinalizedBlockNil(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestCapella(false)
 	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
 	require.NoError(t, err)
@@ -106,7 +291,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testi
 	}
 }
 
-func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing.T) {
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDenebFinalizedBlockNil(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestDeneb(false)
 
 	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
@@ -133,6 +318,111 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing
 		require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
 	}
 }
+
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapellaFinalizedBlockInPreviousFork(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestCapellaFinalizedBlockAltair(false)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	require.NoError(t, err)
+	require.NotNil(t, update, "update is nil")
+
+	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
+
+	finalizedBlockHeader, err := l.FinalizedBlock.Header()
+	require.NoError(t, err)
+	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, finalizedBlockHeader.Header.Slot, updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not equal")
+	require.Equal(t, finalizedBlockHeader.Header.ProposerIndex, updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.ParentRoot, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.StateRoot, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.BodyRoot, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not equal")
+	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
+	finalityBranch, err := l.AttestedState.FinalizedRootProof(l.Ctx)
+	require.NoError(t, err)
+	for i, leaf := range update.FinalityBranch {
+		require.DeepSSZEqual(t, finalityBranch[i], leaf, "Leaf is not equal")
+	}
+
+}
+
+func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDenebFinalizedBlockInPreviousFork(t *testing.T) {
+	l := util.NewTestLightClient(t).SetupTestDenebFinalizedBlockCapella(false)
+
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	require.NoError(t, err)
+	require.NotNil(t, update, "update is nil")
+
+	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+
+	l.CheckSyncAggregate(update.SyncAggregate)
+	l.CheckAttestedHeader(update.AttestedHeader)
+
+	//zeroHash := params.BeaconConfig().ZeroHash[:]
+	finalizedBlockHeader, err := l.FinalizedBlock.Header()
+	require.NoError(t, err)
+	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
+	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
+	require.NoError(t, err)
+	require.Equal(t, finalizedBlockHeader.Header.Slot, updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not equal")
+	require.Equal(t, finalizedBlockHeader.Header.ProposerIndex, updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.ParentRoot, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.StateRoot, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not equal")
+	require.DeepSSZEqual(t, finalizedBlockHeader.Header.BodyRoot, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not equal")
+	require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
+	finalityBranch, err := l.AttestedState.FinalizedRootProof(l.Ctx)
+	require.NoError(t, err)
+	for i, leaf := range update.FinalityBranch {
+		require.DeepSSZEqual(t, finalityBranch[i], leaf, "Leaf is not equal")
+	}
+
+	// Check Execution BlockHash
+	payloadInterface, err := l.FinalizedBlock.Block().Body().Execution()
+	require.NoError(t, err)
+	transactionsRoot, err := payloadInterface.TransactionsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		transactions, err := payloadInterface.Transactions()
+		require.NoError(t, err)
+		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+		require.NoError(t, err)
+		transactionsRoot = transactionsRootArray[:]
+	} else {
+		require.NoError(t, err)
+	}
+	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+	if errors.Is(err, consensus_types.ErrUnsupportedField) {
+		withdrawals, err := payloadInterface.Withdrawals()
+		require.NoError(t, err)
+		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		withdrawalsRoot = withdrawalsRootArray[:]
+	} else {
+		require.NoError(t, err)
+	}
+	execution := &v11.ExecutionPayloadHeaderCapella{
+		ParentHash:       payloadInterface.ParentHash(),
+		FeeRecipient:     payloadInterface.FeeRecipient(),
+		StateRoot:        payloadInterface.StateRoot(),
+		ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+		LogsBloom:        payloadInterface.LogsBloom(),
+		PrevRandao:       payloadInterface.PrevRandao(),
+		BlockNumber:      payloadInterface.BlockNumber(),
+		GasLimit:         payloadInterface.GasLimit(),
+		GasUsed:          payloadInterface.GasUsed(),
+		Timestamp:        payloadInterface.Timestamp(),
+		ExtraData:        payloadInterface.ExtraData(),
+		BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+		BlockHash:        payloadInterface.BlockHash(),
+		TransactionsRoot: transactionsRoot,
+		WithdrawalsRoot:  withdrawalsRoot,
+	}
+	require.DeepSSZEqual(t, execution, update.FinalizedHeader.GetHeaderCapella().Execution, "Finalized Block Execution is not equal")
+}
+
+// BlockToLightClientHeader tests
 
 func TestLightClient_BlockToLightClientHeaderAltair(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
@@ -380,5 +670,3 @@ func TestLightClient_BlockToLightClientHeaderDeneb_BlindedBeaconBlock(t *testing
 
 	require.DeepSSZEqual(t, executionPayloadProof, header.ExecutionBranch, "Execution payload proofs are not equal")
 }
-
-// TODO - add finality update tests with non-nil finalized block for different versions
