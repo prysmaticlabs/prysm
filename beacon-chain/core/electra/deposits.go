@@ -305,34 +305,40 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 			break
 		}
 
+		var isValidatorExited bool
+		var isValidatorWithdrawn bool
 		index, found := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pendingDeposit.PublicKey))
 		if found {
 			val, err := st.ValidatorAtIndexReadOnly(index)
 			if err != nil {
 				return errors.Wrap(err, "could not get validator")
 			}
-			if val.WithdrawableEpoch() < curEpoch { // Is validator withdrawn?
-				// Deposited balance will never become active. Increase balance but do not consume churn
-				if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
-					return errors.Wrap(err, "could not apply pending deposit")
-				}
-			} else if val.ExitEpoch() < ffe { // Is validator exited?
-				// Validator is exiting, postpone the pendingDeposit until after withdrawable epoch
-				depositsToPostpone = append(depositsToPostpone, pendingDeposit)
-			} else {
-				// Check if pendingDeposit fits in the churn, otherwise, do no more pendingDeposit processing in this epoch.
-				isChurnLimitReached = primitives.Gwei(processedAmount+pendingDeposit.Amount) > availableForProcessing
-				if isChurnLimitReached { // Is churn limit reached?
-					break
-				}
-				// Consume churn and apply pendingDeposit.
-				processedAmount += pendingDeposit.Amount
+			isValidatorExited = val.ExitEpoch() < ffe
+			isValidatorWithdrawn = val.WithdrawableEpoch() < curEpoch
+		}
 
-				if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
-					return errors.Wrap(err, "could not apply pending deposit")
-				}
+		if isValidatorWithdrawn {
+			// Deposited balance will never become active. Increase balance but do not consume churn
+			if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
+				return errors.Wrap(err, "could not apply pending deposit")
+			}
+		} else if isValidatorExited {
+			// Validator is exiting, postpone the pendingDeposit until after withdrawable epoch
+			depositsToPostpone = append(depositsToPostpone, pendingDeposit)
+		} else {
+			// Check if pendingDeposit fits in the churn, otherwise, do no more pendingDeposit processing in this epoch.
+			isChurnLimitReached = primitives.Gwei(processedAmount+pendingDeposit.Amount) > availableForProcessing
+			if isChurnLimitReached { // Is churn limit reached?
+				break
+			}
+			// Consume churn and apply pendingDeposit.
+			processedAmount += pendingDeposit.Amount
+
+			if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
+				return errors.Wrap(err, "could not apply pending deposit")
 			}
 		}
+
 		// Regardless of how the pendingDeposit was handled, we move on in the queue.
 		nextDepositIndex++
 	}
@@ -409,26 +415,9 @@ func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, 
 		return beaconState, nil
 	}
 
-	deposits := make([]*ethpb.Deposit, 0)
-	for _, req := range requests {
-		if req == nil {
-			return nil, errors.New("got a nil DepositRequest")
-		}
-		deposits = append(deposits, &ethpb.Deposit{
-			Data: &ethpb.Deposit_Data{
-				PublicKey:             req.Pubkey,
-				WithdrawalCredentials: req.WithdrawalCredentials,
-				Amount:                req.Amount,
-				Signature:             req.Signature,
-			},
-		})
-	}
-	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not verify deposit signatures in batch")
-	}
+	var err error
 	for _, receipt := range requests {
-		beaconState, err = processDepositRequest(beaconState, receipt, batchVerified)
+		beaconState, err = processDepositRequest(beaconState, receipt)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not apply deposit request")
 		}
@@ -450,28 +439,17 @@ func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, 
 //	       signature=deposit_request.signature,
 //	       slot=state.slot,
 //	   ))
-func processDepositRequest(beaconState state.BeaconState, request *enginev1.DepositRequest, verifySignature bool) (state.BeaconState, error) {
+func processDepositRequest(beaconState state.BeaconState, request *enginev1.DepositRequest) (state.BeaconState, error) {
 	requestsStartIndex, err := beaconState.DepositRequestsStartIndex()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get deposit requests start index")
 	}
 	if requestsStartIndex == params.BeaconConfig().UnsetDepositRequestsStartIndex {
+		if request == nil {
+			return nil, errors.New("nil deposit request")
+		}
 		if err := beaconState.SetDepositRequestsStartIndex(request.Index); err != nil {
 			return nil, errors.Wrap(err, "could not set deposit requests start index")
-		}
-	}
-	if verifySignature {
-		valid, err := IsValidDepositSignature(&ethpb.Deposit_Data{
-			PublicKey:             bytesutil.SafeCopyBytes(request.Pubkey),
-			WithdrawalCredentials: bytesutil.SafeCopyBytes(request.WithdrawalCredentials),
-			Amount:                request.Amount,
-			Signature:             bytesutil.SafeCopyBytes(request.Signature),
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "could not verify deposit signature")
-		}
-		if !valid {
-			return beaconState, nil
 		}
 	}
 	if err := beaconState.AppendPendingDeposit(&ethpb.PendingDeposit{
