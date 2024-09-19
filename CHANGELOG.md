@@ -2330,7 +2330,7 @@ There are two known issues with this release:
 
 ### Added
 
-- Web3Signer support. See the [documentation](https://docs.prylabs.network/docs/next/wallet/web3signer) for more
+- Web3Signer support. See the [documentation](https://docs.prylabs.network/docs/wallet/web3signer) for more
   details.
 - Bellatrix support. See [kiln testnet instructions](https://hackmd.io/OqIoTiQvS9KOIataIFksBQ?view)
 - Weak subjectivity sync / checkpoint sync. This is an experimental feature and may have unintended side effects for
