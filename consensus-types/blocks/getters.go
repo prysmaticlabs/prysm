@@ -157,11 +157,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		if !ok {
 			return nil, fmt.Errorf("%T is not an execution payload header of Deneb version", p)
 		}
-		pe, ok := payload.(interfaces.ExecutionData)
-		if !ok {
-			return nil, interfaces.ErrIncompatibleFork
-		}
-		header, err := PayloadToHeaderDeneb(pe)
+		header, err := PayloadToHeaderDeneb(payload)
 		if err != nil {
 			return nil, err
 		}
