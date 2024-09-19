@@ -2088,6 +2088,10 @@ func (b *BeaconBlockElectra) ToConsensus() (*eth.BeaconBlockElectra, error) {
 		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
 
+	if b.Body.ExecutionRequests == nil {
+		return nil, server.NewDecodeError(errors.New("nil execution requests"), "Body.ExequtionRequests")
+	}
+
 	depositRequests := make([]*enginev1.DepositRequest, len(b.Body.ExecutionRequests.Deposits))
 	for i, d := range b.Body.ExecutionRequests.Deposits {
 		depositRequests[i], err = d.ToConsensus()
@@ -2384,6 +2388,9 @@ func (b *BlindedBeaconBlockElectra) ToConsensus() (*eth.BlindedBeaconBlockElectr
 	payloadExcessBlobGas, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.ExcessBlobGas, 10, 64)
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
+	}
+	if b.Body.ExecutionRequests == nil {
+		return nil, server.NewDecodeError(errors.New("nil execution requests"), "Body.ExecutionRequests")
 	}
 	depositRequests := make([]*enginev1.DepositRequest, len(b.Body.ExecutionRequests.Deposits))
 	for i, d := range b.Body.ExecutionRequests.Deposits {
@@ -2978,8 +2985,17 @@ func BlindedBeaconBlockElectraFromConsensus(b *eth.BlindedBeaconBlockElectra) (*
 			ExecutionPayloadHeader: payload,
 			BLSToExecutionChanges:  SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 			BlobKzgCommitments:     blobKzgCommitments,
+			ExecutionRequests:      ExecutionRequestsFromConsensus(b.Body.ExecutionRequests),
 		},
 	}, nil
+}
+
+func ExecutionRequestsFromConsensus(er *enginev1.ExecutionRequests) *ExecutionRequests {
+	return &ExecutionRequests{
+		Deposits:       DepositRequestsFromConsensus(er.Deposits),
+		Withdrawals:    WithdrawalRequestsFromConsensus(er.Withdrawals),
+		Consolidations: ConsolidationRequestsFromConsensus(er.Consolidations),
+	}
 }
 
 func SignedBlindedBeaconBlockElectraFromConsensus(b *eth.SignedBlindedBeaconBlockElectra) (*SignedBlindedBeaconBlockElectra, error) {
@@ -3024,6 +3040,7 @@ func BeaconBlockElectraFromConsensus(b *eth.BeaconBlockElectra) (*BeaconBlockEle
 			ExecutionPayload:      payload,
 			BLSToExecutionChanges: SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 			BlobKzgCommitments:    blobKzgCommitments,
+			ExecutionRequests:     ExecutionRequestsFromConsensus(b.Body.ExecutionRequests),
 		},
 	}, nil
 }
