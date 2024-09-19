@@ -223,8 +223,8 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 
 // setReceivedDataColumn marks the data column for a given root as received.
 func (s *Service) setReceivedDataColumn(root [fieldparams.RootLength]byte, columnIndex uint64) {
-	s.receivedDataColumnsFromRootLock.Lock()
-	defer s.receivedDataColumnsFromRootLock.Unlock()
+	s.dataColumnsFromRootLock.Lock()
+	defer s.dataColumnsFromRootLock.Unlock()
 
 	// Get all the received data columns for this root.
 	receivedDataColumns, ok := s.receivedDataColumnsFromRoot[root]
@@ -240,8 +240,8 @@ func (s *Service) setReceivedDataColumn(root [fieldparams.RootLength]byte, colum
 
 // receivedDataColumns returns the received data columns for a given root.
 func (s *Service) receivedDataColumns(root [fieldparams.RootLength]byte) map[uint64]bool {
-	s.receivedDataColumnsFromRootLock.RLock()
-	defer s.receivedDataColumnsFromRootLock.RUnlock()
+	s.dataColumnsFromRootLock.RLock()
+	defer s.dataColumnsFromRootLock.RUnlock()
 
 	// Get all the received data columns for this root.
 	receivedDataColumns, ok := s.receivedDataColumnsFromRoot[root]
@@ -260,8 +260,8 @@ func (s *Service) receivedDataColumns(root [fieldparams.RootLength]byte) map[uin
 
 // deleteReceivedDataColumns deletes the received data columns for a given root.
 func (s *Service) deleteReceivedDataColumns(root [fieldparams.RootLength]byte) {
-	s.receivedDataColumnsFromRootLock.Lock()
-	defer s.receivedDataColumnsFromRootLock.Unlock()
+	s.dataColumnsFromRootLock.Lock()
+	defer s.dataColumnsFromRootLock.Unlock()
 
 	delete(s.receivedDataColumnsFromRoot, root)
 }

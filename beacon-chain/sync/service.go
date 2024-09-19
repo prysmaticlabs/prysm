@@ -168,7 +168,7 @@ type Service struct {
 	availableBlocker                 coverage.AvailableBlocker
 	dataColumsnReconstructionLock    sync.Mutex
 	receivedDataColumnsFromRoot      map[[fieldparams.RootLength]byte]map[uint64]bool
-	receivedDataColumnsFromRootLock  sync.RWMutex
+	dataColumnsFromRootLock          sync.RWMutex
 	ctxMap                           ContextByteVersions
 }
 
