@@ -3,7 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"time"
 
 	"github.com/pkg/errors"
@@ -50,10 +50,12 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 
 	defer s.dataColumsnReconstructionLock.Unlock()
 
-	// Retrieve the custodied columns.
-	custodiedColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), peerdas.CustodySubnetCount())
+	// Retrieve the custody columns.
+	nodeID := s.cfg.p2p.NodeID()
+	custodySubnetCount := peerdas.CustodySubnetCount()
+	custodyColumns, err := peerdas.CustodyColumns(nodeID, custodySubnetCount)
 	if err != nil {
-		return errors.Wrap(err, "custodied columns")
+		return errors.Wrap(err, "custody columns")
 	}
 
 	// Load the data columns sidecars.
@@ -67,7 +69,7 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 		dataColumnSideCars = append(dataColumnSideCars, dataColumnSidecar)
 	}
 
-	// Recover cells and proofs
+	// Recover cells and proofs.
 	recoveredCellsAndProofs, err := peerdas.RecoverCellsAndProofs(dataColumnSideCars, blockRoot)
 	if err != nil {
 		return errors.Wrap(err, "recover cells and proofs")
@@ -86,7 +88,7 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 
 	// Save the data columns sidecars in the database.
 	for _, dataColumnSidecar := range dataColumnSidecars {
-		shouldSave := custodiedColumns[dataColumnSidecar.ColumnIndex]
+		shouldSave := custodyColumns[dataColumnSidecar.ColumnIndex]
 		if !shouldSave {
 			// We do not custody this column, so we dot not need to save it.
 			continue
@@ -122,7 +124,8 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 	slot := dataColumn.Slot()
 
 	// Get the time corresponding to the start of the slot.
-	slotStart, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), slot)
+	genesisTime := uint64(s.cfg.chain.GenesisTime().Unix())
+	slotStart, err := slots.ToTime(genesisTime, slot)
 	if err != nil {
 		return errors.Wrap(err, "to time")
 	}
@@ -141,11 +144,11 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 		// Get the received by gossip data columns.
 		receivedDataColumns := s.receivedDataColumns(blockRoot)
 		if receivedDataColumns == nil {
-			log.WithField("root", fmt.Sprintf("%x", blockRoot)).Error("No received data columns")
+			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Error("No received data columns")
 		}
 
 		// Get the data columns we should store.
-		custodiedDataColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), peerdas.CustodySubnetCount())
+		custodyDataColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), peerdas.CustodySubnetCount())
 		if err != nil {
 			log.WithError(err).Error("Custody columns")
 		}
@@ -158,8 +161,8 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 		}
 
 		// Compute the missing data columns (data columns we should custody but we do not have received via gossip.)
-		missingColumns := make(map[uint64]bool, len(custodiedDataColumns))
-		for column := range custodiedDataColumns {
+		missingColumns := make(map[uint64]bool, len(custodyDataColumns))
+		for column := range custodyDataColumns {
 			if ok := receivedDataColumns[column]; !ok {
 				missingColumns[column] = true
 			}
@@ -178,7 +181,7 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 					"root":   fmt.Sprintf("%x", blockRoot),
 					"slot":   slot,
 					"column": column,
-				}).Error("Data column not received nor reconstructed.")
+				}).Error("Data column not received nor reconstructed")
 				continue
 			}
 
@@ -205,16 +208,14 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 		}
 
 		// Sort the missing data columns.
-		sort.Slice(missingColumnsList, func(i, j int) bool {
-			return missingColumnsList[i] < missingColumnsList[j]
-		})
+		slices.Sort[[]uint64](missingColumnsList)
 
 		log.WithFields(logrus.Fields{
 			"root":         fmt.Sprintf("%x", blockRoot),
 			"slot":         slot,
 			"timeIntoSlot": broadCastMissingDataColumnsTimeIntoSlot,
 			"columns":      missingColumnsList,
-		}).Debug("Broadcasting not seen via gossip but reconstructed data columns")
+		}).Debug("Start broadcasting not seen via gossip but reconstructed data columns")
 	})
 
 	return nil
