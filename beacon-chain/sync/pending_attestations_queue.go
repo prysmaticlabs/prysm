@@ -90,7 +90,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 func (s *Service) processAttestations(ctx context.Context, attestations []ethpb.SignedAggregateAttAndProof) {
 	for _, signedAtt := range attestations {
-		aggregate := signedAtt.AggregateAttestationAndProof().AggregateVal()
+		a, err := signedAtt.AggregateAttestationAndProof()
+		if err != nil {
+			continue
+		}
+		aggregate := a.AggregateVal()
 		data := aggregate.GetData()
 		// The pending attestations can arrive in both aggregated and unaggregated forms,
 		// each from has distinct validation steps.
@@ -107,7 +111,7 @@ func (s *Service) processAttestations(ctx context.Context, attestations []ethpb.
 					log.WithError(err).Debug("Could not save aggregate attestation")
 					continue
 				}
-				s.setAggregatorIndexEpochSeen(data.Target.Epoch, signedAtt.AggregateAttestationAndProof().GetAggregatorIndex())
+				s.setAggregatorIndexEpochSeen(data.Target.Epoch, a.GetAggregatorIndex())
 
 				// Broadcasting the signed attestation again once a node is able to process it.
 				if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {
@@ -163,7 +167,12 @@ func (s *Service) processAttestations(ctx context.Context, attestations []ethpb.
 // that voted for that block root. The caller of this function is responsible
 // for not sending repeated attestations to the pending queue.
 func (s *Service) savePendingAtt(att ethpb.SignedAggregateAttAndProof) {
-	root := bytesutil.ToBytes32(att.AggregateAttestationAndProof().AggregateVal().GetData().BeaconBlockRoot)
+	a, err := att.AggregateAttestationAndProof()
+	if err != nil {
+		log.WithError(err).Debug("Could not get aggregate attestation and proof")
+		return
+	}
+	root := bytesutil.ToBytes32(a.AggregateVal().GetData().BeaconBlockRoot)
 
 	s.pendingAttsLock.Lock()
 	defer s.pendingAttsLock.Unlock()
@@ -195,15 +204,23 @@ func (s *Service) savePendingAtt(att ethpb.SignedAggregateAttAndProof) {
 }
 
 func attsAreEqual(a, b ethpb.SignedAggregateAttAndProof) bool {
+	aAtt, err := a.AggregateAttestationAndProof()
+	if err != nil {
+		return false
+	}
+	bAtt, err := b.AggregateAttestationAndProof()
+	if err != nil {
+		return false
+	}
 	if a.GetSignature() != nil {
-		return b.GetSignature() != nil && a.AggregateAttestationAndProof().GetAggregatorIndex() == b.AggregateAttestationAndProof().GetAggregatorIndex()
+		return b.GetSignature() != nil && aAtt.GetAggregatorIndex() == bAtt.GetAggregatorIndex()
 	}
 	if b.GetSignature() != nil {
 		return false
 	}
 
-	aAggregate := a.AggregateAttestationAndProof().AggregateVal()
-	bAggregate := b.AggregateAttestationAndProof().AggregateVal()
+	aAggregate := aAtt.AggregateVal()
+	bAggregate := bAtt.AggregateVal()
 	aData := aAggregate.GetData()
 	bData := bAggregate.GetData()
 
@@ -235,7 +252,11 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot primitives.Slot)
 
 	for bRoot, atts := range s.blkRootToPendingAtts {
 		for i := len(atts) - 1; i >= 0; i-- {
-			if slot >= atts[i].AggregateAttestationAndProof().AggregateVal().GetData().Slot+params.BeaconConfig().SlotsPerEpoch {
+			att, err := atts[i].AggregateAttestationAndProof()
+			if err != nil {
+				continue
+			}
+			if slot >= att.AggregateVal().GetData().Slot+params.BeaconConfig().SlotsPerEpoch {
 				// Remove the pending attestation from the list in place.
 				atts = append(atts[:i], atts[i+1:]...)
 			}

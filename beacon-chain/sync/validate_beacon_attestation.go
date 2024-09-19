@@ -126,14 +126,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			if !ok {
 				return pubsub.ValidationIgnore, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.AttestationElectra{}, att)
 			}
-			s.savePendingAtt(&eth.SignedAggregateAttestationAndProofElectra{Message: &eth.AggregateAttestationAndProofElectra{Aggregate: a}})
+			s.savePendingAtt(a)
 		} else {
 			a, ok := att.(*eth.Attestation)
 			// This will never fail in practice because we asserted the version
 			if !ok {
 				return pubsub.ValidationIgnore, fmt.Errorf("attestation has wrong type (expected %T, got %T)", &eth.Attestation{}, att)
 			}
-			s.savePendingAtt(&eth.SignedAggregateAttestationAndProof{Message: &eth.AggregateAttestationAndProof{Aggregate: a}})
+			s.savePendingAtt(a)
 		}
 		return pubsub.ValidationIgnore, nil
 	}

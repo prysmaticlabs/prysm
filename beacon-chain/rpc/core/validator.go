@@ -384,7 +384,10 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 	if agg == nil {
 		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
 	}
-	attAndProof := agg.AggregateAttestationAndProof()
+	attAndProof, err := agg.AggregateAttestationAndProof()
+	if err != nil {
+		return &RpcError{Err: err, Reason: BadRequest}
+	}
 	if attAndProof == nil {
 		return &RpcError{Err: errors.New("signed aggregate request can't be nil"), Reason: BadRequest}
 	}
