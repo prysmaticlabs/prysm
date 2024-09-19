@@ -408,7 +408,7 @@ func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *eth
 
 // ProcessDepositRequests is a function as part of electra to process execution layer deposits
 func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, requests []*enginev1.DepositRequest) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "electra.ProcessDepositRequests")
+	_, span := trace.StartSpan(ctx, "electra.ProcessDepositRequests")
 	defer span.End()
 
 	if len(requests) == 0 {
