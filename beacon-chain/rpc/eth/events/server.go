@@ -21,4 +21,5 @@ type Server struct {
 	ChainInfoFetcher       blockchain.ChainInfoFetcher
 	TrackedValidatorsCache *cache.TrackedValidatorsCache
 	KeepAliveInterval      time.Duration
+	EventFeedDepth         int
 }

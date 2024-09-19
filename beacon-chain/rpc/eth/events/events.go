@@ -31,7 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const eventFeedDepth = 1000
+const DefaultEventFeedDepth = 1000
 
 const (
 	InvalidTopic = "__invalid__"
@@ -164,13 +164,22 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, msg, http.StatusInternalServerError)
 		return
 	}
-	es, err := newEventStreamer(eventFeedDepth, s.KeepAliveInterval)
+	depth := s.EventFeedDepth
+	if depth == 0 {
+		depth = DefaultEventFeedDepth
+	}
+	es, err := newEventStreamer(depth, s.KeepAliveInterval)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := es.streamEvents(ctx, sw, topics, s); err != nil {
-		log.WithError(err).Debug("Event streamer shutting down due to error.")
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	api.SetSSEHeaders(w)
+	go es.outboxWriteLoop(ctx, cancel, sw)
+	if err := es.recvEventLoop(ctx, cancel, topics, s); err != nil {
+		log.WithError(err).Debug("Shutting down StreamEvents handler.")
 	}
 }
 
@@ -189,15 +198,7 @@ type eventStreamer struct {
 	keepAlive time.Duration
 }
 
-func (es *eventStreamer) streamEvents(ctx context.Context, w StreamingResponseWriter, req *topicRequest, s *Server) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go es.recvEventLoop(ctx, cancel, req, s)
-	api.SetSSEHeaders(w)
-	return es.outboxWriteLoop(ctx, w)
-}
-
-func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.CancelFunc, req *topicRequest, s *Server) {
+func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.CancelFunc, req *topicRequest, s *Server) error {
 	eventsChan := make(chan *feed.Event, len(es.outbox))
 	if req.needOpsFeed {
 		opsSub := s.OperationNotifier.OperationFeed().Subscribe(eventsChan)
@@ -210,12 +211,12 @@ func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.Cance
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return ctx.Err()
 		case event := <-eventsChan:
 			lr, err := s.lazyReaderForEvent(ctx, event, req)
 			if err != nil {
 				if !errors.Is(err, errNotRequested) {
-					log.WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
+					log.WithField("event_type", fmt.Sprintf("%v", event.Data)).WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
 				}
 				continue
 			}
@@ -230,8 +231,10 @@ func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.Cance
 				// note: we could hijack the connection and close it here. Does that cause issues? What are the benefits?
 				// A benefit of hijack and close is that it may force an error on the remote end, however just closing the context of the
 				// http handler may be sufficient to cause the remote http response reader to close.
-				log.WithField("event_type", fmt.Sprintf("%v", event.Data)).Warn("Unable to safely write event to stream, shutting down.")
-				return
+				if errors.Is(err, errSlowReader) {
+					log.WithError(err).Warn("Client is unable to keep up with event stream, shutting down.")
+				}
+				return err
 			}
 		}
 	}
@@ -261,10 +264,17 @@ func newlineReader() io.Reader {
 
 // outboxWriteLoop runs in a separate goroutine. Its job is to write the values in the outbox to
 // the client as fast as the client can read them.
-func (es *eventStreamer) outboxWriteLoop(ctx context.Context, w StreamingResponseWriter) error {
+func (es *eventStreamer) outboxWriteLoop(ctx context.Context, cancel context.CancelFunc, w StreamingResponseWriter) {
+	var err error
+	defer func() {
+		if err != nil {
+			log.WithError(err).Debug("Event streamer shutting down due to error.")
+		}
+	}()
+	defer cancel()
 	// Write a keepalive at the start to test the connection and simplify test setup.
-	if err := es.writeOutbox(ctx, w, nil); err != nil {
-		return err
+	if err = es.writeOutbox(ctx, w, nil); err != nil {
+		return
 	}
 
 	kaT := time.NewTimer(es.keepAlive)
@@ -277,16 +287,17 @@ func (es *eventStreamer) outboxWriteLoop(ctx context.Context, w StreamingRespons
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			err = ctx.Err()
+			return
 		case <-kaT.C:
-			if err := es.writeOutbox(ctx, w, nil); err != nil {
-				return err
+			if err = es.writeOutbox(ctx, w, nil); err != nil {
+				return
 			}
 			// In this case the timer doesn't need to be Stopped before the Reset call after the select statement,
 			// because the timer has already fired.
 		case lr := <-es.outbox:
-			if err := es.writeOutbox(ctx, w, lr); err != nil {
-				return err
+			if err = es.writeOutbox(ctx, w, lr); err != nil {
+				return
 			}
 			// We don't know if the timer fired concurrently to this case being ready, so we need to check the return
 			// of Stop and drain the timer channel if it fired. We won't need to do this in go 1.23.
