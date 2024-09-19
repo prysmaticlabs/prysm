@@ -274,7 +274,7 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	panic("implement me")
 }
 
-func (b *BeaconBlockBody) ExecutionRequests(*enginev1.ExecutionRequests, error) {
+func (b *BeaconBlockBody) ExecutionRequests() (*enginev1.ExecutionRequests, error) {
 	panic("implement me")
 }
 

@@ -158,6 +158,7 @@ func TestPayloadBodiesViaUnblinder(t *testing.T) {
 
 		payload, err := bbr.payloadForHeader(fx.denebBlock.blinded.header, fx.denebBlock.blinded.block.Version())
 		require.NoError(t, err)
+		require.Equal(t, version.Deneb, fx.denebBlock.blinded.block.Version())
 		unblindFull, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(fx.denebBlock.blinded.block, payload)
 		require.NoError(t, err)
 		testAssertReconstructedEquivalent(t, fx.denebBlock.full, unblindFull)

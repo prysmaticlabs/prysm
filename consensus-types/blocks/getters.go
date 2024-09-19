@@ -167,7 +167,6 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		}
 		return initBlindedSignedBlockFromProtoElectra(
 			&eth.SignedBlindedBeaconBlockElectra{
-				// TODO: Add requests
 				Message: &eth.BlindedBeaconBlockElectra{
 					Slot:          b.block.slot,
 					ProposerIndex: b.block.proposerIndex,
@@ -186,6 +185,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 						ExecutionPayloadHeader: header,
 						BlsToExecutionChanges:  b.block.body.blsToExecutionChanges,
 						BlobKzgCommitments:     b.block.body.blobKzgCommitments,
+						ExecutionRequests:      b.block.body.executionRequests,
 					},
 				},
 				Signature: b.signature[:],

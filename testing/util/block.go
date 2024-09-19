@@ -1642,6 +1642,7 @@ func HydrateBlindedBeaconBlockBodyElectra(b *ethpb.BlindedBeaconBlockBodyElectra
 			WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 		}
 	}
+	b.ExecutionRequests = HydrateExecutionRequests(b.ExecutionRequests)
 	return b
 }
 
