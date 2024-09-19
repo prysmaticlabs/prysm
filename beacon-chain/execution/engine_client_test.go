@@ -502,20 +502,6 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
-	t.Run(NewPayloadMethodV4+" VALID status", func(t *testing.T) {
-		execPayload, ok := fix["ExecutionPayloadDeneb"].(*pb.ExecutionPayloadDeneb)
-		require.Equal(t, true, ok)
-		want, ok := fix["ValidPayloadStatus"].(*pb.PayloadStatus)
-		require.Equal(t, true, ok)
-		client := newPayloadV4Setup(t, want, execPayload)
-
-		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
-		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
-		require.NoError(t, err)
-		require.DeepEqual(t, want.LatestValidHash, resp)
-	})
 	t.Run(NewPayloadMethod+" SYNCING status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -550,20 +536,6 @@ func TestClient_HTTP(t *testing.T) {
 		want, ok := fix["SyncingStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
 		client := newPayloadV3Setup(t, want, execPayload)
-
-		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
-		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
-		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
-		require.DeepEqual(t, []uint8(nil), resp)
-	})
-	t.Run(NewPayloadMethodV4+" SYNCING status", func(t *testing.T) {
-		execPayload, ok := fix["ExecutionPayloadDeneb"].(*pb.ExecutionPayloadDeneb)
-		require.Equal(t, true, ok)
-		want, ok := fix["SyncingStatus"].(*pb.PayloadStatus)
-		require.Equal(t, true, ok)
-		client := newPayloadV4Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
@@ -614,20 +586,6 @@ func TestClient_HTTP(t *testing.T) {
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
-	t.Run(NewPayloadMethodV4+" INVALID_BLOCK_HASH status", func(t *testing.T) {
-		execPayload, ok := fix["ExecutionPayloadDeneb"].(*pb.ExecutionPayloadDeneb)
-		require.Equal(t, true, ok)
-		want, ok := fix["InvalidBlockHashStatus"].(*pb.PayloadStatus)
-		require.Equal(t, true, ok)
-		client := newPayloadV4Setup(t, want, execPayload)
-
-		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
-		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
-		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
-		require.DeepEqual(t, []uint8(nil), resp)
-	})
 	t.Run(NewPayloadMethod+" INVALID status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -662,20 +620,6 @@ func TestClient_HTTP(t *testing.T) {
 		want, ok := fix["InvalidStatus"].(*pb.PayloadStatus)
 		require.Equal(t, true, ok)
 		client := newPayloadV3Setup(t, want, execPayload)
-
-		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
-		require.NoError(t, err)
-		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
-		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
-		require.DeepEqual(t, want.LatestValidHash, resp)
-	})
-	t.Run(NewPayloadMethodV4+" INVALID status", func(t *testing.T) {
-		execPayload, ok := fix["ExecutionPayloadDeneb"].(*pb.ExecutionPayloadDeneb)
-		require.Equal(t, true, ok)
-		want, ok := fix["InvalidStatus"].(*pb.PayloadStatus)
-		require.Equal(t, true, ok)
-		client := newPayloadV4Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
 		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload)
@@ -1489,18 +1433,6 @@ func fixturesStruct() *payloadFixtures {
 			SourcePubkey:  &sPubkey,
 			TargetPubkey:  &tPubkey,
 		}
-	}
-	dr, err := pb.JsonDepositRequestsToProto(depositRequests)
-	if err != nil {
-		panic(err)
-	}
-	wr, err := pb.JsonWithdrawalRequestsToProto(withdrawalRequests)
-	if err != nil {
-		panic(err)
-	}
-	cr, err := pb.JsonConsolidationRequestsToProto(consolidationRequests)
-	if err != nil {
-		panic(err)
 	}
 	hexUint := hexutil.Uint64(1)
 	executionPayloadWithValueFixtureCapella := &pb.GetPayloadV2ResponseJson{
