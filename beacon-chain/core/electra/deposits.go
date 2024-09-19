@@ -109,13 +109,6 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //	# Increase balance by deposit amount
 //	index = ValidatorIndex(validator_pubkeys.index(pubkey))
 //	state.pending_balance_deposits.append(PendingBalanceDeposit(index=index, amount=amount))  # [Modified in Electra:EIP-7251]
-//	# Check if valid deposit switch to compounding credentials
-//
-// if ( is_compounding_withdrawal_credential(withdrawal_credentials) and has_eth1_withdrawal_credential(state.validators[index])
-//
-//	 and is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature)
-//	):
-//	 switch_to_compounding_validator(state, index)
 func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verifySignature bool) (state.BeaconState, error) {
 	pubKey := data.PublicKey
 	amount := data.Amount
@@ -138,24 +131,6 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 		// no validation on top-ups (phase0 feature). no validation before state change
 		if err := beaconState.AppendPendingBalanceDeposit(index, amount); err != nil {
 			return nil, err
-		}
-		val, err := beaconState.ValidatorAtIndex(index)
-		if err != nil {
-			return nil, err
-		}
-		if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) {
-			if verifySignature {
-				valid, err := IsValidDepositSignature(data)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not verify deposit signature")
-				}
-				if !valid {
-					return beaconState, nil
-				}
-			}
-			if err := SwitchToCompoundingValidator(beaconState, index); err != nil {
-				return nil, errors.Wrap(err, "could not switch to compound validator")
-			}
 		}
 	}
 	return beaconState, nil
