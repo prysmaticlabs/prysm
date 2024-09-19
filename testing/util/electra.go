@@ -168,31 +168,3 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 	require.NoError(t, err)
 	return rob, sidecars
 }
-
-func generateTestDepositRequests(offset, n uint64) []*enginev1.DepositRequest {
-	r := make([]*enginev1.DepositRequest, n)
-	var i uint64
-	for i = 0; i < n; i++ {
-		r[i] = &enginev1.DepositRequest{
-			Pubkey:                make([]byte, 48),
-			WithdrawalCredentials: make([]byte, 32),
-			Amount:                offset + i,
-			Signature:             make([]byte, 96),
-			Index:                 offset + i + 100,
-		}
-	}
-	return r
-}
-
-func generateTestWithdrawalRequests(offset, n uint64) []*enginev1.WithdrawalRequest {
-	r := make([]*enginev1.WithdrawalRequest, n)
-	var i uint64
-	for i = 0; i < n; i++ {
-		r[i] = &enginev1.WithdrawalRequest{
-			SourceAddress:   make([]byte, 20),
-			ValidatorPubkey: make([]byte, 48),
-			Amount:          offset + i,
-		}
-	}
-	return r
-}
