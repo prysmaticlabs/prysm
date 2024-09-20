@@ -35,7 +35,7 @@ func TestSetLatestExecutionPayloadHeader(t *testing.T) {
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBeaconBlockElectra().Block.Body.ExecutionPayload
-			ee, err := blocks.WrappedExecutionPayloadElectra(e)
+			ee, err := blocks.WrappedExecutionPayloadDeneb(e)
 			require.NoError(t, err)
 			return ee
 		}(),
@@ -62,7 +62,7 @@ func TestSetLatestExecutionPayloadHeader(t *testing.T) {
 		}(),
 		func() interfaces.ExecutionData {
 			e := util.NewBlindedBeaconBlockElectra().Message.Body.ExecutionPayloadHeader
-			ee, err := blocks.WrappedExecutionPayloadHeaderElectra(e)
+			ee, err := blocks.WrappedExecutionPayloadHeaderDeneb(e)
 			require.NoError(t, err)
 			return ee
 		}(),

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
@@ -613,27 +614,29 @@ func hydrateBeaconBlockBodyElectra() *eth.BeaconBlockBodyElectra {
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		},
-		ExecutionPayload: &pb.ExecutionPayloadElectra{
-			ParentHash:            make([]byte, fieldparams.RootLength),
-			FeeRecipient:          make([]byte, 20),
-			StateRoot:             make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:          make([]byte, fieldparams.RootLength),
-			LogsBloom:             make([]byte, 256),
-			PrevRandao:            make([]byte, fieldparams.RootLength),
-			ExtraData:             make([]byte, 0),
-			BaseFeePerGas:         make([]byte, fieldparams.RootLength),
-			BlockHash:             make([]byte, fieldparams.RootLength),
-			Transactions:          make([][]byte, 0),
-			Withdrawals:           make([]*pb.Withdrawal, 0),
-			DepositRequests:       make([]*pb.DepositRequest, 0),
-			WithdrawalRequests:    make([]*pb.WithdrawalRequest, 0),
-			ConsolidationRequests: make([]*pb.ConsolidationRequest, 0),
+		ExecutionPayload: &pb.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*pb.Withdrawal, 0),
+		},
+		ExecutionRequests: &enginev1.ExecutionRequests{
+			Deposits:       make([]*enginev1.DepositRequest, 0),
+			Withdrawals:    make([]*enginev1.WithdrawalRequest, 0),
+			Consolidations: make([]*enginev1.ConsolidationRequest, 0),
 		},
 	}
 }
 
 func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
 	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
-	_, ok := epd.(interfaces.ExecutionDataElectra)
+	_, ok := epd.(interfaces.ExecutionData)
 	require.Equal(t, false, ok)
 }

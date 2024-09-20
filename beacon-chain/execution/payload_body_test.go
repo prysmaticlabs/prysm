@@ -64,12 +64,6 @@ func payloadToBody(t *testing.T, ed interfaces.ExecutionData) *pb.ExecutionPaylo
 	for i := range txs {
 		body.Transactions = append(body.Transactions, txs[i])
 	}
-	eed, isElectra := ed.(interfaces.ExecutionDataElectra)
-	if isElectra {
-		body.DepositRequests = pb.ProtoDepositRequestsToJson(eed.DepositRequests())
-		body.WithdrawalRequests = pb.ProtoWithdrawalRequestsToJson(eed.WithdrawalRequests())
-		body.ConsolidationRequests = pb.ProtoConsolidationRequestsToJson(eed.ConsolidationRequests())
-	}
 	return body
 }
 
@@ -132,10 +126,10 @@ func testBlindedBlockFixtures(t *testing.T) *blindedBlockFixtures {
 	afterSkipBlock, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, denebSlot(t)+3, 0, util.WithPayloadSetter(afterSkip))
 	fx.afterSkipDeneb = blindedBlockWithHeader(t, afterSkipBlock)
 
-	electra := fixturesStruct().ExecutionPayloadElectra
+	electra := fixturesStruct().ExecutionPayloadDeneb
 	electra.BlockHash = bytesutil.PadTo([]byte("electra"), 32)
 	electra.BlockNumber = 5
-	electraBlock, _ := util.GenerateTestElectraBlockWithSidecar(t, [32]byte{}, electraSlot(t), 0, util.WithElectraPayload(electra))
+	electraBlock, _ := util.GenerateTestElectraBlockWithSidecar(t, [32]byte{}, electraSlot(t), 0, util.WithDenebPayload(electra))
 	fx.electra = blindedBlockWithHeader(t, electraBlock)
 	return fx
 }
@@ -164,6 +158,7 @@ func TestPayloadBodiesViaUnblinder(t *testing.T) {
 
 		payload, err := bbr.payloadForHeader(fx.denebBlock.blinded.header, fx.denebBlock.blinded.block.Version())
 		require.NoError(t, err)
+		require.Equal(t, version.Deneb, fx.denebBlock.blinded.block.Version())
 		unblindFull, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(fx.denebBlock.blinded.block, payload)
 		require.NoError(t, err)
 		testAssertReconstructedEquivalent(t, fx.denebBlock.full, unblindFull)

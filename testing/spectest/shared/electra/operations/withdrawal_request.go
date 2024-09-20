@@ -18,7 +18,8 @@ func blockWithWithdrawalRequest(ssz []byte) (interfaces.SignedBeaconBlock, error
 		return nil, err
 	}
 	b := util.NewBeaconBlockElectra()
-	b.Block.Body = &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadElectra{WithdrawalRequests: []*enginev1.WithdrawalRequest{dr}}}
+	//TODO: add requests
+	b.Block.Body = &ethpb.BeaconBlockBodyElectra{}
 	return blocks.NewSignedBeaconBlock(b)
 }
 

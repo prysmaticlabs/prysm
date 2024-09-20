@@ -510,10 +510,10 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 		}, nil
 	case version.Electra:
 		if b.IsBlinded() {
-			var ph *enginev1.ExecutionPayloadHeaderElectra
+			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
-				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderElectra)
+				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
 				if !ok {
 					return nil, errPayloadHeaderWrongType
 				}
@@ -531,12 +531,13 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 				ExecutionPayloadHeader: ph,
 				BlsToExecutionChanges:  b.blsToExecutionChanges,
 				BlobKzgCommitments:     b.blobKzgCommitments,
+				ExecutionRequests:      b.executionRequests,
 			}, nil
 		}
-		var p *enginev1.ExecutionPayloadElectra
+		var p *enginev1.ExecutionPayloadDeneb
 		var ok bool
 		if b.executionPayload != nil {
-			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadElectra)
+			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadDeneb)
 			if !ok {
 				return nil, errPayloadWrongType
 			}
@@ -554,6 +555,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:      p,
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 			BlobKzgCommitments:    b.blobKzgCommitments,
+			ExecutionRequests:     b.executionRequests,
 		}, nil
 
 	default:
@@ -1137,10 +1139,14 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 		return nil, errNilBlockBody
 	}
 
-	p, err := WrappedExecutionPayloadElectra(pb.ExecutionPayload)
+	p, err := WrappedExecutionPayloadDeneb(pb.ExecutionPayload)
 	// We allow the payload to be nil
 	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
+	}
+	er := pb.ExecutionRequests
+	if er == nil {
+		er = &enginev1.ExecutionRequests{}
 	}
 	b := &BeaconBlockBody{
 		version:                  version.Electra,
@@ -1156,6 +1162,7 @@ func initBlockBodyFromProtoElectra(pb *eth.BeaconBlockBodyElectra) (*BeaconBlock
 		executionPayload:         p,
 		blsToExecutionChanges:    pb.BlsToExecutionChanges,
 		blobKzgCommitments:       pb.BlobKzgCommitments,
+		executionRequests:        er,
 	}
 	return b, nil
 }
@@ -1165,10 +1172,14 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 		return nil, errNilBlockBody
 	}
 
-	ph, err := WrappedExecutionPayloadHeaderElectra(pb.ExecutionPayloadHeader)
+	ph, err := WrappedExecutionPayloadHeaderDeneb(pb.ExecutionPayloadHeader)
 	// We allow the payload to be nil
 	if err != nil && !errors.Is(err, consensus_types.ErrNilObjectWrapped) {
 		return nil, err
+	}
+	er := pb.ExecutionRequests
+	if er == nil {
+		er = &enginev1.ExecutionRequests{}
 	}
 	b := &BeaconBlockBody{
 		version:                  version.Electra,
@@ -1184,6 +1195,7 @@ func initBlindedBlockBodyFromProtoElectra(pb *eth.BlindedBeaconBlockBodyElectra)
 		executionPayloadHeader:   ph,
 		blsToExecutionChanges:    pb.BlsToExecutionChanges,
 		blobKzgCommitments:       pb.BlobKzgCommitments,
+		executionRequests:        er,
 	}
 	return b, nil
 }
