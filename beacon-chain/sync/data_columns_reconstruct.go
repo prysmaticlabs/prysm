@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -24,9 +25,9 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 	blockRoot := verifiedRODataColumn.BlockRoot()
 
 	// Get the columns we store.
-	storedDataColumns, err := s.cfg.blobStorage.ColumnIndices(blockRoot)
+	storedDataColumns, err := s.storedDataColumns(blockRoot)
 	if err != nil {
-		return errors.Wrap(err, "columns indices")
+		return errors.Wrap(err, "stored data columns")
 	}
 
 	storedColumnsCount := len(storedDataColumns)
@@ -103,6 +104,11 @@ func (s *Service) reconstructDataColumns(ctx context.Context, verifiedRODataColu
 		if err := s.cfg.blobStorage.SaveDataColumn(verifiedRoDataColumn); err != nil {
 			return errors.Wrap(err, "save column")
 		}
+
+		// Mark the data column as stored (but not received).
+		if err := s.setStoredDataColumn(blockRoot, dataColumnSidecar.ColumnIndex); err != nil {
+			return errors.Wrap(err, "set stored data column")
+		}
 	}
 
 	log.WithField("root", fmt.Sprintf("%x", blockRoot)).Debug("Data columns reconstructed and saved successfully")
@@ -120,6 +126,8 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 	blockRoot [fieldparams.RootLength]byte,
 	dataColumn blocks.VerifiedRODataColumn,
 ) error {
+	log := log.WithField("root", fmt.Sprintf("%x", blockRoot))
+
 	// Retrieve the slot of the block.
 	slot := dataColumn.Slot()
 
@@ -138,23 +146,30 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 
 	time.AfterFunc(waitingTime, func() {
 		s.dataColumsnReconstructionLock.Lock()
-		defer s.deleteReceivedDataColumns(blockRoot)
 		defer s.dataColumsnReconstructionLock.Unlock()
 
 		// Get the received by gossip data columns.
-		receivedDataColumns := s.receivedDataColumns(blockRoot)
+		receivedDataColumns, err := s.receivedDataColumns(blockRoot)
+		if err != nil {
+			log.WithError(err).Error("Received data columns")
+			return
+		}
+
 		if receivedDataColumns == nil {
-			log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Error("No received data columns")
+			log.Error("No received data columns")
+			return
 		}
 
 		// Get the data columns we should store.
-		custodyDataColumns, err := peerdas.CustodyColumns(s.cfg.p2p.NodeID(), peerdas.CustodySubnetCount())
+		nodeID := s.cfg.p2p.NodeID()
+		custodySubnetCount := peerdas.CustodySubnetCount()
+		custodyDataColumns, err := peerdas.CustodyColumns(nodeID, custodySubnetCount)
 		if err != nil {
 			log.WithError(err).Error("Custody columns")
 		}
 
 		// Get the data columns we actually store.
-		storedDataColumns, err := s.cfg.blobStorage.ColumnIndices(blockRoot)
+		storedDataColumns, err := s.storedDataColumns(blockRoot)
 		if err != nil {
 			log.WithField("root", fmt.Sprintf("%x", blockRoot)).WithError(err).Error("Columns indices")
 			return
@@ -222,46 +237,114 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 }
 
 // setReceivedDataColumn marks the data column for a given root as received.
-func (s *Service) setReceivedDataColumn(root [fieldparams.RootLength]byte, columnIndex uint64) {
-	s.dataColumnsFromRootLock.Lock()
-	defer s.dataColumnsFromRootLock.Unlock()
+func (s *Service) setReceivedDataColumn(root [fieldparams.RootLength]byte, columnIndex uint64) error {
+	s.receivedDataColumnsFromRootLock.Lock()
+	defer s.receivedDataColumnsFromRootLock.Unlock()
 
-	// Get all the received data columns for this root.
-	receivedDataColumns, ok := s.receivedDataColumnsFromRoot[root]
-	if !ok {
-		// Create the map for this block root if needed.
-		receivedDataColumns = make(map[uint64]bool, params.BeaconConfig().NumberOfColumns)
-		s.receivedDataColumnsFromRoot[root] = receivedDataColumns
+	if err := setDataColumnCache(s.receivedDataColumnsFromRoot, root, columnIndex); err != nil {
+		return errors.Wrap(err, "set data column cache")
 	}
 
-	// Mark the data column as received.
-	receivedDataColumns[columnIndex] = true
+	return nil
 }
 
 // receivedDataColumns returns the received data columns for a given root.
-func (s *Service) receivedDataColumns(root [fieldparams.RootLength]byte) map[uint64]bool {
-	s.dataColumnsFromRootLock.RLock()
-	defer s.dataColumnsFromRootLock.RUnlock()
+func (s *Service) receivedDataColumns(root [fieldparams.RootLength]byte) (map[uint64]bool, error) {
+	dataColumns, err := dataColumnsCache(s.receivedDataColumnsFromRoot, root)
+	if err != nil {
+		return nil, errors.Wrap(err, "data columns cache")
+	}
 
-	// Get all the received data columns for this root.
-	receivedDataColumns, ok := s.receivedDataColumnsFromRoot[root]
+	return dataColumns, nil
+}
+
+// setStorededDataColumn marks the data column for a given root as stored.
+func (s *Service) setStoredDataColumn(root [fieldparams.RootLength]byte, columnIndex uint64) error {
+	s.storedDataColumnsFromRootLock.Lock()
+	defer s.storedDataColumnsFromRootLock.Unlock()
+
+	if err := setDataColumnCache(s.storedDataColumnsFromRoot, root, columnIndex); err != nil {
+		return errors.Wrap(err, "set data column cache")
+	}
+
+	return nil
+}
+
+// storedDataColumns returns the received data columns for a given root.
+func (s *Service) storedDataColumns(root [fieldparams.RootLength]byte) (map[uint64]bool, error) {
+	dataColumns, err := dataColumnsCache(s.storedDataColumnsFromRoot, root)
+	if err != nil {
+		return nil, errors.Wrap(err, "data columns cache")
+	}
+
+	return dataColumns, nil
+}
+
+// setDataColumnCache sets the data column for a given root in columnsCache.
+// The caller should hold the lock for the cache.
+func setDataColumnCache(columnsCache *cache.Cache, root [fieldparams.RootLength]byte, columnIndex uint64) error {
+	if columnIndex >= fieldparams.NumberOfColumns {
+		return errors.Errorf("column index out of bounds: got %d, expected < %d", columnIndex, fieldparams.NumberOfColumns)
+	}
+
+	rootString := fmt.Sprintf("%#x", root)
+
+	// Get all the data columns for this root.
+	items, ok := columnsCache.Get(rootString)
 	if !ok {
+		var columns [fieldparams.NumberOfColumns]bool
+		columns[columnIndex] = true
+		columnsCache.Set(rootString, columns, cache.DefaultExpiration)
+
 		return nil
 	}
 
-	// Copy the received data columns.
-	copied := make(map[uint64]bool, len(receivedDataColumns))
-	for column, received := range receivedDataColumns {
-		copied[column] = received
+	// Cast the array.
+	columns, ok := items.([fieldparams.NumberOfColumns]bool)
+	if !ok {
+		return errors.New("cannot cast data columns from cache")
 	}
 
-	return copied
+	// Add the data column to the data columns.
+	columns[columnIndex] = true
+
+	// Update the data columns in the cache.
+	columnsCache.Set(rootString, columns, cache.DefaultExpiration)
+
+	return nil
 }
 
-// deleteReceivedDataColumns deletes the received data columns for a given root.
-func (s *Service) deleteReceivedDataColumns(root [fieldparams.RootLength]byte) {
-	s.dataColumnsFromRootLock.Lock()
-	defer s.dataColumnsFromRootLock.Unlock()
+// dataColumnsCache returns the data columns for a given root in columnsCache.
+func dataColumnsCache(columnsCache *cache.Cache, root [fieldparams.RootLength]byte) (map[uint64]bool, error) {
+	rootString := fmt.Sprintf("%#x", root)
 
-	delete(s.receivedDataColumnsFromRoot, root)
+	// Get all the data columns for this root.
+	items, ok := columnsCache.Get(rootString)
+	if !ok {
+		return nil, nil
+	}
+
+	// Cast the array.
+	dataColumns, ok := items.([fieldparams.NumberOfColumns]bool)
+	if !ok {
+		return nil, errors.New("Cannot cast data columns from cache")
+	}
+
+	// Convert to map.
+	result := columnsArrayToMap(dataColumns)
+
+	return result, nil
+}
+
+// columnsArrayToMap converts an array of columns to a map of columns.
+func columnsArrayToMap(columnsArray [fieldparams.NumberOfColumns]bool) map[uint64]bool {
+	columnsMap := make(map[uint64]bool)
+
+	for i, v := range columnsArray {
+		if v {
+			columnsMap[uint64(i)] = v
+		}
+	}
+
+	return columnsMap
 }
