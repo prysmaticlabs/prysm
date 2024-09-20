@@ -17,11 +17,8 @@ import (
 	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 )
 
 const (
@@ -74,9 +71,10 @@ func NewLightClientFinalityUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*ethpbv2.LightClientFinalityUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +87,9 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*ethpbv2.LightClientOptimisticUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, nil)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +159,7 @@ func NewLightClientUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
 	attestedEpoch := slots.ToEpoch(attestedState.Slot())
@@ -223,73 +223,30 @@ func NewLightClientUpdateFromBeaconState(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested header root")
 	}
-	if attestedHeaderRoot != block.Block().ParentRoot() {
-		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x", attestedHeaderRoot, block.Block().ParentRoot())
+	attestedBlockRoot, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attested block root")
+	}
+	//assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
+	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
+		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
 	}
 
-	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedHeader.Slot))
+	//update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
+	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate(block.Block().Version())
+	result, err := createDefaultLightClientUpdate(block.Block().Version()) // TODO: we should pass finalizedBlock version
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
 
 	// update.attested_header = block_to_light_client_header(attested_block)
-	blockHeader := &ethpbv1.BeaconBlockHeader{
-		Slot:          attestedHeader.Slot,
-		ProposerIndex: attestedHeader.ProposerIndex,
-		ParentRoot:    attestedHeader.ParentRoot,
-		StateRoot:     attestedHeader.StateRoot,
-		BodyRoot:      attestedHeader.BodyRoot,
+	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attested light client header")
 	}
-	switch block.Block().Version() {
-	case version.Altair, version.Bellatrix:
-		result.AttestedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-				HeaderAltair: &ethpbv2.LightClientHeader{Beacon: blockHeader},
-			},
-		}
-	case version.Capella:
-		executionPayloadHeader, err := getExecutionPayloadHeaderCapella(block)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload header")
-		}
-		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload proof")
-		}
-		result.AttestedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-					Beacon:          blockHeader,
-					Execution:       executionPayloadHeader,
-					ExecutionBranch: executionPayloadProof,
-				},
-			},
-		}
-	case version.Deneb:
-		executionPayloadHeader, err := getExecutionPayloadHeaderDeneb(block)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload header")
-		}
-		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload proof")
-		}
-		result.AttestedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
-					Beacon:          blockHeader,
-					Execution:       executionPayloadHeader,
-					ExecutionBranch: executionPayloadProof,
-				},
-			},
-		}
-	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(block.Block().Version()))
-	}
+	result.AttestedHeader = attestedLightClientHeader
 
 	// if update_attested_period == update_signature_period
 	if updateAttestedPeriod == updateSignaturePeriod {
@@ -319,70 +276,11 @@ func NewLightClientUpdateFromBeaconState(
 		// if finalized_block.message.slot != GENESIS_SLOT
 		if finalizedBlock.Block().Slot() != 0 {
 			// update.finalized_header = block_to_light_client_header(finalized_block)
-			v1alpha1FinalizedHeader, err := finalizedBlock.Header()
+			finalizedLightClientHeader, err := BlockToLightClientHeader(finalizedBlock)
 			if err != nil {
-				return nil, errors.Wrap(err, "could not get finalized header")
+				return nil, errors.Wrap(err, "could not get finalized light client header")
 			}
-			finalizedHeader := migration.V1Alpha1SignedHeaderToV1(v1alpha1FinalizedHeader).GetMessage()
-			finalizedHeaderRoot, err := finalizedHeader.HashTreeRoot()
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get finalized header root")
-			}
-			switch finalizedBlock.Block().Version() {
-			case version.Altair, version.Bellatrix:
-				result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
-					Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-						HeaderAltair: &ethpbv2.LightClientHeader{Beacon: finalizedHeader},
-					},
-				}
-			case version.Capella:
-				executionPayloadHeader, err := getExecutionPayloadHeaderCapella(finalizedBlock)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload header")
-				}
-				executionPayloadProof, err := blocks.PayloadProof(ctx, finalizedBlock.Block())
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload proof")
-				}
-				result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
-					Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-						HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-							Beacon:          finalizedHeader,
-							Execution:       executionPayloadHeader,
-							ExecutionBranch: executionPayloadProof,
-						},
-					},
-				}
-			case version.Deneb:
-				executionPayloadHeader, err := getExecutionPayloadHeaderDeneb(finalizedBlock)
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload header")
-				}
-				executionPayloadProof, err := blocks.PayloadProof(ctx, finalizedBlock.Block())
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload proof")
-				}
-				result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
-					Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-						HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
-							Beacon:          finalizedHeader,
-							Execution:       executionPayloadHeader,
-							ExecutionBranch: executionPayloadProof,
-						},
-					},
-				}
-			default:
-				return nil, fmt.Errorf("unsupported block version %s", version.String(block.Block().Version()))
-			}
-
-			// assert hash_tree_root(update.finalized_header.beacon) == attested_state.finalized_checkpoint.root
-			if finalizedHeaderRoot != bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root) {
-				return nil, fmt.Errorf(
-					"finalized header root %#x not equal to attested finalized checkpoint root %#x",
-					finalizedHeaderRoot,
-					bytesutil.ToBytes32(attestedState.FinalizedCheckpoint().Root),
-				)
-			}
+			result.FinalizedHeader = finalizedLightClientHeader
 		} else {
 			// assert attested_state.finalized_checkpoint.root == Bytes32()
 			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
@@ -668,6 +566,45 @@ func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 	}
 	return withdrawalsRoot, nil
 }
+
+func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderContainer, error) {
+	switch block.Version() {
+	case version.Altair, version.Bellatrix:
+		altairHeader, err := BlockToLightClientHeaderAltair(block)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get altair header")
+		}
+		return &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: altairHeader,
+			},
+		}, nil
+	case version.Capella:
+		capellaHeader, err := BlockToLightClientHeaderCapella(context.Background(), block)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get capella header")
+		}
+		return &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: capellaHeader,
+			},
+		}, nil
+	case version.Deneb:
+		denebHeader, err := BlockToLightClientHeaderDeneb(context.Background(), block)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get deneb header")
+		}
+		return &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: denebHeader,
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported block version %s", version.String(block.Version()))
+	}
+}
+
+// TODO: make below functions private
 
 func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
 	if block.Version() != version.Altair {
