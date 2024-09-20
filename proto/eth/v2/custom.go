@@ -3,8 +3,9 @@ package eth
 import (
 	"bytes"
 	"fmt"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"math/bits"
+
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 )
