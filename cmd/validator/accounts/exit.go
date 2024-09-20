@@ -4,12 +4,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
@@ -17,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/v5/validator/node"
 	"github.com/urfave/cli/v2"
-	"google.golang.org/grpc"
 )
 
 func Exit(c *cli.Context, r io.Reader) error {
@@ -47,24 +43,10 @@ func Exit(c *cli.Context, r io.Reader) error {
 		}
 		w = &wallet.Wallet{}
 	} else if c.IsSet(flags.Web3SignerURLFlag.Name) {
-		ctx := grpcutil.AppendHeaders(c.Context, grpcHeaders)
-		conn, err := grpc.DialContext(ctx, beaconRPCProvider, dialOpts...)
-		if err != nil {
-			return errors.Wrapf(err, "could not dial endpoint %s", beaconRPCProvider)
-		}
-		nodeClient := ethpb.NewNodeClient(conn)
-		resp, err := nodeClient.GetGenesis(c.Context, &empty.Empty{})
-		if err != nil {
-			return errors.Wrapf(err, "failed to get genesis info")
-		}
-		if err := conn.Close(); err != nil {
-			log.WithError(err).Error("Failed to close connection")
-		}
 		config, err := node.Web3SignerConfig(c)
 		if err != nil {
 			return errors.Wrapf(err, "could not configure remote signer")
 		}
-		config.GenesisValidatorsRoot = resp.GenesisValidatorsRoot
 		w, km, err = walletWithWeb3SignerKeymanager(c, config)
 		if err != nil {
 			return err

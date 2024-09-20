@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/io/prompt"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
@@ -353,11 +352,6 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		config := cfg.Web3SignerConfig
 		if config == nil {
 			return nil, errors.New("web3signer config is nil")
-		}
-		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
-		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
-		if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
-			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
 		km, err = remoteweb3signer.NewKeymanager(ctx, config)
 		if err != nil {
