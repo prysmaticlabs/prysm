@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -1456,6 +1457,40 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	}
 }
 
+type PrepareBeaconProposerRequestMatcher struct {
+	expectedRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
+}
+
+func (m *PrepareBeaconProposerRequestMatcher) Matches(x interface{}) bool {
+	req, ok := x.(*ethpb.PrepareBeaconProposerRequest)
+	if !ok {
+		return false
+	}
+
+	if len(req.Recipients) != len(m.expectedRecipients) {
+		return false
+	}
+
+	// Build maps for efficient comparison
+	expectedMap := make(map[primitives.ValidatorIndex][]byte)
+	for _, recipient := range m.expectedRecipients {
+		expectedMap[recipient.ValidatorIndex] = recipient.FeeRecipient
+	}
+
+	// Compare the maps
+	for _, fc := range req.Recipients {
+		expectedFeeRecipient, exists := expectedMap[fc.ValidatorIndex]
+		if !exists || !bytes.Equal(expectedFeeRecipient, fc.FeeRecipient) {
+			return false
+		}
+	}
+	return true
+}
+
+func (m *PrepareBeaconProposerRequestMatcher) String() string {
+	return fmt.Sprintf("matches PrepareBeaconProposerRequest with Recipients: %v", m.expectedRecipients)
+}
+
 func TestValidator_PushSettings(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		ctrl := gomock.NewController(t)
@@ -1525,8 +1560,8 @@ func TestValidator_PushSettings(t *testing.T) {
 							PublicKeys: [][]byte{keys[0][:], keys[1][:]},
 							Indices:    []primitives.ValidatorIndex{1, 2},
 						}, nil)
-					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-						Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &PrepareBeaconProposerRequestMatcher{
+						expectedRecipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 							{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
 							{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 						},
@@ -1616,8 +1651,8 @@ func TestValidator_PushSettings(t *testing.T) {
 							PublicKeys: [][]byte{keys[0][:], keys[1][:]},
 							Indices:    []primitives.ValidatorIndex{1, 2},
 						}, nil)
-					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-						Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &PrepareBeaconProposerRequestMatcher{
+						expectedRecipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 							{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
 							{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 						},
@@ -1702,8 +1737,8 @@ func TestValidator_PushSettings(t *testing.T) {
 							PublicKeys: [][]byte{keys[0][:], keys[1][:]},
 							Indices:    []primitives.ValidatorIndex{1, 2},
 						}, nil)
-					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-						Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &PrepareBeaconProposerRequestMatcher{
+						expectedRecipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 							{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
 							{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 						},
