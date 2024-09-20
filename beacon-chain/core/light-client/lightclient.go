@@ -223,7 +223,7 @@ func NewLightClientUpdateFromBeaconState(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested header root")
 	}
-	attestedBlockRoot, err := block.Block().HashTreeRoot()
+	attestedBlockRoot, err := attestedBlock.Block().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested block root")
 	}

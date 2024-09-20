@@ -21,7 +21,7 @@ type TestLightClient struct {
 	State          state.BeaconState
 	Block          interfaces.ReadOnlySignedBeaconBlock
 	AttestedState  state.BeaconState
-	AttestedHeader *ethpb.BeaconBlockHeader
+	AttestedBlock  interfaces.ReadOnlySignedBeaconBlock
 	FinalizedBlock interfaces.ReadOnlySignedBeaconBlock
 }
 
@@ -133,7 +133,7 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 
 	l.State = state
 	l.AttestedState = attestedState
-	l.AttestedHeader = attestedHeader
+	l.AttestedBlock = signedParent
 	l.Block = signedBlock
 	l.Ctx = ctx
 	l.FinalizedBlock = finalizedBlock
@@ -245,7 +245,7 @@ func (l *TestLightClient) SetupTestCapellaFinalizedBlockAltair(blinded bool) *Te
 
 	l.State = state
 	l.AttestedState = attestedState
-	l.AttestedHeader = attestedHeader
+	l.AttestedBlock = signedParent
 	l.Block = signedBlock
 	l.Ctx = ctx
 	l.FinalizedBlock = finalizedBlock
@@ -330,10 +330,10 @@ func (l *TestLightClient) SetupTestAltair() *TestLightClient {
 
 	l.State = state
 	l.AttestedState = attestedState
-	l.AttestedHeader = attestedHeader
 	l.Block = signedBlock
 	l.Ctx = ctx
 	l.FinalizedBlock = finalizedBlock
+	l.AttestedBlock = signedParent
 
 	return l
 }
@@ -442,7 +442,7 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 
 	l.State = state
 	l.AttestedState = attestedState
-	l.AttestedHeader = attestedHeader
+	l.AttestedBlock = signedParent
 	l.Block = signedBlock
 	l.Ctx = ctx
 	l.FinalizedBlock = finalizedBlock
@@ -554,7 +554,7 @@ func (l *TestLightClient) SetupTestDenebFinalizedBlockCapella(blinded bool) *Tes
 
 	l.State = state
 	l.AttestedState = attestedState
-	l.AttestedHeader = attestedHeader
+	l.AttestedBlock = signedParent
 	l.Block = signedBlock
 	l.Ctx = ctx
 	l.FinalizedBlock = finalizedBlock
@@ -565,14 +565,16 @@ func (l *TestLightClient) SetupTestDenebFinalizedBlockCapella(blinded bool) *Tes
 func (l *TestLightClient) CheckAttestedHeader(container *ethpbv2.LightClientHeaderContainer) {
 	updateAttestedHeaderBeacon, err := container.GetBeacon()
 	require.NoError(l.T, err)
-	require.Equal(l.T, l.AttestedHeader.Slot, updateAttestedHeaderBeacon.Slot, "Attested header slot is not equal")
-	require.Equal(l.T, l.AttestedHeader.ProposerIndex, updateAttestedHeaderBeacon.ProposerIndex, "Attested header proposer index is not equal")
-	require.DeepSSZEqual(l.T, l.AttestedHeader.ParentRoot, updateAttestedHeaderBeacon.ParentRoot, "Attested header parent root is not equal")
-	require.DeepSSZEqual(l.T, l.AttestedHeader.BodyRoot, updateAttestedHeaderBeacon.BodyRoot, "Attested header body root is not equal")
+	testAttestedHeader, err := l.AttestedBlock.Header()
+	require.NoError(l.T, err)
+	require.Equal(l.T, l.AttestedBlock.Block().Slot(), updateAttestedHeaderBeacon.Slot, "Attested block slot is not equal")
+	require.Equal(l.T, testAttestedHeader.Header.ProposerIndex, updateAttestedHeaderBeacon.ProposerIndex, "Attested block proposer index is not equal")
+	require.DeepSSZEqual(l.T, testAttestedHeader.Header.ParentRoot, updateAttestedHeaderBeacon.ParentRoot, "Attested block parent root is not equal")
+	require.DeepSSZEqual(l.T, testAttestedHeader.Header.BodyRoot, updateAttestedHeaderBeacon.BodyRoot, "Attested block body root is not equal")
 
 	attestedStateRoot, err := l.AttestedState.HashTreeRoot(l.Ctx)
 	require.NoError(l.T, err)
-	require.DeepSSZEqual(l.T, attestedStateRoot[:], updateAttestedHeaderBeacon.StateRoot, "Attested header state root is not equal")
+	require.DeepSSZEqual(l.T, attestedStateRoot[:], updateAttestedHeaderBeacon.StateRoot, "Attested block state root is not equal")
 }
 
 func (l *TestLightClient) CheckSyncAggregate(sa *ethpbv1.SyncAggregate) {

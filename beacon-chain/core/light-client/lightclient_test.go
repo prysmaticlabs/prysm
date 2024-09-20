@@ -18,12 +18,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
+// TODO: check for attested block in tests
+
 // NewLightClientOptimisticUpdateFromBeaconState tests
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
 
-	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState)
+	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -36,7 +38,7 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *test
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateCapella(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestCapella(false)
 
-	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState)
+	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -49,7 +51,7 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateCapella(t *tes
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestDeneb(false)
 
-	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState)
+	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -64,7 +66,7 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateDeneb(t *testi
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
 
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, l.FinalizedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -96,7 +98,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testin
 
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestCapella(false)
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, l.FinalizedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -168,7 +170,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapella(t *testi
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestDeneb(false)
 
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, l.FinalizedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -241,7 +243,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltairFinalizedBlockNil(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestAltair()
 
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, nil)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -267,7 +269,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltairFinalizedB
 
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapellaFinalizedBlockNil(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestCapella(false)
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, nil)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -294,7 +296,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapellaFinalized
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDenebFinalizedBlockNil(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestDeneb(false)
 
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, nil)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, nil)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -321,7 +323,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDenebFinalizedBl
 
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapellaFinalizedBlockInPreviousFork(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestCapellaFinalizedBlockAltair(false)
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, l.FinalizedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
@@ -352,7 +354,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateCapellaFinalized
 func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDenebFinalizedBlockInPreviousFork(t *testing.T) {
 	l := util.NewTestLightClient(t).SetupTestDenebFinalizedBlockCapella(false)
 
-	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.FinalizedBlock)
+	update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, l.FinalizedBlock)
 	require.NoError(t, err)
 	require.NotNil(t, update, "update is nil")
 
