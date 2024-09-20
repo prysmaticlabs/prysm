@@ -13,13 +13,15 @@ import (
 )
 
 func blockWithWithdrawalRequest(ssz []byte) (interfaces.SignedBeaconBlock, error) {
-	dr := &enginev1.WithdrawalRequest{}
-	if err := dr.UnmarshalSSZ(ssz); err != nil {
+	wr := &enginev1.WithdrawalRequest{}
+	if err := wr.UnmarshalSSZ(ssz); err != nil {
 		return nil, err
 	}
+	er := &enginev1.ExecutionRequests{
+		Withdrawals: []*enginev1.WithdrawalRequest{wr},
+	}
 	b := util.NewBeaconBlockElectra()
-	//TODO: add requests
-	b.Block.Body = &ethpb.BeaconBlockBodyElectra{}
+	b.Block.Body = &ethpb.BeaconBlockBodyElectra{ExecutionRequests: er}
 	return blocks.NewSignedBeaconBlock(b)
 }
 
