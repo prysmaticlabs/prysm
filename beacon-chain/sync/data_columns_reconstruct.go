@@ -133,13 +133,13 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 
 	// Get the time corresponding to the start of the slot.
 	genesisTime := uint64(s.cfg.chain.GenesisTime().Unix())
-	slotStart, err := slots.ToTime(genesisTime, slot)
+	slotStartTime, err := slots.ToTime(genesisTime, slot)
 	if err != nil {
 		return errors.Wrap(err, "to time")
 	}
 
 	// Compute when to broadcast the missing data columns.
-	broadcastTime := slotStart.Add(broadCastMissingDataColumnsTimeIntoSlot)
+	broadcastTime := slotStartTime.Add(broadCastMissingDataColumnsTimeIntoSlot)
 
 	// Compute the waiting time. This could be negative. In such a case, broadcast immediately.
 	waitingTime := time.Until(broadcastTime)
@@ -209,9 +209,8 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 
 			// Compute the subnet for this column.
 			subnet := column % params.BeaconConfig().DataColumnSidecarSubnetCount
-
 			// Broadcast the missing data column.
-			if err := s.cfg.p2p.BroadcastDataColumn(ctx, subnet, dataColumnSidecar); err != nil {
+			if err := s.cfg.p2p.BroadcastDataColumn(ctx, slot, slotStartTime, blockRoot, subnet, dataColumnSidecar); err != nil {
 				log.WithError(err).Error("Broadcast data column")
 			}
 		}

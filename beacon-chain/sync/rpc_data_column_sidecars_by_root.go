@@ -121,7 +121,11 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		custody = uint64MapToSortedSlice(custodyColumns)
 	}
 
-	log := log.WithField("custody", custody)
+	remotePeer := stream.Conn().RemotePeer()
+	log := log.WithFields(logrus.Fields{
+		"peer":    remotePeer,
+		"custody": custody,
+	})
 
 	i := 0
 	for root, columns := range requestedColumnsByRootLog {
@@ -133,7 +137,7 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		i++
 	}
 
-	log.Debug("Served data column sidecar by root request")
+	log.Debug("Serving data column sidecar by root request")
 
 	// Subscribe to the data column feed.
 	rootIndexChan := make(chan filesystem.RootIndexPair)

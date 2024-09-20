@@ -23,6 +23,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -585,9 +586,12 @@ func TestService_BroadcastDataColumn(t *testing.T) {
 
 	// Attempt to broadcast nil object should fail.
 	ctx := context.Background()
-	require.ErrorContains(t, "attempted to broadcast nil", p.BroadcastDataColumn(ctx, subnet, nil))
+	slot := primitives.Slot(42)
+	slotStartTime := time.Now()
+	var root [fieldparams.RootLength]byte
+	require.ErrorContains(t, "attempted to broadcast nil", p.BroadcastDataColumn(ctx, slot, slotStartTime, root, subnet, nil))
 
 	// Broadcast to peers and wait.
-	require.NoError(t, p.BroadcastDataColumn(ctx, subnet, sidecar))
+	require.NoError(t, p.BroadcastDataColumn(ctx, slot, slotStartTime, root, subnet, sidecar))
 	require.Equal(t, false, util.WaitTimeout(&wg, 1*time.Second), "Failed to receive pubsub within 1s")
 }

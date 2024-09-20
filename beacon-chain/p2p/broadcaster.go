@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
@@ -282,7 +283,14 @@ func (s *Service) internalBroadcastBlob(
 // BroadcastDataColumn broadcasts a data column to the p2p network, the message is assumed to be
 // broadcasted to the current fork and to the input column subnet.
 // TODO: Add tests
-func (s *Service) BroadcastDataColumn(ctx context.Context, columnSubnet uint64, dataColumnSidecar *ethpb.DataColumnSidecar) error {
+func (s *Service) BroadcastDataColumn(
+	ctx context.Context,
+	slot primitives.Slot,
+	slotStartTime time.Time,
+	root [fieldparams.RootLength]byte,
+	columnSubnet uint64,
+	dataColumnSidecar *ethpb.DataColumnSidecar,
+) error {
 	// Add tracing to the function.
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastBlob")
 	defer span.End()
@@ -301,13 +309,16 @@ func (s *Service) BroadcastDataColumn(ctx context.Context, columnSubnet uint64, 
 	}
 
 	// Non-blocking broadcast, with attempts to discover a column subnet peer if none available.
-	go s.internalBroadcastDataColumn(ctx, columnSubnet, dataColumnSidecar, forkDigest)
+	go s.internalBroadcastDataColumn(ctx, slot, slotStartTime, root, columnSubnet, dataColumnSidecar, forkDigest)
 
 	return nil
 }
 
 func (s *Service) internalBroadcastDataColumn(
 	ctx context.Context,
+	slot primitives.Slot,
+	slotStartTime time.Time,
+	root [fieldparams.RootLength]byte,
 	columnSubnet uint64,
 	dataColumnSidecar *ethpb.DataColumnSidecar,
 	forkDigest [fieldparams.VersionLength]byte,
@@ -367,6 +378,13 @@ func (s *Service) internalBroadcastDataColumn(
 		log.WithError(err).Error("Failed to broadcast data column sidecar")
 		tracing.AnnotateError(span, err)
 	}
+
+	log.WithFields(logrus.Fields{
+		"slot":               slot,
+		"timeSinceSlotStart": time.Since(slotStartTime),
+		"root":               fmt.Sprintf("%#x", root),
+		"columnSubnet":       columnSubnet,
+	}).Debug("Broadcasted data column sidecar")
 
 	// Increase the number of successful broadcasts.
 	dataColumnSidecarBroadcasts.Inc()

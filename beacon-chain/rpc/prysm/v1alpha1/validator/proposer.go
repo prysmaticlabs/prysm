@@ -471,8 +471,14 @@ func (vs *Server) broadcastAndReceiveDataColumns(
 	slot primitives.Slot,
 ) error {
 	eg, _ := errgroup.WithContext(ctx)
-
 	dataColumnsWithholdCount := features.Get().DataColumnsWithholdCount
+
+	// Get the time corresponding to the start of the slot.
+	genesisTime := uint64(vs.TimeFetcher.GenesisTime().Unix())
+	slotStartTime, err := slots.ToTime(genesisTime, slot)
+	if err != nil {
+		return errors.Wrap(err, "to time")
+	}
 
 	for _, sd := range sidecars {
 		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
@@ -487,11 +493,10 @@ func (vs *Server) broadcastAndReceiveDataColumns(
 				log.WithFields(logrus.Fields{
 					"root":            fmt.Sprintf("%#x", root),
 					"slot":            slot,
-					"subnet":          subnet,
 					"dataColumnIndex": sidecar.ColumnIndex,
 				}).Warning("Withholding data column")
 			} else {
-				if err := vs.P2P.BroadcastDataColumn(ctx, subnet, sidecar); err != nil {
+				if err := vs.P2P.BroadcastDataColumn(ctx, slot, slotStartTime, root, subnet, sidecar); err != nil {
 					return errors.Wrap(err, "broadcast data column")
 				}
 			}

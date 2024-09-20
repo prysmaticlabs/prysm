@@ -27,7 +27,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
@@ -192,7 +194,7 @@ func (p *TestP2P) BroadcastBlob(context.Context, uint64, *ethpb.BlobSidecar) err
 }
 
 // BroadcastDataColumn broadcasts a data column for mock.
-func (p *TestP2P) BroadcastDataColumn(context.Context, uint64, *ethpb.DataColumnSidecar) error {
+func (p *TestP2P) BroadcastDataColumn(context.Context, primitives.Slot, time.Time, [fieldparams.RootLength]byte, uint64, *ethpb.DataColumnSidecar) error {
 	p.BroadcastCalled.Store(true)
 	return nil
 }
