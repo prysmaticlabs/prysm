@@ -73,6 +73,9 @@ type Keymanager struct {
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	ctx, span := trace.StartSpan(ctx, "remote-keymanager.NewKeymanager")
 	defer span.End()
+	if cfg == nil {
+		return nil, errors.New("web3signer config is nil")
+	}
 	if cfg.BaseEndpoint == "" {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v", cfg.BaseEndpoint)
 	}

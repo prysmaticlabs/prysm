@@ -349,11 +349,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 			return nil, errors.Wrap(err, "could not initialize derived keymanager")
 		}
 	case keymanager.Web3Signer:
-		config := cfg.Web3SignerConfig
-		if config == nil {
-			return nil, errors.New("web3signer config is nil")
-		}
-		km, err = remoteweb3signer.NewKeymanager(ctx, config)
+		km, err = remoteweb3signer.NewKeymanager(ctx, cfg.Web3SignerConfig)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
 		}

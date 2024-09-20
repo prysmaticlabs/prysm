@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -67,13 +66,10 @@ func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
 	set.String(flags.WalletDirFlag.Name, newDir, "")
 	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 	ctx := context.Background()
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	require.NoError(t, err)
 	config := iface.InitKeymanagerConfig{
 		ListenForChanges: false,
 		Web3SignerConfig: &remoteweb3signer.SetupConfig{
-			BaseEndpoint:          "http://localhost:8545",
-			GenesisValidatorsRoot: root,
+			BaseEndpoint: "http://localhost:8545",
 		},
 	}
 	km, err := w.InitializeKeymanager(ctx, config)
