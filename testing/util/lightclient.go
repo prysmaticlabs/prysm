@@ -4,14 +4,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
+	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
@@ -575,6 +581,114 @@ func (l *TestLightClient) CheckAttestedHeader(container *ethpbv2.LightClientHead
 	attestedStateRoot, err := l.AttestedState.HashTreeRoot(l.Ctx)
 	require.NoError(l.T, err)
 	require.DeepSSZEqual(l.T, attestedStateRoot[:], updateAttestedHeaderBeacon.StateRoot, "Attested block state root is not equal")
+
+	if l.AttestedBlock.Version() == version.Capella {
+		payloadInterface, err := l.AttestedBlock.Block().Body().Execution()
+		require.NoError(l.T, err)
+		transactionsRoot, err := payloadInterface.TransactionsRoot()
+		if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			transactions, err := payloadInterface.Transactions()
+			require.NoError(l.T, err)
+			transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+			require.NoError(l.T, err)
+			transactionsRoot = transactionsRootArray[:]
+		} else {
+			require.NoError(l.T, err)
+		}
+		withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+		if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			withdrawals, err := payloadInterface.Withdrawals()
+			require.NoError(l.T, err)
+			withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			require.NoError(l.T, err)
+			withdrawalsRoot = withdrawalsRootArray[:]
+		} else {
+			require.NoError(l.T, err)
+		}
+		execution := &v11.ExecutionPayloadHeaderCapella{
+			ParentHash:       payloadInterface.ParentHash(),
+			FeeRecipient:     payloadInterface.FeeRecipient(),
+			StateRoot:        payloadInterface.StateRoot(),
+			ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+			LogsBloom:        payloadInterface.LogsBloom(),
+			PrevRandao:       payloadInterface.PrevRandao(),
+			BlockNumber:      payloadInterface.BlockNumber(),
+			GasLimit:         payloadInterface.GasLimit(),
+			GasUsed:          payloadInterface.GasUsed(),
+			Timestamp:        payloadInterface.Timestamp(),
+			ExtraData:        payloadInterface.ExtraData(),
+			BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+			BlockHash:        payloadInterface.BlockHash(),
+			TransactionsRoot: transactionsRoot,
+			WithdrawalsRoot:  withdrawalsRoot,
+		}
+
+		updateAttestedHeaderExecution, err := container.GetExecutionHeaderCapella()
+		require.NoError(l.T, err)
+		require.DeepSSZEqual(l.T, execution, updateAttestedHeaderExecution, "Attested Block Execution is not equal")
+
+		executionPayloadProof, err := blocks.PayloadProof(l.Ctx, l.AttestedBlock.Block())
+		require.NoError(l.T, err)
+		updateAttestedHeaderExecutionBranch, err := container.GetExecutionBranch()
+		require.NoError(l.T, err)
+		for i, leaf := range updateAttestedHeaderExecutionBranch {
+			require.DeepSSZEqual(l.T, executionPayloadProof[i], leaf, "Leaf is not equal")
+		}
+	}
+
+	if l.AttestedBlock.Version() == version.Deneb {
+		payloadInterface, err := l.AttestedBlock.Block().Body().Execution()
+		require.NoError(l.T, err)
+		transactionsRoot, err := payloadInterface.TransactionsRoot()
+		if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			transactions, err := payloadInterface.Transactions()
+			require.NoError(l.T, err)
+			transactionsRootArray, err := ssz.TransactionsRoot(transactions)
+			require.NoError(l.T, err)
+			transactionsRoot = transactionsRootArray[:]
+		} else {
+			require.NoError(l.T, err)
+		}
+		withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
+		if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			withdrawals, err := payloadInterface.Withdrawals()
+			require.NoError(l.T, err)
+			withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			require.NoError(l.T, err)
+			withdrawalsRoot = withdrawalsRootArray[:]
+		} else {
+			require.NoError(l.T, err)
+		}
+		execution := &v11.ExecutionPayloadHeaderDeneb{
+			ParentHash:       payloadInterface.ParentHash(),
+			FeeRecipient:     payloadInterface.FeeRecipient(),
+			StateRoot:        payloadInterface.StateRoot(),
+			ReceiptsRoot:     payloadInterface.ReceiptsRoot(),
+			LogsBloom:        payloadInterface.LogsBloom(),
+			PrevRandao:       payloadInterface.PrevRandao(),
+			BlockNumber:      payloadInterface.BlockNumber(),
+			GasLimit:         payloadInterface.GasLimit(),
+			GasUsed:          payloadInterface.GasUsed(),
+			Timestamp:        payloadInterface.Timestamp(),
+			ExtraData:        payloadInterface.ExtraData(),
+			BaseFeePerGas:    payloadInterface.BaseFeePerGas(),
+			BlockHash:        payloadInterface.BlockHash(),
+			TransactionsRoot: transactionsRoot,
+			WithdrawalsRoot:  withdrawalsRoot,
+		}
+
+		updateAttestedHeaderExecution, err := container.GetExecutionHeaderDeneb()
+		require.NoError(l.T, err)
+		require.DeepSSZEqual(l.T, execution, updateAttestedHeaderExecution, "Attested Block Execution is not equal")
+
+		executionPayloadProof, err := blocks.PayloadProof(l.Ctx, l.AttestedBlock.Block())
+		require.NoError(l.T, err)
+		updateAttestedHeaderExecutionBranch, err := container.GetExecutionBranch()
+		require.NoError(l.T, err)
+		for i, leaf := range updateAttestedHeaderExecutionBranch {
+			require.DeepSSZEqual(l.T, executionPayloadProof[i], leaf, "Leaf is not equal")
+		}
+	}
 }
 
 func (l *TestLightClient) CheckSyncAggregate(sa *ethpbv1.SyncAggregate) {

@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
-// TODO: check for attested block in tests
-
 // NewLightClientOptimisticUpdateFromBeaconState tests
 
 func TestLightClient_NewLightClientOptimisticUpdateFromBeaconStateAltair(t *testing.T) {
@@ -78,7 +76,6 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateAltair(t *testin
 	finalizedBlockHeader, err := l.FinalizedBlock.Header()
 	require.NoError(t, err)
 
-	//zeroHash := params.BeaconConfig().ZeroHash[:]
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
 	updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
 	require.NoError(t, err)
@@ -179,7 +176,6 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconStateDeneb(t *testing
 	l.CheckSyncAggregate(update.SyncAggregate)
 	l.CheckAttestedHeader(update.AttestedHeader)
 
-	//zeroHash := params.BeaconConfig().ZeroHash[:]
 	finalizedBlockHeader, err := l.FinalizedBlock.Header()
 	require.NoError(t, err)
 	require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
