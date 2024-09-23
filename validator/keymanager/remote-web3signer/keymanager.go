@@ -422,6 +422,10 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		return handleBlockDeneb(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlindedBlockDeneb:
 		return handleBlindedBlockDeneb(ctx, validator, request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlockElectra:
+		return handleBlockElectra(ctx, validator, request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlindedBlockElectra:
+		return handleBlindedBlockElectra(ctx, validator, request, genesisValidatorsRoot)
 	// We do not support "DEPOSIT" type.
 	/*
 		case *validatorpb.:
@@ -576,6 +580,30 @@ func handleBlindedBlockDeneb(ctx context.Context, validator *validator.Validate,
 	}
 	blindedBlockDenebSignRequestsTotal.Inc()
 	return json.Marshal(blindedBlockv2DenebSignRequest)
+}
+
+func handleBlockElectra(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blockv2ElectraSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blockv2ElectraSignRequest); err != nil {
+		return nil, err
+	}
+	blockElectraSignRequestsTotal.Inc()
+	return json.Marshal(blockv2ElectraSignRequest)
+}
+
+func handleBlindedBlockElectra(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blindedBlockv2ElectraSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blindedBlockv2ElectraSignRequest); err != nil {
+		return nil, err
+	}
+	blindedBlockElectraSignRequestsTotal.Inc()
+	return json.Marshal(blindedBlockv2ElectraSignRequest)
 }
 
 func handleRandaoReveal(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {

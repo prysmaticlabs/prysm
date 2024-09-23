@@ -365,6 +365,34 @@ func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValid
 			return nil, err
 		}
 		b = beaconBlock
+	case *validatorpb.SignRequest_BlockElectra:
+		version = "ELECTRA"
+		blockElectra, ok := request.Object.(*validatorpb.SignRequest_BlockElectra)
+		if !ok {
+			return nil, errors.New("failed to cast request object to electra block")
+		}
+		if blockElectra == nil {
+			return nil, errors.New("invalid sign request: electra block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blockElectra.BlockElectra)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlockElectra:
+		version = "ELECTRA"
+		blindedBlockElectra, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockElectra)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded electra block")
+		}
+		if blindedBlockElectra == nil {
+			return nil, errors.New("invalid sign request: blinded electra block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockElectra.BlindedBlockElectra)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
 	default:
 		return nil, errors.New("invalid sign request - invalid object type")
 	}

@@ -450,6 +450,32 @@ func TestGetBlockV2BlindedSignRequest(t *testing.T) {
 			}(t), "DENEB"),
 			wantErr: false,
 		},
+		{
+			name: "Happy Path Test non blinded Electra",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_ELECTRA"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want: mock.BlockV2BlindedSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0xb5d0ae72716c50f01a6bf4edd98f282b909b31a81e7234e2a0363bee23447579")
+				require.NoError(t, err)
+				return bytevalue
+			}(t), "ELECTRA"),
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test blinded Electra",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_BLINDED_ELECTRA"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want: mock.BlockV2BlindedSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0xedb1bcb0d8b4be2d1ccca09c113c7f2dc4b126a8379e6aeb02652fa182195d12")
+				require.NoError(t, err)
+				return bytevalue
+			}(t), "ELECTRA"),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
