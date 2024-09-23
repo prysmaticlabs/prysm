@@ -473,13 +473,6 @@ func (vs *Server) broadcastAndReceiveDataColumns(
 	eg, _ := errgroup.WithContext(ctx)
 	dataColumnsWithholdCount := features.Get().DataColumnsWithholdCount
 
-	// Get the time corresponding to the start of the slot.
-	genesisTime := uint64(vs.TimeFetcher.GenesisTime().Unix())
-	slotStartTime, err := slots.ToTime(genesisTime, slot)
-	if err != nil {
-		return errors.Wrap(err, "to time")
-	}
-
 	for _, sd := range sidecars {
 		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
 		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
@@ -496,7 +489,7 @@ func (vs *Server) broadcastAndReceiveDataColumns(
 					"dataColumnIndex": sidecar.ColumnIndex,
 				}).Warning("Withholding data column")
 			} else {
-				if err := vs.P2P.BroadcastDataColumn(ctx, slot, slotStartTime, root, subnet, sidecar); err != nil {
+				if err := vs.P2P.BroadcastDataColumn(ctx, root, subnet, sidecar); err != nil {
 					return errors.Wrap(err, "broadcast data column")
 				}
 			}

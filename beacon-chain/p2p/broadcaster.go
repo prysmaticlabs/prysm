@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
@@ -285,8 +284,6 @@ func (s *Service) internalBroadcastBlob(
 // TODO: Add tests
 func (s *Service) BroadcastDataColumn(
 	ctx context.Context,
-	slot primitives.Slot,
-	slotStartTime time.Time,
 	root [fieldparams.RootLength]byte,
 	columnSubnet uint64,
 	dataColumnSidecar *ethpb.DataColumnSidecar,
@@ -309,15 +306,13 @@ func (s *Service) BroadcastDataColumn(
 	}
 
 	// Non-blocking broadcast, with attempts to discover a column subnet peer if none available.
-	go s.internalBroadcastDataColumn(ctx, slot, slotStartTime, root, columnSubnet, dataColumnSidecar, forkDigest)
+	go s.internalBroadcastDataColumn(ctx, root, columnSubnet, dataColumnSidecar, forkDigest)
 
 	return nil
 }
 
 func (s *Service) internalBroadcastDataColumn(
 	ctx context.Context,
-	slot primitives.Slot,
-	slotStartTime time.Time,
 	root [fieldparams.RootLength]byte,
 	columnSubnet uint64,
 	dataColumnSidecar *ethpb.DataColumnSidecar,
@@ -377,6 +372,14 @@ func (s *Service) internalBroadcastDataColumn(
 	if err := s.broadcastObject(ctx, dataColumnSidecar, topic); err != nil {
 		log.WithError(err).Error("Failed to broadcast data column sidecar")
 		tracing.AnnotateError(span, err)
+	}
+
+	header := dataColumnSidecar.SignedBlockHeader.GetHeader()
+	slot := header.GetSlot()
+
+	slotStartTime, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert slot to time")
 	}
 
 	log.WithFields(logrus.Fields{

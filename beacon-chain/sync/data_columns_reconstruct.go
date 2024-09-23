@@ -210,7 +210,7 @@ func (s *Service) scheduleReconstructedDataColumnsBroadcast(
 			// Compute the subnet for this column.
 			subnet := column % params.BeaconConfig().DataColumnSidecarSubnetCount
 			// Broadcast the missing data column.
-			if err := s.cfg.p2p.BroadcastDataColumn(ctx, slot, slotStartTime, blockRoot, subnet, dataColumnSidecar); err != nil {
+			if err := s.cfg.p2p.BroadcastDataColumn(ctx, blockRoot, subnet, dataColumnSidecar); err != nil {
 				log.WithError(err).Error("Broadcast data column")
 			}
 		}
