@@ -133,6 +133,22 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*ethpb.Deposi
 	return verified, nil
 }
 
+// BatchVerifyPendingDepositsSignatures batch verifies pending deposit signatures.
+func BatchVerifyPendingDepositsSignatures(ctx context.Context, deposits []*ethpb.PendingDeposit) (bool, error) {
+	var err error
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	if err != nil {
+		return false, err
+	}
+
+	verified := false
+	if err := verifyPendingDepositDataWithDomain(ctx, deposits, domain); err != nil {
+		log.WithError(err).Debug("Failed to batch verify deposits signatures, will try individual verify")
+		verified = true
+	}
+	return verified, nil
+}
+
 // IsValidDepositSignature returns whether deposit_data is valid
 // def is_valid_deposit_signature(pubkey: BLSPubkey, withdrawal_credentials: Bytes32, amount: uint64, signature: BLSSignature) -> bool:
 //
@@ -213,6 +229,47 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*ethpb.Deposit, dom
 			PublicKey:             dep.Data.PublicKey,
 			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
 			Amount:                dep.Data.Amount,
+		}
+		sr, err := signing.ComputeSigningRoot(depositMessage, domain)
+		if err != nil {
+			return err
+		}
+		msgs[i] = sr
+	}
+	verify, err := bls.VerifyMultipleSignatures(sigs, msgs, pks)
+	if err != nil {
+		return errors.Errorf("could not verify multiple signatures: %v", err)
+	}
+	if !verify {
+		return errors.New("one or more deposit signatures did not verify")
+	}
+	return nil
+}
+
+func verifyPendingDepositDataWithDomain(ctx context.Context, deps []*ethpb.PendingDeposit, domain []byte) error {
+	if len(deps) == 0 {
+		return nil
+	}
+	pks := make([]bls.PublicKey, len(deps))
+	sigs := make([][]byte, len(deps))
+	msgs := make([][32]byte, len(deps))
+	for i, dep := range deps {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if dep == nil {
+			return errors.New("nil deposit")
+		}
+		dpk, err := bls.PublicKeyFromBytes(dep.PublicKey)
+		if err != nil {
+			return err
+		}
+		pks[i] = dpk
+		sigs[i] = dep.Signature
+		depositMessage := &ethpb.DepositMessage{
+			PublicKey:             dep.PublicKey,
+			WithdrawalCredentials: dep.WithdrawalCredentials,
+			Amount:                dep.Amount,
 		}
 		sr, err := signing.ComputeSigningRoot(depositMessage, domain)
 		if err != nil {

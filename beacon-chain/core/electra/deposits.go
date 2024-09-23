@@ -284,6 +284,8 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	ffe := params.BeaconConfig().FarFutureEpoch
 	curEpoch := slots.ToEpoch(st.Slot())
 
+	// Slice to collect deposits needing signature verification
+	var depositsToVerify []*ethpb.PendingDeposit
 	for _, pendingDeposit := range deposits {
 		startIndex, err := st.DepositRequestsStartIndex()
 		if err != nil {
@@ -319,7 +321,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 
 		if isValidatorWithdrawn {
 			// Deposited balance will never become active. Increase balance but do not consume churn
-			if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
+			if err := ApplyPendingDeposit(ctx, st, pendingDeposit, true); err != nil {
 				return errors.Wrap(err, "could not apply pending deposit")
 			}
 		} else if isValidatorExited {
@@ -333,14 +335,33 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 			}
 			// Consume churn and apply pendingDeposit.
 			processedAmount += pendingDeposit.Amount
-
-			if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
-				return errors.Wrap(err, "could not apply pending deposit")
+			if found {
+				if err := ApplyPendingDeposit(ctx, st, pendingDeposit, true); err != nil {
+					return errors.Wrap(err, "could not apply pending deposit")
+				}
+			} else {
+				// Collect deposit for batch signature verification
+				depositsToVerify = append(depositsToVerify, pendingDeposit)
 			}
 		}
 
 		// Regardless of how the pendingDeposit was handled, we move on in the queue.
 		nextDepositIndex++
+	}
+
+	// Perform batch signature verification on deposits on unfound validators
+	if len(depositsToVerify) > 0 {
+		batchVerified, err := blocks.BatchVerifyPendingDepositsSignatures(ctx, depositsToVerify)
+		if err != nil {
+			return errors.Wrap(err, "could not batch verify deposit signatures")
+		}
+
+		// Apply deposits that passed verification
+		for _, dep := range depositsToVerify {
+			if err := ApplyPendingDeposit(ctx, st, dep, batchVerified); err != nil {
+				return errors.Wrap(err, "could not apply pending deposit")
+			}
+		}
 	}
 
 	// Combined operation:
@@ -382,21 +403,24 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 //	    validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
 //	    # Increase balance
 //	    increase_balance(state, validator_index, deposit.amount)
-func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *ethpb.PendingDeposit) error {
+func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *ethpb.PendingDeposit, isSigVerified bool) error {
 	_, span := trace.StartSpan(ctx, "electra.ApplyPendingDeposit")
 	defer span.End()
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(deposit.PublicKey))
 	if !ok {
-		valid, err := blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
-			PublicKey:             bytesutil.SafeCopyBytes(deposit.PublicKey),
-			WithdrawalCredentials: bytesutil.SafeCopyBytes(deposit.WithdrawalCredentials),
-			Amount:                deposit.Amount,
-			Signature:             bytesutil.SafeCopyBytes(deposit.Signature),
-		})
-		if err != nil {
-			return errors.Wrap(err, "could not verify deposit signature")
+		var err error
+		if !isSigVerified {
+			isSigVerified, err = blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
+				PublicKey:             bytesutil.SafeCopyBytes(deposit.PublicKey),
+				WithdrawalCredentials: bytesutil.SafeCopyBytes(deposit.WithdrawalCredentials),
+				Amount:                deposit.Amount,
+				Signature:             bytesutil.SafeCopyBytes(deposit.Signature),
+			})
+			if err != nil {
+				return errors.Wrap(err, "could not verify deposit signature")
+			}
 		}
-		if valid {
+		if isSigVerified {
 			if err := blocks.AddValidatorToRegistry(st, deposit.PublicKey, deposit.WithdrawalCredentials, deposit.Amount); err != nil {
 				return errors.Wrap(err, "could not add validator to registry")
 			}
