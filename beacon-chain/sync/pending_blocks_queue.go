@@ -205,7 +205,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 	}
 
 	if coreTime.PeerDASIsActive(b.Block().Slot()) {
-		request, err := s.pendingDataColumnRequestForBlock(blkRoot, b)
+		request, err := s.buildRequestsForMissingDataColumns(blkRoot, b)
 		if err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 			if peerCount == 0 {
 				return errors.Wrapf(errNoPeersForPending, "block root=%#x", blkRoot)
 			}
-			if err := s.sendAndSaveDataColumnSidecars(ctx, request, peers[rand.NewGenerator().Int()%peerCount], b); err != nil {
+			if err := s.requestAndSaveDataColumnSidecars(ctx, request, peers[rand.NewGenerator().Int()%peerCount], b); err != nil {
 				return err
 			}
 		}
