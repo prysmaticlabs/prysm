@@ -274,8 +274,8 @@ func (s *Service) pendingBlobsRequestForBlock(root [32]byte, b interfaces.ReadOn
 	return blobIdentifiers, nil
 }
 
-// buildRequestsForMissingDataColumns looks at the data columns we should custody and we don't actually store for a given block,
-// and construct the corresponding data column sidecars by root requests.
+// buildRequestsForMissingDataColumns looks at the data columns we should custody and have via subnet sampling
+// and that we don't actually store for a given block, and construct the corresponding data column sidecars by root requests.
 func (s *Service) buildRequestsForMissingDataColumns(root [32]byte, block interfaces.ReadOnlySignedBeaconBlock) (types.DataColumnSidecarsByRootReq, error) {
 	// Block before deneb has nor blobs neither data columns.
 	if block.Version() < version.Deneb {
@@ -301,7 +301,7 @@ func (s *Service) buildRequestsForMissingDataColumns(root [32]byte, block interf
 
 	// Retrieve the columns we should custody.
 	nodeID := s.cfg.p2p.NodeID()
-	custodySubnetCount := peerdas.CustodySubnetCount()
+	custodySubnetCount := peerdas.SubnetSamplingSize()
 
 	custodyColumns, err := peerdas.CustodyColumns(nodeID, custodySubnetCount)
 	if err != nil {

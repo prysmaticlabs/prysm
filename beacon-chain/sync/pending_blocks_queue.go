@@ -346,9 +346,9 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 
 	if peerDASIsActive {
 		var err error
-		bestPeers, err = s.cfg.p2p.DataColumnsAdmissibleCustodyPeers(bestPeers)
+		bestPeers, err = s.cfg.p2p.DataColumnsAdmissibleSubnetSamplingPeers(bestPeers)
 		if err != nil {
-			return errors.Wrap(err, "get valid custody peers")
+			return errors.Wrap(err, "data columns admissible subnet sampling peers")
 		}
 	}
 
