@@ -1017,8 +1017,10 @@ func processRetrievedDataColumns(
 // This function:
 // - Mutate `bwb` by adding the retrieved data columns.
 // - Mutate `missingColumnsFromRoot` by removing the columns that have been retrieved.
-// This function returns when all the missing data columns have been retrieved.
-func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(ctx context.Context,
+// This function returns when all the missing data columns have been retrieved,
+// or when the context is canceled.
+func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
+	ctx context.Context,
 	bwb []blocks.BlockWithROBlobs,
 	missingColumnsFromRoot map[[fieldparams.RootLength]byte]map[uint64]bool,
 	indicesFromRoot map[[fieldparams.RootLength]byte][]int,
@@ -1072,7 +1074,7 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(ctx context.Context,
 		// Get all the blocks and data columns we should retrieve.
 		blockFromRoot := blockFromRoot(bwb[firstIndex : lastIndex+1])
 
-		// Iterate request over all peers, and exit as soon as at least one data column is retrieved.
+		// Iterate requests over all peers, and exits as soon as at least one data column is retrieved.
 		roDataColumns, peer, err := f.requestDataColumnsFromPeers(ctx, request, peers)
 		if err != nil {
 			return errors.Wrap(err, "request data columns from peers")
@@ -1082,12 +1084,22 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(ctx context.Context,
 		processRetrievedDataColumns(roDataColumns, blockFromRoot, indicesFromRoot, missingColumnsFromRoot, bwb, f.cv)
 
 		if len(missingColumnsFromRoot) > 0 {
-			for root, columns := range missingColumnsFromRoot {
+			numberOfColumns := params.BeaconConfig().NumberOfColumns
+
+			for root, missingColumns := range missingColumnsFromRoot {
+				missingColumnsCount := uint64(len(missingColumns))
+				var missingColumnsLog interface{} = "all"
+
+				if missingColumnsCount < numberOfColumns {
+					missingColumnsLog = sortedSliceFromMap(missingColumns)
+				}
+
+				slot := blockFromRoot[root].Block().Slot()
 				log.WithFields(logrus.Fields{
-					"peer":    peer,
-					"root":    fmt.Sprintf("%#x", root),
-					"slot":    blockFromRoot[root].Block().Slot(),
-					"columns": columns,
+					"peer":           peer,
+					"root":           fmt.Sprintf("%#x", root),
+					"slot":           slot,
+					"missingColumns": missingColumnsLog,
 				}).Debug("Peer did not correctly return data columns")
 			}
 		}
