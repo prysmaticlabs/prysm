@@ -362,8 +362,8 @@ func (v *validator) checkAndLogValidatorStatus(activeValCount int64) bool {
 		}
 		log := log.WithFields(fields)
 		if v.emitAccountMetrics {
-			fmtKey := fmt.Sprintf("%#x", s.publicKey)
-			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(s.status.Status))
+			fmtKey, fmtIndex := fmt.Sprintf("%#x", s.publicKey), fmt.Sprintf("%#x", s.index)
+			ValidatorStatusesGaugeVec.WithLabelValues(fmtKey, fmtIndex).Set(float64(s.status.Status))
 		}
 		switch s.status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
