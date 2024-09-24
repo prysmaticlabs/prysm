@@ -210,7 +210,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 
 func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	// Setup bootnode.
-	cfg := &Config{}
+	cfg := &Config{PingInterval: testPingInterval}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)

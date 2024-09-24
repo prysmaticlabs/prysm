@@ -223,6 +223,7 @@ func (s *Service) createListener(
 	dv5Cfg := discover.Config{
 		PrivateKey: privKey,
 		Bootnodes:  bootNodes,
+		PingInterval: s.cfg.PingInterval,
 	}
 
 	listener, err := discover.ListenV5(conn, localNode, dv5Cfg)

@@ -125,7 +125,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port), PingInterval: testPingInterval},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -137,6 +137,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg := &Config{
 		Discv5BootStrapAddrs: []string{bootNode.String()},
 		UDPPort:              uint(port),
+		PingInterval: testPingInterval,
 	}
 
 	var listeners []*discover.UDPv5

@@ -66,7 +66,7 @@ func TestStartDiscV5_FindPeersWithSubnet(t *testing.T) {
 	genesisTime := time.Now()
 
 	bootNodeService := &Service{
-		cfg:                   &Config{UDPPort: 2000, TCPPort: 3000, QUICPort: 3000},
+		cfg:                   &Config{UDPPort: 2000, TCPPort: 3000, QUICPort: 3000, PingInterval: testPingInterval},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}

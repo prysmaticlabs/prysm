@@ -29,6 +29,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+const testPingInterval = 500*time.Millisecond
+
 type mockListener struct {
 	localNode *enode.LocalNode
 }
@@ -185,7 +187,7 @@ func TestListenForNewNodes(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
-	cfg := &Config{StateNotifier: notifier}
+	cfg := &Config{StateNotifier: notifier, PingInterval: testPingInterval}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
