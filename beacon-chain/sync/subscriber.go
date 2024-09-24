@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
@@ -240,7 +241,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			tracing.AnnotateError(span, err)
-			log.WithError(err).Error("Could not handle P2P pub-sub message")
+			log.WithError(err).Error("Could not handle p2p pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
@@ -318,6 +319,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 				"topic":        topic,
 				"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
 				"peerID":       pid.String(),
+				"agent":        agentString(pid, s.cfg.p2p.Host()),
 				"gossipScore":  s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid),
 			}
 			if features.Get().EnableFullSSZDataLogging {
@@ -332,6 +334,7 @@ func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, p
 					"topic":        topic,
 					"multiaddress": multiAddr(pid, s.cfg.p2p.Peers()),
 					"peerID":       pid.String(),
+					"agent":        agentString(pid, s.cfg.p2p.Host()),
 					"gossipScore":  fmt.Sprintf("%.2f", s.cfg.p2p.Peers().Scorers().GossipScorer().Score(pid)),
 				}).Debug("Gossip message was ignored")
 			}
@@ -953,6 +956,15 @@ func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool
 		return true, nil
 	}
 	return retDigest == digest, nil
+}
+
+func agentString(pid peer.ID, hst host.Host) string {
+	rawVersion, storeErr := hst.Peerstore().Get(pid, "AgentVersion")
+	agString, ok := rawVersion.(string)
+	if storeErr != nil || !ok {
+		agString = ""
+	}
+	return agString
 }
 
 func multiAddr(pid peer.ID, stat *peers.Status) string {
