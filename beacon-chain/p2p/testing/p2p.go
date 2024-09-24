@@ -19,6 +19,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
@@ -52,7 +53,7 @@ type TestP2P struct {
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
-	h, err := libp2p.New(libp2p.ResourceManager(&network.NullResourceManager{}))
+	h, err := libp2p.New(libp2p.ResourceManager(&network.NullResourceManager{}), libp2p.Transport(tcp.NewTCPTransport), libp2p.DefaultListenAddrs)
 	require.NoError(t, err)
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
