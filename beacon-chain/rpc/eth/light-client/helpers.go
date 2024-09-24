@@ -156,7 +156,12 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
-	headerJSON, err := json.Marshal(lightClientHeader)
+
+	apiLightClientHeader := &structs.LightClientHeader{
+		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
+	}
+
+	headerJSON, err := json.Marshal(apiLightClientHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}
@@ -218,7 +223,12 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
-	headerJSON, err := json.Marshal(lightClientHeader)
+
+	apiLightClientHeader := &structs.LightClientHeader{
+		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
+	}
+
+	headerJSON, err := json.Marshal(apiLightClientHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}
