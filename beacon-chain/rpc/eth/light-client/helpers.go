@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -88,7 +89,12 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
-	headerJSON, err := json.Marshal(lightClientHeader)
+
+	apiLightClientHeader := &structs.LightClientHeader{
+		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
+	}
+
+	headerJSON, err := json.Marshal(apiLightClientHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}

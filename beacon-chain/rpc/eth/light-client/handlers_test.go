@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -27,41 +28,47 @@ import (
 
 func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 	helpers.ClearCache()
+	ctx := context.Background()
 	slot := primitives.Slot(params.BeaconConfig().AltairForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
 
-	b := util.NewBeaconBlockAltair()
-	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
-	b.Block.Slot = slot
-
-	signedBlock, err := blocks.NewSignedBeaconBlock(b)
-
+	testState, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	header, err := signedBlock.Header()
+	err = testState.SetSlot(slot)
 	require.NoError(t, err)
 
-	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	bs, err := util.NewBeaconStateAltair(func(state *ethpb.BeaconStateAltair) error {
-		state.BlockRoots[0] = r[:]
-		return nil
-	})
+	block := util.NewBeaconBlockAltair()
+	block.Block.Slot = slot
+
+	signedBlock, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 
-	require.NoError(t, bs.SetSlot(slot))
-	require.NoError(t, bs.SetLatestBlockHeader(header.Header))
+	h, err := signedBlock.Header()
+	require.NoError(t, err)
+
+	err = testState.SetLatestBlockHeader(h.Header)
+	require.NoError(t, err)
+
+	stateRoot, err := testState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+
+	// get a new signed block so the root is updated with the new state root
+	block.Block.StateRoot = stateRoot[:]
+	signedBlock, err = blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
 
 	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
 	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
 	s := &Server{
 		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
-			slot: bs,
+			slot: testState,
 		}},
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
 	request := httptest.NewRequest("GET", "http://foo.com/", nil)
-	request.SetPathValue("block_root", hexutil.Encode(r[:]))
+	request.SetPathValue("block_root", hexutil.Encode(stateRoot[:]))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -74,8 +81,15 @@ func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 	err = json.Unmarshal(resp.Data.Header, &respHeader)
 	require.NoError(t, err)
 	require.Equal(t, "altair", resp.Version)
-	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), respHeader.Beacon.BodyRoot)
-	require.NotNil(t, resp.Data)
+
+	blockHeader, err := signedBlock.Header()
+	require.NoError(t, err)
+	require.Equal(t, hexutil.Encode(blockHeader.Header.BodyRoot), respHeader.Beacon.BodyRoot)
+	require.Equal(t, strconv.FormatUint(uint64(blockHeader.Header.Slot), 10), respHeader.Beacon.Slot)
+
+	require.NotNil(t, resp.Data.CurrentSyncCommittee)
+	require.NotNil(t, resp.Data.CurrentSyncCommitteeBranch)
+
 }
 
 func TestLightClientHandler_GetLightClientBootstrap_Capella(t *testing.T) {
