@@ -27,42 +27,17 @@ import (
 )
 
 func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
-	helpers.ClearCache()
-	ctx := context.Background()
-	slot := primitives.Slot(params.BeaconConfig().AltairForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
+	l := util.NewTestLightClient(t).SetupTestAltair()
 
-	testState, err := util.NewBeaconStateAltair()
-	require.NoError(t, err)
-	err = testState.SetSlot(slot)
+	slot := l.State.Slot()
+	stateRoot, err := l.State.HashTreeRoot(l.Ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, err)
-
-	block := util.NewBeaconBlockAltair()
-	block.Block.Slot = slot
-
-	signedBlock, err := blocks.NewSignedBeaconBlock(block)
-	require.NoError(t, err)
-
-	h, err := signedBlock.Header()
-	require.NoError(t, err)
-
-	err = testState.SetLatestBlockHeader(h.Header)
-	require.NoError(t, err)
-
-	stateRoot, err := testState.HashTreeRoot(ctx)
-	require.NoError(t, err)
-
-	// get a new signed block so the root is updated with the new state root
-	block.Block.StateRoot = stateRoot[:]
-	signedBlock, err = blocks.NewSignedBeaconBlock(block)
-	require.NoError(t, err)
-
-	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
+	mockBlocker := &testutil.MockBlocker{BlockToReturn: l.Block}
 	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
 	s := &Server{
 		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
-			slot: testState,
+			slot: l.State,
 		}},
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
@@ -82,7 +57,7 @@ func TestLightClientHandler_GetLightClientBootstrap_Altair(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "altair", resp.Version)
 
-	blockHeader, err := signedBlock.Header()
+	blockHeader, err := l.Block.Header()
 	require.NoError(t, err)
 	require.Equal(t, hexutil.Encode(blockHeader.Header.BodyRoot), respHeader.Beacon.BodyRoot)
 	require.Equal(t, strconv.FormatUint(uint64(blockHeader.Header.Slot), 10), respHeader.Beacon.Slot)
