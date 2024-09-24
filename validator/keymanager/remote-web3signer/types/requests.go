@@ -1,4 +1,4 @@
-package v1
+package types
 
 import (
 	"fmt"
@@ -85,6 +85,34 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 		ForkInfo:          fork,
 		SigningRoot:       request.SigningRoot,
 		AggregateAndProof: aggregateAndProof,
+	}, nil
+}
+
+// GetAggregateAndProofV2ElectraSignRequest maps the request for signing type AGGREGATE_AND_PROOF_V2 on Electra changes.
+func GetAggregateAndProofV2ElectraSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*AggregateAndProofV2ElectraSignRequest, error) {
+	aggregateAttestationAndProof, ok := request.Object.(*validatorpb.SignRequest_AggregateAttestationAndProofElectra)
+	if !ok {
+		return nil, errors.New("failed to cast request object to aggregate attestation and proof")
+	}
+	if aggregateAttestationAndProof == nil {
+		return nil, errors.New("invalid sign request: AggregateAndProof is nil")
+	}
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	aggregateAndProof, err := MapAggregateAndProofElectra(aggregateAttestationAndProof.AggregateAttestationAndProofElectra)
+	if err != nil {
+		return nil, err
+	}
+	return &AggregateAndProofV2ElectraSignRequest{
+		Type:        "AGGREGATE_AND_PROOF_V2",
+		ForkInfo:    fork,
+		SigningRoot: request.SigningRoot,
+		AggregateAndProof: &AggregateAndProofV2Electra{
+			Version: "ELECTRA",
+			Data:    aggregateAndProof,
+		},
 	}, nil
 }
 
