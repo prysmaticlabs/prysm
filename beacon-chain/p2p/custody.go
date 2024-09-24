@@ -20,7 +20,7 @@ func (s *Service) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 		return nil, errors.Wrap(err, "custody columns for local node")
 	}
 
-	localCustotyColumnsCount := uint64(len(localCustodyColumns))
+	localCustodyColumnsCount := uint64(len(localCustodyColumns))
 
 	// Find the valid peers.
 	validPeers := make([]peer.ID, 0, len(peers))
@@ -45,7 +45,7 @@ loop:
 		remoteCustodyColumnsCount := uint64(len(remoteCustodyColumns))
 
 		// If the remote peer custodies less columns than the local node, skip it.
-		if remoteCustodyColumnsCount < localCustotyColumnsCount {
+		if remoteCustodyColumnsCount < localCustodyColumnsCount {
 			continue
 		}
 
