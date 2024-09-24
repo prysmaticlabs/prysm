@@ -350,12 +350,9 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, os.MkdirAll(newDir, 0700))
 	set.String(flags.WalletDirFlag.Name, newDir, "")
 	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+		BaseEndpoint:       "http://example.com",
+		ProvidedPublicKeys: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 	}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -633,13 +630,10 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, os.MkdirAll(newDir, 0700))
 	set.String(flags.WalletDirFlag.Name, newDir, "")
 	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
 		Web3SignerConfig: &remoteweb3signer.SetupConfig{
-			BaseEndpoint:          "http://example.com",
-			GenesisValidatorsRoot: root,
-			ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
+			BaseEndpoint:       "http://example.com",
+			ProvidedPublicKeys: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 		}})
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -1329,12 +1323,9 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 	newDir := filepath.Join(t.TempDir(), "new")
 	set.String(flags.WalletDirFlag.Name, newDir, "")
 	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
 	config := &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    []string{"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"},
+		BaseEndpoint:       "http://example.com",
+		ProvidedPublicKeys: []string{"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"},
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)
@@ -1375,12 +1366,9 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 	newDir := filepath.Join(t.TempDir(), "new")
 	set.String(flags.WalletDirFlag.Name, newDir, "")
 	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
 	config := &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    nil,
+		BaseEndpoint:       "http://example.com",
+		ProvidedPublicKeys: nil,
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)
@@ -1436,13 +1424,10 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 	newDir := filepath.Join(t.TempDir(), "new")
 	set.String(flags.WalletDirFlag.Name, newDir, "")
 	w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
 	pkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
 	config := &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    []string{pkey},
+		BaseEndpoint:       "http://example.com",
+		ProvidedPublicKeys: []string{pkey},
 	}
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
 	require.NoError(t, err)

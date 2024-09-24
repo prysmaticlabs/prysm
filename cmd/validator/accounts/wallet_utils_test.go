@@ -88,11 +88,8 @@ func TestWalletWithKeymanager_web3signer(t *testing.T) {
 	require.NoError(t, set.Set(flags.Web3SignerURLFlag.Name, "http://localhost:12345"))
 	require.NoError(t, set.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"))
 	ctx := cli.NewContext(&app, set, nil)
-	bytes, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
-	require.NoError(t, err)
 	config, err := node.Web3SignerConfig(ctx)
 	require.NoError(t, err)
-	config.GenesisValidatorsRoot = bytes
 	w, k, err := walletWithWeb3SignerKeymanager(ctx, config)
 	require.NoError(t, err)
 	keys, err := k.FetchValidatingPublicKeys(ctx.Context)

@@ -228,9 +228,8 @@ func TestWeb3SignerConfig(t *testing.T) {
 					"0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b"},
 			},
 			want: &remoteweb3signer.SetupConfig{
-				BaseEndpoint:          "http://localhost:8545",
-				GenesisValidatorsRoot: nil,
-				PublicKeysURL:         "",
+				BaseEndpoint:  "http://localhost:8545",
+				PublicKeysURL: "",
 				ProvidedPublicKeys: []string{
 					"0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c",
 					"0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b",
@@ -244,10 +243,9 @@ func TestWeb3SignerConfig(t *testing.T) {
 				publicKeysOrURLs: []string{"http://localhost:8545/api/v1/eth2/publicKeys"},
 			},
 			want: &remoteweb3signer.SetupConfig{
-				BaseEndpoint:          "http://localhost:8545",
-				GenesisValidatorsRoot: nil,
-				PublicKeysURL:         "http://localhost:8545/api/v1/eth2/publicKeys",
-				ProvidedPublicKeys:    nil,
+				BaseEndpoint:       "http://localhost:8545",
+				PublicKeysURL:      "http://localhost:8545/api/v1/eth2/publicKeys",
+				ProvidedPublicKeys: nil,
 			},
 		},
 		{

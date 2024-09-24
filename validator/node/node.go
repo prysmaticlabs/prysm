@@ -529,8 +529,7 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 			return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", urlStr)
 		}
 		web3signerConfig = &remoteweb3signer.SetupConfig{
-			BaseEndpoint:          u.String(),
-			GenesisValidatorsRoot: nil,
+			BaseEndpoint: u.String(),
 		}
 		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)

@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
@@ -41,9 +42,8 @@ const (
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
 type SetupConfig struct {
-	KeyFilePath           string
-	BaseEndpoint          string
-	GenesisValidatorsRoot []byte
+	KeyFilePath  string
+	BaseEndpoint string
 
 	// Either URL or keylist must be set.
 	// If the URL is set, the keymanager will fetch the public keys from the URL.
@@ -73,8 +73,11 @@ type Keymanager struct {
 func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	ctx, span := trace.StartSpan(ctx, "remote-keymanager.NewKeymanager")
 	defer span.End()
-	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
-		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
+	if cfg == nil {
+		return nil, errors.New("web3signer config is nil")
+	}
+	if cfg.BaseEndpoint == "" {
+		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v", cfg.BaseEndpoint)
 	}
 	client, err := internal.NewApiClient(cfg.BaseEndpoint)
 	if err != nil {
@@ -83,7 +86,7 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 
 	km := &Keymanager{
 		client:                internal.HttpSignerClient(client),
-		genesisValidatorsRoot: cfg.GenesisValidatorsRoot,
+		genesisValidatorsRoot: params.BeaconConfig().GenesisValidatorsRoot[:],
 		accountsChangedFeed:   new(event.Feed),
 		validator:             validator.New(),
 		retriesRemaining:      maxRetries,
