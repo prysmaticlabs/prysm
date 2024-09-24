@@ -100,7 +100,7 @@ func TestDataColumnsAdmissibleCustodyPeers(t *testing.T) {
 	require.DeepSSZEqual(t, expected, actual)
 }
 
-func TestCustodyCountFromRemotePeer(t *testing.T) {
+func TestDataColumnsCustodyCountFromRemotePeer(t *testing.T) {
 	const (
 		expectedENR      uint64 = 7
 		expectedMetadata uint64 = 8
@@ -186,7 +186,7 @@ func TestCustodyCountFromRemotePeer(t *testing.T) {
 			}
 
 			// Retrieve the custody count from the remote peer.
-			actual := service.CustodyCountFromRemotePeer(pid)
+			actual := service.DataColumnsCustodyCountFromRemotePeer(pid)
 
 			// Verify the result.
 			require.Equal(t, tc.expected, actual)

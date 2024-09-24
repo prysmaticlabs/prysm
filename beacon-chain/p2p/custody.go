@@ -28,7 +28,7 @@ func (s *Service) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID,
 loop:
 	for _, pid := range peers {
 		// Get the custody subnets count of the remote peer.
-		remoteCustodySubnetCount := s.CustodyCountFromRemotePeer(pid)
+		remoteCustodySubnetCount := s.DataColumnsCustodyCountFromRemotePeer(pid)
 
 		// Get the remote node ID from the peer ID.
 		remoteNodeID, err := ConvertPeerIDToNodeID(pid)
@@ -101,8 +101,8 @@ func (s *Service) custodyCountFromRemotePeerEnr(pid peer.ID) uint64 {
 	return custodyCount
 }
 
-// CustodyCountFromRemotePeer retrieves the custody count from a remote peer.
-func (s *Service) CustodyCountFromRemotePeer(pid peer.ID) uint64 {
+// DataColumnsCustodyCountFromRemotePeer retrieves the custody count from a remote peer.
+func (s *Service) DataColumnsCustodyCountFromRemotePeer(pid peer.ID) uint64 {
 	// Try to get the custody count from the peer's metadata.
 	metadata, err := s.peers.Metadata(pid)
 	if err != nil {

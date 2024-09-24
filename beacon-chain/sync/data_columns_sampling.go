@@ -155,7 +155,7 @@ func (d *dataColumnSampler1D) refreshPeerInfo() {
 	d.prunePeerInfo(activePeers)
 
 	for _, pid := range activePeers {
-		csc := d.p2p.CustodyCountFromRemotePeer(pid)
+		csc := d.p2p.DataColumnsCustodyCountFromRemotePeer(pid)
 
 		columns, ok := d.columnFromPeer[pid]
 		columnsCount := uint64(len(columns))
