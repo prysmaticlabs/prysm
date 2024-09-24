@@ -30,7 +30,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState, bl
 		return createLightClientBootstrapAltair(ctx, state, blk)
 	case version.Capella:
 		return createLightClientBootstrapCapella(ctx, state, blk)
-	case version.Deneb, version.Electra:
+	case version.Deneb:
 		return createLightClientBootstrapDeneb(ctx, state, blk)
 	}
 	return nil, fmt.Errorf("unsupported block version %s", version.String(blk.Version()))
