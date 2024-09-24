@@ -449,6 +449,6 @@ func (s *TestP2P) CustodyCountFromRemotePeer(pid peer.ID) uint64 {
 	return custodyCount
 }
 
-func (*TestP2P) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
+func (*TestP2P) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	return peers, nil
 }

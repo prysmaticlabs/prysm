@@ -211,7 +211,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 		if len(request) > 0 {
 			peers := s.getBestPeers()
-			peers, err = s.cfg.p2p.GetValidCustodyPeers(peers)
+			peers, err = s.cfg.p2p.DataColumnsAdmissibleCustodyPeers(peers)
 			if err != nil {
 				return err
 			}
@@ -346,7 +346,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 
 	if peerDASIsActive {
 		var err error
-		bestPeers, err = s.cfg.p2p.GetValidCustodyPeers(bestPeers)
+		bestPeers, err = s.cfg.p2p.DataColumnsAdmissibleCustodyPeers(bestPeers)
 		if err != nil {
 			return errors.Wrap(err, "get valid custody peers")
 		}

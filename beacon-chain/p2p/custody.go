@@ -9,8 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
-// GetValidCustodyPeers returns a list of peers that custody a super set of the local node's custody columns.
-func (s *Service) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
+// DataColumnsAdmissibleCustodyPeers returns a list of peers that custody a super set of the local node's custody columns.
+func (s *Service) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	// Get the total number of columns.
 	numberOfColumns := params.BeaconConfig().NumberOfColumns
 

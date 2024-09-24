@@ -189,6 +189,6 @@ func (*FakeP2P) CustodyCountFromRemotePeer(peer.ID) uint64 {
 	return 0
 }
 
-func (*FakeP2P) GetValidCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
+func (*FakeP2P) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	return peers, nil
 }

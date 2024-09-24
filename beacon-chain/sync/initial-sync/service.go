@@ -444,7 +444,7 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 		return nil
 	}
 	shufflePeers(pids)
-	pids, err = s.cfg.P2P.GetValidCustodyPeers(pids)
+	pids, err = s.cfg.P2P.DataColumnsAdmissibleCustodyPeers(pids)
 	if err != nil {
 		return err
 	}
