@@ -428,7 +428,7 @@ func (d *dataColumnSampler1D) sampleDataColumnsFromPeer(
 	}
 
 	// Send the request to the peer.
-	roDataColumns, err := SendDataColumnSidecarByRoot(ctx, d.clock, d.p2p, pid, d.ctxMap, &req)
+	roDataColumns, err := SendDataColumnSidecarsByRootRequest(ctx, d.clock, d.p2p, pid, d.ctxMap, &req)
 	if err != nil {
 		log.WithError(err).Error("Failed to send data column sidecar by root")
 		return nil

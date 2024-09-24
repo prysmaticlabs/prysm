@@ -449,7 +449,7 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 		return err
 	}
 	for i := range pids {
-		sidecars, err := sync.SendDataColumnSidecarByRoot(s.ctx, s.clock, s.cfg.P2P, pids[i], s.ctxMap, &req)
+		sidecars, err := sync.SendDataColumnSidecarsByRootRequest(s.ctx, s.clock, s.cfg.P2P, pids[i], s.ctxMap, &req)
 		if err != nil {
 			continue
 		}

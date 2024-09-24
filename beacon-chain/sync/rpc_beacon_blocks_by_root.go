@@ -192,7 +192,7 @@ func (s *Service) sendAndSaveDataColumnSidecars(ctx context.Context, request typ
 		return nil
 	}
 
-	sidecars, err := SendDataColumnSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peerID, s.ctxMap, &request)
+	sidecars, err := SendDataColumnSidecarsByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, peerID, s.ctxMap, &request)
 	if err != nil {
 		return err
 	}
