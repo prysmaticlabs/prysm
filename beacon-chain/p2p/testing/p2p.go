@@ -87,7 +87,10 @@ func (p *TestP2P) Connect(b *TestP2P) {
 }
 
 func connect(a, b host.Host) error {
-	pinfo := b.Peerstore().PeerInfo(b.ID())
+	pinfo := peer.AddrInfo{
+		ID:    b.ID(),
+		Addrs: b.Addrs(),
+	}
 	return a.Connect(context.Background(), pinfo)
 }
 
