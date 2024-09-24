@@ -11,16 +11,33 @@ import (
 
 // DataColumnsAdmissibleCustodyPeers returns a list of peers that custody a super set of the local node's custody columns.
 func (s *Service) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
+	localCustodySubnetCount := peerdas.CustodySubnetCount()
+	return s.dataColumnsAdmissiblePeers(peers, localCustodySubnetCount)
+}
+
+// DataColumnsAdmissibleSubnetSamplingPeers returns a list of peers that custody a super set of the local node's sampling columns.
+func (s *Service) DataColumnsAdmissibleSubnetSamplingPeers(peers []peer.ID) ([]peer.ID, error) {
+	localSubnetSamplingSize := peerdas.SubnetSamplingSize()
+	return s.dataColumnsAdmissiblePeers(peers, localSubnetSamplingSize)
+}
+
+// dataColumnsAdmissiblePeers computes the first columns of the local node corresponding to `subnetCount`, then
+// filters out `peers` that do not custody a super set of these columns.
+func (s *Service) dataColumnsAdmissiblePeers(peers []peer.ID, subnetCount uint64) ([]peer.ID, error) {
 	// Get the total number of columns.
 	numberOfColumns := params.BeaconConfig().NumberOfColumns
 
-	localCustodySubnetCount := peerdas.CustodySubnetCount()
-	localCustodyColumns, err := peerdas.CustodyColumns(s.NodeID(), localCustodySubnetCount)
+	// Retrieve the local node ID.
+	localNodeId := s.NodeID()
+
+	// Retrieve the needed columns.
+	neededColumns, err := peerdas.CustodyColumns(localNodeId, subnetCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "custody columns for local node")
 	}
 
-	localCustodyColumnsCount := uint64(len(localCustodyColumns))
+	// Get the number of needed columns.
+	localneededColumnsCount := uint64(len(neededColumns))
 
 	// Find the valid peers.
 	validPeers := make([]peer.ID, 0, len(peers))
@@ -44,8 +61,8 @@ loop:
 
 		remoteCustodyColumnsCount := uint64(len(remoteCustodyColumns))
 
-		// If the remote peer custodies less columns than the local node, skip it.
-		if remoteCustodyColumnsCount < localCustodyColumnsCount {
+		// If the remote peer custodies less columns than the local node needs, skip it.
+		if remoteCustodyColumnsCount < localneededColumnsCount {
 			continue
 		}
 
@@ -57,7 +74,7 @@ loop:
 		}
 
 		// Filter out invalid peers.
-		for c := range localCustodyColumns {
+		for c := range neededColumns {
 			if !remoteCustodyColumns[c] {
 				continue loop
 			}

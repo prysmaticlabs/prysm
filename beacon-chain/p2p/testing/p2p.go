@@ -452,3 +452,7 @@ func (s *TestP2P) DataColumnsCustodyCountFromRemotePeer(pid peer.ID) uint64 {
 func (*TestP2P) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	return peers, nil
 }
+
+func (*TestP2P) DataColumnsAdmissibleSubnetSamplingPeers(peers []peer.ID) ([]peer.ID, error) {
+	return peers, nil
+}

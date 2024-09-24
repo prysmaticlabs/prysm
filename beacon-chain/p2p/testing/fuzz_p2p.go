@@ -192,3 +192,7 @@ func (*FakeP2P) DataColumnsCustodyCountFromRemotePeer(peer.ID) uint64 {
 func (*FakeP2P) DataColumnsAdmissibleCustodyPeers(peers []peer.ID) ([]peer.ID, error) {
 	return peers, nil
 }
+
+func (*FakeP2P) DataColumnsAdmissibleSubnetSamplingPeers(peers []peer.ID) ([]peer.ID, error) {
+	return peers, nil
+}

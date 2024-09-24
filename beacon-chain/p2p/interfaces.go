@@ -116,4 +116,5 @@ type MetadataProvider interface {
 type DataColumnsHandler interface {
 	DataColumnsCustodyCountFromRemotePeer(peer.ID) uint64
 	DataColumnsAdmissibleCustodyPeers([]peer.ID) ([]peer.ID, error)
+	DataColumnsAdmissibleSubnetSamplingPeers([]peer.ID) ([]peer.ID, error)
 }
