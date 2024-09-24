@@ -314,8 +314,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	// Remove duplicates (if any) from the list of roots.
 	roots = dedupRoots(roots)
 
-	// Reversly iterate through the list of roots to request blocks, and filter out roots that are already
-	// seen in pending blocks or being synced.
+	// Filters out in place roots that are already seen in pending blocks or being synced.
 	func() {
 		s.pendingQueueLock.RLock()
 		defer s.pendingQueueLock.RUnlock()
