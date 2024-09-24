@@ -75,6 +75,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Ignoring already synced block")
 		return nil
 	}
+
 	receivedTime := time.Now()
 	s.blockBeingSynced.set(blockRoot)
 	defer s.blockBeingSynced.unset(blockRoot)
@@ -83,6 +84,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
+
 	preState, err := s.getBlockPreState(ctx, blockCopy.Block())
 	if err != nil {
 		return errors.Wrap(err, "could not get block's prestate")
@@ -93,10 +95,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
+
 	daWaitedTime, err := s.handleDA(ctx, blockCopy, blockRoot, avs)
 	if err != nil {
 		return err
 	}
+
 	// Defragment the state before continuing block processing.
 	s.defragmentState(postState)
 
@@ -239,7 +243,7 @@ func (s *Service) handleDA(
 		}
 	} else {
 		if err := s.isDataAvailable(ctx, blockRoot, block); err != nil {
-			return 0, errors.Wrap(err, "could not validate blob data availability")
+			return 0, errors.Wrap(err, "is data available")
 		}
 	}
 	daWaitedTime := time.Since(daStartTime)
