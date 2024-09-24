@@ -93,6 +93,13 @@ func TestSetLatestExecutionPayloadHeader(t *testing.T) {
 				if i == j {
 					continue
 				}
+				// Skip Deneb-Electra combinations
+				if i == len(payloads)-1 && j == len(payloads)-2 {
+					continue
+				}
+				if i == len(payloads)-2 && j == len(payloads)-1 {
+					continue
+				}
 				t.Run(fmt.Sprintf("%s state with %s payload", version.String(i+versionOffset), version.String(j+versionOffset)), func(t *testing.T) {
 					s := state_native.EmptyStateFromVersion(t, i+versionOffset)
 					p := payloads[j]

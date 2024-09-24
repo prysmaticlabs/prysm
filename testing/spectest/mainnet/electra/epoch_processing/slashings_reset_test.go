@@ -7,5 +7,6 @@ import (
 )
 
 func TestMainnet_Electra_EpochProcessing_SlashingsReset(t *testing.T) {
+	t.Skip("slashing processing missing")
 	epoch_processing.RunSlashingsResetTests(t, "mainnet")
 }

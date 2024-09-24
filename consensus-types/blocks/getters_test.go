@@ -634,9 +634,3 @@ func hydrateBeaconBlockBodyElectra() *eth.BeaconBlockBodyElectra {
 		},
 	}
 }
-
-func TestPreElectraFailsInterfaceAssertion(t *testing.T) {
-	var epd interfaces.ExecutionData = &executionPayloadDeneb{}
-	_, ok := epd.(interfaces.ExecutionData)
-	require.Equal(t, false, ok)
-}

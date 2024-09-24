@@ -368,6 +368,9 @@ func CopyBlobKZGs(b [][]byte) [][]byte {
 
 // CopyExecutionRequests copies the provided execution requests.
 func CopyExecutionRequests(e *enginev1.ExecutionRequests) *enginev1.ExecutionRequests {
+	if e == nil {
+		return nil
+	}
 	dr := make([]*enginev1.DepositRequest, len(e.Deposits))
 	for i, d := range e.Deposits {
 		dr[i] = d.Copy()
