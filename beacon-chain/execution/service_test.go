@@ -218,7 +218,9 @@ func TestFollowBlock_OK(t *testing.T) {
 	baseHeight := hdr.Number.Uint64()
 	// process follow_distance blocks
 	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
-		testAcc.Backend.Commit()
+		// Throw away error in case adjustment wasn't successful.
+		err = testAcc.Backend.AdjustTime(10 * time.Second)
+		_ = err
 	}
 	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
 	require.NoError(t, err)
@@ -233,7 +235,9 @@ func TestFollowBlock_OK(t *testing.T) {
 	expectedHeight := numToForward + baseHeight
 	// forward 2 blocks
 	for i := uint64(0); i < numToForward; i++ {
-		testAcc.Backend.Commit()
+		// Throw away error in case adjustment wasn't successful.
+		err = testAcc.Backend.AdjustTime(10 * time.Second)
+		_ = err
 	}
 	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
 	require.NoError(t, err)

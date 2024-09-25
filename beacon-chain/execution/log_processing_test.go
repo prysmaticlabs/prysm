@@ -417,7 +417,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	nConfig.ContractDeploymentBlock = 0
 	params.OverrideBeaconNetworkConfig(nConfig)
 
-	testAcc.Backend.Commit()
+	assert.NoError(t, testAcc.Backend.AdjustTime(10*time.Second))
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
@@ -440,11 +440,17 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		// 5
 		if (i+1)%8 == depositOffset {
 			testAcc.Backend.Commit()
+			// Throw away error in case adjustment wasn't successful.
+			err = testAcc.Backend.AdjustTime(10 * time.Second)
+			_ = err
 		}
 	}
 	// Forward the chain to account for the follow distance
 	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
 		testAcc.Backend.Commit()
+		// Throw away error in case adjustment wasn't successful.
+		err = testAcc.Backend.AdjustTime(10 * time.Second)
+		_ = err
 	}
 	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
 	require.NoError(t, err)
