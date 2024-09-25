@@ -62,20 +62,32 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with the best child and descendant node.
-func (s *Store) insert(ctx context.Context,
+func (s *Store) insert(
+	ctx context.Context,
 	slot primitives.Slot,
-	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch primitives.Epoch) (*Node, error) {
+	root, parentRoot, payloadHash, parentHash [fieldparams.RootLength]byte,
+	justifiedEpoch, finalizedEpoch primitives.Epoch,
+) (*Node, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
 	// Return if the block has been inserted into Store before.
-	if n, ok := s.nodeByRoot[root]; ok {
-		return n, nil
+	n, rootPresent := s.nodeByRoot[root]
+	m, hashPresent := s.nodeByPayload[payloadHash]
+	if rootPresent {
+		if payloadHash == [32]byte{} {
+			return n, nil
+		}
+		if hashPresent {
+			return m, nil
+		}
 	}
-
 	parent := s.nodeByRoot[parentRoot]
-	n := &Node{
+	fullParent := s.nodeByPayload[parentHash]
+	if fullParent != nil && parent != nil && fullParent.root == parent.root {
+		parent = fullParent
+	}
+	n = &Node{
 		slot:                     slot,
 		root:                     root,
 		parent:                   parent,
@@ -99,17 +111,22 @@ func (s *Store) insert(ctx context.Context,
 		}
 	}
 
-	s.nodeByPayload[payloadHash] = n
-	s.nodeByRoot[root] = n
 	if parent == nil {
 		if s.treeRootNode == nil {
 			s.treeRootNode = n
 			s.headNode = n
 			s.highestReceivedNode = n
-		} else {
+		} else if s.treeRootNode.root != n.root {
 			return n, errInvalidParentRoot
 		}
-	} else {
+	}
+	if !rootPresent {
+		s.nodeByRoot[root] = n
+	}
+	if !hashPresent {
+		s.nodeByPayload[payloadHash] = n
+	}
+	if parent != nil {
 		parent.children = append(parent.children, n)
 		// Apply proposer boost
 		timeNow := uint64(time.Now().Unix())
