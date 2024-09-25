@@ -13,8 +13,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
-- Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
+- Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb.
 - GetBeaconStateV2: add Electra case.
+- Added GetBlockAttestationsV2 endpoint.
 
 ### Changed
 
