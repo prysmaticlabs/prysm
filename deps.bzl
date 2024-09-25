@@ -823,12 +823,6 @@ def prysm_deps():
         version = "v0.0.0-20230517082657-f9840df7b83e",
     )
     go_repository(
-        name = "com_github_fjl_memsize",
-        importpath = "github.com/fjl/memsize",
-        sum = "h1:27txuSD9or+NZlnOWdKUxeBzTAUkWCVh+4Gf2dWFOzA=",
-        version = "v0.0.2",
-    )
-    go_repository(
         name = "com_github_flosch_pongo2_v4",
         importpath = "github.com/flosch/pongo2/v4",
         sum = "h1:gv+5Pe3vaSVmiJvh/BZa82b7/00YUGm0PIyVVLop0Hw=",
