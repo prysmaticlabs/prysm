@@ -515,7 +515,7 @@ func TestGetBlockAttestations(t *testing.T) {
 			Blocker:               mockBlockFetcher,
 		}
 
-		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
 		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -531,6 +531,24 @@ func TestGetBlockAttestations(t *testing.T) {
 			require.NoError(t, err)
 		}
 		assert.DeepEqual(t, b.Block.Body.Attestations, atts)
+
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request.SetPathValue("block_id", "head")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockAttestationsV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp2 := &structs.GetBlockAttestationsV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+		require.Equal(t, len(b.Block.Body.Attestations), len(resp2.Data))
+		atts = make([]*eth.Attestation, len(b.Block.Body.Attestations))
+		for i, a := range resp.Data {
+			atts[i], err = a.ToConsensus()
+			require.NoError(t, err)
+		}
+		assert.DeepEqual(t, b.Block.Body.Attestations, atts)
+		assert.Equal(t, "phase0", resp2.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBeaconBlockBellatrix()
@@ -549,7 +567,7 @@ func TestGetBlockAttestations(t *testing.T) {
 			Blocker:               mockBlockFetcher,
 		}
 
-		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
 		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -559,6 +577,18 @@ func TestGetBlockAttestations(t *testing.T) {
 		resp := &structs.GetBlockAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
+
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request.SetPathValue("block_id", "head")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockAttestationsV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp2 := &structs.GetBlockAttestationsV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+		assert.Equal(t, true, resp2.ExecutionOptimistic)
+		assert.Equal(t, "bellatrix", resp2.Version)
 	})
 	t.Run("finalized", func(t *testing.T) {
 		b := util.NewBeaconBlock()
@@ -576,7 +606,7 @@ func TestGetBlockAttestations(t *testing.T) {
 				Blocker:               mockBlockFetcher,
 			}
 
-			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
 			request.SetPathValue("block_id", "head")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
@@ -586,6 +616,18 @@ func TestGetBlockAttestations(t *testing.T) {
 			resp := &structs.GetBlockAttestationsResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
+
+			request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
+			writer = httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockAttestationsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			resp2 := &structs.GetBlockAttestationsV2Response{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+			assert.Equal(t, true, resp2.Finalized)
+			assert.Equal(t, "phase0", resp2.Version)
 		})
 		t.Run("false", func(t *testing.T) {
 			mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: false}}
@@ -595,7 +637,7 @@ func TestGetBlockAttestations(t *testing.T) {
 				Blocker:               mockBlockFetcher,
 			}
 
-			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
 			request.SetPathValue("block_id", "head")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
@@ -605,6 +647,18 @@ func TestGetBlockAttestations(t *testing.T) {
 			resp := &structs.GetBlockAttestationsResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.ExecutionOptimistic)
+
+			request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
+			writer = httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockAttestationsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			resp2 := &structs.GetBlockAttestationsV2Response{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+			assert.Equal(t, false, resp2.ExecutionOptimistic)
+			assert.Equal(t, "phase0", resp2.Version)
 		})
 	})
 }

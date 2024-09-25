@@ -586,6 +586,15 @@ func (s *Service) beaconEndpoints(
 			methods: []string{http.MethodGet},
 		},
 		{
+			template: "/eth/v2/beacon/blocks/{block_id}/attestations",
+			name:     namespace + ".GetBlockAttestations",
+			middleware: []middleware.Middleware{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetBlockAttestations,
+			methods: []string{http.MethodGet},
+		},
+		{
 			template: "/eth/v1/beacon/blinded_blocks/{block_id}",
 			name:     namespace + ".GetBlindedBlock",
 			middleware: []middleware.Middleware{

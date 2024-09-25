@@ -200,16 +200,40 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestations")
 	defer span.End()
 
+	atts, isOptimistic, root, _ := s.blockAttestations(ctx, w, r)
+	resp := &structs.GetBlockAttestationsResponse{
+		Data:                atts,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
+	}
+	httputil.WriteJson(w, resp)
+}
+
+// GetBlockAttestationsV2 retrieves attestation included in requested block.
+func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestationsV2")
+	defer span.End()
+
+	atts, isOptimistic, root, v := s.blockAttestations(ctx, w, r)
+	resp := &structs.GetBlockAttestationsV2Response{
+		Version:             v,
+		Data:                atts,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
+	}
+	httputil.WriteJson(w, resp)
+}
+
+func (s *Server) blockAttestations(ctx context.Context, w http.ResponseWriter, r *http.Request) ([]*structs.Attestation, bool, [32]byte, string) {
 	blockId := r.PathValue("block_id")
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
-		return
+		return nil, false, [32]byte{}, ""
 	}
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
-		return
+		return nil, false, [32]byte{}, ""
 	}
-
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*structs.Attestation, len(consensusAtts))
 	for i, att := range consensusAtts {
@@ -218,26 +242,22 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 			atts[i] = structs.AttFromConsensus(a)
 		} else {
 			httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
-			return
+			return nil, false, [32]byte{}, ""
 		}
 	}
+
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, false, [32]byte{}, ""
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 	if err != nil {
 		httputil.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, false, [32]byte{}, ""
 	}
 
-	resp := &structs.GetBlockAttestationsResponse{
-		Data:                atts,
-		ExecutionOptimistic: isOptimistic,
-		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
-	}
-	httputil.WriteJson(w, resp)
+	return atts, isOptimistic, root, version.String(blk.Block().Version())
 }
 
 // PublishBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
