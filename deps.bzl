@@ -813,8 +813,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
-        sum = "h1:Dky6dXlngF6Qjc+EfDipAkE83N5I5DE68bY6O0VLNPk=",
-        version = "v0.1.2",
+        sum = "h1:ZI+z3JH05h4kgmFXdHuR1aWYsgrg7o+Fw7/NCzM16Mo=",
+        version = "v0.1.3",
     )
     go_repository(
         name = "com_github_fjl_gencodec",
@@ -1529,8 +1529,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_herumi_bls_eth_go_binary",
         importpath = "github.com/herumi/bls-eth-go-binary",
-        sum = "h1:wCMygKUQhmcQAjlk2Gquzq6dLmyMv2kF+llRspoRgrk=",
-        version = "v0.0.0-20210917013441-d37c07cfda4e",
+        sum = "h1:9eeW3EA4epCb7FIHt2luENpAW69MvKGL5jieHlBiP+w=",
+        version = "v1.31.0",
     )
     go_repository(
         name = "com_github_holiman_billy",
@@ -3360,6 +3360,12 @@ def prysm_deps():
         version = "v1.2.7",
     )
     go_repository(
+        name = "com_github_umbracle_gohashtree",
+        importpath = "github.com/umbracle/gohashtree",
+        sum = "h1:CQh33pStIp/E30b7TxDlXfM0145bn2e8boI30IxAhTg=",
+        version = "v0.0.2-alpha.0.20230207094856-5b775a815c10",
+    )
+    go_repository(
         name = "com_github_urfave_cli",
         importpath = "github.com/urfave/cli",
         sum = "h1:gsqYFH8bb9ekPA12kRo0hfjngWQjkJPlN9R0N78BoUo=",
@@ -3449,8 +3455,8 @@ def prysm_deps():
             "gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library",
         ],
         importpath = "github.com/wealdtech/go-eth2-types/v2",
-        sum = "h1:tiA6T88M6XQIbrV5Zz53l1G5HtRERcxQfmET225V4Ls=",
-        version = "v2.5.2",
+        sum = "h1:b5aXlNBLKgjAg/Fft9VvGlqAUCQMP5LzYhlHRrr4yPg=",
+        version = "v2.8.2",
     )
     go_repository(
         name = "com_github_wealdtech_go_eth2_util",
