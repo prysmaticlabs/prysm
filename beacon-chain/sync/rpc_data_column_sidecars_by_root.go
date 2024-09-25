@@ -166,14 +166,6 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		s.rateLimiter.add(stream, 1)
 		requestedRoot, requestedIndex := bytesutil.ToBytes32(requestedColumnIdents[i].BlockRoot), requestedColumnIdents[i].ColumnIndex
 
-		// Decrease the peer's score if it requests a column that is not custodied.
-		isCustodied := custodyColumns[requestedIndex]
-		if !isCustodied {
-			s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
-			s.writeErrorResponseToStream(responseCodeInvalidRequest, types.ErrInvalidColumnIndex.Error(), stream)
-			return types.ErrInvalidColumnIndex
-		}
-
 		// TODO: Differentiate between blobs and columns for our storage engine
 		// If the data column is nil, it means it is not yet available in the db.
 		// We wait for it to be available.
