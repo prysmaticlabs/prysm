@@ -10,6 +10,11 @@ type AggregateAttestationResponse struct {
 	Data *Attestation `json:"data"`
 }
 
+type AggregateAttestationV2Response struct {
+	Version string       `json:"version"`
+	Data    *Attestation `json:"data"`
+}
+
 type SubmitContributionAndProofsRequest struct {
 	Data []*SignedContributionAndProof `json:"data"`
 }

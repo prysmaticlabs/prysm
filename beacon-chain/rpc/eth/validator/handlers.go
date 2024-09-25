@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -52,31 +53,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var match ethpbalpha.Att
-	var err error
-
-	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
-	if err != nil {
-		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if match == nil {
-		atts, err := s.AttestationsPool.UnaggregatedAttestations()
-		if err != nil {
-			httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		match, err = matchingAtt(atts, primitives.Slot(slot), attDataRoot)
-		if err != nil {
-			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	if match == nil {
-		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
-		return
-	}
-
+	match := s.aggregateAttestation(w, slot, 0, attDataRoot)
 	response := &structs.AggregateAttestationResponse{
 		Data: &structs.Attestation{
 			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
@@ -98,15 +75,92 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	httputil.WriteJson(w, response)
 }
 
-func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte) (ethpbalpha.Att, error) {
+// GetAggregateAttestationV2 aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
+func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
+	defer span.End()
+
+	_, attDataRoot, ok := shared.HexFromQuery(w, r, "attestation_data_root", fieldparams.RootLength, true)
+	if !ok {
+		return
+	}
+
+	_, slot, ok := shared.UintFromQuery(w, r, "slot", true)
+	if !ok {
+		return
+	}
+
+	_, index, ok := shared.UintFromQuery(w, r, "committee_index", true)
+	if !ok {
+		return
+	}
+
+	match := s.aggregateAttestation(w, slot, index, attDataRoot)
+	response := &structs.AggregateAttestationV2Response{
+		Version: version.String(match.Version()),
+		Data: &structs.Attestation{
+			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
+			Data: &structs.AttestationData{
+				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
+				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
+				Source: &structs.Checkpoint{
+					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Source.Root),
+				},
+				Target: &structs.Checkpoint{
+					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Target.Root),
+				},
+			},
+			Signature: hexutil.Encode(match.GetSignature()),
+		}}
+	httputil.WriteJson(w, response)
+}
+
+func (s *Server) aggregateAttestation(w http.ResponseWriter, slot, index uint64, attDataRoot []byte) ethpbalpha.Att {
+	var match ethpbalpha.Att
+	var err error
+
+	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot, primitives.CommitteeIndex(index))
+	if err != nil {
+		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+		return nil
+	}
+	if match == nil {
+		atts, err := s.AttestationsPool.UnaggregatedAttestations()
+		if err != nil {
+			httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
+			return nil
+		}
+		match, err = matchingAtt(atts, primitives.Slot(slot), attDataRoot, primitives.CommitteeIndex(index))
+		if err != nil {
+			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+			return nil
+		}
+	}
+	if match == nil {
+		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
+		return nil
+	}
+	return match
+}
+
+func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte, index primitives.CommitteeIndex) (ethpbalpha.Att, error) {
 	for _, att := range atts {
 		if att.GetData().Slot == slot {
 			root, err := att.GetData().HashTreeRoot()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get attestation data root")
 			}
-			if bytes.Equal(root[:], attDataRoot) {
-				return att, nil
+			if index == 0 {
+				if bytes.Equal(root[:], attDataRoot) {
+					return att, nil
+				}
+			} else {
+				if bytes.Equal(root[:], attDataRoot) && att.GetData().CommitteeIndex == index {
+					return att, nil
+				}
 			}
 		}
 	}

@@ -178,6 +178,33 @@ func TestGetAggregateAttestation(t *testing.T) {
 		assert.Equal(t, "1", resp.Data.Data.Target.Epoch)
 		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.Target.Root)
 	})
+	t.Run("matching aggregated att V2", func(t *testing.T) {
+		reqRoot, err := attslot22.Data.HashTreeRoot()
+		require.NoError(t, err)
+		attDataRoot := hexutil.Encode(reqRoot[:])
+		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=10"
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAggregateAttestationV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.AggregateAttestationV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		assert.DeepEqual(t, "0x00010101", resp.Data.AggregationBits)
+		assert.DeepEqual(t, hexutil.Encode(sig22), resp.Data.Signature)
+		assert.Equal(t, "2", resp.Data.Data.Slot)
+		assert.Equal(t, "1", resp.Data.Data.CommitteeIndex)
+		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.BeaconBlockRoot)
+		require.NotNil(t, resp.Data.Data.Source)
+		assert.Equal(t, "1", resp.Data.Data.Source.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.Source.Root)
+		require.NotNil(t, resp.Data.Data.Target)
+		assert.Equal(t, "1", resp.Data.Data.Target.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.Target.Root)
+	})
 	t.Run("matching unaggregated att", func(t *testing.T) {
 		reqRoot, err := attslot32.Data.HashTreeRoot()
 		require.NoError(t, err)
