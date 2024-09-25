@@ -47,11 +47,11 @@ func GetRandBlob(seed int64) GoKZG.Blob {
 }
 
 func GenerateCommitmentAndProof(blob GoKZG.Blob) (GoKZG.KZGCommitment, GoKZG.KZGProof, error) {
-	commitment, err := kzgContext.BlobToKZGCommitment(blob, 0)
+	commitment, err := kzgContext.BlobToKZGCommitment(&blob, 0)
 	if err != nil {
 		return GoKZG.KZGCommitment{}, GoKZG.KZGProof{}, err
 	}
-	proof, err := kzgContext.ComputeBlobKZGProof(blob, commitment, 0)
+	proof, err := kzgContext.ComputeBlobKZGProof(&blob, commitment, 0)
 	if err != nil {
 		return GoKZG.KZGCommitment{}, GoKZG.KZGProof{}, err
 	}
