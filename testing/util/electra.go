@@ -47,7 +47,7 @@ type electraBlockGenerator struct {
 	sk       bls.SecretKey
 	proposer primitives.ValidatorIndex
 	valRoot  []byte
-	payload  *enginev1.ExecutionPayloadDeneb
+	payload  *enginev1.ExecutionPayloadElectra
 }
 
 func WithElectraProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey, valRoot []byte) ElectraBlockGeneratorOption {
@@ -59,7 +59,7 @@ func WithElectraProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey,
 	}
 }
 
-func WithDenebPayload(p *enginev1.ExecutionPayloadDeneb) ElectraBlockGeneratorOption {
+func WithElectraPayload(p *enginev1.ExecutionPayloadElectra) ElectraBlockGeneratorOption {
 	return func(g *electraBlockGenerator) {
 		g.payload = p
 	}
@@ -96,7 +96,7 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 		logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 		receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 		parentHash := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
-		g.payload = &enginev1.ExecutionPayloadDeneb{
+		g.payload = &enginev1.ExecutionPayloadElectra{
 			ParentHash:    parentHash,
 			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 			StateRoot:     stateRoot,

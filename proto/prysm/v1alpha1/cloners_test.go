@@ -884,6 +884,8 @@ func genPayloadDeneb() *enginev1.ExecutionPayloadDeneb {
 	}
 }
 
+var genPayloadElectra = genPayloadDeneb
+
 func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
 	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytes(32),
@@ -944,6 +946,8 @@ func genPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDeneb {
 		ExcessBlobGas:    6,
 	}
 }
+
+var genPayloadHeaderElectra = genPayloadHeaderDeneb
 
 func genWithdrawals(num int) []*enginev1.Withdrawal {
 	ws := make([]*enginev1.Withdrawal, num)
@@ -1049,7 +1053,7 @@ func genBlindedBeaconBlockBodyElectra() *v1alpha1.BlindedBeaconBlockBodyElectra 
 		Deposits:               genDeposits(5),
 		VoluntaryExits:         genSignedVoluntaryExits(12),
 		SyncAggregate:          genSyncAggregate(),
-		ExecutionPayloadHeader: genPayloadHeaderDeneb(),
+		ExecutionPayloadHeader: genPayloadHeaderElectra(),
 		BlsToExecutionChanges:  genBLSToExecutionChanges(10),
 		BlobKzgCommitments:     getKZGCommitments(4),
 		ExecutionRequests:      genExecutionRequests(),
@@ -1084,7 +1088,7 @@ func genBeaconBlockBodyElectra() *v1alpha1.BeaconBlockBodyElectra {
 		Deposits:              genDeposits(5),
 		VoluntaryExits:        genSignedVoluntaryExits(12),
 		SyncAggregate:         genSyncAggregate(),
-		ExecutionPayload:      genPayloadDeneb(),
+		ExecutionPayload:      genPayloadElectra(),
 		BlsToExecutionChanges: genBLSToExecutionChanges(10),
 		BlobKzgCommitments:    getKZGCommitments(4),
 		ExecutionRequests:     genExecutionRequests(),

@@ -37,9 +37,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
-		obj = &enginev1.ExecutionPayloadDeneb{}
+		obj = &enginev1.ExecutionPayloadElectra{}
 	case "ExecutionPayloadHeader":
-		obj = &enginev1.ExecutionPayloadHeaderDeneb{}
+		obj = &enginev1.ExecutionPayloadHeaderElectra{}
 	case "Attestation":
 		obj = &ethpb.AttestationElectra{}
 	case "AttestationData":

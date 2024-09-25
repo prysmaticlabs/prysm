@@ -172,7 +172,7 @@ func GenerateFullBlockElectra(
 		return nil, err
 	}
 	blockHash := indexToHash(uint64(slot))
-	newExecutionPayloadDeneb := &v1.ExecutionPayloadDeneb{
+	newExecutionPayloadElectra := &v1.ExecutionPayloadElectra{
 		ParentHash:    parentExecution.BlockHash(),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
@@ -249,7 +249,7 @@ func GenerateFullBlockElectra(
 			Deposits:              newDeposits,
 			Graffiti:              make([]byte, fieldparams.RootLength),
 			SyncAggregate:         newSyncAggregate,
-			ExecutionPayload:      newExecutionPayloadDeneb,
+			ExecutionPayload:      newExecutionPayloadElectra,
 			BlsToExecutionChanges: changes,
 			ExecutionRequests:     executionRequests,
 		},

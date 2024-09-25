@@ -472,9 +472,9 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 			Signature: sig[:],
 		}
 	case version.Electra:
-		p, ok := payload.(*enginev1.ExecutionPayloadDeneb)
+		p, ok := payload.(*enginev1.ExecutionPayloadElectra)
 		if !ok {
-			return nil, errors.New("payload not of Deneb type")
+			return nil, errors.New("payload not of Electra type")
 		}
 		blsToExecutionChanges, err := b.Body().BLSToExecutionChanges()
 		if err != nil {

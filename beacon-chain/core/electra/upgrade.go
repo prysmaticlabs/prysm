@@ -243,7 +243,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		InactivityScores:            inactivityScores,
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderDeneb{
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{
 			ParentHash:       payloadHeader.ParentHash(),
 			FeeRecipient:     payloadHeader.FeeRecipient(),
 			StateRoot:        payloadHeader.StateRoot(),

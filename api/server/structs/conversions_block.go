@@ -2154,7 +2154,7 @@ func (b *BeaconBlockElectra) ToConsensus() (*eth.BeaconBlockElectra, error) {
 				SyncCommitteeBits:      syncCommitteeBits,
 				SyncCommitteeSignature: syncCommitteeSig,
 			},
-			ExecutionPayload: &enginev1.ExecutionPayloadDeneb{
+			ExecutionPayload: &enginev1.ExecutionPayloadElectra{
 				ParentHash:    payloadParentHash,
 				FeeRecipient:  payloadFeeRecipient,
 				StateRoot:     payloadStateRoot,
@@ -2455,7 +2455,7 @@ func (b *BlindedBeaconBlockElectra) ToConsensus() (*eth.BlindedBeaconBlockElectr
 				SyncCommitteeBits:      syncCommitteeBits,
 				SyncCommitteeSignature: syncCommitteeSig,
 			},
-			ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderDeneb{
+			ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{
 				ParentHash:       payloadParentHash,
 				FeeRecipient:     payloadFeeRecipient,
 				StateRoot:        payloadStateRoot,
@@ -2959,7 +2959,7 @@ func BlindedBeaconBlockElectraFromConsensus(b *eth.BlindedBeaconBlockElectra) (*
 	for i := range b.Body.BlobKzgCommitments {
 		blobKzgCommitments[i] = hexutil.Encode(b.Body.BlobKzgCommitments[i])
 	}
-	payload, err := ExecutionPayloadHeaderDenebFromConsensus(b.Body.ExecutionPayloadHeader)
+	payload, err := ExecutionPayloadHeaderElectraFromConsensus(b.Body.ExecutionPayloadHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -3010,7 +3010,7 @@ func SignedBlindedBeaconBlockElectraFromConsensus(b *eth.SignedBlindedBeaconBloc
 }
 
 func BeaconBlockElectraFromConsensus(b *eth.BeaconBlockElectra) (*BeaconBlockElectra, error) {
-	payload, err := ExecutionPayloadDenebFromConsensus(b.Body.ExecutionPayload)
+	payload, err := ExecutionPayloadElectraFromConsensus(b.Body.ExecutionPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -3144,6 +3144,8 @@ func ExecutionPayloadDenebFromConsensus(payload *enginev1.ExecutionPayloadDeneb)
 	}, nil
 }
 
+var ExecutionPayloadElectraFromConsensus = ExecutionPayloadDenebFromConsensus
+
 func ExecutionPayloadHeaderFromConsensus(payload *enginev1.ExecutionPayloadHeader) (*ExecutionPayloadHeader, error) {
 	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
 	if err != nil {
@@ -3219,3 +3221,5 @@ func ExecutionPayloadHeaderDenebFromConsensus(payload *enginev1.ExecutionPayload
 		ExcessBlobGas:    fmt.Sprintf("%d", payload.ExcessBlobGas),
 	}, nil
 }
+
+var ExecutionPayloadHeaderElectraFromConsensus = ExecutionPayloadHeaderDenebFromConsensus

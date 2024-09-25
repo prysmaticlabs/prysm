@@ -129,7 +129,7 @@ func testBlindedBlockFixtures(t *testing.T) *blindedBlockFixtures {
 	electra := fixturesStruct().ExecutionPayloadDeneb
 	electra.BlockHash = bytesutil.PadTo([]byte("electra"), 32)
 	electra.BlockNumber = 5
-	electraBlock, _ := util.GenerateTestElectraBlockWithSidecar(t, [32]byte{}, electraSlot(t), 0, util.WithDenebPayload(electra))
+	electraBlock, _ := util.GenerateTestElectraBlockWithSidecar(t, [32]byte{}, electraSlot(t), 0, util.WithElectraPayload(electra))
 	fx.electra = blindedBlockWithHeader(t, electraBlock)
 	return fx
 }

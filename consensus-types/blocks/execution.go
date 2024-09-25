@@ -781,6 +781,8 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	}, nil
 }
 
+var PayloadToHeaderElectra = PayloadToHeaderDeneb
+
 // IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
 // a non-zero value, this function will return false.
 func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
@@ -858,6 +860,8 @@ func WrappedExecutionPayloadHeaderDeneb(p *enginev1.ExecutionPayloadHeaderDeneb)
 	}
 	return w, nil
 }
+
+var WrappedExecutionPayloadHeaderElectra = WrappedExecutionPayloadHeaderDeneb
 
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadHeaderDeneb) IsNil() bool {
@@ -1016,6 +1020,8 @@ func WrappedExecutionPayloadDeneb(p *enginev1.ExecutionPayloadDeneb) (interfaces
 	}
 	return w, nil
 }
+
+var WrappedExecutionPayloadElectra = WrappedExecutionPayloadDeneb
 
 // IsNil checks if the underlying data is nil.
 func (e executionPayloadDeneb) IsNil() bool {

@@ -614,7 +614,7 @@ func hydrateBeaconBlockBodyElectra() *eth.BeaconBlockBodyElectra {
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		},
-		ExecutionPayload: &pb.ExecutionPayloadDeneb{
+		ExecutionPayload: &pb.ExecutionPayloadElectra{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, 20),
 			StateRoot:     make([]byte, fieldparams.RootLength),

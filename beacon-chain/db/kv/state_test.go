@@ -137,7 +137,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 				st, err := util.NewBeaconStateElectra()
 				require.NoError(t, err)
 				require.NoError(t, st.SetSlot(100))
-				p, err := blocks.WrappedExecutionPayloadHeaderDeneb(&enginev1.ExecutionPayloadHeaderDeneb{
+				p, err := blocks.WrappedExecutionPayloadHeaderElectra(&enginev1.ExecutionPayloadHeaderElectra{
 					ParentHash:       make([]byte, 32),
 					FeeRecipient:     make([]byte, 20),
 					StateRoot:        make([]byte, 32),
