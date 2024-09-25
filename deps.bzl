@@ -771,6 +771,7 @@ def prysm_deps():
         name = "com_github_ethereum_go_ethereum",
         build_directives = [
             "gazelle:resolve go github.com/karalabe/usb @prysm//third_party/usb:go_default_library",
+            "gazelle:resolve go github.com/karalabe/hid @prysm//third_party/hid:go_default_library",
         ],
         importpath = "github.com/ethereum/go-ethereum",
         patch_args = ["-p1"],
@@ -1779,12 +1780,6 @@ def prysm_deps():
         importpath = "github.com/k0kubun/go-ansi",
         sum = "h1:qGQQKEcAR99REcMpsXCp3lJ03zYT1PkRd3kQGPn9GVg=",
         version = "v0.0.0-20180517002512-3bf9e2903213",
-    )
-    go_repository(
-        name = "com_github_karalabe_hid",
-        importpath = "github.com/karalabe/hid",
-        sum = "h1:msKODTL1m0wigztaqILOtla9HeW1ciscYG4xjLtvk5I=",
-        version = "v1.0.1-0.20240306101548-573246063e52",
     )
     go_repository(
         name = "com_github_kataras_blocks",
