@@ -54,6 +54,9 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	}
 
 	match := s.aggregateAttestation(w, slot, 0, attDataRoot)
+	if match == nil {
+		return
+	}
 	response := &structs.AggregateAttestationResponse{
 		Data: &structs.Attestation{
 			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
@@ -96,6 +99,9 @@ func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Reques
 	}
 
 	match := s.aggregateAttestation(w, slot, index, attDataRoot)
+	if match == nil {
+		return
+	}
 	response := &structs.AggregateAttestationV2Response{
 		Version: version.String(match.Version()),
 		Data: &structs.Attestation{
