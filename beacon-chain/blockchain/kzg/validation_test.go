@@ -68,7 +68,7 @@ func TestBytesToAny(t *testing.T) {
 	blob := GoKZG.Blob{0x01, 0x02}
 	commitment := GoKZG.KZGCommitment{0x01, 0x02}
 	proof := GoKZG.KZGProof{0x01, 0x02}
-	require.DeepEqual(t, blob, bytesToBlob(bytes))
+	require.DeepEqual(t, blob, *bytesToBlob(bytes))
 	require.DeepEqual(t, commitment, bytesToCommitment(bytes))
 	require.DeepEqual(t, proof, bytesToKZGProof(bytes))
 }

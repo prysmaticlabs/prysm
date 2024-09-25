@@ -31,7 +31,8 @@ func TestBootnode_OK(t *testing.T) {
 	require.NoError(t, err)
 	privKey := extractPrivateKey()
 	cfg := discover.Config{
-		PrivateKey: privKey,
+		PrivateKey:   privKey,
+		PingInterval: 100 * time.Millisecond,
 	}
 	listener := createListener(ipAddr, 4000, cfg)
 	defer listener.Close()
