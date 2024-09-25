@@ -744,11 +744,13 @@ func (f *blocksFetcher) filterPeersForDataColumns(
 	dataColumns map[uint64]bool,
 	peers []peer.ID,
 ) ([]peer.ID, error) {
-	// Filter peers based on the percentage of peers to be used in a request.
-	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
+	// TODO: Uncomment when we are not in devnet any more.
+	// TODO: Find a way to have this uncommented without being in devnet.
+	// // Filter peers based on the percentage of peers to be used in a request.
+	// peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 
-	// Filter peers on bandwidth.
-	peers = f.hasSufficientBandwidth(peers, blocksCount)
+	// // Filter peers on bandwidth.
+	// peers = f.hasSufficientBandwidth(peers, blocksCount)
 
 	// Select peers which custody ALL wanted columns.
 	// Basically, it is very unlikely that a non-supernode peer will have custody of all columns.
