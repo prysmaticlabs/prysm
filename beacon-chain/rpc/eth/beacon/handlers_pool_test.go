@@ -1063,7 +1063,7 @@ func TestGetAttesterSlashings(t *testing.T) {
 		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []ethpbv1alpha1.AttSlashing{slashing1, slashing2}},
 	}
 
-	request := httptest.NewRequest(http.MethodGet, "http://example.com/beacon/pool/attester_slashings", nil)
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/pool/attester_slashings", nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
@@ -1074,6 +1074,19 @@ func TestGetAttesterSlashings(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
 	assert.Equal(t, 2, len(resp.Data))
+
+	request = httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/beacon/pool/attester_slashings", nil)
+	writer = httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetAttesterSlashingsV2(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp2 := &structs.GetAttesterSlashingsV2Response{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+	require.NotNil(t, resp2)
+	require.NotNil(t, resp2.Data)
+	assert.Equal(t, 2, len(resp2.Data))
+	assert.Equal(t, "phase0", resp2.Version)
 }
 
 func TestGetProposerSlashings(t *testing.T) {

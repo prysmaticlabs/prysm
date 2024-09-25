@@ -172,6 +172,11 @@ type GetAttesterSlashingsResponse struct {
 	Data []*AttesterSlashing `json:"data"`
 }
 
+type GetAttesterSlashingsV2Response struct {
+	Version string              `json:"version"`
+	Data    []*AttesterSlashing `json:"data"`
+}
+
 type GetProposerSlashingsResponse struct {
 	Data []*ProposerSlashing `json:"data"`
 }
