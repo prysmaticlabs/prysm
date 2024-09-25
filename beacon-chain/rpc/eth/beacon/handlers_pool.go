@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -554,6 +555,11 @@ func (s *Server) SubmitAttesterSlashingV2(w http.ResponseWriter, r *http.Request
 	case err != nil:
 		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	versionHeader := r.Header.Get(api.VersionHeader)
+	if versionHeader == "" {
+		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
 	}
 
 	slashing, err := req.ToConsensus()
