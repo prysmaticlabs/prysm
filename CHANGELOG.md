@@ -15,6 +15,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement capella and deneb changes.
 - Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
 - GetBeaconStateV2: add Electra case.
+- Added SubmitPoolAttesterSlashingV2 endpoint.
 
 ### Changed
 
