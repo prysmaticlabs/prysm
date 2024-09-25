@@ -218,14 +218,16 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 
 	for i := 0; i < 200; i++ {
-		testAcc.Backend.Commit()
+		// Throw away error in case adjustment wasn't successful.
+		err = testAcc.Backend.AdjustTime(10 * time.Second)
+		_ = err
 	}
 	ctx := context.Background()
 	hd, err := testAcc.Backend.HeaderByNumber(ctx, nil)
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
-	blk, err := web3Service.BlockByTimestamp(ctx, 1000 /* time */)
+	blk, err := web3Service.BlockByTimestamp(ctx, uint64(time.Now().Unix()) /* time */)
 	require.NoError(t, err)
 	if blk.Number.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")
