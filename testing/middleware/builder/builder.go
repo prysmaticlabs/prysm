@@ -798,7 +798,7 @@ func executableDataToBlock(params engine.ExecutableData, prevBeaconRoot []byte) 
 		pRoot := common.Hash(prevBeaconRoot)
 		header.ParentBeaconRoot = &pRoot
 	}
-	block := gethTypes.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(params.Withdrawals)
+	block := gethTypes.NewBlockWithHeader(header).WithBody(gethTypes.Body{Transactions: txs, Uncles: nil, Withdrawals: params.Withdrawals})
 	return block, nil
 }
 
