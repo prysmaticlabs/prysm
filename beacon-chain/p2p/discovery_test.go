@@ -101,6 +101,11 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		cfg := &Config{
 			Discv5BootStrapAddrs: []string{bootNode.String()},
 			UDPPort:              uint(port),
+			PingInterval:         testPingInterval,
+		}
+		// Add another node to allow for more cross peer discovery.
+		if len(listeners) > 0 {
+			cfg.Discv5BootStrapAddrs = append(cfg.Discv5BootStrapAddrs, listeners[len(listeners)-1].Self().String())
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{

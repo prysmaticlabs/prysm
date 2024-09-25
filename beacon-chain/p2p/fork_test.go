@@ -137,7 +137,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 	cfg := &Config{
 		Discv5BootStrapAddrs: []string{bootNode.String()},
 		UDPPort:              uint(port),
-		PingInterval: testPingInterval,
+		PingInterval:         testPingInterval,
 	}
 
 	var listeners []*discover.UDPv5

@@ -221,8 +221,8 @@ func (s *Service) createListener(
 	}
 
 	dv5Cfg := discover.Config{
-		PrivateKey: privKey,
-		Bootnodes:  bootNodes,
+		PrivateKey:   privKey,
+		Bootnodes:    bootNodes,
 		PingInterval: s.cfg.PingInterval,
 	}
 

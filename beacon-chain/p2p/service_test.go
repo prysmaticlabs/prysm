@@ -29,7 +29,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-const testPingInterval = 500*time.Millisecond
+const testPingInterval = 100 * time.Millisecond
 
 type mockListener struct {
 	localNode *enode.LocalNode
