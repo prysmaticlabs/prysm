@@ -180,7 +180,9 @@ func TestService_Eth1Synced(t *testing.T) {
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
 
-	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
+	hdr, err := testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	currTime := hdr.Time
 	now := time.Now()
 	assert.NoError(t, testAcc.Backend.AdjustTime(now.Sub(time.Unix(int64(currTime), 0))))
 	testAcc.Backend.Commit()
@@ -211,14 +213,18 @@ func TestFollowBlock_OK(t *testing.T) {
 
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
-	baseHeight := testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
+	hdr, err := testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	baseHeight := hdr.Number.Uint64()
 	// process follow_distance blocks
 	for i := 0; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
 		testAcc.Backend.Commit()
 	}
+	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
 	// set current height
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 
 	h, err := web3Service.followedBlockHeight(context.Background())
 	require.NoError(t, err)
@@ -229,9 +235,11 @@ func TestFollowBlock_OK(t *testing.T) {
 	for i := uint64(0); i < numToForward; i++ {
 		testAcc.Backend.Commit()
 	}
+	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
 	// set current height
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 
 	h, err = web3Service.followedBlockHeight(context.Background())
 	require.NoError(t, err)
@@ -476,15 +484,20 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	for i := 0; i < numToForward; i++ {
 		testAcc.Backend.Commit()
 	}
-	currTime := testAcc.Backend.Blockchain().CurrentHeader().Time
+	hdr, err := testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	currTime := hdr.Time
 	now := time.Now()
 	err = testAcc.Backend.AdjustTime(now.Sub(time.Unix(int64(currTime), 0)))
 	require.NoError(t, err)
 	testAcc.Backend.Commit()
 
-	currTime = testAcc.Backend.Blockchain().CurrentHeader().Time
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentHeader().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentHeader().Time
+	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+
+	currTime = hdr.Time
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 	web3Service.chainStartData.GenesisTime = currTime
 
 	// With a current slot of zero, only request follow_blocks behind.

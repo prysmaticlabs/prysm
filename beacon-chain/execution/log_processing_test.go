@@ -405,8 +405,10 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
 	web3Service.latestEth1Data.LastRequestedBlock = 0
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
+	hdr, err := testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = 0
 	bConfig.SecondsPerETH1Block = 10
@@ -444,8 +446,10 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
 		testAcc.Backend.Commit()
 	}
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
+	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 
 	// Set up our subscriber now to listen for the chain started event.
 	stateChannel := make(chan *feed.Event, 1)
@@ -502,8 +506,10 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
 	web3Service.latestEth1Data.LastRequestedBlock = 0
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
+	hdr, err := testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(bConfig)
@@ -540,14 +546,18 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	for i := uint64(0); i < 1500; i++ {
 		testAcc.Backend.Commit()
 	}
-	wantedGenesisTime := testAcc.Backend.Blockchain().CurrentBlock().Time
+	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	wantedGenesisTime := hdr.Time
 
 	// Forward the chain to account for the follow distance
 	for i := uint64(0); i < params.BeaconConfig().Eth1FollowDistance; i++ {
 		testAcc.Backend.Commit()
 	}
-	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().Number.Uint64()
-	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time
+	hdr, err = testAcc.Backend.Client.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	web3Service.latestEth1Data.BlockHeight = hdr.Number.Uint64()
+	web3Service.latestEth1Data.BlockTime = hdr.Time
 
 	// Set the genesis time 500 blocks ahead of the last
 	// deposit log.
