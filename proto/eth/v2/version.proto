@@ -29,4 +29,5 @@ enum Version {
   BELLATRIX = 2;
   CAPELLA = 3;
   DENEB = 4;
+  ELECTRA = 5;
 }

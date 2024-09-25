@@ -22,10 +22,8 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, 
 		return blocks.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeader.Copy())
 	case version.Capella:
 		return blocks.WrappedExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapella.Copy())
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		return blocks.WrappedExecutionPayloadHeaderDeneb(b.latestExecutionPayloadHeaderDeneb.Copy())
-	case version.Electra:
-		return blocks.WrappedExecutionPayloadHeaderElectra(b.latestExecutionPayloadHeaderElectra.Copy())
 	default:
 		return nil, fmt.Errorf("unsupported version (%s) for latest execution payload header", version.String(b.version))
 	}
