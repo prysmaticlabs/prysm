@@ -140,6 +140,13 @@ type GetBlockAttestationsV2Response struct {
 	Data                []*Attestation `json:"data"`
 }
 
+type GetBlockAttestationsV2ResponseElectra struct {
+	Version             string                `json:"version"`
+	ExecutionOptimistic bool                  `json:"execution_optimistic"`
+	Finalized           bool                  `json:"finalized"`
+	Data                []*AttestationElectra `json:"data"`
+}
+
 type GetStateRootResponse struct {
 	ExecutionOptimistic bool       `json:"execution_optimistic"`
 	Finalized           bool       `json:"finalized"`
