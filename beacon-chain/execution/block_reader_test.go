@@ -216,6 +216,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	web3Service = setDefaultMocks(web3Service)
 	web3Service.rpcClient = &mockExecution.RPCClient{Backend: testAcc.Backend}
+	wantedTime := time.Now().Unix() + 100*10
 
 	for i := 0; i < 200; i++ {
 		// Throw away error in case adjustment wasn't successful.
@@ -227,7 +228,7 @@ func TestService_BlockNumberByTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	web3Service.latestEth1Data.BlockTime = hd.Time
 	web3Service.latestEth1Data.BlockHeight = hd.Number.Uint64()
-	blk, err := web3Service.BlockByTimestamp(ctx, uint64(time.Now().Unix()) /* time */)
+	blk, err := web3Service.BlockByTimestamp(ctx, uint64(wantedTime) /* time */)
 	require.NoError(t, err)
 	if blk.Number.Cmp(big.NewInt(0)) == 0 {
 		t.Error("Returned a block with zero number, expected to be non zero")
