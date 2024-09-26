@@ -37,6 +37,7 @@ func NewWrappedExecutionData(v proto.Message) (interfaces.ExecutionData, error) 
 		return WrappedExecutionPayloadDeneb(pbStruct)
 	case *enginev1.ExecutionPayloadDenebWithValueAndBlobsBundle:
 		return WrappedExecutionPayloadDeneb(pbStruct.Payload)
+
 	default:
 		return nil, ErrUnsupportedVersion
 	}

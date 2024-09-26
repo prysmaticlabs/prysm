@@ -77,6 +77,19 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		log.WithError(err).Warn("Proposer: failed to retrieve header from BuilderBid")
 		return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
 	}
+
+	if bid.Version() >= version.Electra {
+		bidElectra, ok := bid.(builder.BidElectra)
+		if ok {
+			_, err := bidElectra.ExecutionRequests()
+			if err != nil {
+				log.WithError(err).Warn("Proposer: failed to retrieve execution requests from BuilderBid")
+				return local.Bid, local.BlobsBundle, setLocalExecution(blk, local)
+			}
+			// TODO: use the execution requests
+		}
+	}
+
 	if bid.Version() >= version.Deneb {
 		builderKzgCommitments, err = bid.BlobKzgCommitments()
 		if err != nil {
