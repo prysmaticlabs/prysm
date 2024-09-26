@@ -10,7 +10,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -245,26 +244,23 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{
-			ParentHash:                payloadHeader.ParentHash(),
-			FeeRecipient:              payloadHeader.FeeRecipient(),
-			StateRoot:                 payloadHeader.StateRoot(),
-			ReceiptsRoot:              payloadHeader.ReceiptsRoot(),
-			LogsBloom:                 payloadHeader.LogsBloom(),
-			PrevRandao:                payloadHeader.PrevRandao(),
-			BlockNumber:               payloadHeader.BlockNumber(),
-			GasLimit:                  payloadHeader.GasLimit(),
-			GasUsed:                   payloadHeader.GasUsed(),
-			Timestamp:                 payloadHeader.Timestamp(),
-			ExtraData:                 payloadHeader.ExtraData(),
-			BaseFeePerGas:             payloadHeader.BaseFeePerGas(),
-			BlockHash:                 payloadHeader.BlockHash(),
-			TransactionsRoot:          txRoot,
-			WithdrawalsRoot:           wdRoot,
-			ExcessBlobGas:             excessBlobGas,
-			BlobGasUsed:               blobGasUsed,
-			DepositRequestsRoot:       bytesutil.Bytes32(0), // [New in Electra:EIP6110]
-			WithdrawalRequestsRoot:    bytesutil.Bytes32(0), // [New in Electra:EIP7002]
-			ConsolidationRequestsRoot: bytesutil.Bytes32(0), // [New in Electra:EIP7251]
+			ParentHash:       payloadHeader.ParentHash(),
+			FeeRecipient:     payloadHeader.FeeRecipient(),
+			StateRoot:        payloadHeader.StateRoot(),
+			ReceiptsRoot:     payloadHeader.ReceiptsRoot(),
+			LogsBloom:        payloadHeader.LogsBloom(),
+			PrevRandao:       payloadHeader.PrevRandao(),
+			BlockNumber:      payloadHeader.BlockNumber(),
+			GasLimit:         payloadHeader.GasLimit(),
+			GasUsed:          payloadHeader.GasUsed(),
+			Timestamp:        payloadHeader.Timestamp(),
+			ExtraData:        payloadHeader.ExtraData(),
+			BaseFeePerGas:    payloadHeader.BaseFeePerGas(),
+			BlockHash:        payloadHeader.BlockHash(),
+			TransactionsRoot: txRoot,
+			WithdrawalsRoot:  wdRoot,
+			ExcessBlobGas:    excessBlobGas,
+			BlobGasUsed:      blobGasUsed,
 		},
 		NextWithdrawalIndex:          wi,
 		NextWithdrawalValidatorIndex: vi,
