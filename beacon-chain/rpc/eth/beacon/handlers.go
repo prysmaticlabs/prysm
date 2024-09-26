@@ -200,7 +200,18 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestations")
 	defer span.End()
 
-	_, atts, isOptimistic, root, _ := s.blockAttestations(ctx, w, r)
+	blk, isOptimistic, root := s.blockData(ctx, w, r)
+	consensusAtts := blk.Block().Body().Attestations()
+	atts := make([]*structs.Attestation, len(consensusAtts))
+	for i, att := range consensusAtts {
+		a, ok := att.(*eth.Attestation)
+		if ok {
+			atts[i] = structs.AttFromConsensus(a)
+		} else {
+			httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
+			return
+		}
+	}
 	resp := &structs.GetBlockAttestationsResponse{
 		Data:                atts,
 		ExecutionOptimistic: isOptimistic,
@@ -214,78 +225,65 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestationsV2")
 	defer span.End()
 
-	attsElectra, atts, isOptimistic, root, v := s.blockAttestations(ctx, w, r)
-	if attsElectra == nil && atts == nil {
-		return
-	}
-	if v == version.String(version.Electra) {
-		resp := &structs.GetBlockAttestationsV2ResponseElectra{
-			Version:             v,
-			Data:                attsElectra,
-			ExecutionOptimistic: isOptimistic,
-			Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
-		}
-		httputil.WriteJson(w, resp)
-		return
-	}
-	resp := &structs.GetBlockAttestationsV2Response{
-		Version:             v,
-		Data:                atts,
-		ExecutionOptimistic: isOptimistic,
-		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
-	}
-	httputil.WriteJson(w, resp)
-}
-
-func (s *Server) blockAttestations(ctx context.Context, w http.ResponseWriter, r *http.Request) ([]*structs.AttestationElectra, []*structs.Attestation, bool, [32]byte, string) {
-	blockId := r.PathValue("block_id")
-	if blockId == "" {
-		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
-		return nil, nil, false, [32]byte{}, ""
-	}
-	blk, err := s.Blocker.Block(ctx, []byte(blockId))
-	if !shared.WriteBlockFetchError(w, blk, err) {
-		return nil, nil, false, [32]byte{}, ""
-	}
+	blk, isOptimistic, root := s.blockData(ctx, w, r)
 	consensusAtts := blk.Block().Body().Attestations()
-	var attsElectra []*structs.AttestationElectra
-	var attsRegular []*structs.Attestation
+
+	var atts = make([]interface{}, len(consensusAtts))
 	v := version.String(blk.Block().Version())
 
 	if v == version.String(version.Electra) {
 		for i, att := range consensusAtts {
 			a, ok := att.(*eth.AttestationElectra)
 			if ok {
-				attsElectra[i] = structs.AttElectraFromConsensus(a)
+				atts[i] = structs.AttElectraFromConsensus(a)
 			} else {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations electra of type %T", att), http.StatusInternalServerError)
-				return nil, nil, false, [32]byte{}, ""
+				return
 			}
 		}
 	} else {
 		for i, att := range consensusAtts {
 			a, ok := att.(*eth.Attestation)
 			if ok {
-				attsRegular[i] = structs.AttFromConsensus(a)
+				atts[i] = structs.AttFromConsensus(a)
 			} else {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
-				return nil, nil, false, [32]byte{}, ""
+				return
 			}
 		}
+	}
+
+	resp := &structs.GetBlockAttestationsV2Response{
+		Version:             v,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
+		Data:                atts,
+	}
+	httputil.WriteJson(w, resp)
+}
+
+func (s *Server) blockData(ctx context.Context, w http.ResponseWriter, r *http.Request) (interfaces.ReadOnlySignedBeaconBlock, bool, [32]byte) {
+	blockId := r.PathValue("block_id")
+	if blockId == "" {
+		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return nil, false, [32]byte{}
+	}
+	blk, err := s.Blocker.Block(ctx, []byte(blockId))
+	if !shared.WriteBlockFetchError(w, blk, err) {
+		return nil, false, [32]byte{}
 	}
 
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
-		return nil, nil, false, [32]byte{}, ""
+		return nil, false, [32]byte{}
 	}
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 	if err != nil {
 		httputil.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
-		return nil, nil, false, [32]byte{}, ""
+		return nil, false, [32]byte{}
 	}
-
-	return attsElectra, attsRegular, isOptimistic, root, v
+	return blk, isOptimistic, root
 }
 
 // PublishBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct

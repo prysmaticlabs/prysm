@@ -134,17 +134,10 @@ type GetBlockAttestationsResponse struct {
 }
 
 type GetBlockAttestationsV2Response struct {
-	Version             string         `json:"version"`
-	ExecutionOptimistic bool           `json:"execution_optimistic"`
-	Finalized           bool           `json:"finalized"`
-	Data                []*Attestation `json:"data"`
-}
-
-type GetBlockAttestationsV2ResponseElectra struct {
-	Version             string                `json:"version"`
-	ExecutionOptimistic bool                  `json:"execution_optimistic"`
-	Finalized           bool                  `json:"finalized"`
-	Data                []*AttestationElectra `json:"data"`
+	Version             string      `json:"version"`
+	ExecutionOptimistic bool        `json:"execution_optimistic"`
+	Finalized           bool        `json:"finalized"`
+	Data                interface{} `json:"data"`
 }
 
 type GetStateRootResponse struct {
