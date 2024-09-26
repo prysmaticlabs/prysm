@@ -343,6 +343,22 @@ filegroup(
 )
 
 http_archive(
+    name = "sepolia_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "metadata/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+""",
+    integrity = "sha256-cY/UgpCcYEhQf7JefD65FI8tn/A+rAvKhcm2/qiVdqY=",
+    strip_prefix = "sepolia-f2c219a93c4491cee3d90c18f2f8e82aed850eab",
+    url = "https://github.com/eth-clients/sepolia/archive/f2c219a93c4491cee3d90c18f2f8e82aed850eab.tar.gz",  # 2024-09-19
+)
+
+http_archive(
     name = "com_google_protobuf",
     sha256 = "9bd87b8280ef720d3240514f884e56a712f2218f0d693b48050c836028940a42",
     strip_prefix = "protobuf-25.1",
