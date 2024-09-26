@@ -39,24 +39,21 @@ func ProcessPayloadStateTransition(
 	preState state.BeaconState,
 	envelope interfaces.ROExecutionPayloadEnvelope,
 ) error {
-	payload, err := envelope.Execution()
-	if err != nil {
-		return err
-	}
-	exe, ok := payload.(interfaces.ExecutionDataElectra)
-	if !ok {
-		return errors.New("could not cast execution data to electra execution data")
-	}
-	preState, err = electra.ProcessDepositRequests(ctx, preState, exe.DepositRequests())
+	er := envelope.ExecutionRequests()
+	preState, err := electra.ProcessDepositRequests(ctx, preState, er.Deposits)
 	if err != nil {
 		return errors.Wrap(err, "could not process deposit receipts")
 	}
-	preState, err = electra.ProcessWithdrawalRequests(ctx, preState, exe.WithdrawalRequests())
+	preState, err = electra.ProcessWithdrawalRequests(ctx, preState, er.Withdrawals)
 	if err != nil {
-		return errors.Wrap(err, "could not process execution layer withdrawal requests")
+		return errors.Wrap(err, "could not process ercution layer withdrawal requests")
 	}
-	if err := electra.ProcessConsolidationRequests(ctx, preState, exe.ConsolidationRequests()); err != nil {
+	if err := electra.ProcessConsolidationRequests(ctx, preState, er.Consolidations); err != nil {
 		return errors.Wrap(err, "could not process consolidation requests")
+	}
+	payload, err := envelope.Execution()
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload")
 	}
 	if err := preState.SetLatestBlockHash(payload.BlockHash()); err != nil {
 		return err
