@@ -36,6 +36,7 @@ func TestBootnode_OK(t *testing.T) {
 	}
 	listener := createListener(ipAddr, 4000, cfg)
 	defer listener.Close()
+	time.Sleep(10 * time.Second)
 
 	cfg.PrivateKey = extractPrivateKey()
 	bootNode, err := enode.Parse(enode.ValidSchemes, listener.Self().String())
