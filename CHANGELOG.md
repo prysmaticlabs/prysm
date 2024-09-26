@@ -41,6 +41,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 - Refactored light client code to make it more readable and make future PRs easier.
 - Updated Libp2p Dependencies to allow prysm to use gossipsub v1.2 .
+- Added validator index label to `validator_statuses` metric
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
