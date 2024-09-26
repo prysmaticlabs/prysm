@@ -541,7 +541,9 @@ func TestGetBlockAttestations(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp2 := &structs.GetBlockAttestationsV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
-		require.Equal(t, len(b.Block.Body.Attestations), len(resp2.Data))
+		dataSlice, ok := resp2.Data.([]interface{})
+		assert.Equal(t, true, ok)
+		require.Equal(t, len(b.Block.Body.Attestations), len(dataSlice))
 		atts = make([]*eth.Attestation, len(b.Block.Body.Attestations))
 		for i, a := range resp.Data {
 			atts[i], err = a.ToConsensus()
