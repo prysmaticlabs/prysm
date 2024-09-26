@@ -1085,7 +1085,9 @@ func TestGetAttesterSlashings(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
 	require.NotNil(t, resp2)
 	require.NotNil(t, resp2.Data)
-	assert.Equal(t, 2, len(resp2.Data))
+	dataSlice, ok := resp2.Data.([]interface{})
+	assert.Equal(t, true, ok)
+	assert.Equal(t, 2, len(dataSlice))
 	assert.Equal(t, "phase0", resp2.Version)
 }
 
