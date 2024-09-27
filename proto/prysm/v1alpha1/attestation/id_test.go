@@ -41,6 +41,22 @@ func TestNewId(t *testing.T) {
 
 		assert.NotEqual(t, phase0Id, electraId)
 	})
+	t.Run("ID is different for different committee bits", func(t *testing.T) {
+		cb := primitives.NewAttestationCommitteeBits()
+		cb.SetBitAt(0, true)
+		cb.SetBitAt(1, true)
+		att := util.HydrateAttestationElectra(&ethpb.AttestationElectra{CommitteeBits: cb})
+		id1, err := attestation.NewId(att, attestation.Data)
+		assert.NoError(t, err)
+		cb = primitives.NewAttestationCommitteeBits()
+		cb.SetBitAt(0, true)
+		cb.SetBitAt(2, true)
+		att = util.HydrateAttestationElectra(&ethpb.AttestationElectra{CommitteeBits: cb})
+		id2, err := attestation.NewId(att, attestation.Data)
+		assert.NoError(t, err)
+
+		assert.NotEqual(t, id1, id2)
+	})
 	t.Run("invalid source", func(t *testing.T) {
 		att := util.HydrateAttestation(&ethpb.Attestation{})
 		_, err := attestation.NewId(att, 123)
@@ -50,14 +66,6 @@ func TestNewId(t *testing.T) {
 		cb := primitives.NewAttestationCommitteeBits()
 		att := util.HydrateAttestationElectra(&ethpb.AttestationElectra{CommitteeBits: cb})
 		_, err := attestation.NewId(att, attestation.Data)
-		assert.ErrorContains(t, "0 committee bits are set", err)
-	})
-	t.Run("data source Electra - multiple bits set", func(t *testing.T) {
-		cb := primitives.NewAttestationCommitteeBits()
-		cb.SetBitAt(0, true)
-		cb.SetBitAt(1, true)
-		att := util.HydrateAttestationElectra(&ethpb.AttestationElectra{CommitteeBits: cb})
-		_, err := attestation.NewId(att, attestation.Data)
-		assert.ErrorContains(t, "2 committee bits are set", err)
+		assert.ErrorContains(t, "no committee bits are set", err)
 	})
 }

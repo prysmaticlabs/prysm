@@ -135,6 +135,11 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 }
 
 func TestVerifyExitAndSignature(t *testing.T) {
+	// Remove after electra fork epoch is defined.
+	cfg := params.BeaconConfig()
+	cfg.ElectraForkEpoch = cfg.DenebForkEpoch * 2
+	params.SetActiveTestCleanup(t, cfg)
+	// End remove section.
 	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 	require.NoError(t, err)
 	tests := []struct {
@@ -167,7 +172,7 @@ func TestVerifyExitAndSignature(t *testing.T) {
 			wantErr: "nil exit",
 		},
 		{
-			name: "Happy Path",
+			name: "Happy Path phase0",
 			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error) {
 				fork := &ethpb.Fork{
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -274,6 +279,52 @@ func TestVerifyExitAndSignature(t *testing.T) {
 
 				return validator, signedExit, bs, nil
 			},
+		},
+		{
+			name: "EIP-7251 - pending balance to withdraw must be zero",
+			setup: func() (*ethpb.Validator, *ethpb.SignedVoluntaryExit, state.ReadOnlyBeaconState, error) {
+				fork := &ethpb.Fork{
+					PreviousVersion: params.BeaconConfig().DenebForkVersion,
+					CurrentVersion:  params.BeaconConfig().ElectraForkVersion,
+					Epoch:           params.BeaconConfig().ElectraForkEpoch,
+				}
+				signedExit := &ethpb.SignedVoluntaryExit{
+					Exit: &ethpb.VoluntaryExit{
+						Epoch:          params.BeaconConfig().DenebForkEpoch + 1,
+						ValidatorIndex: 0,
+					},
+				}
+				electraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
+				require.NoError(t, err)
+				bs, keys := util.DeterministicGenesisState(t, 1)
+				bs, err = state_native.InitializeFromProtoUnsafeElectra(&ethpb.BeaconStateElectra{
+					GenesisValidatorsRoot: bs.GenesisValidatorsRoot(),
+					Fork:                  fork,
+					Slot:                  electraSlot,
+					Validators:            bs.Validators(),
+				})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				validator := bs.Validators()[0]
+				validator.ActivationEpoch = 1
+				err = bs.UpdateValidatorAtIndex(0, validator)
+				require.NoError(t, err)
+				sb, err := signing.ComputeDomainAndSign(bs, signedExit.Exit.Epoch, signedExit.Exit, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				signedExit.Signature = sig.Marshal()
+
+				// Give validator a pending balance to withdraw.
+				require.NoError(t, bs.AppendPendingPartialWithdrawal(&ethpb.PendingPartialWithdrawal{
+					Index:  0,
+					Amount: 500,
+				}))
+
+				return validator, signedExit, bs, nil
+			},
+			wantErr: "validator 0 must have no pending balance to withdraw",
 		},
 	}
 	for _, tt := range tests {

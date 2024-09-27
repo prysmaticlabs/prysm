@@ -42,7 +42,7 @@ func (c *AttCaches) ForkchoiceAttestations() []ethpb.Att {
 
 	atts := make([]ethpb.Att, 0, len(c.forkchoiceAtt))
 	for _, att := range c.forkchoiceAtt {
-		atts = append(atts, att.Copy())
+		atts = append(atts, att.Clone())
 	}
 
 	return atts

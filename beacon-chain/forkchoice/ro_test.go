@@ -37,6 +37,7 @@ const (
 	slotCalled
 	lastRootCalled
 	targetRootForEpochCalled
+	parentRootCalled
 )
 
 func _discard(t *testing.T, e error) {
@@ -289,5 +290,10 @@ func (ro *mockROForkchoice) LastRoot(_ primitives.Epoch) [32]byte {
 // TargetRootForEpoch implements FastGetter.
 func (ro *mockROForkchoice) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) ([32]byte, error) {
 	ro.calls = append(ro.calls, targetRootForEpochCalled)
+	return [32]byte{}, nil
+}
+
+func (ro *mockROForkchoice) ParentRoot(_ [32]byte) ([32]byte, error) {
+	ro.calls = append(ro.calls, parentRootCalled)
 	return [32]byte{}, nil
 }

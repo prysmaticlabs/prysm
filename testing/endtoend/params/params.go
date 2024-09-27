@@ -14,9 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 )
 
@@ -48,14 +47,14 @@ type ports struct {
 	PrysmBeaconNodeUDPPort          int
 	PrysmBeaconNodeQUICPort         int
 	PrysmBeaconNodeTCPPort          int
-	PrysmBeaconNodeGatewayPort      int
+	PrysmBeaconNodeHTTPPort         int
 	PrysmBeaconNodeMetricsPort      int
 	PrysmBeaconNodePprofPort        int
 	LighthouseBeaconNodeP2PPort     int
 	LighthouseBeaconNodeHTTPPort    int
 	LighthouseBeaconNodeMetricsPort int
 	ValidatorMetricsPort            int
-	ValidatorGatewayPort            int
+	ValidatorHTTPPort               int
 	JaegerTracingPort               int
 }
 
@@ -147,7 +146,7 @@ const (
 	prysmBeaconNodeUDPPort     = prysmBeaconNodeRPCPort + portSpan
 	prysmBeaconNodeQUICPort    = prysmBeaconNodeRPCPort + 2*portSpan
 	prysmBeaconNodeTCPPort     = prysmBeaconNodeRPCPort + 3*portSpan
-	prysmBeaconNodeGatewayPort = prysmBeaconNodeRPCPort + 4*portSpan
+	prysmBeaconNodeHTTPPort    = prysmBeaconNodeRPCPort + 4*portSpan
 	prysmBeaconNodeMetricsPort = prysmBeaconNodeRPCPort + 5*portSpan
 	prysmBeaconNodePprofPort   = prysmBeaconNodeRPCPort + 6*portSpan
 
@@ -155,8 +154,8 @@ const (
 	lighthouseBeaconNodeHTTPPort    = lighthouseBeaconNodeP2PPort + portSpan
 	lighthouseBeaconNodeMetricsPort = lighthouseBeaconNodeP2PPort + 2*portSpan
 
-	validatorGatewayPort = 6150
-	validatorMetricsPort = validatorGatewayPort + portSpan
+	validatorHTTPPort    = 6150
+	validatorMetricsPort = validatorHTTPPort + portSpan
 
 	jaegerTracingPort = 9150
 
@@ -340,7 +339,7 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	if err != nil {
 		return err
 	}
-	beaconNodeGatewayPort, err := port(prysmBeaconNodeGatewayPort, shardCount, shardIndex, existingRegistrations)
+	beaconNodeHTTPPort, err := port(prysmBeaconNodeHTTPPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -352,7 +351,7 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	if err != nil {
 		return err
 	}
-	validatorGatewayPort, err := port(validatorGatewayPort, shardCount, shardIndex, existingRegistrations)
+	validatorHTTPPort, err := port(validatorHTTPPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
 	}
@@ -375,11 +374,11 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	ports.PrysmBeaconNodeUDPPort = beaconNodeUDPPort
 	ports.PrysmBeaconNodeQUICPort = beaconNodeQUICPort
 	ports.PrysmBeaconNodeTCPPort = beaconNodeTCPPort
-	ports.PrysmBeaconNodeGatewayPort = beaconNodeGatewayPort
+	ports.PrysmBeaconNodeHTTPPort = beaconNodeHTTPPort
 	ports.PrysmBeaconNodeMetricsPort = beaconNodeMetricsPort
 	ports.PrysmBeaconNodePprofPort = beaconNodePprofPort
 	ports.ValidatorMetricsPort = validatorMetricsPort
-	ports.ValidatorGatewayPort = validatorGatewayPort
+	ports.ValidatorHTTPPort = validatorHTTPPort
 	ports.JaegerTracingPort = jaegerTracingPort
 	return nil
 }

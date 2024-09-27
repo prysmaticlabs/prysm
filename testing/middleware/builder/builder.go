@@ -21,15 +21,14 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
-	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/network"
@@ -40,10 +39,10 @@ import (
 )
 
 const (
-	statusPath   = "/eth/v1/builder/status"
-	registerPath = "/eth/v1/builder/validators"
-	headerPath   = "/eth/v1/builder/header/{slot:[0-9]+}/{parent_hash:0x[a-fA-F0-9]+}/{pubkey:0x[a-fA-F0-9]+}"
-	blindedPath  = "/eth/v1/builder/blinded_blocks"
+	statusPath   = "GET /eth/v1/builder/status"
+	registerPath = "POST /eth/v1/builder/validators"
+	headerPath   = "GET /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}"
+	blindedPath  = "POST /eth/v1/builder/blinded_blocks"
 
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
@@ -112,7 +111,7 @@ type Builder struct {
 	prevBeaconRoot []byte
 	currPayload    interfaces.ExecutionData
 	blobBundle     *v1.BlobsBundle
-	mux            *gMux.Router
+	mux            *http.ServeMux
 	validatorMap   map[string]*eth.ValidatorRegistrationV1
 	valLock        sync.RWMutex
 	srv            *http.Server
@@ -142,9 +141,8 @@ func New(opts ...Option) (*Builder, error) {
 	if err != nil {
 		return nil, err
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/", p)
-	router := gMux.NewRouter()
+	router := http.NewServeMux()
+	router.Handle("/", p)
 	router.HandleFunc(statusPath, func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 	})
@@ -153,7 +151,7 @@ func New(opts ...Option) (*Builder, error) {
 	router.HandleFunc(blindedPath, p.handleBlindedBlock)
 	addr := net.JoinHostPort(p.cfg.builderHost, strconv.Itoa(p.cfg.builderPort))
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           router,
 		Addr:              addr,
 		ReadHeaderTimeout: time.Second,
 	}
@@ -304,13 +302,17 @@ func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
 }
 
 func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) {
-	urlParams := gMux.Vars(req)
-	pHash := urlParams["parent_hash"]
+	pHash := req.PathValue("parent_hash")
 	if pHash == "" {
 		http.Error(w, "no valid parent hash", http.StatusBadRequest)
 		return
 	}
-	reqSlot := urlParams["slot"]
+	_, err := bytesutil.DecodeHexWithLength(pHash, common.HashLength)
+	if err != nil {
+		http.Error(w, "invalid parent hash", http.StatusBadRequest)
+		return
+	}
+	reqSlot := req.PathValue("slot")
 	if reqSlot == "" {
 		http.Error(w, "no valid slot provided", http.StatusBadRequest)
 		return
@@ -318,6 +320,16 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	slot, err := strconv.Atoi(reqSlot)
 	if err != nil {
 		http.Error(w, "invalid slot provided", http.StatusBadRequest)
+		return
+	}
+	reqPubkey := req.PathValue("pubkey")
+	if reqPubkey == "" {
+		http.Error(w, "no valid pubkey provided", http.StatusBadRequest)
+		return
+	}
+	_, err = bytesutil.DecodeHexWithLength(reqPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		http.Error(w, "invalid pubkey", http.StatusBadRequest)
 		return
 	}
 	ax := types.Slot(slot)
@@ -795,7 +807,7 @@ func decodeTransactions(enc [][]byte) ([]*gethTypes.Transaction, error) {
 	for i, encTx := range enc {
 		var tx gethTypes.Transaction
 		if err := tx.UnmarshalBinary(encTx); err != nil {
-			return nil, fmt.Errorf("invalid transaction %d: %v", i, err)
+			return nil, fmt.Errorf("invalid transaction %d: %w", i, err)
 		}
 		txs[i] = &tx
 	}

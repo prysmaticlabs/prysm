@@ -103,5 +103,5 @@ func (b *BeaconState) HistoricalSummaries() ([]*ethpb.HistoricalSummary, error) 
 // historicalSummariesVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) historicalSummariesVal() []*ethpb.HistoricalSummary {
-	return ethpb.CopyHistoricalSummaries(b.historicalSummaries)
+	return ethpb.CopySlice(b.historicalSummaries)
 }

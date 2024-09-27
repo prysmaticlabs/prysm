@@ -10,10 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	"go.opencensus.io/trace"
 )
 
 // SubmitValidatorRegistrations signs validator registration objects and submits it to the beacon node by batch of validatorRegsBatchSize size maximum.
@@ -52,7 +52,7 @@ func SubmitValidatorRegistrations(
 	}
 
 	if lastErr == nil {
-		log.Infoln("Submitted builder validator registration settings for custom builders")
+		log.Debugln("Submitted builder validator registration settings for custom builders")
 	} else {
 		log.WithError(lastErr).Warn("Could not submit all signed registrations to beacon node")
 	}
@@ -93,24 +93,24 @@ func signValidatorRegistration(ctx context.Context, signer iface.SigningFunc, re
 }
 
 // SignValidatorRegistrationRequest compares and returns either the cached validator registration request or signs a new one.
-func (v *validator) SignValidatorRegistrationRequest(ctx context.Context, signer iface.SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+func (v *validator) SignValidatorRegistrationRequest(ctx context.Context, signer iface.SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, bool /* isCached */, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.SignValidatorRegistrationRequest")
 	defer span.End()
 
 	signedReg, ok := v.signedValidatorRegistrations[bytesutil.ToBytes48(newValidatorRegistration.Pubkey)]
 	if ok && isValidatorRegistrationSame(signedReg.Message, newValidatorRegistration) {
-		return signedReg, nil
+		return signedReg, true, nil
 	} else {
 		sig, err := signValidatorRegistration(ctx, signer, newValidatorRegistration)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		newRequest := &ethpb.SignedValidatorRegistrationV1{
 			Message:   newValidatorRegistration,
 			Signature: sig,
 		}
 		v.signedValidatorRegistrations[bytesutil.ToBytes48(newValidatorRegistration.Pubkey)] = newRequest
-		return newRequest, nil
+		return newRequest, false, nil
 	}
 }
 

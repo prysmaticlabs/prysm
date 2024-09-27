@@ -2,6 +2,7 @@ package electra_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
@@ -18,10 +19,17 @@ func createValidatorsWithTotalActiveBalance(totalBal primitives.Gwei) []*eth.Val
 	num := totalBal / primitives.Gwei(params.BeaconConfig().MinActivationBalance)
 	vals := make([]*eth.Validator, num)
 	for i := range vals {
+		wd := make([]byte, 32)
+		wd[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		wd[31] = byte(i)
+
 		vals[i] = &eth.Validator{
-			ActivationEpoch:  primitives.Epoch(0),
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MinActivationBalance,
+			ActivationEpoch:       primitives.Epoch(0),
+			EffectiveBalance:      params.BeaconConfig().MinActivationBalance,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             []byte(fmt.Sprintf("val_%d", i)),
+			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
+			WithdrawalCredentials: wd,
 		}
 	}
 	if totalBal%primitives.Gwei(params.BeaconConfig().MinActivationBalance) != 0 {

@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
-
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 )
 

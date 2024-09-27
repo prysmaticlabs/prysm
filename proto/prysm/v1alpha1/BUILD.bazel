@@ -32,7 +32,6 @@ proto_library(
     deps = [
         "//proto/engine/v1:proto",
         "//proto/eth/ext:proto",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_proto",
         "@com_google_protobuf//:any_proto",
         "@com_google_protobuf//:descriptor_proto",
         "@com_google_protobuf//:empty_proto",
@@ -149,6 +148,7 @@ ssz_electra_objs = [
     "PendingConsolidation",
     "PendingPartialWithdrawal",
     "SignedAggregateAttestationAndProofElectra",
+    "SignedBeaconBlockContentsElectra",
     "SignedBeaconBlockElectra",
     "SignedBlindedBeaconBlockElectra",
     "SignedConsolidation",
@@ -156,90 +156,89 @@ ssz_electra_objs = [
 
 ssz_gen_marshal(
     name = "ssz_generated_phase0",
-    go_proto = ":go_proto",
     out = "phase0.ssz.go",
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_phase0_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_altair",
-    go_proto = ":go_proto",
     out = "altair.ssz.go",
+    exclude_objs = ssz_phase0_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_altair_objs,
-    exclude_objs = ssz_phase0_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_bellatrix",
-    go_proto = ":go_proto",
     out = "bellatrix.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_bellatrix_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_capella",
-    go_proto = ":go_proto",
     out = "capella.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_capella_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_deneb",
-    go_proto = ":go_proto",
     out = "deneb.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs + ssz_capella_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_deneb_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs,
 )
 
 ssz_gen_marshal(
     name = "ssz_generated_electra",
-    go_proto = ":go_proto",
     out = "electra.ssz.go",
+    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs + ssz_capella_objs + ssz_deneb_objs,
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = ssz_electra_objs,
-    exclude_objs = ssz_phase0_objs + ssz_altair_objs + ssz_bellatrix_objs  + ssz_capella_objs + ssz_deneb_objs,
 )
-
 
 ssz_gen_marshal(
     name = "ssz_generated_non_core",
-    go_proto = ":go_proto",
     out = "non-core.ssz.go",
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//math:go_default_library",
+        "//proto/engine/v1:go_default_library",
     ],
     objs = [
         "BeaconBlocksByRangeRequest",
@@ -267,7 +266,6 @@ go_proto_library(
         "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
@@ -281,47 +279,24 @@ go_proto_library(
     ],
 )
 
-go_proto_library(
-    name = "go_grpc_gateway_library",
-    compilers = [
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
-    ],
-    embed = [":go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
-    protos = [":proto"],
-    visibility = ["//visibility:private"],
-    deps = [
-        "//proto/engine/v1:go_default_library",
-        "//proto/eth/ext:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
-        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@googleapis//google/api:annotations_go_proto",
-        "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
-        "@io_bazel_rules_go//proto/wkt:timestamp_go_proto",
-        "@io_bazel_rules_go//proto/wkt:wrappers_go_proto",
-        "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
-        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
-    ],
-)
-
 go_library(
     name = "go_default_library",
     srcs = [
         "attestation.go",
+        "beacon_block.go",
         "cloners.go",
+        "eip_7521.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
-        ":ssz_generated_non_core",  # keep
-        ":ssz_generated_phase0",  # keep
         ":ssz_generated_altair",  # keep
         ":ssz_generated_bellatrix",  # keep
         ":ssz_generated_capella",  # keep
         ":ssz_generated_deneb",  # keep
         ":ssz_generated_electra",  # keep
+        ":ssz_generated_non_core",  # keep
+        ":ssz_generated_phase0",  # keep
     ],
-    embed = [
-        ":go_grpc_gateway_library",
-    ],
+    embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1",
     visibility = ["//visibility:public"],
     deps = SSZ_DEPS + [
@@ -330,10 +305,9 @@ go_library(
         "//proto/engine/v1:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//runtime/version:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",  # keep
         "@googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
@@ -344,6 +318,7 @@ go_library(
         "@org_golang_google_grpc//grpclog:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
         "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
@@ -371,10 +346,17 @@ ssz_proto_files(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_fuzz_test.go",
+        "beacon_block_fuzz_test.go",
         "cloners_test.go",
+        "eip_7521_fuzz_test.go",
+        "export_test.go",
+        "fuzz_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
         "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
+        "@com_github_google_gofuzz//:go_default_library",
     ],
 )

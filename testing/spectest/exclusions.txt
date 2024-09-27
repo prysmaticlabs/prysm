@@ -47,7 +47,6 @@ tests/mainnet/eip6110/operations/attester_slashing
 tests/mainnet/eip6110/operations/block_header
 tests/mainnet/eip6110/operations/bls_to_execution_change
 tests/mainnet/eip6110/operations/deposit
-tests/mainnet/eip6110/operations/deposit_receipt
 tests/mainnet/eip6110/operations/execution_payload
 tests/mainnet/eip6110/operations/proposer_slashing
 tests/mainnet/eip6110/operations/sync_aggregate
@@ -136,7 +135,6 @@ tests/minimal/eip6110/operations/attester_slashing
 tests/minimal/eip6110/operations/block_header
 tests/minimal/eip6110/operations/bls_to_execution_change
 tests/minimal/eip6110/operations/deposit
-tests/minimal/eip6110/operations/deposit_receipt
 tests/minimal/eip6110/operations/execution_payload
 tests/minimal/eip6110/operations/proposer_slashing
 tests/minimal/eip6110/operations/sync_aggregate

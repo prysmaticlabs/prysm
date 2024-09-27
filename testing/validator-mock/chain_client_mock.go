@@ -41,7 +41,7 @@ func (m *MockChainClient) EXPECT() *MockChainClientMockRecorder {
 	return m.recorder
 }
 
-// GetChainHead mocks base method.
+// ChainHead mocks base method.
 func (m *MockChainClient) ChainHead(arg0 context.Context, arg1 *emptypb.Empty) (*eth.ChainHead, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ChainHead", arg0, arg1)
@@ -50,58 +50,13 @@ func (m *MockChainClient) ChainHead(arg0 context.Context, arg1 *emptypb.Empty) (
 	return ret0, ret1
 }
 
-// GetChainHead indicates an expected call of GetChainHead.
-func (mr *MockChainClientMockRecorder) GetChainHead(arg0, arg1 any) *gomock.Call {
+// ChainHead indicates an expected call of ChainHead.
+func (mr *MockChainClientMockRecorder) ChainHead(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainHead", reflect.TypeOf((*MockChainClient)(nil).ChainHead), arg0, arg1)
 }
 
-// GetValidatorParticipation mocks base method.
-func (m *MockChainClient) ValidatorParticipation(arg0 context.Context, arg1 *eth.GetValidatorParticipationRequest) (*eth.ValidatorParticipationResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidatorParticipation", arg0, arg1)
-	ret0, _ := ret[0].(*eth.ValidatorParticipationResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetValidatorParticipation indicates an expected call of GetValidatorParticipation.
-func (mr *MockChainClientMockRecorder) GetValidatorParticipation(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorParticipation", reflect.TypeOf((*MockChainClient)(nil).ValidatorParticipation), arg0, arg1)
-}
-
-// GetValidatorPerformance mocks base method.
-func (m *MockChainClient) ValidatorPerformance(arg0 context.Context, arg1 *eth.ValidatorPerformanceRequest) (*eth.ValidatorPerformanceResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidatorPerformance", arg0, arg1)
-	ret0, _ := ret[0].(*eth.ValidatorPerformanceResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetValidatorPerformance indicates an expected call of GetValidatorPerformance.
-func (mr *MockChainClientMockRecorder) GetValidatorPerformance(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorPerformance", reflect.TypeOf((*MockChainClient)(nil).ValidatorPerformance), arg0, arg1)
-}
-
-// GetValidatorQueue mocks base method.
-func (m *MockChainClient) ValidatorQueue(arg0 context.Context, arg1 *emptypb.Empty) (*eth.ValidatorQueue, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidatorQueue", arg0, arg1)
-	ret0, _ := ret[0].(*eth.ValidatorQueue)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetValidatorQueue indicates an expected call of GetValidatorQueue.
-func (mr *MockChainClientMockRecorder) GetValidatorQueue(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorQueue", reflect.TypeOf((*MockChainClient)(nil).ValidatorQueue), arg0, arg1)
-}
-
-// ListValidatorBalances mocks base method.
+// ValidatorBalances mocks base method.
 func (m *MockChainClient) ValidatorBalances(arg0 context.Context, arg1 *eth.ListValidatorBalancesRequest) (*eth.ValidatorBalances, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidatorBalances", arg0, arg1)
@@ -110,13 +65,58 @@ func (m *MockChainClient) ValidatorBalances(arg0 context.Context, arg1 *eth.List
 	return ret0, ret1
 }
 
-// ListValidatorBalances indicates an expected call of ListValidatorBalances.
-func (mr *MockChainClientMockRecorder) ListValidatorBalances(arg0, arg1 any) *gomock.Call {
+// ValidatorBalances indicates an expected call of ValidatorBalances.
+func (mr *MockChainClientMockRecorder) ValidatorBalances(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorBalances", reflect.TypeOf((*MockChainClient)(nil).ValidatorBalances), arg0, arg1)
 }
 
-// ListValidators mocks base method.
+// ValidatorParticipation mocks base method.
+func (m *MockChainClient) ValidatorParticipation(arg0 context.Context, arg1 *eth.GetValidatorParticipationRequest) (*eth.ValidatorParticipationResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatorParticipation", arg0, arg1)
+	ret0, _ := ret[0].(*eth.ValidatorParticipationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatorParticipation indicates an expected call of ValidatorParticipation.
+func (mr *MockChainClientMockRecorder) ValidatorParticipation(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorParticipation", reflect.TypeOf((*MockChainClient)(nil).ValidatorParticipation), arg0, arg1)
+}
+
+// ValidatorPerformance mocks base method.
+func (m *MockChainClient) ValidatorPerformance(arg0 context.Context, arg1 *eth.ValidatorPerformanceRequest) (*eth.ValidatorPerformanceResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatorPerformance", arg0, arg1)
+	ret0, _ := ret[0].(*eth.ValidatorPerformanceResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatorPerformance indicates an expected call of ValidatorPerformance.
+func (mr *MockChainClientMockRecorder) ValidatorPerformance(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorPerformance", reflect.TypeOf((*MockChainClient)(nil).ValidatorPerformance), arg0, arg1)
+}
+
+// ValidatorQueue mocks base method.
+func (m *MockChainClient) ValidatorQueue(arg0 context.Context, arg1 *emptypb.Empty) (*eth.ValidatorQueue, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatorQueue", arg0, arg1)
+	ret0, _ := ret[0].(*eth.ValidatorQueue)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatorQueue indicates an expected call of ValidatorQueue.
+func (mr *MockChainClientMockRecorder) ValidatorQueue(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorQueue", reflect.TypeOf((*MockChainClient)(nil).ValidatorQueue), arg0, arg1)
+}
+
+// Validators mocks base method.
 func (m *MockChainClient) Validators(arg0 context.Context, arg1 *eth.ListValidatorsRequest) (*eth.Validators, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Validators", arg0, arg1)
@@ -125,8 +125,8 @@ func (m *MockChainClient) Validators(arg0 context.Context, arg1 *eth.ListValidat
 	return ret0, ret1
 }
 
-// ListValidators indicates an expected call of ListValidators.
-func (mr *MockChainClientMockRecorder) ListValidators(arg0, arg1 any) *gomock.Call {
+// Validators indicates an expected call of Validators.
+func (mr *MockChainClientMockRecorder) Validators(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validators", reflect.TypeOf((*MockChainClient)(nil).Validators), arg0, arg1)
 }

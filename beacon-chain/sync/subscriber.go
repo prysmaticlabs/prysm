@@ -24,12 +24,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/messagehandler"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -208,7 +208,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 			}
 		}()
 
-		span.AddAttributes(trace.StringAttribute("topic", topic))
+		span.SetAttributes(trace.StringAttribute("topic", topic))
 
 		if msg.ValidatorData == nil {
 			log.Error("Received nil message on pubsub")
@@ -230,7 +230,7 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 			msg, err := sub.Next(s.ctx)
 			if err != nil {
 				// This should only happen when the context is cancelled or subscription is cancelled.
-				if err != pubsub.ErrSubscriptionCancelled { // Only log a warning on unexpected errors.
+				if !errors.Is(err, pubsub.ErrSubscriptionCancelled) { // Only log a warning on unexpected errors.
 					log.WithError(err).Warn("Subscription next failed")
 				}
 				// Cancel subscription in the event of an error, as we are

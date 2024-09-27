@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
@@ -970,6 +971,7 @@ func TestIsFullyWithdrawableValidator(t *testing.T) {
 		validator *ethpb.Validator
 		balance   uint64
 		epoch     primitives.Epoch
+		fork      int
 		want      bool
 	}{
 		{
@@ -1027,13 +1029,14 @@ func TestIsFullyWithdrawableValidator(t *testing.T) {
 			},
 			balance: params.BeaconConfig().MaxEffectiveBalance,
 			epoch:   params.BeaconConfig().ElectraForkEpoch,
+			fork:    version.Electra,
 			want:    true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, helpers.IsFullyWithdrawableValidator(tt.validator, tt.balance, tt.epoch))
+			assert.Equal(t, tt.want, helpers.IsFullyWithdrawableValidator(tt.validator, tt.balance, tt.epoch, tt.fork))
 		})
 	}
 }
@@ -1044,6 +1047,7 @@ func TestIsPartiallyWithdrawableValidator(t *testing.T) {
 		validator *ethpb.Validator
 		balance   uint64
 		epoch     primitives.Epoch
+		fork      int
 		want      bool
 	}{
 		{
@@ -1091,6 +1095,7 @@ func TestIsPartiallyWithdrawableValidator(t *testing.T) {
 			},
 			balance: params.BeaconConfig().MinActivationBalance * 2,
 			epoch:   params.BeaconConfig().ElectraForkEpoch,
+			fork:    version.Electra,
 			want:    true,
 		},
 		{
@@ -1101,13 +1106,14 @@ func TestIsPartiallyWithdrawableValidator(t *testing.T) {
 			},
 			balance: params.BeaconConfig().MaxEffectiveBalanceElectra * 2,
 			epoch:   params.BeaconConfig().ElectraForkEpoch,
+			fork:    version.Electra,
 			want:    true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, helpers.IsPartiallyWithdrawableValidator(tt.validator, tt.balance, tt.epoch))
+			assert.Equal(t, tt.want, helpers.IsPartiallyWithdrawableValidator(tt.validator, tt.balance, tt.epoch, tt.fork))
 		})
 	}
 }

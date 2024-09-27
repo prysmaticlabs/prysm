@@ -663,6 +663,18 @@ func TestMaxCover_MaxCover(t *testing.T) {
 			}},
 			wantedErr: "empty bitlists: invalid max_cover problem",
 		},
+		{
+			name: "doesn't select bitlist which is a subset of another bitlist",
+			args: args{k: 3, allowOverlaps: true, candidates: []*bitfield.Bitlist64{
+				bitfield.NewBitlist64From([]uint64{0b00011100}),
+				bitfield.NewBitlist64From([]uint64{0b00011110}),
+				bitfield.NewBitlist64From([]uint64{0b00000001}),
+			}},
+			want: &BitSetAggregation{
+				Coverage: bitfield.NewBitlist64From([]uint64{0b00011111}),
+				Keys:     []int{1, 2},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

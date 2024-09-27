@@ -4,15 +4,14 @@ import (
 	"context"
 	"testing"
 
-	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
@@ -37,6 +36,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			genesisTime:      1,
 			chainClient:      chainClient,
 			prysmChainClient: prysmChainClient,
+			pubkeyToStatus:   make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactive.pub[:], active.pub[:]})
@@ -48,7 +48,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{inactive.pub[:], active.pub[:]},
 			},
 		).Return(resp, nil)
-		prysmChainClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().ValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validator2.Status{validator2.Active},
@@ -74,6 +74,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			genesisTime:      1,
 			chainClient:      chainClient,
 			prysmChainClient: prysmChainClient,
+			pubkeyToStatus:   make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{kp.pub[:]})
@@ -84,7 +85,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{kp.pub[:]},
 			},
 		).Return(resp, nil)
-		prysmChainClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().ValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validator2.Status{validator2.Active},
@@ -104,6 +105,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			validatorClient: client,
 			km:              newMockKeymanager(t, kp),
 			genesisTime:     1,
+			pubkeyToStatus:  make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		}
 
 		client.EXPECT().MultipleValidatorStatus(

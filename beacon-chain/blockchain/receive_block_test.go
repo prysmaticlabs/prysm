@@ -12,7 +12,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -421,14 +420,9 @@ func Test_sendNewFinalizedEvent(t *testing.T) {
 }
 
 func Test_executePostFinalizationTasks(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EIP6110ValidatorIndexCache: true,
-	})
-	defer resetFn()
-
 	logHook := logTest.NewGlobal()
 
-	headState, err := util.NewBeaconState()
+	headState, err := util.NewBeaconStateElectra()
 	require.NoError(t, err)
 	finalizedStRoot, err := headState.HashTreeRoot(context.Background())
 	require.NoError(t, err)

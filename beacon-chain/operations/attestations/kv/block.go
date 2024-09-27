@@ -33,7 +33,7 @@ func (c *AttCaches) SaveBlockAttestation(att ethpb.Att) error {
 		}
 	}
 
-	c.blockAtt[id] = append(atts, att.Copy())
+	c.blockAtt[id] = append(atts, att.Clone())
 
 	return nil
 }

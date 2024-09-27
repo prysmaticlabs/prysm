@@ -35,5 +35,5 @@ func (b *BeaconState) pendingBalanceDepositsVal() []*ethpb.PendingBalanceDeposit
 		return nil
 	}
 
-	return ethpb.CopyPendingBalanceDeposits(b.pendingBalanceDeposits)
+	return ethpb.CopySlice(b.pendingBalanceDeposits)
 }

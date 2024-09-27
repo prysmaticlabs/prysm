@@ -684,9 +684,9 @@ func TestService_AddPendingBlockToQueueOverMax(t *testing.T) {
 	}
 
 	b := util.NewBeaconBlock()
-	b1 := ethpb.CopySignedBeaconBlock(b)
+	b1 := b.Copy()
 	b1.Block.StateRoot = []byte{'a'}
-	b2 := ethpb.CopySignedBeaconBlock(b)
+	b2 := b.Copy()
 	b2.Block.StateRoot = []byte{'b'}
 	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -698,7 +698,7 @@ func TestService_AddPendingBlockToQueueOverMax(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, r.insertBlockToPendingQueue(0, wsb, [32]byte{2}))
 
-	b3 := ethpb.CopySignedBeaconBlock(b)
+	b3 := b.Copy()
 	b3.Block.StateRoot = []byte{'c'}
 	wsb, err = blocks.NewSignedBeaconBlock(b2)
 	require.NoError(t, err)

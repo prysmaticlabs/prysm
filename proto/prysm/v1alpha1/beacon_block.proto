@@ -19,7 +19,7 @@ import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
-import "proto/prysm/v1alpha1/eip_7251.proto";
+import "proto/engine/v1/electra.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
 option go_package = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1;eth";
@@ -818,12 +818,14 @@ message BeaconBlockBodyElectra {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload from the execution chain. New in Bellatrix network upgrade.
-    ethereum.engine.v1.ExecutionPayloadElectra execution_payload = 10;
+    ethereum.engine.v1.ExecutionPayloadDeneb execution_payload = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+
+    ethereum.engine.v1.ExecutionRequests execution_requests = 13;
 }
 
 message SignedBlindedBeaconBlockElectra {
@@ -881,12 +883,14 @@ message BlindedBeaconBlockBodyElectra {
     SyncAggregate sync_aggregate = 9;
 
     // Execution payload header from the execution chain. New in Bellatrix network upgrade to accommodate MEV interaction.
-    ethereum.engine.v1.ExecutionPayloadHeaderElectra execution_payload_header = 10;
+    ethereum.engine.v1.ExecutionPayloadHeaderDeneb execution_payload_header = 10;
 
     // At most MAX_BLS_TO_EXECUTION_CHANGES. New in Capella network upgrade.
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 
     repeated bytes blob_kzg_commitments = 12 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "max_blob_commitments.size"];
+
+    ethereum.engine.v1.ExecutionRequests execution_requests = 13;
 }
 
 message ValidatorRegistrationV1 {

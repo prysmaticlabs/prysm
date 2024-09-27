@@ -32,7 +32,7 @@ func (e Endpoint) Equals(other Endpoint) bool {
 	return e.Url == other.Url && e.Auth.Equals(other.Auth)
 }
 
-// HttpClient creates a http client object dependant
+// HttpClient creates a http client object dependent
 // on the properties of the network endpoint.
 func (e Endpoint) HttpClient() *http.Client {
 	if e.Auth.Method != authorization.Bearer {

@@ -35,11 +35,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
-	beaconapi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
@@ -48,10 +48,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/local"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -77,7 +74,7 @@ type validator struct {
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	prevEpochBalances                  map[[fieldparams.BLSPubkeyLength]byte]uint64
 	blacklistedPubkeys                 map[[fieldparams.BLSPubkeyLength]byte]bool
-	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex
+	pubkeyToStatus                     map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus
 	wallet                             *wallet.Wallet
 	walletInitializedChan              chan *wallet.Wallet
 	walletInitializedFeed              *event.Feed
@@ -265,7 +262,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	log.Info("Syncing with beacon node to align on chain genesis info")
 
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return client.ErrConnectionIssue
 	}
 
@@ -352,10 +349,10 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, activeValCount int64) bool {
+func (v *validator) checkAndLogValidatorStatus(activeValCount int64) bool {
 	nonexistentIndex := primitives.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
-	for _, s := range statuses {
+	for _, s := range v.pubkeyToStatus {
 		fields := logrus.Fields{
 			"pubkey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
 			"status": s.status.Status.String(),
@@ -701,14 +698,22 @@ func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.Duties
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the slot. Returns UNKNOWN if the
-// validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
+// validator assignments are unknown. Otherwise, returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.RolesAt")
 	defer span.End()
 
 	v.dutiesLock.RLock()
 	defer v.dutiesLock.RUnlock()
-	rolesAt := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
+
+	var (
+		rolesAt = make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
+
+		// store sync committee duties pubkeys and share indices in slices for
+		// potential DV processing
+		syncCommitteeValidators = make(map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte)
+	)
+
 	for validator, duty := range v.duties.CurrentEpochDuties {
 		var roles []iface.ValidatorRole
 
@@ -723,6 +728,7 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 				}
 			}
 		}
+
 		if duty.AttesterSlot == slot {
 			roles = append(roles, iface.RoleAttester)
 
@@ -751,15 +757,9 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 				inSyncCommittee = true
 			}
 		}
+
 		if inSyncCommittee {
-			aggregator, err := v.isSyncCommitteeAggregator(ctx, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
-			if err != nil {
-				aggregator = false
-				log.WithError(err).Errorf("Could not check if validator %#x is an aggregator", bytesutil.Trunc(duty.PublicKey))
-			}
-			if aggregator {
-				roles = append(roles, iface.RoleSyncCommitteeAggregator)
-			}
+			syncCommitteeValidators[duty.ValidatorIndex] = bytesutil.ToBytes48(duty.PublicKey)
 		}
 
 		if len(roles) == 0 {
@@ -770,6 +770,32 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 		copy(pubKey[:], duty.PublicKey)
 		rolesAt[pubKey] = roles
 	}
+
+	aggregator, err := v.isSyncCommitteeAggregator(
+		ctx,
+		slot,
+		syncCommitteeValidators,
+	)
+
+	if err != nil {
+		log.WithError(err).Error("Could not check if any validator is a sync committee aggregator")
+		return rolesAt, nil
+	}
+
+	for valIdx, isAgg := range aggregator {
+		if isAgg {
+			valPubkey, ok := syncCommitteeValidators[valIdx]
+			if !ok {
+				log.
+					WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(valPubkey[:]))).
+					Warn("Validator is marked as sync committee aggregator but cannot be found in sync committee validator list")
+				continue
+			}
+
+			rolesAt[bytesutil.ToBytes48(valPubkey[:])] = append(rolesAt[bytesutil.ToBytes48(valPubkey[:])], iface.RoleSyncCommitteeAggregator)
+		}
+	}
+
 	return rolesAt, nil
 }
 
@@ -827,54 +853,61 @@ func (v *validator) isAggregator(
 //
 //	modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //	return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0
-func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, validatorIndex primitives.ValidatorIndex) (bool, error) {
+func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitives.Slot, validators map[primitives.ValidatorIndex][fieldparams.BLSPubkeyLength]byte) (map[primitives.ValidatorIndex]bool, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.isSyncCommitteeAggregator")
 	defer span.End()
 
-	res, err := v.validatorClient.SyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
-		PublicKey: pubKey[:],
-		Slot:      slot,
-	})
-	if err != nil {
-		return false, err
-	}
+	var (
+		selections []iface.SyncCommitteeSelection
+		isAgg      = make(map[primitives.ValidatorIndex]bool)
+	)
 
-	var selections []iface.SyncCommitteeSelection
-	for _, index := range res.Indices {
-		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := uint64(index) / subCommitteeSize
-		sig, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
+	for valIdx, pubKey := range validators {
+		res, err := v.validatorClient.SyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+			PublicKey: pubKey[:],
+			Slot:      slot,
+		})
+
 		if err != nil {
-			return false, err
+			return nil, errors.Wrap(err, "can't fetch sync subcommittee index")
 		}
 
-		selections = append(selections, iface.SyncCommitteeSelection{
-			SelectionProof:    sig,
-			Slot:              slot,
-			SubcommitteeIndex: primitives.CommitteeIndex(subnet),
-			ValidatorIndex:    validatorIndex,
-		})
+		for _, index := range res.Indices {
+			subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+			subnet := uint64(index) / subCommitteeSize
+			sig, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
+			if err != nil {
+				return nil, errors.Wrap(err, "can't sign selection data")
+			}
+
+			selections = append(selections, iface.SyncCommitteeSelection{
+				SelectionProof:    sig,
+				Slot:              slot,
+				SubcommitteeIndex: primitives.CommitteeIndex(subnet),
+				ValidatorIndex:    valIdx,
+			})
+		}
 	}
 
 	// Override selections with aggregated ones if the node is part of a Distributed Validator.
 	if v.distributed && len(selections) > 0 {
+		var err error
 		selections, err = v.validatorClient.AggregatedSyncSelections(ctx, selections)
 		if err != nil {
-			return false, errors.Wrap(err, "failed to get aggregated sync selections")
+			return nil, errors.Wrap(err, "failed to get aggregated sync selections")
 		}
 	}
 
 	for _, s := range selections {
 		isAggregator, err := altair.IsSyncCommitteeAggregator(s.SelectionProof)
 		if err != nil {
-			return false, err
+			return nil, errors.Wrap(err, "can't detect sync committee aggregator")
 		}
-		if isAggregator {
-			return true, nil
-		}
+
+		isAgg[s.ValidatorIndex] = isAggregator
 	}
 
-	return false, nil
+	return isAgg, nil
 }
 
 // UpdateDomainDataCaches by making calls for all of the possible domain data. These can change when
@@ -1066,16 +1099,13 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, forceFullPush bool) error {
 	ctx, span := trace.StartSpan(ctx, "validator.PushProposerSettings")
 	defer span.End()
 
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
-	nctx, cancel := context.WithDeadline(ctx, deadline)
-	ctx = nctx
-	defer cancel()
 
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -1089,6 +1119,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err != nil {
 		return err
 	}
+
 	proposerReqs, err := v.buildPrepProposerReqs(filteredKeys)
 	if err != nil {
 		return err
@@ -1103,16 +1134,21 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 			"proposerSettingsRequestCount": len(proposerReqs),
 		}).Debugln("Request count did not match included validator count. Only keys that have been activated will be included in the request.")
 	}
+
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: proposerReqs,
 	}); err != nil {
 		return err
 	}
-
-	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
-	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
-		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
+	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign, slot, forceFullPush)
+	if len(signedRegReqs) > 0 {
+		go func() {
+			if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
+				log.WithError(errors.Wrap(ErrBuilderValidatorRegistration, err.Error())).Warn("failed to register validator on builder")
+			}
+		}()
 	}
+
 	return nil
 }
 
@@ -1173,44 +1209,31 @@ func (v *validator) ChangeHost() {
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.filterAndCacheActiveKeys")
 	defer span.End()
-
+	isEpochStart := slots.IsEpochStart(slot)
 	filteredKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
-	statusRequestKeys := make([][]byte, 0)
-	for _, k := range pubkeys {
-		_, ok := v.pubkeyToValidatorIndex[k]
-		// Get validator index from RPC server if not found.
-		if !ok {
-			i, ok, err := v.validatorIndex(ctx, k)
-			if err != nil {
-				return nil, err
-			}
-			if !ok { // Nothing we can do if RPC server doesn't have validator index.
-				continue
-			}
-			v.pubkeyToValidatorIndex[k] = i
+	if len(pubkeys) == 0 {
+		return filteredKeys, nil
+	}
+	var err error
+	// repopulate the statuses if epoch start or if a new key is added missing the cache
+	if isEpochStart || len(v.pubkeyToStatus) != len(pubkeys) /* cache not populated or updated correctly */ {
+		if err = v.updateValidatorStatusCache(ctx, pubkeys); err != nil {
+			return nil, errors.Wrap(err, "failed to update validator status cache")
 		}
-		copiedk := k
-		statusRequestKeys = append(statusRequestKeys, copiedk[:])
 	}
-	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
-		PublicKeys: statusRequestKeys,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for i, s := range resp.Statuses {
+	for k, s := range v.pubkeyToStatus {
 		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-		currActivating := s.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.ActivationEpoch
+		currActivating := s.status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= s.status.ActivationEpoch
 
-		active := s.Status == ethpb.ValidatorStatus_ACTIVE
-		exiting := s.Status == ethpb.ValidatorStatus_EXITING
+		active := s.status.Status == ethpb.ValidatorStatus_ACTIVE
+		exiting := s.status.Status == ethpb.ValidatorStatus_EXITING
 
 		if currActivating || active || exiting {
-			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
+			filteredKeys = append(filteredKeys, k)
 		} else {
 			log.WithFields(logrus.Fields{
-				"pubkey": hexutil.Encode(resp.PublicKeys[i]),
-				"status": s.Status.String(),
+				"pubkey": hexutil.Encode(s.publicKey),
+				"status": s.status.Status.String(),
 			}).Debugf("Skipping non-active status key.")
 		}
 	}
@@ -1218,11 +1241,47 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 	return filteredKeys, nil
 }
 
+// updateValidatorStatusCache updates the validator statuses cache, a map of keys currently used by the validator client
+func (v *validator) updateValidatorStatusCache(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) error {
+	statusRequestKeys := make([][]byte, 0)
+	for _, k := range pubkeys {
+		statusRequestKeys = append(statusRequestKeys, k[:])
+	}
+	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+		PublicKeys: statusRequestKeys,
+	})
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return errors.New("response is nil")
+	}
+	if len(resp.Statuses) != len(resp.PublicKeys) {
+		return fmt.Errorf("expected %d pubkeys in status, received %d", len(resp.Statuses), len(resp.PublicKeys))
+	}
+	if len(resp.Statuses) != len(resp.Indices) {
+		return fmt.Errorf("expected %d indices in status, received %d", len(resp.Statuses), len(resp.Indices))
+	}
+	for i, s := range resp.Statuses {
+		v.pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = &validatorStatus{
+			publicKey: resp.PublicKeys[i],
+			status:    s,
+			index:     resp.Indices[i],
+		}
+	}
+	return nil
+}
+
 func (v *validator) buildPrepProposerReqs(activePubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
 	var prepareProposerReqs []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	for _, k := range activePubkeys {
+		s, ok := v.pubkeyToStatus[k]
+		if !ok {
+			continue
+		}
+
 		// Default case: Define fee recipient to burn address
-		var feeRecipient common.Address
+		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 
 		// If fee recipient is defined in default configuration, use it
 		if v.ProposerSettings() != nil && v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
@@ -1238,13 +1297,8 @@ func (v *validator) buildPrepProposerReqs(activePubkeys [][fieldparams.BLSPubkey
 			}
 		}
 
-		validatorIndex, ok := v.pubkeyToValidatorIndex[k]
-		if !ok {
-			continue
-		}
-
 		prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			ValidatorIndex: validatorIndex,
+			ValidatorIndex: s.index,
 			FeeRecipient:   feeRecipient[:],
 		})
 	}
@@ -1255,19 +1309,27 @@ func (v *validator) buildSignedRegReqs(
 	ctx context.Context,
 	activePubkeys [][fieldparams.BLSPubkeyLength]byte,
 	signer iface.SigningFunc,
+	slot primitives.Slot,
+	forceFullPush bool,
 ) []*ethpb.SignedValidatorRegistrationV1 {
 	ctx, span := trace.StartSpan(ctx, "validator.buildSignedRegReqs")
 	defer span.End()
 
-	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
+	var signedValRegRequests []*ethpb.SignedValidatorRegistrationV1
 	if v.ProposerSettings() == nil {
-		return signedValRegRegs
+		return signedValRegRequests
 	}
 	// if the timestamp is pre-genesis, don't create registrations
 	if v.genesisTime > uint64(time.Now().UTC().Unix()) {
-		return signedValRegRegs
+		return signedValRegRequests
 	}
 	for i, k := range activePubkeys {
+		// map is populated before this function in buildPrepProposerReq
+		_, ok := v.pubkeyToStatus[k]
+		if !ok {
+			continue
+		}
+
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		enabled := false
@@ -1307,12 +1369,6 @@ func (v *validator) buildSignedRegReqs(
 			continue
 		}
 
-		// map is populated before this function in buildPrepProposerReq
-		_, ok := v.pubkeyToValidatorIndex[k]
-		if !ok {
-			continue
-		}
-
 		req := &ethpb.ValidatorRegistrationV1{
 			FeeRecipient: feeRecipient[:],
 			GasLimit:     gasLimit,
@@ -1320,7 +1376,7 @@ func (v *validator) buildSignedRegReqs(
 			Pubkey:       activePubkeys[i][:],
 		}
 
-		signedReq, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
+		signedRequest, isCached, err := v.SignValidatorRegistrationRequest(ctx, signer, req)
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"pubkey":       fmt.Sprintf("%#x", req.Pubkey),
@@ -1329,38 +1385,20 @@ func (v *validator) buildSignedRegReqs(
 			continue
 		}
 
-		signedValRegRegs = append(signedValRegRegs, signedReq)
-
 		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.WithFields(logrus.Fields{
 				"pubkey":       fmt.Sprintf("%#x", req.Pubkey),
 				"feeRecipient": feeRecipient,
 			}).Warn("Fee recipient is burn address")
 		}
-	}
-	return signedValRegRegs
-}
 
-func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.validatorIndex")
-	defer span.End()
-
-	resp, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubkey[:]})
-	switch {
-	case status.Code(err) == codes.NotFound:
-		log.Debugf("Could not find validator index for public key %#x. "+
-			"Perhaps the validator is not yet active.", pubkey)
-		return 0, false, nil
-	case err != nil:
-		notFoundErr := &beaconapi.IndexNotFoundError{}
-		if errors.As(err, &notFoundErr) {
-			log.Debugf("Could not find validator index for public key %#x. "+
-				"Perhaps the validator is not yet active.", pubkey)
-			return 0, false, nil
+		if slots.IsEpochStart(slot) || forceFullPush || !isCached {
+			// if epoch start (or forced to) send all validator registrations
+			// otherwise if slot is not epoch start then only send new non cached values
+			signedValRegRequests = append(signedValRegRequests, signedRequest)
 		}
-		return 0, false, err
 	}
-	return resp.Index, true, nil
+	return signedValRegRequests
 }
 
 func (v *validator) aggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {

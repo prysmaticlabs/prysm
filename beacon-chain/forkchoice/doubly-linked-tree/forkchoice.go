@@ -15,11 +15,11 @@ import (
 	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // New initializes a new fork choice store.
@@ -267,11 +267,12 @@ func (f *ForkChoice) updateBalances() error {
 	newBalances := f.justifiedBalances
 	zHash := params.BeaconConfig().ZeroHash
 
-	for index, vote := range f.votes {
+	for index := 0; index < len(f.votes); index++ {
 		// Skip if validator has been slashed
 		if f.store.slashedIndices[primitives.ValidatorIndex(index)] {
 			continue
 		}
+		vote := &f.votes[index]
 		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == zHash && vote.nextRoot == zHash {
@@ -674,4 +675,19 @@ func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) (
 		}
 	}
 	return f.TargetRootForEpoch(targetNode.root, epoch)
+}
+
+// ParentRoot returns the block root of the parent node if it is in forkchoice.
+// The exception is for the finalized checkpoint root which we return the zero
+// hash.
+func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return [32]byte{}, ErrNilNode
+	}
+	// Return the zero hash for the tree root
+	if n.parent == nil {
+		return [32]byte{}, nil
+	}
+	return n.parent.root, nil
 }

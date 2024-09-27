@@ -20,7 +20,6 @@ import (
 // RunUpgradeToElectra is a helper function that runs Electra's fork spec tests.
 // It unmarshals a pre- and post-state to check `UpgradeToElectra` comply with spec implementation.
 func RunUpgradeToElectra(t *testing.T, config string) {
-	t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "fork/fork/pyspec_tests")

@@ -60,7 +60,7 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		GenesisTime:            timeStamp,
 		DepositContractAddress: []byte("hello"),
 	}, nil)
-	chainClient.EXPECT().GetChainHead(
+	chainClient.EXPECT().ChainHead(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{
@@ -230,7 +230,7 @@ func TestServer_GetValidators(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			beaconChainClient := validatormock.NewMockChainClient(ctrl)
 			if tt.wantErr == "" {
-				beaconChainClient.EXPECT().ListValidators(
+				beaconChainClient.EXPECT().Validators(
 					gomock.Any(), // ctx
 					tt.expectedReq,
 				).Return(tt.chainResp, nil)

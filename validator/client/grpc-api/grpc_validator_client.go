@@ -11,10 +11,10 @@ import (
 	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	log "github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
 )
 
@@ -71,6 +71,10 @@ func (c *grpcValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.
 	return c.beaconNodeValidatorClient.ProposeAttestation(ctx, in)
 }
 
+func (c *grpcValidatorClient) ProposeAttestationElectra(ctx context.Context, in *ethpb.AttestationElectra) (*ethpb.AttestResponse, error) {
+	return c.beaconNodeValidatorClient.ProposeAttestationElectra(ctx, in)
+}
+
 func (c *grpcValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	return c.beaconNodeValidatorClient.ProposeBeaconBlock(ctx, in)
 }
@@ -87,8 +91,16 @@ func (c *grpcValidatorClient) SubmitAggregateSelectionProof(ctx context.Context,
 	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProof(ctx, in)
 }
 
+func (c *grpcValidatorClient) SubmitAggregateSelectionProofElectra(ctx context.Context, in *ethpb.AggregateSelectionRequest, _ primitives.ValidatorIndex, _ uint64) (*ethpb.AggregateSelectionElectraResponse, error) {
+	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProofElectra(ctx, in)
+}
+
 func (c *grpcValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
 	return c.beaconNodeValidatorClient.SubmitSignedAggregateSelectionProof(ctx, in)
+}
+
+func (c *grpcValidatorClient) SubmitSignedAggregateSelectionProofElectra(ctx context.Context, in *ethpb.SignedAggregateSubmitElectraRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
+	return c.beaconNodeValidatorClient.SubmitSignedAggregateSelectionProofElectra(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {

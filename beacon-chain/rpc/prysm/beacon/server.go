@@ -3,6 +3,7 @@ package beacon
 import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	beacondb "github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
@@ -18,4 +19,5 @@ type Server struct {
 	Stater                lookup.Stater
 	ChainInfoFetcher      blockchain.ChainInfoFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
+	CoreService           *core.Service
 }

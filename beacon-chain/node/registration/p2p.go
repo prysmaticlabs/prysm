@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v2"
 )
@@ -50,7 +51,8 @@ func readbootNodes(fileName string) ([]string, error) {
 	listNodes := make([]string, 0)
 	err = yaml.UnmarshalStrict(fileContent, &listNodes)
 	if err != nil {
-		if _, ok := err.(*yaml.TypeError); !ok {
+		var typeError *yaml.TypeError
+		if !errors.As(err, &typeError) {
 			return nil, err
 		} else {
 			log.WithError(err).Error("There were some issues parsing the bootnodes from a yaml file.")

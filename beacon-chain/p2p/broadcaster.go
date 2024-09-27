@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -110,7 +110,7 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 	hasPeer := s.hasPeerWithSubnet(attestationToTopic(subnet, forkDigest))
 	s.subnetLocker(subnet).RUnlock()
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
 		trace.Int64Attribute("slot", int64(att.GetData().Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
 		trace.Int64Attribute("subnet", int64(subnet)),           // lint:ignore uintcast -- It's safe to do this for tracing.
@@ -169,7 +169,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	hasPeer := s.hasPeerWithSubnet(syncCommitteeToTopic(subnet, forkDigest))
 	s.subnetLocker(wrappedSubIdx).RUnlock()
 
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.BoolAttribute("hasPeer", hasPeer),
 		trace.Int64Attribute("slot", int64(sMsg.Slot)), // lint:ignore uintcast -- It's safe to do this for tracing.
 		trace.Int64Attribute("subnet", int64(subnet)),  // lint:ignore uintcast -- It's safe to do this for tracing.
@@ -273,7 +273,7 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastObject")
 	defer span.End()
 
-	span.AddAttributes(trace.StringAttribute("topic", topic))
+	span.SetAttributes(trace.StringAttribute("topic", topic))
 
 	buf := new(bytes.Buffer)
 	if _, err := s.Encoding().EncodeGossip(buf, obj); err != nil {
@@ -282,12 +282,12 @@ func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic 
 		return err
 	}
 
-	if span.IsRecordingEvents() {
+	if span.IsRecording() {
 		id := hash.FastSum64(buf.Bytes())
 		messageLen := int64(buf.Len())
 		// lint:ignore uintcast -- It's safe to do this for tracing.
 		iid := int64(id)
-		span.AddMessageSendEvent(iid, messageLen /*uncompressed*/, messageLen /*compressed*/)
+		span = trace.AddMessageSendEvent(span, iid, messageLen /*uncompressed*/, messageLen /*compressed*/)
 	}
 	if err := s.PublishToTopic(ctx, topic+s.Encoding().ProtocolSuffix(), buf.Bytes()); err != nil {
 		err := errors.Wrap(err, "could not publish message")

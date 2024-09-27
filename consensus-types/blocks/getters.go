@@ -52,40 +52,29 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	}
 	switch b.version {
 	case version.Phase0:
-		cp := eth.CopySignedBeaconBlock(pb.(*eth.SignedBeaconBlock))
-		return initSignedBlockFromProtoPhase0(cp)
+		return initSignedBlockFromProtoPhase0(pb.(*eth.SignedBeaconBlock).Copy())
 	case version.Altair:
-		cp := eth.CopySignedBeaconBlockAltair(pb.(*eth.SignedBeaconBlockAltair))
-		return initSignedBlockFromProtoAltair(cp)
+		return initSignedBlockFromProtoAltair(pb.(*eth.SignedBeaconBlockAltair).Copy())
 	case version.Bellatrix:
 		if b.IsBlinded() {
-			cp := eth.CopySignedBlindedBeaconBlockBellatrix(pb.(*eth.SignedBlindedBeaconBlockBellatrix))
-			return initBlindedSignedBlockFromProtoBellatrix(cp)
+			return initBlindedSignedBlockFromProtoBellatrix(pb.(*eth.SignedBlindedBeaconBlockBellatrix).Copy())
 		}
-		cp := eth.CopySignedBeaconBlockBellatrix(pb.(*eth.SignedBeaconBlockBellatrix))
-		return initSignedBlockFromProtoBellatrix(cp)
+		return initSignedBlockFromProtoBellatrix(pb.(*eth.SignedBeaconBlockBellatrix).Copy())
 	case version.Capella:
 		if b.IsBlinded() {
-			cp := eth.CopySignedBlindedBeaconBlockCapella(pb.(*eth.SignedBlindedBeaconBlockCapella))
-			return initBlindedSignedBlockFromProtoCapella(cp)
+			return initBlindedSignedBlockFromProtoCapella(pb.(*eth.SignedBlindedBeaconBlockCapella).Copy())
 		}
-		cp := eth.CopySignedBeaconBlockCapella(pb.(*eth.SignedBeaconBlockCapella))
-		return initSignedBlockFromProtoCapella(cp)
+		return initSignedBlockFromProtoCapella(pb.(*eth.SignedBeaconBlockCapella).Copy())
 	case version.Deneb:
 		if b.IsBlinded() {
-			cp := eth.CopySignedBlindedBeaconBlockDeneb(pb.(*eth.SignedBlindedBeaconBlockDeneb))
-			return initBlindedSignedBlockFromProtoDeneb(cp)
+			return initBlindedSignedBlockFromProtoDeneb(pb.(*eth.SignedBlindedBeaconBlockDeneb).Copy())
 		}
-		cp := eth.CopySignedBeaconBlockDeneb(pb.(*eth.SignedBeaconBlockDeneb))
-		return initSignedBlockFromProtoDeneb(cp)
+		return initSignedBlockFromProtoDeneb(pb.(*eth.SignedBeaconBlockDeneb).Copy())
 	case version.Electra:
 		if b.IsBlinded() {
-			cp := eth.CopySignedBlindedBeaconBlockElectra(pb.(*eth.SignedBlindedBeaconBlockElectra))
-			return initBlindedSignedBlockFromProtoElectra(cp)
+			return initBlindedSignedBlockFromProtoElectra(pb.(*eth.SignedBlindedBeaconBlockElectra).Copy())
 		}
-		cp := eth.CopySignedBeaconBlockElectra(pb.(*eth.SignedBeaconBlockElectra))
-		return initSignedBlockFromProtoElectra(cp)
-
+		return initSignedBlockFromProtoElectra(pb.(*eth.SignedBeaconBlockElectra).Copy())
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -161,6 +150,42 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 	payload, err := b.block.Body().Execution()
 	if err != nil {
 		return nil, err
+	}
+
+	if b.version >= version.Electra {
+		p, ok := payload.Proto().(*enginev1.ExecutionPayloadElectra)
+		if !ok {
+			return nil, fmt.Errorf("%T is not an execution payload header of Deneb version", p)
+		}
+		header, err := PayloadToHeaderElectra(payload)
+		if err != nil {
+			return nil, err
+		}
+		return initBlindedSignedBlockFromProtoElectra(
+			&eth.SignedBlindedBeaconBlockElectra{
+				Message: &eth.BlindedBeaconBlockElectra{
+					Slot:          b.block.slot,
+					ProposerIndex: b.block.proposerIndex,
+					ParentRoot:    b.block.parentRoot[:],
+					StateRoot:     b.block.stateRoot[:],
+					Body: &eth.BlindedBeaconBlockBodyElectra{
+						RandaoReveal:           b.block.body.randaoReveal[:],
+						Eth1Data:               b.block.body.eth1Data,
+						Graffiti:               b.block.body.graffiti[:],
+						ProposerSlashings:      b.block.body.proposerSlashings,
+						AttesterSlashings:      b.block.body.attesterSlashingsElectra,
+						Attestations:           b.block.body.attestationsElectra,
+						Deposits:               b.block.body.deposits,
+						VoluntaryExits:         b.block.body.voluntaryExits,
+						SyncAggregate:          b.block.body.syncAggregate,
+						ExecutionPayloadHeader: header,
+						BlsToExecutionChanges:  b.block.body.blsToExecutionChanges,
+						BlobKzgCommitments:     b.block.body.blobKzgCommitments,
+						ExecutionRequests:      b.block.body.executionRequests,
+					},
+				},
+				Signature: b.signature[:],
+			})
 	}
 
 	switch p := payload.Proto().(type) {
@@ -248,46 +273,13 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 				},
 				Signature: b.signature[:],
 			})
-	case *enginev1.ExecutionPayloadElectra:
-		pe, ok := payload.(interfaces.ExecutionDataElectra)
-		if !ok {
-			return nil, interfaces.ErrIncompatibleFork
-		}
-		header, err := PayloadToHeaderElectra(pe)
-		if err != nil {
-			return nil, err
-		}
-		return initBlindedSignedBlockFromProtoElectra(
-			&eth.SignedBlindedBeaconBlockElectra{
-				Message: &eth.BlindedBeaconBlockElectra{
-					Slot:          b.block.slot,
-					ProposerIndex: b.block.proposerIndex,
-					ParentRoot:    b.block.parentRoot[:],
-					StateRoot:     b.block.stateRoot[:],
-					Body: &eth.BlindedBeaconBlockBodyElectra{
-						RandaoReveal:           b.block.body.randaoReveal[:],
-						Eth1Data:               b.block.body.eth1Data,
-						Graffiti:               b.block.body.graffiti[:],
-						ProposerSlashings:      b.block.body.proposerSlashings,
-						AttesterSlashings:      b.block.body.attesterSlashingsElectra,
-						Attestations:           b.block.body.attestationsElectra,
-						Deposits:               b.block.body.deposits,
-						VoluntaryExits:         b.block.body.voluntaryExits,
-						SyncAggregate:          b.block.body.syncAggregate,
-						ExecutionPayloadHeader: header,
-						BlsToExecutionChanges:  b.block.body.blsToExecutionChanges,
-						BlobKzgCommitments:     b.block.body.blobKzgCommitments,
-					},
-				},
-				Signature: b.signature[:],
-			})
 	default:
 		return nil, fmt.Errorf("%T is not an execution payload header", p)
 	}
 }
 
 func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
-	if e.IsNil() {
+	if e == nil || e.IsNil() {
 		return errors.New("cannot unblind with nil execution data")
 	}
 	if !b.IsBlinded() {
@@ -972,39 +964,29 @@ func (b *BeaconBlock) Copy() (interfaces.ReadOnlyBeaconBlock, error) {
 	}
 	switch b.version {
 	case version.Phase0:
-		cp := eth.CopyBeaconBlock(pb.(*eth.BeaconBlock))
-		return initBlockFromProtoPhase0(cp)
+		return initBlockFromProtoPhase0(pb.(*eth.BeaconBlock).Copy())
 	case version.Altair:
-		cp := eth.CopyBeaconBlockAltair(pb.(*eth.BeaconBlockAltair))
-		return initBlockFromProtoAltair(cp)
+		return initBlockFromProtoAltair(pb.(*eth.BeaconBlockAltair).Copy())
 	case version.Bellatrix:
 		if b.IsBlinded() {
-			cp := eth.CopyBlindedBeaconBlockBellatrix(pb.(*eth.BlindedBeaconBlockBellatrix))
-			return initBlindedBlockFromProtoBellatrix(cp)
+			return initBlindedBlockFromProtoBellatrix(pb.(*eth.BlindedBeaconBlockBellatrix).Copy())
 		}
-		cp := eth.CopyBeaconBlockBellatrix(pb.(*eth.BeaconBlockBellatrix))
-		return initBlockFromProtoBellatrix(cp)
+		return initBlockFromProtoBellatrix(pb.(*eth.BeaconBlockBellatrix).Copy())
 	case version.Capella:
 		if b.IsBlinded() {
-			cp := eth.CopyBlindedBeaconBlockCapella(pb.(*eth.BlindedBeaconBlockCapella))
-			return initBlindedBlockFromProtoCapella(cp)
+			return initBlindedBlockFromProtoCapella(pb.(*eth.BlindedBeaconBlockCapella).Copy())
 		}
-		cp := eth.CopyBeaconBlockCapella(pb.(*eth.BeaconBlockCapella))
-		return initBlockFromProtoCapella(cp)
+		return initBlockFromProtoCapella(pb.(*eth.BeaconBlockCapella).Copy())
 	case version.Deneb:
 		if b.IsBlinded() {
-			cp := eth.CopyBlindedBeaconBlockDeneb(pb.(*eth.BlindedBeaconBlockDeneb))
-			return initBlindedBlockFromProtoDeneb(cp)
+			return initBlindedBlockFromProtoDeneb(pb.(*eth.BlindedBeaconBlockDeneb).Copy())
 		}
-		cp := eth.CopyBeaconBlockDeneb(pb.(*eth.BeaconBlockDeneb))
-		return initBlockFromProtoDeneb(cp)
+		return initBlockFromProtoDeneb(pb.(*eth.BeaconBlockDeneb).Copy())
 	case version.Electra:
 		if b.IsBlinded() {
-			cp := eth.CopyBlindedBeaconBlockElectra(pb.(*eth.BlindedBeaconBlockElectra))
-			return initBlindedBlockFromProtoElectra(cp)
+			return initBlindedBlockFromProtoElectra(pb.(*eth.BlindedBeaconBlockElectra).Copy())
 		}
-		cp := eth.CopyBeaconBlockElectra(pb.(*eth.BeaconBlockElectra))
-		return initBlockFromProtoElectra(cp)
+		return initBlockFromProtoElectra(pb.(*eth.BeaconBlockElectra).Copy())
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -1129,6 +1111,14 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	default:
 		return nil, errIncorrectBlockVersion
 	}
+}
+
+// ExecutionRequests returns the execution requests
+func (b *BeaconBlockBody) ExecutionRequests() (*enginev1.ExecutionRequests, error) {
+	if b.version < version.Electra {
+		return nil, consensus_types.ErrNotSupported("ExecutionRequests", b.version)
+	}
+	return b.executionRequests, nil
 }
 
 // Version returns the version of the beacon block body

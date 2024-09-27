@@ -108,7 +108,7 @@ type Settings struct {
 	DefaultConfig *Option
 }
 
-// ShouldBeSaved goes through checks to see if the value should be savable
+// ShouldBeSaved goes through checks to see if the value should be saveable
 // Pseudocode: conditions for being saved into the database
 // 1. settings are not nil
 // 2. proposeconfig is not nil (this defines specific settings for each validator key), default config can be nil in this case and fall back to beacon node settings

@@ -2,11 +2,13 @@ package blocks
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -200,13 +202,13 @@ func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) err
 //	    block_hash=payload.block_hash,
 //	    transactions_root=hash_tree_root(payload.transactions),
 //	)
-func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
-	var err error
-	if st.Version() >= version.Capella {
-		st, err = ProcessWithdrawals(st, payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process withdrawals")
-		}
+func ProcessPayload(st state.BeaconState, body interfaces.ReadOnlyBeaconBlockBody) (state.BeaconState, error) {
+	payload, err := body.Execution()
+	if err != nil {
+		return nil, err
+	}
+	if err := verifyBlobCommitmentCount(body); err != nil {
+		return nil, err
 	}
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
@@ -220,68 +222,18 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 	return st, nil
 }
 
-// ValidatePayloadHeaderWhenMergeCompletes validates the payload header when the merge completes.
-func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interfaces.ExecutionData) error {
-	// Skip validation if the state is not merge compatible.
-	complete, err := IsMergeTransitionComplete(st)
-	if err != nil {
-		return err
-	}
-	if !complete {
+func verifyBlobCommitmentCount(body interfaces.ReadOnlyBeaconBlockBody) error {
+	if body.Version() < version.Deneb {
 		return nil
 	}
-	// Validate current header's parent hash matches state header's block hash.
-	h, err := st.LatestExecutionPayloadHeader()
+	kzgs, err := body.BlobKzgCommitments()
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
-		return ErrInvalidPayloadBlockHash
+	if len(kzgs) > field_params.MaxBlobsPerBlock {
+		return fmt.Errorf("too many kzg commitments in block: %d", len(kzgs))
 	}
 	return nil
-}
-
-// ValidatePayloadHeader validates the payload header.
-func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData) error {
-	// Validate header's random mix matches with state in current epoch
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(header.PrevRandao(), random) {
-		return ErrInvalidPayloadPrevRandao
-	}
-
-	// Validate header's timestamp matches with state in current slot.
-	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
-	if err != nil {
-		return err
-	}
-	if header.Timestamp() != uint64(t.Unix()) {
-		return ErrInvalidPayloadTimeStamp
-	}
-	return nil
-}
-
-// ProcessPayloadHeader processes the payload header.
-func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
-	var err error
-	if st.Version() >= version.Capella {
-		st, err = ProcessWithdrawals(st, header)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process withdrawals")
-		}
-	}
-	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
-		return nil, err
-	}
-	if err := ValidatePayloadHeader(st, header); err != nil {
-		return nil, err
-	}
-	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
-		return nil, err
-	}
-	return st, nil
 }
 
 // GetBlockPayloadHash returns the hash of the execution payload of the block

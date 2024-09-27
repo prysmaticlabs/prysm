@@ -861,3 +861,29 @@ func TestForkChoiceSlot(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, primitives.Slot(3), slot)
 }
+
+func TestForkchoiceParentRoot(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+	root1 := [32]byte{'a'}
+	st, root, err := prepareForkchoiceState(ctx, 3, root1, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	root2 := [32]byte{'b'}
+	st, root, err = prepareForkchoiceState(ctx, 3, root2, root1, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	root, err = f.ParentRoot(root2)
+	require.NoError(t, err)
+	require.Equal(t, root1, root)
+
+	_, err = f.ParentRoot([32]byte{'c'})
+	require.ErrorIs(t, err, ErrNilNode)
+
+	zeroHash := [32]byte{}
+	root, err = f.ParentRoot(zeroHash)
+	require.NoError(t, err)
+	require.Equal(t, zeroHash, root)
+}

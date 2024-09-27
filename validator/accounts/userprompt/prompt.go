@@ -59,12 +59,12 @@ func InputDirectory(cliCtx *cli.Context, promptText string, flag *cli.StringFlag
 
 // FormatPromptError for the user.
 func FormatPromptError(err error) error {
-	switch err {
-	case promptui.ErrAbort:
+	switch {
+	case errors.Is(err, promptui.ErrAbort):
 		return errors.New("wallet creation aborted, closing")
-	case promptui.ErrInterrupt:
+	case errors.Is(err, promptui.ErrInterrupt):
 		return errors.New("keyboard interrupt, closing")
-	case promptui.ErrEOF:
+	case errors.Is(err, promptui.ErrEOF):
 		return errors.New("no input received, closing")
 	default:
 		return err

@@ -49,6 +49,7 @@ go_test(
         "mainnet_config_test.go",
         "testnet_config_test.go",
         "testnet_holesky_config_test.go",
+        "testnet_sepolia_config_test.go",
     ],
     data = glob(["*.yaml"]) + [
         "testdata/e2e_config.yaml",
@@ -57,11 +58,13 @@ go_test(
         "@consensus_spec_tests_minimal//:test_data",
         "@eth2_networks//:configs",
         "@holesky_testnet//:configs",
+        "@sepolia_testnet//:configs",
     ],
     embed = [":go_default_library"],
     gotags = ["develop"],
     tags = ["CI_race_detection"],
     deps = [
+        "//beacon-chain/state/genesis:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",

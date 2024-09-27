@@ -292,7 +292,7 @@ func TestGetValidatorCount(t *testing.T) {
 			}
 
 			chainClient := mock.NewMockChainClient(ctrl)
-			chainClient.EXPECT().ListValidators(
+			chainClient.EXPECT().Validators(
 				gomock.Any(),
 				gomock.Any(),
 			).Return(
@@ -300,7 +300,7 @@ func TestGetValidatorCount(t *testing.T) {
 				nil,
 			)
 
-			chainClient.EXPECT().GetChainHead(
+			chainClient.EXPECT().ChainHead(
 				gomock.Any(),
 				gomock.Any(),
 			).Return(

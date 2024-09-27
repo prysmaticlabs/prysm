@@ -30,7 +30,6 @@ func init() {
 
 // RunBlockProcessingTest executes "sanity/blocks" tests.
 func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
-	t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", folderPath)

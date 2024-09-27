@@ -49,10 +49,9 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.KeyFlag,
 	flags.HTTPModules,
-	flags.DisableGRPCGateway,
-	flags.GRPCGatewayHost,
-	flags.GRPCGatewayPort,
-	flags.GPRCGatewayCorsDomain,
+	flags.HTTPServerHost,
+	flags.HTTPServerPort,
+	flags.HTTPServerCorsDomain,
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
@@ -82,6 +81,8 @@ var appFlags = []cli.Flag{
 	flags.MaxBuilderConsecutiveMissedSlots,
 	flags.EngineEndpointTimeoutSeconds,
 	flags.LocalBlockValueBoost,
+	flags.MinBuilderBid,
+	flags.MinBuilderDiff,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -210,6 +211,10 @@ func before(ctx *cli.Context) error {
 
 	if err := fdlimits.SetMaxFdLimits(); err != nil {
 		return errors.Wrap(err, "failed to set max fd limits")
+	}
+
+	if err := features.ValidateNetworkFlags(ctx); err != nil {
+		return errors.Wrap(err, "provided multiple network flags")
 	}
 
 	return cmd.ValidateNoArgs(ctx)

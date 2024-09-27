@@ -24,7 +24,7 @@ type Validator struct {
 	IsPrevEpochSourceAttester bool
 	// IsPrevEpochTargetAttester is true if the validator attested previous epoch target.
 	IsPrevEpochTargetAttester bool
-	// IsHeadAttester is true if the validator attested head.
+	// IsPrevEpochHeadAttester is true if the validator attested the previous epoch head.
 	IsPrevEpochHeadAttester bool
 
 	// CurrentEpochEffectiveBalance is how much effective balance this validator has current epoch.

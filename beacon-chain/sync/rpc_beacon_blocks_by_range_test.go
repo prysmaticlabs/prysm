@@ -12,6 +12,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/pkg/errors"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	db2 "github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	db "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
@@ -432,11 +433,12 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	}
 	sendRequest := func(p1, p2 *p2ptest.TestP2P, r *Service,
 		req *ethpb.BeaconBlocksByRangeRequest, validateBlocks bool, success bool) error {
-		var wg sync.WaitGroup
-		wg.Add(1)
 		pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+		reqAnswered := false
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
-			defer wg.Done()
+			defer func() {
+				reqAnswered = true
+			}()
 			if !validateBlocks {
 				return
 			}
@@ -457,9 +459,8 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 		if err := r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream); err != nil {
 			return err
 		}
-		if util.WaitTimeout(&wg, 1*time.Second) {
-			t.Fatal("Did not receive stream within 1 sec")
-		}
+		time.Sleep(100 * time.Millisecond)
+		assert.Equal(t, reqAnswered, true)
 		return nil
 	}
 
@@ -857,7 +858,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 				if err != nil && err != io.EOF {
 					t.Fatal(err)
 				}
-				if code != 0 || err == io.EOF {
+				if code != 0 || errors.Is(err, io.EOF) {
 					break
 				}
 				blk := util.NewBeaconBlock()

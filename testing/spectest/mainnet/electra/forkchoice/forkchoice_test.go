@@ -8,6 +8,5 @@ import (
 )
 
 func TestMainnet_Electra_Forkchoice(t *testing.T) {
-	t.Skip("TODO: Electra")
 	forkchoice.Run(t, "mainnet", version.Electra)
 }

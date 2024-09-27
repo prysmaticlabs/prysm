@@ -5,12 +5,14 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -195,6 +197,52 @@ func TestReplayBlocks_ThroughFutureForkBoundaries(t *testing.T) {
 
 	// Verify state is version Electra.
 	assert.Equal(t, version.Electra, newState.Version())
+}
+
+func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	bCfg := params.BeaconConfig().Copy()
+	bCfg.ElectraForkEpoch = 1
+	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.ElectraForkVersion)] = 1
+	params.OverrideBeaconConfig(bCfg)
+
+	beaconState, _ := util.DeterministicGenesisStateElectra(t, 1)
+	require.NoError(t, beaconState.SetDepositBalanceToConsume(100))
+	amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
+	require.NoError(t, beaconState.SetPendingBalanceDeposits([]*ethpb.PendingBalanceDeposit{
+		{
+			Amount: uint64(amountAvailForProcessing) / 10,
+			Index:  primitives.ValidatorIndex(0),
+		},
+	}))
+	genesisBlock := util.NewBeaconBlockElectra()
+	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:       genesisBlock.Block.Slot,
+		ParentRoot: genesisBlock.Block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		BodyRoot:   bodyRoot[:],
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, version.Electra, beaconState.Version())
+	require.Equal(t, params.BeaconConfig().MinActivationBalance, beaconState.Balances()[0])
+	service := New(testDB.SetupDB(t), doublylinkedtree.New())
+	targetSlot := (params.BeaconConfig().SlotsPerEpoch * 2) - 1
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.ReadOnlySignedBeaconBlock{}, targetSlot)
+	require.NoError(t, err)
+
+	require.Equal(t, version.Electra, newState.Version())
+	res, err := newState.DepositBalanceToConsume()
+	require.NoError(t, err)
+	require.Equal(t, primitives.Gwei(0), res)
+
+	remaining, err := newState.PendingBalanceDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(remaining))
+
+	require.Equal(t, params.BeaconConfig().MinActivationBalance+(uint64(amountAvailForProcessing)/10), newState.Balances()[0])
 }
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {

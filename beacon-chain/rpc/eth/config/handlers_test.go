@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -176,10 +175,6 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
-	var dc [4]byte
-	copy(dc[:], []byte{'1', '1', '0', '0'})
-	config.DomainConsolidation = dc
-
 	params.OverrideBeaconConfig(config)
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/spec", nil)
@@ -193,7 +188,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 155, len(data))
+	assert.Equal(t, 154, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -489,7 +484,7 @@ func TestGetSpec(t *testing.T) {
 			case "MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT":
 				assert.Equal(t, "256000000000", v)
 			case "DATA_COLUMN_SIDECAR_SUBNET_COUNT":
-				assert.Equal(t, "32", v)
+				assert.Equal(t, "128", v)
 			case "MAX_REQUEST_DATA_COLUMN_SIDECARS":
 				assert.Equal(t, "16384", v)
 			case "MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA":
@@ -516,8 +511,6 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "86", v)
 			case "MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "87", v)
-			case "DOMAIN_CONSOLIDATION":
-				assert.Equal(t, "0x31313030", v)
 			case "MAX_ATTESTER_SLASHINGS_ELECTRA":
 				assert.Equal(t, "88", v)
 			case "MAX_ATTESTATIONS_ELECTRA":

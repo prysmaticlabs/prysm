@@ -182,7 +182,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.21.11",
+    go_version = "1.22.4",
     nogo = "@//:nogo",
 )
 
@@ -227,7 +227,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.5.0-alpha.3"
+consensus_spec_version = "v1.5.0-alpha.6"
 
 bls_test_version = "v0.1.1"
 
@@ -243,7 +243,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-+byv+GUOQytex5GgtjBGVoNDseJZbiBdAjEtlgCbjEo=",
+    integrity = "sha256-M7u/Ot/Vzorww+dFbHp0cxLyM2mezJjijCzq+LY3uvs=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -259,7 +259,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-JJUy/jT1h3kGQkinTuzL7gMOA1+qgmPgJXVrYuH63Cg=",
+    integrity = "sha256-deOSeLRsmHXvkRp8n2bs3HXdkGUJWWqu8KFM/QABbZg=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -275,7 +275,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-T2VM4Qd0SwgGnTjWxjOX297DqEsovO9Ueij1UEJy48Y=",
+    integrity = "sha256-Zz7YCf6XVf57nzSEGq9ToflJFHM0lAGwhd18l9Rf3hA=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -290,7 +290,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-OP9BCBcQ7i+93bwj7ktY8pZ5uWsGjgTe4XTp7BDhX+I=",
+    integrity = "sha256-BoXckDxXnDcEmAjg/dQgf/tLiJsb6CT0aZvmWHFijrY=",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -340,6 +340,22 @@ filegroup(
     integrity = "sha256-b7ZTT+olF+VXEJYNTV5jggNtCkt9dOejm1i2VE+zy+0=",
     strip_prefix = "holesky-874c199423ccd180607320c38cbaca05d9a1573a",
     url = "https://github.com/eth-clients/holesky/archive/874c199423ccd180607320c38cbaca05d9a1573a.tar.gz",  # 2024-06-18
+)
+
+http_archive(
+    name = "sepolia_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "metadata/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+""",
+    integrity = "sha256-cY/UgpCcYEhQf7JefD65FI8tn/A+rAvKhcm2/qiVdqY=",
+    strip_prefix = "sepolia-f2c219a93c4491cee3d90c18f2f8e82aed850eab",
+    url = "https://github.com/eth-clients/sepolia/archive/f2c219a93c4491cee3d90c18f2f8e82aed850eab.tar.gz",  # 2024-09-19
 )
 
 http_archive(

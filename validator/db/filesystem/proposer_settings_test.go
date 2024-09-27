@@ -61,7 +61,7 @@ func TestStore_ProposerSettings(t *testing.T) {
 			configuration: &Configuration{
 				ProposerSettings: &validatorpb.ProposerSettingsPayload{
 					ProposerConfig: map[string]*validatorpb.ProposerOptionPayload{
-						pubkeyString: &validatorpb.ProposerOptionPayload{
+						pubkeyString: {
 							FeeRecipient: customFeeRecipientString,
 						},
 					},
@@ -72,7 +72,7 @@ func TestStore_ProposerSettings(t *testing.T) {
 			},
 			expectedProposerSettings: &proposer.Settings{
 				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
-					pubkey: &proposer.Option{
+					pubkey: {
 						FeeRecipientConfig: &proposer.FeeRecipientConfig{
 							FeeRecipient: customFeeRecipient,
 						},

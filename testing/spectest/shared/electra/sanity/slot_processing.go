@@ -21,7 +21,6 @@ func init() {
 
 // RunSlotProcessingTests executes "sanity/slots" tests.
 func RunSlotProcessingTests(t *testing.T, config string) {
-	t.Skip("Failing until spectests are updated to v1.5.0-alpha.3")
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "electra", "sanity/slots/pyspec_tests")

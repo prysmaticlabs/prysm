@@ -7,13 +7,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/pagination"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -244,91 +243,9 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 // the most recent finalized and justified slots.
 // DEPRECATED: This endpoint is superseded by the /eth/v1/beacon API endpoint
 func (bs *Server) GetChainHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.ChainHead, error) {
-	return bs.chainHeadRetrieval(ctx)
-}
-
-// Retrieve chain head information from the DB and the current beacon state.
-func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
-	headBlock, err := bs.HeadFetcher.HeadBlock(ctx)
+	ch, err := bs.CoreService.ChainHead(ctx)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head block")
+		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "Could not retrieve chain head: %v", err.Err)
 	}
-	optimisticStatus, err := bs.OptimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get optimistic status")
-	}
-	if err := consensusblocks.BeaconBlockIsNil(headBlock); err != nil {
-		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
-	}
-	headBlockRoot, err := headBlock.Block().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
-	}
-
-	validGenesis := false
-	validateCP := func(cp *ethpb.Checkpoint, name string) error {
-		if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0 {
-			if validGenesis {
-				return nil
-			}
-			// Retrieve genesis block in the event we have genesis checkpoints.
-			genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-			if err != nil || consensusblocks.BeaconBlockIsNil(genBlock) != nil {
-				return status.Error(codes.Internal, "Could not get genesis block")
-			}
-			validGenesis = true
-			return nil
-		}
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
-		if err != nil {
-			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
-		}
-		if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
-		}
-		return nil
-	}
-
-	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
-	if err := validateCP(finalizedCheckpoint, "finalized"); err != nil {
-		return nil, err
-	}
-
-	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
-	if err := validateCP(justifiedCheckpoint, "justified"); err != nil {
-		return nil, err
-	}
-
-	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
-	if err := validateCP(prevJustifiedCheckpoint, "prev justified"); err != nil {
-		return nil, err
-	}
-
-	fSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get epoch start slot from finalized checkpoint epoch")
-	}
-	jSlot, err := slots.EpochStart(justifiedCheckpoint.Epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get epoch start slot from justified checkpoint epoch")
-	}
-	pjSlot, err := slots.EpochStart(prevJustifiedCheckpoint.Epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get epoch start slot from prev justified checkpoint epoch")
-	}
-	return &ethpb.ChainHead{
-		HeadSlot:                   headBlock.Block().Slot(),
-		HeadEpoch:                  slots.ToEpoch(headBlock.Block().Slot()),
-		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedSlot:              fSlot,
-		FinalizedEpoch:             finalizedCheckpoint.Epoch,
-		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		JustifiedSlot:              jSlot,
-		JustifiedEpoch:             justifiedCheckpoint.Epoch,
-		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      pjSlot,
-		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
-		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-		OptimisticStatus:           optimisticStatus,
-	}, nil
+	return ch, nil
 }
