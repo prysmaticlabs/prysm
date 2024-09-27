@@ -1,6 +1,9 @@
 package eth
 
-import "github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+import (
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+)
 
 // Copy --
 func (sigBlock *SignedBeaconBlock) Copy() *SignedBeaconBlock {
@@ -310,6 +313,7 @@ func (body *BlindedBeaconBlockBodyElectra) Copy() *BlindedBeaconBlockBodyElectra
 		ExecutionPayloadHeader: body.ExecutionPayloadHeader.Copy(),
 		BlsToExecutionChanges:  CopySlice(body.BlsToExecutionChanges),
 		BlobKzgCommitments:     CopyBlobKZGs(body.BlobKzgCommitments),
+		ExecutionRequests:      CopyExecutionRequests(body.ExecutionRequests),
 	}
 }
 
@@ -360,6 +364,31 @@ func (body *BlindedBeaconBlockBodyBellatrix) Copy() *BlindedBeaconBlockBodyBella
 // CopyBlobKZGs copies the provided blob kzgs object.
 func CopyBlobKZGs(b [][]byte) [][]byte {
 	return bytesutil.SafeCopy2dBytes(b)
+}
+
+// CopyExecutionRequests copies the provided execution requests.
+func CopyExecutionRequests(e *enginev1.ExecutionRequests) *enginev1.ExecutionRequests {
+	if e == nil {
+		return nil
+	}
+	dr := make([]*enginev1.DepositRequest, len(e.Deposits))
+	for i, d := range e.Deposits {
+		dr[i] = d.Copy()
+	}
+	wr := make([]*enginev1.WithdrawalRequest, len(e.Withdrawals))
+	for i, w := range e.Withdrawals {
+		wr[i] = w.Copy()
+	}
+	cr := make([]*enginev1.ConsolidationRequest, len(e.Consolidations))
+	for i, c := range e.Consolidations {
+		cr[i] = c.Copy()
+	}
+
+	return &enginev1.ExecutionRequests{
+		Deposits:       dr,
+		Withdrawals:    wr,
+		Consolidations: cr,
+	}
 }
 
 // Copy --
@@ -451,6 +480,7 @@ func (body *BeaconBlockBodyElectra) Copy() *BeaconBlockBodyElectra {
 		ExecutionPayload:      body.ExecutionPayload.Copy(),
 		BlsToExecutionChanges: CopySlice(body.BlsToExecutionChanges),
 		BlobKzgCommitments:    CopyBlobKZGs(body.BlobKzgCommitments),
+		ExecutionRequests:     CopyExecutionRequests(body.ExecutionRequests),
 	}
 }
 
