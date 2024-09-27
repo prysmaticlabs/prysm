@@ -85,13 +85,17 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port), PingInterval: testPingInterval},
+		cfg:                   &Config{UDPPort: uint(port), PingInterval: testPingInterval, DisableLivenessCheck: true},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
 	defer bootListener.Close()
+
+	// Allow bootnode's table to have its initial refresh. This allows
+	// inbound nodes to be added in.
+	time.Sleep(5 * time.Second)
 
 	bootNode := bootListener.Self()
 
@@ -102,10 +106,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 			Discv5BootStrapAddrs: []string{bootNode.String()},
 			UDPPort:              uint(port),
 			PingInterval:         testPingInterval,
-		}
-		// Add another node to allow for more cross peer discovery.
-		if len(listeners) > 0 {
-			cfg.Discv5BootStrapAddrs = append(cfg.Discv5BootStrapAddrs, listeners[len(listeners)-1].Self().String())
+			DisableLivenessCheck: true,
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{

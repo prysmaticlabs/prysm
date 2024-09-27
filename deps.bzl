@@ -295,8 +295,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_bits_and_blooms_bitset",
         importpath = "github.com/bits-and-blooms/bitset",
-        sum = "h1:RMyy2mBBShArUAhfVRZJ2xyBO58KCBCtZFShw3umo6k=",
-        version = "v1.11.0",
+        sum = "h1:bAQ9OPNFYbGHV6Nez0tmNI0RiEu7/hxlYJRUA0wFAVE=",
+        version = "v1.13.0",
     )
     go_repository(
         name = "com_github_bradfitz_go_smtpd",
@@ -488,8 +488,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_cockroachdb_pebble",
         importpath = "github.com/cockroachdb/pebble",
-        sum = "h1:XnKU22oiCLy2Xn8vp1re67cXg4SAasg/WDt1NtcRFaw=",
-        version = "v1.1.1",
+        sum = "h1:CUh2IPtR4swHlEj48Rhfzw6l/d0qA31fItcIszQVIsA=",
+        version = "v1.1.2",
     )
     go_repository(
         name = "com_github_cockroachdb_redact",
@@ -778,14 +778,15 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
-        sum = "h1:NgOWvXS+lauK+zFukEvi85UmmsS/OkV0N23UZ1VTIig=",
-        version = "v1.14.8",
+        replace = "github.com/fjl/go-ethereum",
+        sum = "h1:YJ2iHhMN7b/YGrWebITsPiduDfXv/6h225UFe3szB8w=",
+        version = "v0.6.9-0.20240926130606-32ae7902e5f3",
     )
     go_repository(
         name = "com_github_ethereum_go_verkle",
         importpath = "github.com/ethereum/go-verkle",
-        sum = "h1:KrE8I4reeVvf7C1tm8elRjj4BdscTYzz/WAbYyf/JI4=",
-        version = "v0.1.1-0.20240306133620-7d920df305f0",
+        sum = "h1:8NfxH2iXvJ60YRB8ChToFTUzl8awsc3cJ8CbLjGIl/A=",
+        version = "v0.1.1-0.20240829091221-dffa7562dbe9",
     )
     go_repository(
         name = "com_github_evanphx_json_patch",

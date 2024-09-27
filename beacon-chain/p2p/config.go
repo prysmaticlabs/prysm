@@ -17,6 +17,7 @@ type Config struct {
 	NoDiscovery          bool
 	EnableUPnP           bool
 	StaticPeerID         bool
+	DisableLivenessCheck bool
 	StaticPeers          []string
 	Discv5BootStrapAddrs []string
 	RelayNodeAddr        string
