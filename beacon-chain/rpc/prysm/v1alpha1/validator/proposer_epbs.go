@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -51,10 +50,16 @@ func (vs *Server) GetExecutionPayloadEnvelope(ctx context.Context, req *eth.Payl
 		return nil, status.Errorf(codes.InvalidArgument, "current slot mismatch: expected %d, got %d", vs.TimeFetcher.CurrentSlot(), req.Slot)
 	}
 
-	_, r := vs.ForkchoiceFetcher.HighestReceivedBlockSlotRoot()
-	payloadStatus := vs.ForkchoiceFetcher.GetPTCVote(r)
-
-	if payloadStatus == primitives.PAYLOAD_WITHHELD {
+	s, r := vs.ForkchoiceFetcher.HighestReceivedBlockSlotRoot()
+	if s != req.Slot {
+		return nil, status.Error(codes.NotFound, "No block exists in current slot")
+	}
+	cachedBlockRoot := [32]byte(vs.payloadEnvelope.BeaconBlockRoot)
+	if cachedBlockRoot == r {
+		return nil, status.Error(codes.NotFound, "Proposer did not include cached payload")
+	}
+	currentBlockWeight, err := vs.ForkchoiceFetcher.Weight(cachedBlockRoot)
+	if currentBlockWeight > 0 { // TODO: need some threshold
 		return &enginev1.ExecutionPayloadEnvelope{
 			Payload:            nil, // TODO: I'm not sure if I need to pass in and hydrate a empty payload here.
 			BuilderIndex:       req.ProposerIndex,
@@ -65,7 +70,11 @@ func (vs *Server) GetExecutionPayloadEnvelope(ctx context.Context, req *eth.Payl
 		}, nil
 	}
 
-	// TODO: calculate state root
+	env, err := blocks.WrappedROExecutionPayloadEnvelope(vs.payloadEnvelope)
+	if err != nil {
+		status.Errorf(codes.Internal, "failed to convert to read only payload envelope: %v", err)
+	}
+	vs.computePostPayloadStateRoot(ctx, env)
 	var stateRoot []byte
 	vs.payloadEnvelope.StateRoot = stateRoot
 
@@ -141,8 +150,8 @@ func (vs *Server) GetLocalHeader(ctx context.Context, req *eth.HeaderRequest) (*
 	if params.BeaconConfig().EPBSForkEpoch > epoch {
 		return nil, status.Errorf(codes.FailedPrecondition, "EPBS fork has not occurred yet")
 	}
-	if slot != vs.TimeFetcher.CurrentSlot() {
-		return nil, status.Errorf(codes.InvalidArgument, "current slot mismatch: expected %d, got %d", vs.TimeFetcher.CurrentSlot(), slot)
+	if slot != vs.TimeFetcher.CurrentSlot() || slot != vs.TimeFetcher.CurrentSlot()+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "slot mismatch: expected %d, got %d", vs.TimeFetcher.CurrentSlot(), slot)
 	}
 
 	st, parentRoot, err := vs.getParentState(ctx, slot)

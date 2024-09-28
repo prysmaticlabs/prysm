@@ -33,6 +33,8 @@ const (
 	RoleSyncCommitteeAggregator
 	// RolePayloadTimelinessCommittee means the validator should submit a payload attestation message.
 	RolePayloadTimelinessCommittee
+	// RoleBlockBuilder means the builder should be getting the header and submitting the execution payload if its part of the block.
+	RoleBlockBuilder
 )
 
 // Validator interface defines the primary methods of a validator client.
@@ -73,6 +75,7 @@ type Validator interface {
 	HealthTracker() *beacon.NodeHealthTracker
 	Host() string
 	ChangeHost()
+	SubmitBid(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte)
 }
 
 // SigningFunc interface defines a type for the function that signs a message

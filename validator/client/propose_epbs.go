@@ -18,13 +18,13 @@ func (v *validator) SubmitHeader(ctx context.Context, slot primitives.Slot, pubK
 		return nil
 	}
 
-	proposerIndex, ok := v.pubkeyToValidatorIndex[pubKey]
+	status, ok := v.pubkeyToStatus[pubKey]
 	if !ok {
 		return fmt.Errorf("validator index not found for pubkey %v", pubKey)
 	}
 	header, err := v.validatorClient.GetLocalHeader(ctx, &ethpb.HeaderRequest{
 		Slot:          slot,
-		ProposerIndex: proposerIndex,
+		ProposerIndex: status.index,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to get local header")
@@ -51,13 +51,13 @@ func (v *validator) SubmitExecutionPayloadEnvelope(ctx context.Context, slot pri
 		return nil
 	}
 
-	proposerIndex, ok := v.pubkeyToValidatorIndex[pubKey]
+	status, ok := v.pubkeyToStatus[pubKey]
 	if !ok {
 		return fmt.Errorf("validator index not found for pubkey %v", pubKey)
 	}
 	env, err := v.validatorClient.GetExecutionPayloadEnvelope(ctx, &ethpb.PayloadEnvelopeRequest{
 		Slot:          slot,
-		ProposerIndex: proposerIndex,
+		ProposerIndex: status.index,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to get execution payload envelope")

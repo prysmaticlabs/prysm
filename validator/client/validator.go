@@ -65,6 +65,10 @@ var (
 	msgNoKeysFetched     = "No validating keys fetched. Waiting for keys..."
 )
 
+var (
+	builderPublicKey [fieldparams.BLSPubkeyLength]byte
+)
+
 type validator struct {
 	duties                             *ethpb.DutiesResponse
 	ticker                             slots.Ticker
@@ -797,6 +801,14 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 			}
 
 			rolesAt[bytesutil.ToBytes48(valPubkey[:])] = append(rolesAt[bytesutil.ToBytes48(valPubkey[:])], iface.RoleSyncCommitteeAggregator)
+		}
+	}
+
+	if features.Get().Builder {
+		if builderPublicKey == [fieldparams.BLSPubkeyLength]byte{} {
+			log.Warn("Builder enabled but no specified builder address, skipping builder routine")
+		} else {
+			rolesAt[builderPublicKey] = append(rolesAt[builderPublicKey], iface.RoleBlockBuilder)
 		}
 	}
 

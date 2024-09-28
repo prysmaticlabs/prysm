@@ -78,6 +78,8 @@ type Flags struct {
 	SaveInvalidBlock bool // SaveInvalidBlock saves invalid block to temp.
 	SaveInvalidBlob  bool // SaveInvalidBlob saves invalid blob to temp.
 
+	Builder bool // Builder simulates builder behavior for epbs for both prysm node and validator client.
+
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration

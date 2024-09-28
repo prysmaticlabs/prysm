@@ -51,6 +51,7 @@ type ForkchoiceFetcher interface {
 	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
 	GetPTCVote(root [32]byte) primitives.PTCStatus
+	Weight(root [32]byte) (uint64, error)
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
