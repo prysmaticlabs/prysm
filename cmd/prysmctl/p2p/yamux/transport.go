@@ -17,7 +17,7 @@ func init() {
 
 var _ Multiplexer = &Transport{}
 
-func (t *Transport) NewConn(nc net.Conn, isServer bool, scope PeerScope) (MuxedConn, error) {
+func (t *Transport) NewConn(nc net.Conn, isServer bool, scope PeerScope) (*Session, error) {
 	var newSpan func() (MemoryManager, error)
 	if scope != nil {
 		newSpan = func() (MemoryManager, error) { return scope.BeginSpan() }

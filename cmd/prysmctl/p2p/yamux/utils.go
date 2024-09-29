@@ -22,7 +22,7 @@ const (
 
 const (
 	initialStreamWindow = 256 * 1024
-	// maxStreamWindow     = 16 * 1024 * 1024
+	maxStreamWindow     = 16 * 1024 * 1024
 )
 
 const (
@@ -49,8 +49,6 @@ const (
 	protoVersion uint8 = 0
 )
 
-type header [headerSize]byte
-
 type segmentedBuffer struct {
 	cap     uint32
 	len     uint32
@@ -58,31 +56,6 @@ type segmentedBuffer struct {
 	readPos int
 	bPos    int
 	b       [][]byte
-}
-
-func (h header) Version() uint8 {
-	return h[0]
-}
-
-func (h header) MsgType() uint8 {
-	return h[1]
-}
-
-func (h header) Flags() uint16 {
-	return binary.BigEndian.Uint16(h[2:4])
-}
-
-func (h header) StreamID() uint32 {
-	return binary.BigEndian.Uint32(h[4:8])
-}
-
-func (h header) Length() uint32 {
-	return binary.BigEndian.Uint32(h[8:12])
-}
-
-func (h header) String() string {
-	return fmt.Sprintf("Vsn:%d Type:%d Flags:%d StreamID:%d Length:%d",
-		h.Version(), h.MsgType(), h.Flags(), h.StreamID(), h.Length())
 }
 
 func encode(msgType uint8, flags uint16, streamID uint32, length uint32) header {

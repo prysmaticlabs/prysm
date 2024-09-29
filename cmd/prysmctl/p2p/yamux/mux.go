@@ -1,32 +1,8 @@
 package yamux
 
 import (
-	"context"
-	"io"
 	"net"
-	"time"
 )
-
-type peerID string
-type conn Session
-
-type MuxedConn interface {
-	io.Closer
-	IsClosed() bool
-	OpenStream(context.Context) (MuxedStream, error)
-	AcceptStream() (MuxedStream, error)
-}
-type MuxedStream interface {
-	io.Reader
-	io.Writer
-	io.Closer
-	CloseWrite() error
-	CloseRead() error
-	Reset() error
-	SetDeadline(time.Time) error
-	SetReadDeadline(time.Time) error
-	SetWriteDeadline(time.Time) error
-}
 
 type ResourceScopeSpan interface {
 	ResourceScope
@@ -40,15 +16,16 @@ type ResourceScope interface {
 	BeginSpan() (ResourceScopeSpan, error)
 }
 
+// Memory manager
 type PeerScope interface {
 	ResourceScope
-	Peer() peerID
+	Peer() string
 }
 
 type Multiplexer interface {
-	NewConn(c net.Conn, isServer bool, scope PeerScope) (MuxedConn, error)
+	NewConn(c net.Conn, isServer bool, scope PeerScope) (*Session, error)
 }
 
-func NewMuxedConn(m *Session) MuxedConn {
-	return (*conn)(m)
+func NewMuxedConn(m *Session) *Session {
+	return m
 }

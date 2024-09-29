@@ -7,8 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/libp2p/go-libp2p/core/network"
+	// "github.com/libp2p/go-libp2p/core/network"
 )
 
 const (
@@ -28,8 +27,6 @@ const (
 type streamState int
 
 type halfStreamState int
-
-var _ network.MuxedStream = &Stream{}
 
 type Stream struct {
 	sendWindow uint32
@@ -91,9 +88,9 @@ func (s *Stream) forceClose() {
 	s.writeDeadline.set(time.Time{})
 }
 
+// increments how much data can be sent on the stream
 func (s *Stream) incrSendWindow(hdr header, flags uint16) {
 	s.processFlags(flags)
-	// Increase window, unblock a sender
 	atomic.AddUint32(&s.sendWindow, hdr.Length())
 	asyncNotify(s.sendNotifyCh)
 }
@@ -107,12 +104,11 @@ func (s *Stream) readData(hdr header, flags uint16, conn io.Reader) error {
 		return nil
 	}
 
-	// Copy into buffer
 	if err := s.recvBuf.Append(conn, length); err != nil {
 		s.session.logger.Printf("[ERR] yamux: Failed to read stream data on stream %d: %v", s.id, err)
 		return err
 	}
-	// Unblock the reader
+
 	asyncNotify(s.recvNotifyCh)
 	return nil
 }
@@ -229,12 +225,12 @@ func (s *Stream) Close() error {
 	return s.CloseWrite()
 }
 
+// ensure no more data can be read from the stream
 func (s *Stream) CloseRead() error {
 	cleanup := false
 	s.stateLock.Lock()
 	switch s.readState {
 	case halfOpen:
-		// Open for reading -> close read
 	case halfClosed, halfReset:
 		s.stateLock.Unlock()
 		return nil
@@ -249,8 +245,6 @@ func (s *Stream) CloseRead() error {
 	s.stateLock.Unlock()
 	s.notifyWaiting()
 	if cleanup {
-		// we're fully closed, might as well be nice to the user and
-		// free everything early.
 		s.cleanup()
 	}
 	return nil
@@ -260,7 +254,6 @@ func (s *Stream) CloseWrite() error {
 	s.stateLock.Lock()
 	switch s.writeState {
 	case halfOpen:
-		// Open for writing -> close write
 	case halfClosed:
 		s.stateLock.Unlock()
 		return nil
@@ -280,8 +273,6 @@ func (s *Stream) CloseWrite() error {
 
 	err := s.sendClose()
 	if cleanup {
-		// we're fully closed, might as well be nice to the user and
-		// free everything early.
 		s.cleanup()
 	}
 	return err
@@ -302,16 +293,12 @@ func (s *Stream) Reset() error {
 		s.stateLock.Unlock()
 		return nil
 	case streamInit:
-		// we haven't sent anything, so we don't need to send a reset.
 	case streamSYNSent, streamSYNReceived, streamEstablished:
 		sendReset = true
 	default:
 		panic("unhandled state")
 	}
 
-	// at least one direction is open, we need to reset.
-
-	// If we've already sent/received an EOF, no need to reset that side.
 	if s.writeState == halfOpen {
 		s.writeState = halfReset
 	}
@@ -371,33 +358,28 @@ START:
 
 	switch state {
 	case halfOpen:
-		// Open -> read
 	case halfClosed:
 		empty := s.recvBuf.Len() == 0
 		if empty {
 			return 0, io.EOF
 		}
-		// Closed, but we have data pending -> read.
 	case halfReset:
-		return 0, fmt.Errorf("stream reset")
+		return 0, fmt.Errorf("STREAMERR: stream reset")
 	default:
 		panic("unknown state")
 	}
 
-	// If there is no data available, block
 	if s.recvBuf.Len() == 0 {
 		select {
 		case <-s.recvNotifyCh:
 			goto START
 		case <-s.readDeadline.wait():
-			return 0, fmt.Errorf("timeout")
+			return 0, fmt.Errorf("SESSIONERR: timeout")
 		}
 	}
 
-	// Read any bytes
 	n, _ = s.recvBuf.Read(b)
 
-	// Send a window update potentially
 	err = s.sendWindowUpdate(s.readDeadline.wait())
 	return n, err
 }
@@ -414,8 +396,6 @@ func (s *Stream) Write(b []byte) (int, error) {
 	return total, nil
 }
 
-// write is used to write to the stream, may return on
-// a short write.
 func (s *Stream) write(b []byte) (n int, err error) {
 	var flags uint16
 	var max uint32
@@ -428,17 +408,16 @@ START:
 
 	switch state {
 	case halfOpen:
-		// Open for writing -> write
 	case halfClosed:
-		return 0, fmt.Errorf("stream closed for writing")
+		return 0, fmt.Errorf("STREAMERR: stream closed for writing")
 	case halfReset:
-		return 0, fmt.Errorf("stream reset")
+		return 0, fmt.Errorf("STREAMERR: stream reset")
 	default:
 		panic("unknown state")
 	}
 
-	// If there is no data available, block
 	window := atomic.LoadUint32(&s.sendWindow)
+	//send window is full
 	if window == 0 {
 		select {
 		case <-s.sendNotifyCh:
@@ -448,21 +427,15 @@ START:
 		}
 	}
 
-	// Determine the flags if any
 	flags = s.sendFlags()
 
-	// Send up to min(message, window
 	max = min(window, s.session.config.MaxMessageSize-headerSize, uint32(len(b)))
-
-	// Send the header
 	hdr = encode(typeData, flags, s.id, max)
 	if err = s.session.sendMsg(hdr, b[:max], s.writeDeadline.wait()); err != nil {
 		return 0, err
 	}
 
-	// Reduce our send window
 	atomic.AddUint32(&s.sendWindow, ^uint32(max-1))
 
-	// Unlock
 	return int(max), err
 }
