@@ -232,9 +232,9 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 	consensusAtts := blk.Block().Body().Attestations()
 
 	var atts = make([]interface{}, len(consensusAtts))
-	v := version.String(blk.Block().Version())
+	v := blk.Block().Version()
 
-	if v >= version.String(version.Electra) {
+	if v >= version.Electra {
 		for i, att := range consensusAtts {
 			a, ok := att.(*eth.AttestationElectra)
 			if ok {
@@ -257,7 +257,7 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 	}
 
 	resp := &structs.GetBlockAttestationsV2Response{
-		Version:             v,
+		Version:             version.String(v),
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
 		Data:                atts,
