@@ -78,23 +78,19 @@ func ProcessOperations(
 		return nil, errors.Wrap(err, "could not process bls-to-execution changes")
 	}
 	// new in electra
-	e, err := bb.Execution()
+	requests, err := bb.ExecutionRequests()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution data from block")
+		return nil, errors.Wrap(err, "could not get execution requests")
 	}
-	exe, ok := e.(interfaces.ExecutionDataElectra)
-	if !ok {
-		return nil, errors.New("could not cast execution data to electra execution data")
-	}
-	st, err = ProcessDepositRequests(ctx, st, exe.DepositRequests())
+	st, err = ProcessDepositRequests(ctx, st, requests.Deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit receipts")
 	}
-	st, err = ProcessWithdrawalRequests(ctx, st, exe.WithdrawalRequests())
+	st, err = ProcessWithdrawalRequests(ctx, st, requests.Withdrawals)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process execution layer withdrawal requests")
 	}
-	if err := ProcessConsolidationRequests(ctx, st, exe.ConsolidationRequests()); err != nil {
+	if err := ProcessConsolidationRequests(ctx, st, requests.Consolidations); err != nil {
 		return nil, fmt.Errorf("could not process consolidation requests: %w", err)
 	}
 	return st, nil

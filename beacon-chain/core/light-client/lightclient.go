@@ -328,7 +328,7 @@ func NewLightClientUpdateFromBeaconState(
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get finalized header root")
 			}
-			switch block.Block().Version() {
+			switch finalizedBlock.Block().Version() {
 			case version.Altair, version.Bellatrix:
 				result.FinalizedHeader = &ethpbv2.LightClientHeaderContainer{
 					Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
