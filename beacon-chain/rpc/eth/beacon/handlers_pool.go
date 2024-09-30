@@ -503,7 +503,7 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 
 	// Retrieve the slashings based on the version
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	if v == version.String(version.Electra) {
+	if v >= version.String(version.Electra) {
 		// Handle Electra version
 		ss := make([]*eth.AttesterSlashingElectra, 0, len(sourceSlashings))
 		for _, slashing := range sourceSlashings {

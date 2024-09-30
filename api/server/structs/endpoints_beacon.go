@@ -174,7 +174,7 @@ type GetAttesterSlashingsResponse struct {
 
 type GetAttesterSlashingsV2Response struct {
 	Version string      `json:"version"`
-	Data    interface{} `json:"data"`
+	Data    interface{} `json:"data"` // Accepts both `[]*AttesterSlashing` and `[]*AttesterSlashingElectra` types
 }
 
 type GetProposerSlashingsResponse struct {
