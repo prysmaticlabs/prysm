@@ -16,6 +16,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb.
 - GetBeaconStateV2: add Electra case.
 - Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
+- Tests to ensure sepolia config matches the official upstream yaml
 - Added GetBlockAttestationsV2 endpoint.
 
 ### Changed
@@ -41,6 +42,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 - Refactored light client code to make it more readable and make future PRs easier.
 - Updated Libp2p Dependencies to allow prysm to use gossipsub v1.2 .
+- Updated Sepolia bootnodes.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
