@@ -137,7 +137,7 @@ type GetBlockAttestationsV2Response struct {
 	Version             string      `json:"version"`
 	ExecutionOptimistic bool        `json:"execution_optimistic"`
 	Finalized           bool        `json:"finalized"`
-	Data                interface{} `json:"data"`
+	Data                interface{} `json:"data"` // Accepts both `Attestation` and `AttestationElectra` types
 }
 
 type GetStateRootResponse struct {

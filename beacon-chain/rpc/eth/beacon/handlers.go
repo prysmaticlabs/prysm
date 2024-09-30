@@ -226,12 +226,15 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 	defer span.End()
 
 	blk, isOptimistic, root := s.blockData(ctx, w, r)
+	if blk == nil {
+		return
+	}
 	consensusAtts := blk.Block().Body().Attestations()
 
 	var atts = make([]interface{}, len(consensusAtts))
 	v := version.String(blk.Block().Version())
 
-	if v == version.String(version.Electra) {
+	if v >= version.String(version.Electra) {
 		for i, att := range consensusAtts {
 			a, ok := att.(*eth.AttestationElectra)
 			if ok {
