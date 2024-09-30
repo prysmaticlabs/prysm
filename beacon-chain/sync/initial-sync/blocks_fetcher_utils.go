@@ -359,9 +359,12 @@ func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch p
 		cp := f.chain.FinalizedCheckpt()
 		headEpoch = cp.Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	} else {
-		headEpoch = slots.ToEpoch(f.chain.HeadSlot())
-		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+
+		return headEpoch, targetEpoch, peers
 	}
+
+	headEpoch = slots.ToEpoch(f.chain.HeadSlot())
+	targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+
 	return headEpoch, targetEpoch, peers
 }
