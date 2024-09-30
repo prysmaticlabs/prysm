@@ -259,6 +259,9 @@ func (s *Service) ForkchoiceUpdated(
 
 func getPayloadMethodAndMessage(slot primitives.Slot) (string, proto.Message) {
 	pe := slots.ToEpoch(slot)
+	if pe >= params.BeaconConfig().ElectraForkEpoch {
+		return GetPayloadMethodV4, &pb.ExecutionEnvelopeElectra{}
+	}
 	if pe >= params.BeaconConfig().DenebForkEpoch {
 		return GetPayloadMethodV3, &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
 	}
