@@ -14,6 +14,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
 - Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
+- GetBeaconStateV2: add Electra case.
+- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
+- Tests to ensure sepolia config matches the official upstream yaml
 
 ### Changed
 
@@ -38,6 +41,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated k8s-io/client-go to v0.30.4 and k8s-io/apimachinery to v0.30.4
 - Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 - Refactored light client code to make it more readable and make future PRs easier.
+- Updated Libp2p Dependencies to allow prysm to use gossipsub v1.2 .
+- Updated Sepolia bootnodes.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
@@ -59,9 +64,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - validator registration log changed to debug, and the frequency of validator registration calls are reduced
 - Core: Fix process effective balance update to safe copy validator for Electra.
 - `== nil` checks before calling `IsNil()` on interfaces to prevent panics.
-- Core: Fixed slash processing causing extra hashing
-- Core: Fixed extra allocations when processing slashings
+- Core: Fixed slash processing causing extra hashing.
+- Core: Fixed extra allocations when processing slashings.
 - remove unneeded container in blob sidecar ssz response
+- Light client support: create finalized header based on finalizedBlock's version, not attestedBlock.
+- Testing: added custom matcher for better push settings testing.
 
 ### Security
 
@@ -2674,7 +2681,7 @@ on your validators.
 **Beacon chain node**
 
 | Metric                                           | Description                                                                                           | References |
-|--------------------------------------------------|-------------------------------------------------------------------------------------------------------|------------|
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ---------- |
 | `p2p_message_ignored_validation_total`           | Count of messages that were ignored in validation                                                     |            |
 | `beacon_current_active_validators`               | Current total active validators                                                                       |            |
 | `beacon_processed_deposits_total`                | Total number of deposits processed                                                                    |            |
@@ -2725,9 +2732,9 @@ on your validators.
 #### Changed Metrics
 
 **Beacon chain node**
-| Metric | Old Name | Description | References |
-|-----------------------|----------------------|------------------------------------------------------|------------|
-| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg | |
+| Metric                | Old Name             | Description                                          | References |
+| --------------------- | -------------------- | ---------------------------------------------------- | ---------- |
+| `beacon_reorgs_total` | `beacon_reorg_total` | Count the number of times a beacon chain has a reorg |            |
 
 ### Deprecated
 
