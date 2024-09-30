@@ -102,9 +102,30 @@ func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Reques
 	if match == nil {
 		return
 	}
-	response := &structs.AggregateAttestationV2Response{
+	resp := &structs.AggregateAttestationV2Response{
 		Version: version.String(match.Version()),
-		Data: &structs.Attestation{
+	}
+	if match.Version() >= version.Electra {
+		resp.Data = &structs.AttestationElectra{
+			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
+			Data: &structs.AttestationData{
+				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
+				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
+				Source: &structs.Checkpoint{
+					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Source.Root),
+				},
+				Target: &structs.Checkpoint{
+					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
+					Root:  hexutil.Encode(match.GetData().Target.Root),
+				},
+			},
+			Signature:     hexutil.Encode(match.GetSignature()),
+			CommitteeBits: hexutil.Encode(match.CommitteeBitsVal().Bytes()),
+		}
+	} else {
+		resp.Data = &structs.Attestation{
 			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
 			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
@@ -120,8 +141,9 @@ func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Reques
 				},
 			},
 			Signature: hexutil.Encode(match.GetSignature()),
-		}}
-	httputil.WriteJson(w, response)
+		}
+	}
+	httputil.WriteJson(w, resp)
 }
 
 func (s *Server) aggregateAttestation(w http.ResponseWriter, slot, index uint64, attDataRoot []byte) ethpbalpha.Att {

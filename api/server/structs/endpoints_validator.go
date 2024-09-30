@@ -11,8 +11,8 @@ type AggregateAttestationResponse struct {
 }
 
 type AggregateAttestationV2Response struct {
-	Version string       `json:"version"`
-	Data    *Attestation `json:"data"`
+	Version string      `json:"version"`
+	Data    interface{} `json:"data"`
 }
 
 type SubmitContributionAndProofsRequest struct {
