@@ -498,12 +498,12 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	v := version.String(headState.Version())
-	resp := &structs.GetAttesterSlashingsV2Response{Version: v}
+	v := headState.Version()
+	resp := &structs.GetAttesterSlashingsV2Response{Version: version.String(v)}
 
 	// Retrieve the slashings based on the version
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	if v >= version.String(version.Electra) {
+	if v >= version.Electra {
 		// Handle Electra version
 		ss := make([]*eth.AttesterSlashingElectra, 0, len(sourceSlashings))
 		for _, slashing := range sourceSlashings {
