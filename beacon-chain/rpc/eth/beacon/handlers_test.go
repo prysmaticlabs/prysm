@@ -531,26 +531,85 @@ func TestGetBlockAttestations(t *testing.T) {
 			require.NoError(t, err)
 		}
 		assert.DeepEqual(t, b.Block.Body.Attestations, atts)
+	})
+	t.Run("okV2", func(t *testing.T) {
+		b := util.NewBeaconBlockElectra()
+		b.Block.Body.Attestations = []*eth.AttestationElectra{
+			{
+				AggregationBits: bitfield.Bitlist{0x00},
+				Data: &eth.AttestationData{
+					Slot:            123,
+					CommitteeIndex:  123,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32),
+					Source: &eth.Checkpoint{
+						Epoch: 123,
+						Root:  bytesutil.PadTo([]byte("root1"), 32),
+					},
+					Target: &eth.Checkpoint{
+						Epoch: 123,
+						Root:  bytesutil.PadTo([]byte("root1"), 32),
+					},
+				},
+				Signature:     bytesutil.PadTo([]byte("sig1"), 96),
+				CommitteeBits: primitives.NewAttestationCommitteeBits(),
+			},
+			{
+				AggregationBits: bitfield.Bitlist{0x01},
+				Data: &eth.AttestationData{
+					Slot:            456,
+					CommitteeIndex:  456,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32),
+					Source: &eth.Checkpoint{
+						Epoch: 456,
+						Root:  bytesutil.PadTo([]byte("root2"), 32),
+					},
+					Target: &eth.Checkpoint{
+						Epoch: 456,
+						Root:  bytesutil.PadTo([]byte("root2"), 32),
+					},
+				},
+				Signature:     bytesutil.PadTo([]byte("sig2"), 96),
+				CommitteeBits: primitives.NewAttestationCommitteeBits(),
+			},
+		}
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
+		mockChainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		s := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               mockBlockFetcher,
+		}
 
-		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
 		request.SetPathValue("block_id", "head")
-		writer = httptest.NewRecorder()
+		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
 		s.GetBlockAttestationsV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp2 := &structs.GetBlockAttestationsV2Response{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
-		dataSlice, ok := resp2.Data.([]interface{})
-		assert.Equal(t, true, ok)
-		require.Equal(t, len(b.Block.Body.Attestations), len(dataSlice))
-		atts = make([]*eth.Attestation, len(b.Block.Body.Attestations))
-		for i, a := range resp.Data {
-			atts[i], err = a.ToConsensus()
+		resp := &structs.GetBlockAttestationsV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+		// Manually unmarshal the data into the expected type
+		data, ok := resp.Data.([]interface{})
+		require.Equal(t, true, ok)
+
+		atts2 := make([]*eth.AttestationElectra, len(b.Block.Body.Attestations))
+		for i, item := range data {
+			itemBytes, err := json.Marshal(item)
+			require.NoError(t, err)
+
+			var attElectra structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(itemBytes, &attElectra))
+			atts2[i], err = attElectra.ToConsensus()
 			require.NoError(t, err)
 		}
-		assert.DeepEqual(t, b.Block.Body.Attestations, atts)
-		assert.Equal(t, "phase0", resp2.Version)
+		assert.DeepEqual(t, b.Block.Body.Attestations, atts2)
+		assert.Equal(t, "electra", resp.Version)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		b := util.NewBeaconBlockBellatrix()
