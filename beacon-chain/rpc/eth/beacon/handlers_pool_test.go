@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	blockchainmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
@@ -37,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -1224,6 +1226,99 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	writer.Body = &bytes.Buffer{}
 
 	s.SubmitAttesterSlashing(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, slashing, pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
+}
+
+func TestSubmitAttesterSlashingV2_Ok(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	_, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &ethpbv1alpha1.Validator{
+		PublicKey: keys[0].PublicKey().Marshal(),
+	}
+	bs, err := util.NewBeaconStateElectra(func(state *ethpbv1alpha1.BeaconStateElectra) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
+		return nil
+	})
+	require.NoError(t, err)
+
+	slashing := &ethpbv1alpha1.AttesterSlashingElectra{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+		Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	for _, att := range []*ethpbv1alpha1.IndexedAttestationElectra{slashing.Attestation_1, slashing.Attestation_2} {
+		sb, err := signing.ComputeDomainAndSign(bs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
+	s := &Server{
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
+	}
+
+	toSubmit := structs.AttesterSlashingsElectraFromConsensus([]*ethpbv1alpha1.AttesterSlashingElectra{slashing})
+	b, err := json.Marshal(toSubmit[0])
+	require.NoError(t, err)
+	var body bytes.Buffer
+	_, err = body.Write(b)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+	request.Header.Set(api.VersionHeader, version.String(version.Electra))
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitAttesterSlashingV2(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
 	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
