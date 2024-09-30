@@ -67,6 +67,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Core: Fixed slash processing causing extra hashing.
 - Core: Fixed extra allocations when processing slashings.
 - remove unneeded container in blob sidecar ssz response
+- Light client support: create finalized header based on finalizedBlock's version, not attestedBlock.
 - Testing: added custom matcher for better push settings testing.
 
 ### Security
