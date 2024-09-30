@@ -505,39 +505,8 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	headState, err := s.ChainInfoFetcher.HeadState(ctx)
-	if err != nil {
-		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.Attestation_1.Data.Slot)
-	if err != nil {
-		httputil.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = blocks.VerifyAttesterSlashing(ctx, headState, slashing)
-	if err != nil {
-		httputil.HandleError(w, "Invalid attester slashing: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = s.SlashingsPool.InsertAttesterSlashing(ctx, headState, slashing)
-	if err != nil {
-		httputil.HandleError(w, "Could not insert attester slashing into pool: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// notify events
-	s.OperationNotifier.OperationFeed().Send(&feed.Event{
-		Type: operation.AttesterSlashingReceived,
-		Data: &operation.AttesterSlashingReceivedData{
-			AttesterSlashing: slashing,
-		},
-	})
-	if !features.Get().DisableBroadcastSlashings {
-		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
-			httputil.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+	s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
+
 }
 
 // SubmitAttesterSlashingV2 submits an attester slashing object to node's pool and
@@ -546,33 +515,67 @@ func (s *Server) SubmitAttesterSlashingV2(w http.ResponseWriter, r *http.Request
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
 	defer span.End()
 
-	var req structs.AttesterSlashingElectra
-	err := json.NewDecoder(r.Body).Decode(&req)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionHeader == "" {
 		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
 	}
-
-	slashing, err := req.ToConsensus()
+	v, err := version.FromString(versionHeader)
 	if err != nil {
-		httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+		httputil.HandleError(w, "Invalid version: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if v >= version.Electra {
+		var req structs.AttesterSlashingElectra
+		err := json.NewDecoder(r.Body).Decode(&req)
+		switch {
+		case errors.Is(err, io.EOF):
+			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+			return
+		case err != nil:
+			httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		slashing, err := req.ToConsensus()
+		if err != nil {
+			httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
+	} else {
+		var req structs.AttesterSlashing
+		err := json.NewDecoder(r.Body).Decode(&req)
+		switch {
+		case errors.Is(err, io.EOF):
+			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+			return
+		case err != nil:
+			httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		slashing, err := req.ToConsensus()
+		if err != nil {
+			httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
+	}
+}
+
+func (s *Server) attesterSlashing(
+	w http.ResponseWriter,
+	ctx context.Context,
+	slot primitives.Slot,
+	slashing eth.AttSlashing,
+) {
 	headState, err := s.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.Attestation_1.Data.Slot)
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slot)
 	if err != nil {
 		httputil.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
 		return
