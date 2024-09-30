@@ -18,6 +18,10 @@ type SubmitAggregateAndProofsRequest struct {
 	Data []*SignedAggregateAttestationAndProof `json:"data"`
 }
 
+type SubmitAggregateAndProofsRequestV2 struct {
+	Data []json.RawMessage `json:"data"`
+}
+
 type SubmitSyncCommitteeSubscriptionsRequest struct {
 	Data []*SyncCommitteeSubscription `json:"data"`
 }

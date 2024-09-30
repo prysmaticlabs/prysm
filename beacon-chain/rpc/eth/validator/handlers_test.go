@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/builder/testing"
@@ -37,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -450,6 +452,22 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
 	})
+	t.Run("singleV2", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		c.Broadcaster = broadcaster
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	})
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pmock.MockBroadcaster{}
 		c.Broadcaster = broadcaster
@@ -466,12 +484,42 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
 	})
+	t.Run("multipleV2", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		c.Broadcaster = broadcaster
+		c.SyncCommitteePool = synccommittee.NewStore()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleAggregates)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
 		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("no bodyV2", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
@@ -493,6 +541,22 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
 	})
+	t.Run("emptyV2", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
 	t.Run("invalid", func(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString(invalidAggregate)
@@ -502,6 +566,21 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		s.SubmitAggregateAndProofs(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("invalidV2", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
@@ -2668,6 +2747,7 @@ var (
       "aggregator_index": "1",
       "aggregate": {
         "aggregation_bits": "0x01",
+        "committee_bits": "0x01",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -2694,6 +2774,7 @@ var (
       "aggregator_index": "1",
       "aggregate": {
         "aggregation_bits": "0x01",
+		"committee_bits": "0x01",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -2718,6 +2799,7 @@ var (
       "aggregator_index": "1",
       "aggregate": {
         "aggregation_bits": "0x01",
+		"committee_bits": "0x01",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -2746,6 +2828,7 @@ var (
       "aggregator_index": "foo",
       "aggregate": {
         "aggregation_bits": "0x01",
+		"committee_bits": "0x01",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",

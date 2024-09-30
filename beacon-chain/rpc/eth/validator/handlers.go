@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -31,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -182,6 +184,94 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 			} else {
 				httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
 				return
+			}
+		}
+	}
+
+	if broadcastFailed {
+		httputil.HandleError(w, "Could not broadcast one or more signed aggregated attestations", http.StatusInternalServerError)
+	}
+}
+
+// SubmitAggregateAndProofsV2 verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
+func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
+	defer span.End()
+
+	var req structs.SubmitAggregateAndProofsRequestV2
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case errors.Is(err, io.EOF):
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.Data) == 0 {
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+
+	versionHeader := r.Header.Get(api.VersionHeader)
+	if versionHeader == "" {
+		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+	}
+	v, err := version.FromString(versionHeader)
+	if err != nil {
+		httputil.HandleError(w, "Invalid version: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	broadcastFailed := false
+	if v >= version.Electra {
+		for _, raw := range req.Data {
+			var item structs.SignedAggregateAttestationAndProofElectra
+			if err = json.Unmarshal(raw, &item); err != nil {
+				httputil.HandleError(w, "Failed to parse Electra aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			consensusItem, err := item.ToConsensus()
+			if err != nil {
+				httputil.HandleError(w, "Could not convert Electra request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
+			if rpcError != nil {
+				var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
+				if errors.As(rpcError.Err, &aggregateBroadcastFailedError) {
+					broadcastFailed = true
+				} else {
+					httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+					return
+				}
+			}
+		}
+	} else {
+		for _, raw := range req.Data {
+			var item structs.SignedAggregateAttestationAndProof
+			if err := json.Unmarshal(raw, &item); err != nil {
+				httputil.HandleError(w, "Failed to parse older version aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			consensusItem, err := item.ToConsensus()
+			if err != nil {
+				httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
+			if rpcError != nil {
+				var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
+				if errors.As(rpcError.Err, &aggregateBroadcastFailedError) {
+					broadcastFailed = true
+				} else {
+					httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+					return
+				}
 			}
 		}
 	}
