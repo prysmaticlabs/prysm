@@ -176,7 +176,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	api.SetSSEHeaders(w)
+	api.SetSSEHeaders(sw)
 	go es.outboxWriteLoop(ctx, cancel, sw)
 	if err := es.recvEventLoop(ctx, cancel, topics, s); err != nil {
 		log.WithError(err).Debug("Shutting down StreamEvents handler.")
@@ -389,6 +389,9 @@ func topicForEvent(event *feed.Event) string {
 }
 
 func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topics *topicRequest) (lazyReader, error) {
+	if event == nil || event.Data == nil {
+		return nil, errors.New("event or event data is nil")
+	}
 	eventName := topicForEvent(event)
 	if !topics.requested(eventName) {
 		return nil, errNotRequested
