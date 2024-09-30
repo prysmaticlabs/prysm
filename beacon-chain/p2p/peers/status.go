@@ -781,26 +781,42 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch primitives.Epoch)
 // BestNonFinalized returns the highest known epoch, higher than ours,
 // and is shared by at least minPeers.
 func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch primitives.Epoch) (primitives.Epoch, []peer.ID) {
+	// Retrieve all connected peers.
 	connected := p.Connected()
+
+	// Calculate our head slot.
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	ourHeadSlot := slotsPerEpoch.Mul(uint64(ourHeadEpoch))
+
+	// key: head epoch, value: number of peers that support this epoch.
 	epochVotes := make(map[primitives.Epoch]uint64)
+
+	// key: peer ID, value: head epoch of the peer.
 	pidEpoch := make(map[peer.ID]primitives.Epoch, len(connected))
+
+	// key: peer ID, value: head slot of the peer.
 	pidHead := make(map[peer.ID]primitives.Slot, len(connected))
+
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourHeadSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(ourHeadEpoch))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
-			epoch := slots.ToEpoch(peerChainState.HeadSlot)
-			epochVotes[epoch]++
-			pidEpoch[pid] = epoch
-			pidHead[pid] = peerChainState.HeadSlot
-			potentialPIDs = append(potentialPIDs, pid)
+		// Skip if the peer's head epoch is not defined, or if the peer's head slot is
+		// lower or equal than ours.
+		if err != nil || peerChainState == nil || peerChainState.HeadSlot <= ourHeadSlot {
+			continue
 		}
+
+		epoch := slots.ToEpoch(peerChainState.HeadSlot)
+
+		epochVotes[epoch]++
+		pidEpoch[pid] = epoch
+		pidHead[pid] = peerChainState.HeadSlot
+		potentialPIDs = append(potentialPIDs, pid)
 	}
 
 	// Select the target epoch, which has enough peers' votes (>= minPeers).
-	var targetEpoch primitives.Epoch
+	targetEpoch := primitives.Epoch(0)
 	for epoch, votes := range epochVotes {
 		if votes >= uint64(minPeers) && targetEpoch < epoch {
 			targetEpoch = epoch
