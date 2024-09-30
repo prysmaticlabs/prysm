@@ -186,7 +186,7 @@ func ProcessSlashings(st state.BeaconState, slashingMultiplier uint64) (state.Be
 
 	// Modified in Electra:EIP7251
 	var penaltyPerEffectiveBalanceIncrement uint64
-	if st.Version() == version.Electra {
+	if st.Version() >= version.Electra {
 		penaltyPerEffectiveBalanceIncrement = minSlashing / (totalBalance / increment)
 	}
 
@@ -196,7 +196,7 @@ func ProcessSlashings(st state.BeaconState, slashingMultiplier uint64) (state.Be
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch()
 		if val.Slashed() && correctEpoch {
 			var penalty uint64
-			if st.Version() == version.Electra {
+			if st.Version() >= version.Electra {
 				effectiveBalanceIncrements := val.EffectiveBalance() / increment
 				penalty = penaltyPerEffectiveBalanceIncrement * effectiveBalanceIncrements
 			} else {
