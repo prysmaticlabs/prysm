@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/internal"
-	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/v1/mock"
+	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/remote-web3signer/types/mock"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 )
