@@ -205,7 +205,7 @@ func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
 
 	root, err := bytesutil.DecodeHexWithLength(req.BlockRoot, 32)
 	if err != nil {
-		httputil.HandleError(w, "Could not decode block root", http.StatusBadRequest)
+		httputil.HandleError(w, "Could not decode block root: " + err.Error(), http.StatusBadRequest)
 		return
 	}
 
