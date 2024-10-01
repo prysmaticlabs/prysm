@@ -331,8 +331,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 	}
 
 	if coreTime.PeerDASIsActive(start) {
-		connectedPeers := f.p2p.Peers().Connected()
-		response.err = f.fetchDataColumnsFromPeers(ctx, response.bwb, connectedPeers)
+		response.err = f.fetchDataColumnsFromPeers(ctx, response.bwb, nil)
 		return response
 	}
 
@@ -1064,8 +1063,14 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 			blocksCount /= 2
 		}
 
+		// If no peer is specified, get all connected peers.
+		peersToFilter := peers
+		if peersToFilter == nil {
+			peersToFilter = f.p2p.Peers().Connected()
+		}
+
 		// Filter peers.
-		filteredPeers, err := f.peersWithSlotAndDataColumns(peers, lastSlot, missingDataColumns)
+		filteredPeers, err := f.peersWithSlotAndDataColumns(peersToFilter, lastSlot, missingDataColumns)
 		if err != nil {
 			return errors.Wrap(err, "peers with slot and data columns")
 		}
@@ -1073,7 +1078,7 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		if len(filteredPeers) == 0 {
 			log.
 				WithFields(logrus.Fields{
-					"peers":         peers,
+					"peers":         peersToFilter,
 					"filteredPeers": filteredPeers,
 					"delay":         delay,
 					"targetSlot":    lastSlot,
