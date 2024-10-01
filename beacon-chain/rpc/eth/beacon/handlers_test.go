@@ -531,6 +531,34 @@ func TestGetBlockAttestations(t *testing.T) {
 			require.NoError(t, err)
 		}
 		assert.DeepEqual(t, b.Block.Body.Attestations, atts)
+
+		// Checking GetBlockAttestationsV2 with block attestations from phase0
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request.SetPathValue("block_id", "head")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockAttestationsV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp2 := &structs.GetBlockAttestationsV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
+
+		// Manually unmarshal the data into the expected type
+		data, ok := resp2.Data.([]interface{})
+		require.Equal(t, true, ok)
+
+		atts2 := make([]*eth.Attestation, len(b.Block.Body.Attestations))
+		for i, item := range data {
+			itemBytes, err := json.Marshal(item)
+			require.NoError(t, err)
+
+			var att structs.Attestation
+			require.NoError(t, json.Unmarshal(itemBytes, &att))
+			atts2[i], err = att.ToConsensus()
+			require.NoError(t, err)
+		}
+		assert.DeepEqual(t, b.Block.Body.Attestations, atts2)
+		assert.Equal(t, "phase0", resp2.Version)
 	})
 	t.Run("okV2", func(t *testing.T) {
 		b := util.NewBeaconBlockElectra()
