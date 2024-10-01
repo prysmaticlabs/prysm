@@ -850,7 +850,23 @@ func (f *blocksFetcher) requestDataColumnsFromPeers(
 		peers[i], peers[j] = peers[j], peers[i]
 	})
 
+	var columnsLog interface{} = "all"
+	columnsCount := uint64(len(request.Columns))
+	numberOfColumns := params.BeaconConfig().NumberOfColumns
+	if columnsCount < numberOfColumns {
+		columnsLog = request.Columns
+	}
+
+	log := log.WithFields(logrus.Fields{
+		"start":   request.StartSlot,
+		"count":   request.Count,
+		"columns": columnsLog,
+		"items":   request.Count * columnsCount,
+	})
+
 	for _, peer := range peers {
+		log := log.WithField("peer", peer)
+
 		if ctx.Err() != nil {
 			return nil, "", ctx.Err()
 		}
@@ -861,12 +877,9 @@ func (f *blocksFetcher) requestDataColumnsFromPeers(
 			defer l.Unlock()
 
 			log.WithFields(logrus.Fields{
-				"peer":     peer,
-				"start":    request.StartSlot,
-				"count":    request.Count,
 				"capacity": f.rateLimiter.Remaining(peer.String()),
 				"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(peer),
-			}).Debug("Requesting data columns")
+			}).Debug("Data columns by range - requesting")
 
 			// We're intentionally abusing the block rate limit here, treating data column requests as if they were block requests.
 			// Since column requests take more bandwidth than blocks, we should improve how we account for the different kinds
@@ -883,32 +896,28 @@ func (f *blocksFetcher) requestDataColumnsFromPeers(
 		}()
 
 		if err != nil {
-			log.WithError(err).WithField("peer", peer).Warning("Could not wait for bandwidth")
+			log.WithError(err).Warning("Data columns by range - could not wait for bandwidth")
 			continue
 		}
 
 		roDataColumns, err := prysmsync.SendDataColumnsByRangeRequest(ctx, f.clock, f.p2p, peer, f.ctxMap, request)
 		if err != nil {
-			log.WithField("peer", peer).WithError(err).Warning("Could not send data columns by range request")
+			log.WithError(err).Warning("Data columns by range - could not send data columns by range request")
 			continue
 		}
 
 		// If the peer did not return any data columns, go to the next peer.
 		if len(roDataColumns) == 0 {
-			log.WithFields(logrus.Fields{
-				"peer":  peer,
-				"start": request.StartSlot,
-				"count": request.Count,
-			}).Debug("Peer did not returned any data columns")
+			log.Debug("Data columns by range - peer did not returned any data columns")
 
 			continue
 		}
 
-		// We have received at least one data columns from the peer.
+		// We have received at least one data columns from the peer. This is the happy path.
 		return roDataColumns, peer, nil
 	}
 
-	// No peer returned any data columns.
+	// No peer returned any data columns. This this the unhappy path.
 	return nil, "", nil
 }
 
@@ -1008,15 +1017,12 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 	indicesFromRoot map[[fieldparams.RootLength]byte][]int,
 	peers []peer.ID,
 ) error {
-	const delay = 5 * time.Second
-
-	columnsCount := 0
-	for _, columns := range missingColumnsFromRoot {
-		columnsCount += len(columns)
-	}
+	const (
+		delay = 5 * time.Second
+	)
 
 	start := time.Now()
-	log.WithField("columnsCount", columnsCount).Debug("Retrieving missing data columns from peers - start")
+	log.Debug("Retrieving missing data columns from peers - start")
 
 	for len(missingColumnsFromRoot) > 0 {
 		if ctx.Err() != nil {
@@ -1041,6 +1047,17 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 			}
 		}
 
+		// Get a sorted slice of missing data columns.
+		missingDataColumnsSlice := sortedSliceFromMap(missingDataColumns)
+		missingDataColumnsCount := uint64(len(missingDataColumnsSlice))
+
+		numberOfColumns := params.BeaconConfig().NumberOfColumns
+		var requestedColumnsLog interface{} = "all"
+
+		if missingDataColumnsCount < numberOfColumns {
+			requestedColumnsLog = missingDataColumnsSlice
+		}
+
 		// Filter peers.
 		filteredPeers, err := f.peersWithSlotAndDataColumns(peers, lastSlot, missingDataColumns)
 		if err != nil {
@@ -1050,9 +1067,10 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		if len(filteredPeers) == 0 {
 			log.
 				WithFields(logrus.Fields{
-					"peers":      filteredPeers,
-					"delay":      delay,
-					"targetSlot": lastSlot,
+					"peers":         peers,
+					"filteredPeers": filteredPeers,
+					"delay":         delay,
+					"targetSlot":    lastSlot,
 				}).
 				Warning("No peers available to retrieve missing data columns, retrying later")
 
@@ -1067,14 +1085,14 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		request := &p2ppb.DataColumnSidecarsByRangeRequest{
 			StartSlot: startSlot,
 			Count:     blocksCount,
-			Columns:   sortedSliceFromMap(missingDataColumns),
+			Columns:   missingDataColumnsSlice,
 		}
 
 		// Get all the blocks and data columns we should retrieve.
 		blockFromRoot := blockFromRoot(bwb[firstIndex : lastIndex+1])
 
 		// Iterate requests over all peers, and exits as soon as at least one data column is retrieved.
-		roDataColumns, peer, err := f.requestDataColumnsFromPeers(ctx, request, filteredPeers)
+		roDataColumns, _, err := f.requestDataColumnsFromPeers(ctx, request, filteredPeers)
 		if err != nil {
 			return errors.Wrap(err, "request data columns from peers")
 		}
@@ -1082,11 +1100,12 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		if len(roDataColumns) == 0 {
 			log.
 				WithFields(logrus.Fields{
-					"peers":     filteredPeers,
-					"delay":     delay,
-					"startSlot": startSlot,
-					"count":     blocksCount,
-					"columns":   sortedSliceFromMap(missingDataColumns),
+					"peers":         peers,
+					"filteredPeers": filteredPeers,
+					"delay":         delay,
+					"start":         startSlot,
+					"count":         blocksCount,
+					"columns":       requestedColumnsLog,
 				}).
 				Warning("No data columns returned from any peer, retrying later")
 
@@ -1096,27 +1115,6 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 
 		// Process the retrieved data columns.
 		processRetrievedDataColumns(roDataColumns, blockFromRoot, indicesFromRoot, missingColumnsFromRoot, bwb, f.cv)
-
-		if len(missingColumnsFromRoot) > 0 {
-			numberOfColumns := params.BeaconConfig().NumberOfColumns
-
-			for root, missingColumns := range missingColumnsFromRoot {
-				missingColumnsCount := uint64(len(missingColumns))
-				var missingColumnsLog interface{} = "all"
-
-				if missingColumnsCount < numberOfColumns {
-					missingColumnsLog = sortedSliceFromMap(missingColumns)
-				}
-
-				slot := blockFromRoot[root].Block().Slot()
-				log.WithFields(logrus.Fields{
-					"peer":           peer,
-					"root":           fmt.Sprintf("%#x", root),
-					"slot":           slot,
-					"missingColumns": missingColumnsLog,
-				}).Debug("Peer did not returned all requested data columns")
-			}
-		}
 	}
 
 	log.WithField("duration", time.Since(start)).Debug("Retrieving missing data columns from peers - success")
