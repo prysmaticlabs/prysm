@@ -218,7 +218,7 @@ func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
 
 		readOnlySc, err := blocks.NewROBlobWithRoot(sc, bytesutil.ToBytes32(root))
 		if err != nil {
-			httputil.HandleError(w, "Could not create read-only blob", http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not create read-only blob: " + err.Error(), http.StatusInternalServerError)
 			return
 		}
 
