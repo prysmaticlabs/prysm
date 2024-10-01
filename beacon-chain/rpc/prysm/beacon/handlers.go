@@ -212,7 +212,7 @@ func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
 	for _, blobSidecar := range req.BlobSidecars.Sidecars {
 		sc, err := blobSidecar.ToConsensus()
 		if err != nil {
-			httputil.HandleError(w, "Could not decode blob sidecar: " + err.Error(), http.StatusBadRequest)
+			httputil.HandleError(w, "Could not decode blob sidecar: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
