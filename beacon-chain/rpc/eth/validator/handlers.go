@@ -181,14 +181,8 @@ func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get attestation data root")
 			}
-			if index == 0 {
-				if bytes.Equal(root[:], attDataRoot) {
-					return att, nil
-				}
-			} else {
-				if bytes.Equal(root[:], attDataRoot) && att.GetData().CommitteeIndex == index {
-					return att, nil
-				}
+			if bytes.Equal(root[:], attDataRoot) && att.GetData().CommitteeIndex == index {
+				return att, nil
 			}
 		}
 	}
