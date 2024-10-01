@@ -17,6 +17,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - GetBeaconStateV2: add Electra case.
 - Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
 - Tests to ensure sepolia config matches the official upstream yaml
+- `engine_newPayloadV4` used for electra payload communication with execution client
 
 ### Changed
 
