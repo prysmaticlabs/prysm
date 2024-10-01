@@ -544,23 +544,25 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 			},
 			ExecutionPayload: &enginev1.ExecutionPayloadElectra{
-				ParentHash:            make([]byte, 32),
-				FeeRecipient:          make([]byte, 20),
-				StateRoot:             make([]byte, 32),
-				ReceiptsRoot:          make([]byte, 32),
-				LogsBloom:             make([]byte, 256),
-				PrevRandao:            make([]byte, 32),
-				ExtraData:             make([]byte, 0),
-				BaseFeePerGas:         make([]byte, 32),
-				BlockHash:             make([]byte, 32),
-				Transactions:          make([][]byte, 0),
-				Withdrawals:           make([]*enginev1.Withdrawal, 0),
-				DepositRequests:       make([]*enginev1.DepositRequest, 0),
-				WithdrawalRequests:    make([]*enginev1.WithdrawalRequest, 0),
-				ConsolidationRequests: make([]*enginev1.ConsolidationRequest, 0),
+				ParentHash:    make([]byte, 32),
+				FeeRecipient:  make([]byte, 20),
+				StateRoot:     make([]byte, 32),
+				ReceiptsRoot:  make([]byte, 32),
+				LogsBloom:     make([]byte, 256),
+				PrevRandao:    make([]byte, 32),
+				ExtraData:     make([]byte, 0),
+				BaseFeePerGas: make([]byte, 32),
+				BlockHash:     make([]byte, 32),
+				Transactions:  make([][]byte, 0),
+				Withdrawals:   make([]*enginev1.Withdrawal, 0),
 			},
 			BlsToExecutionChanges: make([]*ethpb.SignedBLSToExecutionChange, 0),
 			BlobKzgCommitments:    make([][]byte, 0),
+			ExecutionRequests: &enginev1.ExecutionRequests{
+				Deposits:       make([]*enginev1.DepositRequest, 0),
+				Withdrawals:    make([]*enginev1.WithdrawalRequest, 0),
+				Consolidations: make([]*enginev1.ConsolidationRequest, 0),
+			},
 		}
 	default:
 		return errUnsupportedVersion
@@ -680,33 +682,29 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 		}
 	case version.Electra:
 		payload := &enginev1.ExecutionPayloadElectra{
-			ParentHash:            gb.ParentHash().Bytes(),
-			FeeRecipient:          gb.Coinbase().Bytes(),
-			StateRoot:             gb.Root().Bytes(),
-			ReceiptsRoot:          gb.ReceiptHash().Bytes(),
-			LogsBloom:             gb.Bloom().Bytes(),
-			PrevRandao:            params.BeaconConfig().ZeroHash[:],
-			BlockNumber:           gb.NumberU64(),
-			GasLimit:              gb.GasLimit(),
-			GasUsed:               gb.GasUsed(),
-			Timestamp:             gb.Time(),
-			ExtraData:             gb.Extra()[:32],
-			BaseFeePerGas:         bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
-			BlockHash:             gb.Hash().Bytes(),
-			Transactions:          make([][]byte, 0),
-			Withdrawals:           make([]*enginev1.Withdrawal, 0),
-			ExcessBlobGas:         *gb.ExcessBlobGas(),
-			BlobGasUsed:           *gb.BlobGasUsed(),
-			DepositRequests:       make([]*enginev1.DepositRequest, 0),
-			WithdrawalRequests:    make([]*enginev1.WithdrawalRequest, 0),
-			ConsolidationRequests: make([]*enginev1.ConsolidationRequest, 0),
+			ParentHash:    gb.ParentHash().Bytes(),
+			FeeRecipient:  gb.Coinbase().Bytes(),
+			StateRoot:     gb.Root().Bytes(),
+			ReceiptsRoot:  gb.ReceiptHash().Bytes(),
+			LogsBloom:     gb.Bloom().Bytes(),
+			PrevRandao:    params.BeaconConfig().ZeroHash[:],
+			BlockNumber:   gb.NumberU64(),
+			GasLimit:      gb.GasLimit(),
+			GasUsed:       gb.GasUsed(),
+			Timestamp:     gb.Time(),
+			ExtraData:     gb.Extra()[:32],
+			BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
+			BlockHash:     gb.Hash().Bytes(),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*enginev1.Withdrawal, 0),
+			ExcessBlobGas: *gb.ExcessBlobGas(),
+			BlobGasUsed:   *gb.BlobGasUsed(),
 		}
 		wep, err := blocks.WrappedExecutionPayloadElectra(payload)
 		if err != nil {
 			return err
 		}
-		// wep is of type 'executionPayloadElectra' which implements interfaces.ExecutionDataElectra
-		eph, err := blocks.PayloadToHeaderElectra(wep.(interfaces.ExecutionDataElectra))
+		eph, err := blocks.PayloadToHeaderElectra(wep)
 		if err != nil {
 			return err
 		}
