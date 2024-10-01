@@ -259,16 +259,16 @@ func (s *Service) ForkchoiceUpdated(
 
 func getPayloadMethodAndMessage(slot primitives.Slot) (string, proto.Message) {
 	pe := slots.ToEpoch(slot)
-	if pe >= params.BeaconConfig().ElectraForkEpoch {
+	switch {
+	case pe >= params.BeaconConfig().ElectraForkEpoch:
 		return GetPayloadMethodV4, &pb.ExecutionEnvelopeElectra{}
-	}
-	if pe >= params.BeaconConfig().DenebForkEpoch {
+	case pe == params.BeaconConfig().DenebForkEpoch:
 		return GetPayloadMethodV3, &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
-	}
-	if pe >= params.BeaconConfig().CapellaForkEpoch {
+	case pe == params.BeaconConfig().CapellaForkEpoch:
 		return GetPayloadMethodV2, &pb.ExecutionPayloadCapellaWithValue{}
+	default:
+		return GetPayloadMethod, &pb.ExecutionPayload{}
 	}
-	return GetPayloadMethod, &pb.ExecutionPayload{}
 }
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
