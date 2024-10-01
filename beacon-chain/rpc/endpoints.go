@@ -942,6 +942,8 @@ func (s *Service) prysmBeaconEndpoints(
 		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		CoreService:           coreService,
+		Broadcaster:           s.cfg.Broadcaster,
+		BlobReceiver:          s.cfg.BlobReceiver,
 	}
 
 	const namespace = "prysm.beacon"
@@ -991,6 +993,16 @@ func (s *Service) prysmBeaconEndpoints(
 			},
 			handler: server.GetChainHead,
 			methods: []string{http.MethodGet},
+		},
+		{
+			template: "/prysm/v1/beacon/blobs",
+			name:     namespace + ".PublishBlobs",
+			middleware: []middleware.Middleware{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.PublishBlobs,
+			methods: []string{http.MethodPost},
 		},
 	}
 }
