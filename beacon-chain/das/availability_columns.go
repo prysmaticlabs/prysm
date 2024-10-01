@@ -146,7 +146,7 @@ func fullCommitmentsToCheck(b blocks.ROBlock, current primitives.Slot) (safeComm
 		return ar, err
 	}
 	for i := range ar {
-		copy(ar[i], kc)
+		ar[i] = kc
 	}
 	return ar, nil
 }
