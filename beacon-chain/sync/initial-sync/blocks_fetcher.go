@@ -1018,7 +1018,8 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 	peers []peer.ID,
 ) error {
 	const (
-		delay = 5 * time.Second
+		delay     = 5 * time.Second
+		batchSize = 512
 	)
 
 	start := time.Now()
@@ -1056,6 +1057,11 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 
 		if missingDataColumnsCount < numberOfColumns {
 			requestedColumnsLog = missingDataColumnsSlice
+		}
+
+		// Reduce blocks count until the total number of elements is less than the batch size.
+		for missingDataColumnsCount*blocksCount > batchSize {
+			blocksCount /= 2
 		}
 
 		// Filter peers.
