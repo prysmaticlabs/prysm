@@ -20,6 +20,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Changed
 
+- Electra: Updated interop genesis generator to support Electra.
 - `getLocalPayload` has been refactored to enable work in ePBS branch.
 - `TestNodeServer_GetPeer` and `TestNodeServer_ListPeers` test flakes resolved by iterating the whole peer list to find
   a match rather than taking the first peer in the map.
