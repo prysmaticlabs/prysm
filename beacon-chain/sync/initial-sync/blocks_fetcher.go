@@ -845,6 +845,11 @@ func (f *blocksFetcher) requestDataColumnsFromPeers(
 	request *p2ppb.DataColumnSidecarsByRangeRequest,
 	peers []peer.ID,
 ) ([]blocks.RODataColumn, peer.ID, error) {
+	// Shuffle peers to avoid always querying the same peers
+	f.rand.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
+
 	for _, peer := range peers {
 		if ctx.Err() != nil {
 			return nil, "", ctx.Err()
