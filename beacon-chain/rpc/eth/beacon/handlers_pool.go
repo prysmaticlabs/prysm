@@ -506,7 +506,6 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
-
 }
 
 // SubmitAttesterSlashingV2 submits an attester slashing object to node's pool and
