@@ -889,12 +889,18 @@ func (f *blocksFetcher) requestDataColumnsFromPeers(
 
 		roDataColumns, err := prysmsync.SendDataColumnsByRangeRequest(ctx, f.clock, f.p2p, peer, f.ctxMap, request)
 		if err != nil {
-			log.WithField("peer", peer).WithError(err).Warning("Could not request data columns by range from peer")
+			log.WithField("peer", peer).WithError(err).Warning("Could not send data columns by range request")
 			continue
 		}
 
 		// If the peer did not return any data columns, go to the next peer.
 		if len(roDataColumns) == 0 {
+			log.WithFields(logrus.Fields{
+				"peer":  peer,
+				"start": request.StartSlot,
+				"count": request.Count,
+			}).Debug("Peer did not returned any data columns")
+
 			continue
 		}
 
@@ -1002,6 +1008,16 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 	indicesFromRoot map[[fieldparams.RootLength]byte][]int,
 	peers []peer.ID,
 ) error {
+	const delay = 5 * time.Second
+
+	columnsCount := 0
+	for _, columns := range missingColumnsFromRoot {
+		columnsCount += len(columns)
+	}
+
+	start := time.Now()
+	log.WithField("columnsCount", columnsCount).Debug("Retrieving missing data columns from peers - start")
+
 	for len(missingColumnsFromRoot) > 0 {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -1034,12 +1050,13 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		if len(filteredPeers) == 0 {
 			log.
 				WithFields(logrus.Fields{
-					"nonFilteredPeersCount": len(peers),
-					"filteredPeersCount":    len(filteredPeers),
+					"peers":      filteredPeers,
+					"delay":      delay,
+					"targetSlot": lastSlot,
 				}).
-				Debug("No peers available to retrieve missing data columns, retrying in 5 seconds")
+				Warning("No peers available to retrieve missing data columns, retrying later")
 
-			time.Sleep(5 * time.Second)
+			time.Sleep(delay)
 			continue
 		}
 
@@ -1063,8 +1080,17 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		}
 
 		if len(roDataColumns) == 0 {
-			log.Debug("No data columns returned from any peer, retrying in 5 seconds")
-			time.Sleep(5 * time.Second)
+			log.
+				WithFields(logrus.Fields{
+					"peers":     filteredPeers,
+					"delay":     delay,
+					"startSlot": startSlot,
+					"count":     blocksCount,
+					"columns":   sortedSliceFromMap(missingDataColumns),
+				}).
+				Warning("No data columns returned from any peer, retrying later")
+
+			time.Sleep(delay)
 			continue
 		}
 
@@ -1088,11 +1114,12 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 					"root":           fmt.Sprintf("%#x", root),
 					"slot":           slot,
 					"missingColumns": missingColumnsLog,
-				}).Debug("Peer did not correctly return data columns")
+				}).Debug("Peer did not returned all requested data columns")
 			}
 		}
 	}
 
+	log.WithField("duration", time.Since(start)).Debug("Retrieving missing data columns from peers - success")
 	return nil
 }
 
@@ -1150,8 +1177,6 @@ func (f *blocksFetcher) fetchDataColumnsFromPeers(
 	if err := f.retrieveMissingDataColumnsFromPeers(ctx, bwb, missingColumnsFromRoot, indicesFromRoot, peers); err != nil {
 		return errors.Wrap(err, "retrieve missing data columns from peers")
 	}
-
-	log.Debug("Successfully retrieved all data columns")
 
 	return nil
 }
