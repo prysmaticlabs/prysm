@@ -115,6 +115,7 @@ func Test_endpoints(t *testing.T) {
 		"/eth/v1/beacon/states/{state_id}/validator_count":   {http.MethodGet},
 		"/prysm/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
 		"/prysm/v1/beacon/chain_head":                        {http.MethodGet},
+		"/prysm/v1/beacon/blobs":                             {http.MethodPost},
 	}
 
 	prysmNodeRoutes := map[string][]string{
