@@ -224,7 +224,7 @@ func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
 
 		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
 		if err := s.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
-			httputil.HandleError(w, "Could not receive blob: " + err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not receive blob: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
