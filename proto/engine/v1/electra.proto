@@ -72,5 +72,5 @@ message ExecutionEnvelopeElectra {
 	bytes value = 2;
 	BlobsBundle blobs_bundle = 3;
 	bool should_override_builder = 4;
-	repeated bytes execution_requests = 5;
+	repeated bytes execution_requests_hash = 5;
 }
