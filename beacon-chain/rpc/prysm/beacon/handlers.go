@@ -229,7 +229,7 @@ func (s *Server) PublishBlobs(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := s.Broadcaster.BroadcastBlob(ctx, sc.Index, sc); err != nil {
-			httputil.HandleError(w, "Failed to broadcast blob", http.StatusInternalServerError)
+			httputil.HandleError(w, "Failed to broadcast blob: " + err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
