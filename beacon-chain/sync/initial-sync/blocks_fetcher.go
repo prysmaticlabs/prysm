@@ -883,7 +883,8 @@ func (f *blocksFetcher) requestDataColumnsFromPeers(
 		}()
 
 		if err != nil {
-			return nil, "", err
+			log.WithError(err).WithField("peer", peer).Warning("Could not wait for bandwidth")
+			continue
 		}
 
 		roDataColumns, err := prysmsync.SendDataColumnsByRangeRequest(ctx, f.clock, f.p2p, peer, f.ctxMap, request)
