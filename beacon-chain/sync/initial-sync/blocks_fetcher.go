@@ -331,7 +331,8 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 	}
 
 	if coreTime.PeerDASIsActive(start) {
-		response.err = f.fetchDataColumnsFromPeers(ctx, response.bwb, peers)
+		connectedPeers := f.p2p.Peers().Connected()
+		response.err = f.fetchDataColumnsFromPeers(ctx, response.bwb, connectedPeers)
 		return response
 	}
 
@@ -737,39 +738,6 @@ loop:
 	return outputPeers, nil
 }
 
-// filterPeersForDataColumns filters peers able to serve us `dataColumns`.
-func (f *blocksFetcher) filterPeersForDataColumns(
-	ctx context.Context,
-	blocksCount uint64,
-	dataColumns map[uint64]bool,
-	peers []peer.ID,
-) ([]peer.ID, error) {
-	// TODO: Uncomment when we are not in devnet any more.
-	// TODO: Find a way to have this uncommented without being in devnet.
-	// // Filter peers based on the percentage of peers to be used in a request.
-	// peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
-
-	// // Filter peers on bandwidth.
-	// peers = f.hasSufficientBandwidth(peers, blocksCount)
-
-	// Select peers which custody ALL wanted columns.
-	// Basically, it is very unlikely that a non-supernode peer will have custody of all columns.
-	// TODO: Modify to retrieve data columns from all possible peers.
-	// TODO: If a peer does respond some of the request columns, do not re-request responded columns.
-	peers, err := f.custodyAllNeededColumns(peers, dataColumns)
-	if err != nil {
-		return nil, errors.Wrap(err, "custody all needed columns")
-	}
-
-	// Randomize the order of the peers.
-	randGen := rand.NewGenerator()
-	randGen.Shuffle(len(peers), func(i, j int) {
-		peers[i], peers[j] = peers[j], peers[i]
-	})
-
-	return peers, nil
-}
-
 // custodyColumns returns the columns we should custody.
 func (f *blocksFetcher) custodyColumns() (map[uint64]bool, error) {
 	// Retrieve our node ID.
@@ -1052,9 +1020,9 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		}
 
 		// Filter peers.
-		filteredPeers, err := f.filterPeersForDataColumns(ctx, blocksCount, missingDataColumns, peers)
+		filteredPeers, err := f.peersWithSlotAndDataColumns(peers, lastSlot, missingDataColumns)
 		if err != nil {
-			return errors.Wrap(err, "filter peers for data columns")
+			return errors.Wrap(err, "peers with slot and data columns")
 		}
 
 		if len(filteredPeers) == 0 {
