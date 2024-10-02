@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
@@ -337,46 +336,6 @@ func createDefaultLightClientUpdate() (*ethpbv2.LightClientUpdate, error) {
 		NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 		FinalityBranch:          finalityBranch,
 	}, nil
-}
-
-func createEmptyExecutionPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
-	return &enginev1.ExecutionPayloadHeaderCapella{
-		ParentHash:       make([]byte, 32),
-		FeeRecipient:     make([]byte, 20),
-		StateRoot:        make([]byte, 32),
-		ReceiptsRoot:     make([]byte, 32),
-		LogsBloom:        make([]byte, 256),
-		PrevRandao:       make([]byte, 32),
-		BlockNumber:      0,
-		GasLimit:         0,
-		GasUsed:          0,
-		Timestamp:        0,
-		ExtraData:        make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
-		BlockHash:        make([]byte, 32),
-		TransactionsRoot: make([]byte, 32),
-		WithdrawalsRoot:  make([]byte, 32),
-	}
-}
-
-func createEmptyExecutionPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDeneb {
-	return &enginev1.ExecutionPayloadHeaderDeneb{
-		ParentHash:       make([]byte, 32),
-		FeeRecipient:     make([]byte, 20),
-		StateRoot:        make([]byte, 32),
-		ReceiptsRoot:     make([]byte, 32),
-		LogsBloom:        make([]byte, 256),
-		PrevRandao:       make([]byte, 32),
-		BlockNumber:      0,
-		GasLimit:         0,
-		GasUsed:          0,
-		Timestamp:        0,
-		ExtraData:        make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
-		BlockHash:        make([]byte, 32),
-		TransactionsRoot: make([]byte, 32),
-		WithdrawalsRoot:  make([]byte, 32),
-	}
 }
 
 func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
