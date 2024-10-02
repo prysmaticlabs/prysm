@@ -236,7 +236,7 @@ func NewLightClientUpdateFromBeaconState(
 	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate(block.Block().Version()) // TODO: we should pass finalizedBlock version
+	result, err := createDefaultLightClientUpdate()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
@@ -309,7 +309,7 @@ func NewLightClientUpdateFromBeaconState(
 	return result, nil
 }
 
-func createDefaultLightClientUpdate(v int) (*ethpbv2.LightClientUpdate, error) {
+func createDefaultLightClientUpdate() (*ethpbv2.LightClientUpdate, error) {
 	syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
 	pubKeys := make([][]byte, syncCommitteeSize)
 	for i := uint64(0); i < syncCommitteeSize; i++ {
@@ -327,56 +327,14 @@ func createDefaultLightClientUpdate(v int) (*ethpbv2.LightClientUpdate, error) {
 	for i := 0; i < executionBranchNumOfLeaves; i++ {
 		executionBranch[i] = make([]byte, 32)
 	}
-	finalizedBlockHeader := &ethpbv1.BeaconBlockHeader{
-		Slot:          0,
-		ProposerIndex: 0,
-		ParentRoot:    make([]byte, 32),
-		StateRoot:     make([]byte, 32),
-		BodyRoot:      make([]byte, 32),
-	}
 	finalityBranch := make([][]byte, FinalityBranchNumOfLeaves)
 	for i := 0; i < FinalityBranchNumOfLeaves; i++ {
 		finalityBranch[i] = make([]byte, 32)
 	}
 
-	var finalizedHeader *ethpbv2.LightClientHeaderContainer
-	switch v {
-	case version.Altair, version.Bellatrix:
-		finalizedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-				HeaderAltair: &ethpbv2.LightClientHeader{
-					Beacon: finalizedBlockHeader,
-				},
-			},
-		}
-	case version.Capella:
-		finalizedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-					Beacon:          finalizedBlockHeader,
-					Execution:       createEmptyExecutionPayloadHeaderCapella(),
-					ExecutionBranch: executionBranch,
-				},
-			},
-		}
-	case version.Deneb:
-		finalizedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
-					Beacon:          finalizedBlockHeader,
-					Execution:       createEmptyExecutionPayloadHeaderDeneb(),
-					ExecutionBranch: executionBranch,
-				},
-			},
-		}
-	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(v))
-	}
-
 	return &ethpbv2.LightClientUpdate{
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: nextSyncCommitteeBranch,
-		FinalizedHeader:         finalizedHeader,
 		FinalityBranch:          finalityBranch,
 	}, nil
 }

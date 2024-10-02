@@ -12,8 +12,6 @@ import (
 
 	lightClient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	light_client "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -62,30 +60,6 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		l := util.NewTestLightClient(t).SetupTestAltair()
 
-		t.Run("FinalizedBlock Nil", func(t *testing.T) {
-			update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, nil)
-			require.NoError(t, err)
-			require.NotNil(t, update, "update is nil")
-			require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
-
-			l.CheckSyncAggregate(update.SyncAggregate)
-			l.CheckAttestedHeader(update.AttestedHeader)
-
-			zeroHash := params.BeaconConfig().ZeroHash[:]
-			require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
-			updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
-			require.NoError(t, err)
-			require.Equal(t, primitives.Slot(0), updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not zero")
-			require.Equal(t, primitives.ValidatorIndex(0), updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not zero")
-			require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
-			for _, leaf := range update.FinalityBranch {
-				require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
-			}
-		})
-
 		t.Run("FinalizedBlock Not Nil", func(t *testing.T) {
 			update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, l.FinalizedBlock)
 			require.NoError(t, err)
@@ -119,31 +93,6 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 	})
 
 	t.Run("Capella", func(t *testing.T) {
-		t.Run("FinalizedBlock Nil", func(t *testing.T) {
-			l := util.NewTestLightClient(t).SetupTestCapella(false)
-			update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, nil)
-			require.NoError(t, err)
-			require.NotNil(t, update, "update is nil")
-
-			require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
-
-			l.CheckSyncAggregate(update.SyncAggregate)
-			l.CheckAttestedHeader(update.AttestedHeader)
-
-			zeroHash := params.BeaconConfig().ZeroHash[:]
-			require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
-			updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
-			require.NoError(t, err)
-			require.Equal(t, primitives.Slot(0), updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not zero")
-			require.Equal(t, primitives.ValidatorIndex(0), updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not zero")
-			require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
-			for _, leaf := range update.FinalityBranch {
-				require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
-			}
-		})
 
 		t.Run("FinalizedBlock Not Nil", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestCapella(false)
@@ -247,33 +196,6 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 	})
 
 	t.Run("Deneb", func(t *testing.T) {
-		t.Run("FinalizedBlock Nil", func(t *testing.T) {
-			l := util.NewTestLightClient(t).SetupTestDeneb(false)
-
-			update, err := lightClient.NewLightClientFinalityUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock, nil)
-			require.NoError(t, err)
-			require.NotNil(t, update, "update is nil")
-
-			require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
-
-			l.CheckSyncAggregate(update.SyncAggregate)
-			l.CheckAttestedHeader(update.AttestedHeader)
-
-			zeroHash := params.BeaconConfig().ZeroHash[:]
-			require.NotNil(t, update.FinalizedHeader, "Finalized header is nil")
-			updateFinalizedHeaderBeacon, err := update.FinalizedHeader.GetBeacon()
-			require.NoError(t, err)
-			require.Equal(t, primitives.Slot(0), updateFinalizedHeaderBeacon.Slot, "Finalized header slot is not zero")
-			require.Equal(t, primitives.ValidatorIndex(0), updateFinalizedHeaderBeacon.ProposerIndex, "Finalized header proposer index is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.ParentRoot, "Finalized header parent root is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.StateRoot, "Finalized header state root is not zero")
-			require.DeepSSZEqual(t, zeroHash, updateFinalizedHeaderBeacon.BodyRoot, "Finalized header body root is not zero")
-			require.DeepSSZEqual(t, zeroHash, update.FinalizedHeader.GetHeaderDeneb().Execution.BlockHash, "Execution BlockHash is not zero")
-			require.Equal(t, lightClient.FinalityBranchNumOfLeaves, len(update.FinalityBranch), "Invalid finality branch leaves")
-			for _, leaf := range update.FinalityBranch {
-				require.DeepSSZEqual(t, zeroHash, leaf, "Leaf is not zero")
-			}
-		})
 
 		t.Run("FinalizedBlock Not Nil", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestDeneb(false)
