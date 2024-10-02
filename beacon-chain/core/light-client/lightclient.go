@@ -462,7 +462,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 	case version.Altair, version.Bellatrix:
 		altairHeader, err := BlockToLightClientHeaderAltair(block)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get altair header")
+			return nil, errors.Wrap(err, "could not get header")
 		}
 		return &ethpbv2.LightClientHeaderContainer{
 			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
