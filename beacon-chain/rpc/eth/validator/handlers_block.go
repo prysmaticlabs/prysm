@@ -613,7 +613,7 @@ func handleProduceBlindedElectraV3(
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		httputil.WriteSsz(w, sszResp, "blindedDenebBlockContents.ssz")
+		httputil.WriteSsz(w, sszResp, "blindedElectraBlockContents.ssz")
 		return
 	}
 	blindedBlock, err := structs.BlindedBeaconBlockElectraFromConsensus(blk.BlindedElectra)
@@ -648,7 +648,7 @@ func handleProduceElectraV3(
 			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		httputil.WriteSsz(w, sszResp, "denebBlockContents.ssz")
+		httputil.WriteSsz(w, sszResp, "electraBlockContents.ssz")
 		return
 	}
 
