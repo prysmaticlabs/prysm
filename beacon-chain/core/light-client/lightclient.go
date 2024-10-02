@@ -232,7 +232,7 @@ func NewLightClientUpdateFromBeaconState(
 		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
 	}
 
-	//update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
+	// update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
 	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
