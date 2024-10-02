@@ -12,6 +12,8 @@ import (
 type ExecutionPayloadElectra = ExecutionPayloadDeneb
 type ExecutionPayloadHeaderElectra = ExecutionPayloadHeaderDeneb
 
+// GetDecodedExecutionRequests decodes the byte array in ExecutionBundleElectra and returns a ExecutionRequests container object
+// based on specifications from EIP-7685
 func (eb *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
 	if len(eb.ExecutionRequests) == 0 {
 		return nil, errors.New("no execution requests found")
@@ -93,6 +95,7 @@ func processRequestBytes(
 	return processRequestBytes(remainingBytes, requests)
 }
 
+// EncodeExecutionRequests is a helper function that takes a ExecutionRequests container and converts it into a hash used for `engine_NewPayloadV4`
 func EncodeExecutionRequests(eb *ExecutionRequests) (common.Hash, error) {
 	var executionRequestBytes []byte
 	depositBytes, err := encodeExecutionRequestsByType(0, eb.Deposits)
