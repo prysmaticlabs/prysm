@@ -15,6 +15,7 @@ import (
 
 	event "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	primitives "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	gomock "go.uber.org/mock/gomock"
@@ -176,6 +177,36 @@ func (m *MockValidatorClient) FeeRecipientByPubKey(arg0 context.Context, arg1 *e
 func (mr *MockValidatorClientMockRecorder) FeeRecipientByPubKey(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeRecipientByPubKey", reflect.TypeOf((*MockValidatorClient)(nil).FeeRecipientByPubKey), arg0, arg1)
+}
+
+// GetExecutionPayloadEnvelope mocks base method.
+func (m *MockValidatorClient) GetExecutionPayloadEnvelope(arg0 context.Context, arg1 *eth.PayloadEnvelopeRequest) (*enginev1.ExecutionPayloadEnvelope, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecutionPayloadEnvelope", arg0, arg1)
+	ret0, _ := ret[0].(*enginev1.ExecutionPayloadEnvelope)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionPayloadEnvelope indicates an expected call of GetExecutionPayloadEnvelope.
+func (mr *MockValidatorClientMockRecorder) GetExecutionPayloadEnvelope(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionPayloadEnvelope", reflect.TypeOf((*MockValidatorClient)(nil).GetExecutionPayloadEnvelope), arg0, arg1)
+}
+
+// GetLocalHeader mocks base method.
+func (m *MockValidatorClient) GetLocalHeader(arg0 context.Context, arg1 *eth.HeaderRequest) (*enginev1.ExecutionPayloadHeaderEPBS, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLocalHeader", arg0, arg1)
+	ret0, _ := ret[0].(*enginev1.ExecutionPayloadHeaderEPBS)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLocalHeader indicates an expected call of GetLocalHeader.
+func (mr *MockValidatorClientMockRecorder) GetLocalHeader(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLocalHeader", reflect.TypeOf((*MockValidatorClient)(nil).GetLocalHeader), arg0, arg1)
 }
 
 // GetPayloadAttestationData mocks base method.
@@ -409,6 +440,36 @@ func (m *MockValidatorClient) SubmitSignedContributionAndProof(arg0 context.Cont
 func (mr *MockValidatorClientMockRecorder) SubmitSignedContributionAndProof(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedContributionAndProof", reflect.TypeOf((*MockValidatorClient)(nil).SubmitSignedContributionAndProof), arg0, arg1)
+}
+
+// SubmitSignedExecutionPayloadEnvelope mocks base method.
+func (m *MockValidatorClient) SubmitSignedExecutionPayloadEnvelope(arg0 context.Context, arg1 *enginev1.SignedExecutionPayloadEnvelope) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitSignedExecutionPayloadEnvelope", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitSignedExecutionPayloadEnvelope indicates an expected call of SubmitSignedExecutionPayloadEnvelope.
+func (mr *MockValidatorClientMockRecorder) SubmitSignedExecutionPayloadEnvelope(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedExecutionPayloadEnvelope", reflect.TypeOf((*MockValidatorClient)(nil).SubmitSignedExecutionPayloadEnvelope), arg0, arg1)
+}
+
+// SubmitSignedExecutionPayloadHeader mocks base method.
+func (m *MockValidatorClient) SubmitSignedExecutionPayloadHeader(arg0 context.Context, arg1 *enginev1.SignedExecutionPayloadHeader) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitSignedExecutionPayloadHeader", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitSignedExecutionPayloadHeader indicates an expected call of SubmitSignedExecutionPayloadHeader.
+func (mr *MockValidatorClientMockRecorder) SubmitSignedExecutionPayloadHeader(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSignedExecutionPayloadHeader", reflect.TypeOf((*MockValidatorClient)(nil).SubmitSignedExecutionPayloadHeader), arg0, arg1)
 }
 
 // SubmitSyncMessage mocks base method.

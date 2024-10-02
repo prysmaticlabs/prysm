@@ -148,6 +148,21 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) GetDuties(arg0, arg1 any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDuties", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetDuties), arg0, arg1)
 }
 
+// GetExecutionPayloadEnvelope mocks base method.
+func (m *MockBeaconNodeValidatorServer) GetExecutionPayloadEnvelope(arg0 context.Context, arg1 *eth.PayloadEnvelopeRequest) (*enginev1.ExecutionPayloadEnvelope, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecutionPayloadEnvelope", arg0, arg1)
+	ret0, _ := ret[0].(*enginev1.ExecutionPayloadEnvelope)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionPayloadEnvelope indicates an expected call of GetExecutionPayloadEnvelope.
+func (mr *MockBeaconNodeValidatorServerMockRecorder) GetExecutionPayloadEnvelope(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionPayloadEnvelope", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetExecutionPayloadEnvelope), arg0, arg1)
+}
+
 // GetFeeRecipientByPubKey mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetFeeRecipientByPubKey(arg0 context.Context, arg1 *eth.FeeRecipientByPubKeyRequest) (*eth.FeeRecipientByPubKeyResponse, error) {
 	m.ctrl.T.Helper()
@@ -161,6 +176,21 @@ func (m *MockBeaconNodeValidatorServer) GetFeeRecipientByPubKey(arg0 context.Con
 func (mr *MockBeaconNodeValidatorServerMockRecorder) GetFeeRecipientByPubKey(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFeeRecipientByPubKey", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetFeeRecipientByPubKey), arg0, arg1)
+}
+
+// GetLocalHeader mocks base method.
+func (m *MockBeaconNodeValidatorServer) GetLocalHeader(arg0 context.Context, arg1 *eth.HeaderRequest) (*enginev1.ExecutionPayloadHeaderEPBS, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLocalHeader", arg0, arg1)
+	ret0, _ := ret[0].(*enginev1.ExecutionPayloadHeaderEPBS)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLocalHeader indicates an expected call of GetLocalHeader.
+func (mr *MockBeaconNodeValidatorServerMockRecorder) GetLocalHeader(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLocalHeader", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetLocalHeader), arg0, arg1)
 }
 
 // GetPayloadAttestationData mocks base method.

@@ -227,7 +227,15 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 	winningBid := primitives.ZeroWei()
 	var bundle *enginev1.BlobsBundle
-	if sBlk.Version() >= version.Bellatrix {
+	if sBlk.Version() >= version.EPBS {
+		if vs.signedExecutionPayloadHeader == nil {
+			log.Warn("Failed to retrieve the signed execution payload header, proposing a block without it")
+		} else {
+			if err := sBlk.SetSignedExecutionPayloadHeader(vs.signedExecutionPayloadHeader); err != nil {
+				log.Warn("Failed to set the signed execution payload header, proposing a block without it")
+			}
+		}
+	} else if sBlk.Version() >= version.Bellatrix {
 		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
