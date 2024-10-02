@@ -76,7 +76,6 @@ type BeaconState struct {
 	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
 	rebuildTrie           map[types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
-	validatorIndexCache   *finalizedValidatorIndexCache
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }

@@ -329,8 +329,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "failed to initialize blockchain service")
 	}
 
-	saved.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
-
 	return nil
 }
 

@@ -46,7 +46,6 @@ go_library(
         "ssz.go",
         "state_trie.go",
         "types.go",
-        "validator_index_cache.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native",
     visibility = ["//visibility:public"],
@@ -121,7 +120,6 @@ go_test(
         "state_test.go",
         "state_trie_test.go",
         "types_test.go",
-        "validator_index_cache_test.go",
     ],
     data = glob(["testdata/**"]) + [
         "@consensus_spec_tests_mainnet//:test_data",
