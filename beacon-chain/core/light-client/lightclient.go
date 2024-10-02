@@ -227,7 +227,7 @@ func NewLightClientUpdateFromBeaconState(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested block root")
 	}
-	//assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
+	// assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
 	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
 		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
 	}
