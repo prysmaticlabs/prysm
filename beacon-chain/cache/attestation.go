@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
+	log "github.com/sirupsen/logrus"
 )
 
 type attGroup struct {
@@ -52,7 +53,13 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 	}
 
 	if att.IsAggregated() {
-		group.external = append(group.external, att.Clone())
+		redundant, err := c.AggregateIsRedundant(att)
+		if err != nil {
+			log.WithError(err).Error("Unable to check if attestation is redundant, skipping insertion")
+		}
+		if !redundant {
+			group.external = append(group.external, att.Clone())
+		}
 		return nil
 	}
 
