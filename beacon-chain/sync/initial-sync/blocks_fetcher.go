@@ -1061,6 +1061,7 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		// Reduce blocks count until the total number of elements is less than the batch size.
 		for missingDataColumnsCount*blocksCount > batchSize {
 			blocksCount /= 2
+			lastSlot = firstSlot + primitives.Slot(blocksCount-1)
 		}
 
 		// If no peer is specified, get all connected peers.
