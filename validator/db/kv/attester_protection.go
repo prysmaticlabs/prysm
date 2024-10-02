@@ -13,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 // SlashingKind used for helpful information upon detection.
@@ -419,7 +419,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 			_, span := trace.StartSpan(v.ctx, "batchAttestationWrites.handleBatchedAttestationSaveRequest")
 			s.batchedAttestations.Append(v.record)
 
-			span.AddAttributes(trace.Int64Attribute("num_records", int64(s.batchedAttestations.Len())))
+			span.SetAttributes(trace.Int64Attribute("num_records", int64(s.batchedAttestations.Len())))
 
 			if numRecords := s.batchedAttestations.Len(); numRecords >= attestationBatchCapacity {
 				log.WithField("recordCount", numRecords).Debug(

@@ -25,8 +25,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	prysmTrace "github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type customProcessingFn func(context.Context, state.BeaconState) error
@@ -62,7 +63,7 @@ func ExecuteStateTransition(
 		return nil, err
 	}
 
-	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransition")
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.ExecuteStateTransition")
 	defer span.End()
 	var err error
 
@@ -102,9 +103,9 @@ func ExecuteStateTransition(
 //	  previous_block_root = hash_tree_root(state.latest_block_header)
 //	  state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlot")
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.ProcessSlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
+	span.SetAttributes(prysmTrace.Int64Attribute("slot", int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
 
 	prevStateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
@@ -147,7 +148,7 @@ func ProcessSlotsUsingNextSlotCache(
 	parentState state.BeaconState,
 	parentRoot []byte,
 	slot primitives.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
 	nextSlotState := NextSlotState(parentRoot, slot)
@@ -177,12 +178,12 @@ func ProcessSlotsIfPossible(ctx context.Context, state state.BeaconState, target
 
 // ProcessSlots includes core slot processing as well as a cache
 func ProcessSlots(ctx context.Context, state state.BeaconState, slot primitives.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlots")
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.ProcessSlots")
 	defer span.End()
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")
 	}
-	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
+	span.SetAttributes(prysmTrace.Int64Attribute("slots", int64(slot)-int64(state.Slot()))) // lint:ignore uintcast -- This is OK for tracing.
 
 	// The block must have a higher slot than parent state.
 	if state.Slot() >= slot {
@@ -258,7 +259,7 @@ func cacheBestBeaconStateOnErrFn(highestSlot primitives.Slot, key [32]byte) cust
 //	      if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 //	          process_epoch(state)
 //	      state.slot = Slot(state.slot + 1)
-func ProcessSlotsCore(ctx context.Context, span *trace.Span, state state.BeaconState, slot primitives.Slot, fn customProcessingFn) (state.BeaconState, error) {
+func ProcessSlotsCore(ctx context.Context, span trace.Span, state state.BeaconState, slot primitives.Slot, fn customProcessingFn) (state.BeaconState, error) {
 	var err error
 	for state.Slot() < slot {
 		if fn != nil {
@@ -317,7 +318,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 
 // UpgradeState upgrades the state to the next version if possible.
 func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.UpgradeState")
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.UpgradeState")
 	defer span.End()
 
 	var err error
@@ -444,9 +445,9 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
 func ProcessEpochPrecompute(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.ProcessEpochPrecompute")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(time.CurrentEpoch(state)))) // lint:ignore uintcast -- This is OK for tracing.
+	span.SetAttributes(prysmTrace.Int64Attribute("epoch", int64(time.CurrentEpoch(state)))) // lint:ignore uintcast -- This is OK for tracing.
 
 	if state == nil || state.IsNil() {
 		return nil, errors.New("nil state")

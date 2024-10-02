@@ -13,12 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	log "github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // ProcessDeposits is one of the operations performed on each processed
@@ -248,7 +248,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 
 	// constants
 	ffe := params.BeaconConfig().FarFutureEpoch
-	curEpoch := slots.ToEpoch(st.Slot())
+	nextEpoch := slots.ToEpoch(st.Slot()) + 1
 
 	for _, balanceDeposit := range deposits {
 		v, err := st.ValidatorAtIndexReadOnly(balanceDeposit.Index)
@@ -259,7 +259,7 @@ func ProcessPendingBalanceDeposits(ctx context.Context, st state.BeaconState, ac
 		// If the validator is currently exiting, postpone the deposit until after the withdrawable
 		// epoch.
 		if v.ExitEpoch() < ffe {
-			if curEpoch <= v.WithdrawableEpoch() {
+			if nextEpoch <= v.WithdrawableEpoch() {
 				depositsToPostpone = append(depositsToPostpone, balanceDeposit)
 			} else {
 				// The deposited balance will never become active. Therefore, we increase the balance but do

@@ -26,12 +26,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,7 +50,7 @@ const (
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBeaconBlock")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
+	span.SetAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), req.Slot)
 	if err != nil {
@@ -277,8 +277,8 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	var sidecars []*ethpb.BlobSidecar
 	if block.IsBlinded() {
 		block, sidecars, err = vs.handleBlindedBlock(ctx, block)
-	} else {
-		sidecars, err = vs.handleUnblindedBlock(block, req)
+	} else if block.Version() >= version.Deneb {
+		sidecars, err = vs.blobSidecarsFromUnblindedBlock(block, req)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%s: %v", "handle block failed", err)
@@ -345,13 +345,12 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 	return copiedBlock, sidecars, nil
 }
 
-// handleUnblindedBlock processes unblinded beacon blocks.
-func (vs *Server) handleUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
-	dbBlockContents := req.GetDeneb()
-	if dbBlockContents == nil {
-		return nil, nil
+func (vs *Server) blobSidecarsFromUnblindedBlock(block interfaces.SignedBeaconBlock, req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+	rawBlobs, proofs, err := blobsAndProofs(req)
+	if err != nil {
+		return nil, err
 	}
-	return BuildBlobSidecars(block, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+	return BuildBlobSidecars(block, rawBlobs, proofs)
 }
 
 // broadcastReceiveBlock broadcasts a block and handles its reception.
@@ -430,7 +429,7 @@ func (vs *Server) PrepareBeaconProposer(
 	if len(validatorIndices) != 0 {
 		log.WithFields(logrus.Fields{
 			"validatorCount": len(validatorIndices),
-		}).Info("Updated fee recipient addresses for validator indices")
+		}).Debug("Updated fee recipient addresses for validator indices")
 	}
 	return &emptypb.Empty{}, nil
 }
@@ -501,4 +500,17 @@ func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.S
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func blobsAndProofs(req *ethpb.GenericSignedBeaconBlock) ([][]byte, [][]byte, error) {
+	switch {
+	case req.GetDeneb() != nil:
+		dbBlockContents := req.GetDeneb()
+		return dbBlockContents.Blobs, dbBlockContents.KzgProofs, nil
+	case req.GetElectra() != nil:
+		dbBlockContents := req.GetElectra()
+		return dbBlockContents.Blobs, dbBlockContents.KzgProofs, nil
+	default:
+		return nil, nil, errors.Errorf("unknown request type provided: %T", req)
+	}
 }

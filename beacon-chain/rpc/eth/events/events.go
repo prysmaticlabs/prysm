@@ -19,13 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -301,36 +301,15 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, LightClientFinalityUpdateTopic)
 		}
-
-		var finalityBranch []string
-		for _, b := range updateData.Data.FinalityBranch {
-			finalityBranch = append(finalityBranch, hexutil.Encode(b))
+		update, err := structs.LightClientFinalityUpdateFromConsensus(updateData.Data)
+		if err != nil {
+			return err
 		}
-		update := &structs.LightClientFinalityUpdateEvent{
+		updateEvent := &structs.LightClientFinalityUpdateEvent{
 			Version: version.String(int(updateData.Version)),
-			Data: &structs.LightClientFinalityUpdate{
-				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
-				},
-				FinalizedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.StateRoot),
-				},
-				FinalityBranch: finalityBranch,
-				SyncAggregate: &structs.SyncAggregate{
-					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
-					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
-				},
-				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
-			},
+			Data:    update,
 		}
-		return send(w, flusher, LightClientFinalityUpdateTopic, update)
+		return send(w, flusher, LightClientFinalityUpdateTopic, updateEvent)
 	case statefeed.LightClientOptimisticUpdate:
 		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
 			return nil
@@ -339,24 +318,15 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if !ok {
 			return write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
 		}
-		update := &structs.LightClientOptimisticUpdateEvent{
-			Version: version.String(int(updateData.Version)),
-			Data: &structs.LightClientOptimisticUpdate{
-				AttestedHeader: &structs.BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
-					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
-					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
-					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
-					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
-				},
-				SyncAggregate: &structs.SyncAggregate{
-					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
-					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
-				},
-				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
-			},
+		update, err := structs.LightClientOptimisticUpdateFromConsensus(updateData.Data)
+		if err != nil {
+			return err
 		}
-		return send(w, flusher, LightClientOptimisticUpdateTopic, update)
+		updateEvent := &structs.LightClientOptimisticUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data:    update,
+		}
+		return send(w, flusher, LightClientOptimisticUpdateTopic, updateEvent)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil

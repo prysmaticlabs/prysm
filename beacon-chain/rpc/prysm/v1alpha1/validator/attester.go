@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -24,7 +24,7 @@ import (
 func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.RequestAttestation")
 	defer span.End()
-	span.AddAttributes(
+	span.SetAttributes(
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
@@ -73,18 +73,12 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Atte
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.ProposeAttestationElectra")
 	defer span.End()
 
-	if att.GetData().CommitteeIndex != 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee index must be set to 0")
-	}
-	committeeIndices := helpers.CommitteeIndices(att.CommitteeBits)
-	if len(committeeIndices) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has no bit set")
-	}
-	if len(committeeIndices) > 1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Committee bits has more than one bit set")
+	committeeIndex, err := att.GetCommitteeIndex()
+	if err != nil {
+		return nil, err
 	}
 
-	resp, err := vs.proposeAtt(ctx, att, committeeIndices[0])
+	resp, err := vs.proposeAtt(ctx, att, committeeIndex)
 	if err != nil {
 		return nil, err
 	}

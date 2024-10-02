@@ -133,7 +133,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		expected = 0.95
 	}
 	if partRate < expected {
-		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeGatewayPort)
+		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeHTTPPort)
 		resp := structs.GetBeaconStateV2Response{}
 		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param
 		if err != nil {
@@ -233,7 +233,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
 
-		if b.IsNil() {
+		if b == nil || b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkStartSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
@@ -274,7 +274,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 			return errors.Wrapf(err, "block type doesn't exist for block at epoch %d", lowestBound)
 		}
 
-		if b.IsNil() {
+		if b == nil || b.IsNil() {
 			return errors.New("nil block provided")
 		}
 		forkSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)

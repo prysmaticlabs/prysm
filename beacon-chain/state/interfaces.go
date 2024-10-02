@@ -117,6 +117,7 @@ type ReadOnlyValidator interface {
 	ExitEpoch() primitives.Epoch
 	PublicKey() [fieldparams.BLSPubkeyLength]byte
 	GetWithdrawalCredentials() []byte
+	Copy() *ethpb.Validator
 	Slashed() bool
 	IsNil() bool
 }
@@ -199,6 +200,7 @@ type ReadOnlyWithdrawals interface {
 	NextWithdrawalValidatorIndex() (primitives.ValidatorIndex, error)
 	NextWithdrawalIndex() (uint64, error)
 	PendingBalanceToWithdraw(idx primitives.ValidatorIndex) (uint64, error)
+	PendingPartialWithdrawals() ([]*ethpb.PendingPartialWithdrawal, error)
 	NumPendingPartialWithdrawals() (uint64, error)
 	HasPendingBalanceToWithdraw(idx primitives.ValidatorIndex) (bool, error)
 }
@@ -257,7 +259,7 @@ type WriteOnlyEth1Data interface {
 // WriteOnlyValidators defines a struct which only has write access to validators methods.
 type WriteOnlyValidators interface {
 	SetValidators(val []*ethpb.Validator) error
-	ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error
+	ApplyToEveryValidator(f func(idx int, val ReadOnlyValidator) (*ethpb.Validator, error)) error
 	UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val *ethpb.Validator) error
 	AppendValidator(val *ethpb.Validator) error
 }

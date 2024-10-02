@@ -19,11 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	log "github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -146,7 +146,7 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 
-	span.AddAttributes(trace.StringAttribute("url", u.String()),
+	span.SetAttributes(trace.StringAttribute("url", u.String()),
 		trace.StringAttribute("method", method))
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
@@ -259,7 +259,7 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "builder.client.RegisterValidator")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("num_reqs", int64(len(svr))))
+	span.SetAttributes(trace.Int64Attribute("num_reqs", int64(len(svr))))
 
 	if len(svr) == 0 {
 		err := errors.Wrap(errMalformedRequest, "empty validator registration list")
@@ -278,7 +278,11 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	}
 
 	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
-	return err
+	if err != nil {
+		return err
+	}
+	log.WithField("num_registrations", len(svr)).Info("successfully registered validator(s) on builder")
+	return nil
 }
 
 var errResponseVersionMismatch = errors.New("builder API response uses a different version than requested in " + api.VersionHeader + " header")

@@ -16,8 +16,8 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"go.opencensus.io/trace"
 )
 
 // Time to first byte timeout. The maximum time to wait for first byte of
@@ -156,8 +156,8 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
-		span.AddAttributes(trace.StringAttribute("topic", topic))
-		span.AddAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().String()))
+		span.SetAttributes(trace.StringAttribute("topic", topic))
+		span.SetAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().String()))
 		log := log.WithField("peer", stream.Conn().RemotePeer().String()).WithField("topic", string(stream.Protocol()))
 
 		// Check before hand that peer is valid.

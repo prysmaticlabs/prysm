@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -29,12 +28,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -54,7 +53,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
+	blockId := r.PathValue("block_id")
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -85,7 +84,7 @@ func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlindedBlock")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
+	blockId := r.PathValue("block_id")
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -201,7 +200,7 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestations")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
+	blockId := r.PathValue("block_id")
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -286,7 +285,7 @@ func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
@@ -295,6 +294,29 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionRequired && versionHeader == "" {
 		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+	}
+
+	electraBlock := &eth.SignedBlindedBeaconBlockElectra{}
+	if err = electraBlock.UnmarshalSSZ(body); err == nil {
+		genericBlock := &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_BlindedElectra{
+				BlindedElectra: electraBlock,
+			},
+		}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.proposeBlock(ctx, w, genericBlock)
+		return
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
+		return
 	}
 
 	denebBlock := &eth.SignedBlindedBeaconBlockDeneb{}
@@ -415,7 +437,7 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 	httputil.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -427,6 +449,27 @@ func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter,
 	}
 
 	var consensusBlock *eth.GenericSignedBeaconBlock
+
+	var electraBlock *structs.SignedBlindedBeaconBlockElectra
+	if err = unmarshalStrict(body, &electraBlock); err == nil {
+		consensusBlock, err = electraBlock.ToGeneric()
+		if err == nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			s.proposeBlock(ctx, w, consensusBlock)
+			return
+		}
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
+		return
+	}
 
 	var denebBlock *structs.SignedBlindedBeaconBlockDeneb
 	if err = unmarshalStrict(body, &denebBlock); err == nil {
@@ -579,7 +622,7 @@ func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -588,6 +631,39 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionRequired && versionHeader == "" {
 		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+		return
+	}
+
+	electraBlock := &eth.SignedBeaconBlockContentsElectra{}
+	if err = electraBlock.UnmarshalSSZ(body); err == nil {
+		genericBlock := &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Electra{
+				Electra: electraBlock,
+			},
+		}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			if errors.Is(err, errEquivocatedBlock) {
+				b, err := blocks.NewSignedBeaconBlock(genericBlock)
+				if err != nil {
+					httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				if err := s.broadcastSeenBlockSidecars(ctx, b, genericBlock.GetElectra().Blobs, genericBlock.GetElectra().KzgProofs); err != nil {
+					log.WithError(err).Error("Failed to broadcast blob sidecars")
+				}
+			}
+			httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.proposeBlock(ctx, w, genericBlock)
+		return
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -719,7 +795,7 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 	httputil.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) {
+func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request, versionRequired bool) { // nolint:gocognit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -732,6 +808,37 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 	}
 
 	var consensusBlock *eth.GenericSignedBeaconBlock
+
+	var electraBlockContents *structs.SignedBeaconBlockContentsElectra
+	if err = unmarshalStrict(body, &electraBlockContents); err == nil {
+		consensusBlock, err = electraBlockContents.ToGeneric()
+		if err == nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				if errors.Is(err, errEquivocatedBlock) {
+					b, err := blocks.NewSignedBeaconBlock(consensusBlock)
+					if err != nil {
+						httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					if err := s.broadcastSeenBlockSidecars(ctx, b, consensusBlock.GetElectra().Blobs, consensusBlock.GetElectra().KzgProofs); err != nil {
+						log.WithError(err).Error("Failed to broadcast blob sidecars")
+					}
+				}
+				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			s.proposeBlock(ctx, w, consensusBlock)
+			return
+		}
+	}
+	if versionHeader == version.String(version.Electra) {
+		httputil.HandleError(
+			w,
+			fmt.Sprintf("Could not decode request body into %s consensus block: %v", version.String(version.Electra), err.Error()),
+			http.StatusBadRequest,
+		)
+		return
+	}
 
 	var denebBlockContents *structs.SignedBeaconBlockContentsDeneb
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
@@ -929,7 +1036,7 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	var root []byte
-	blockID := mux.Vars(r)["block_id"]
+	blockID := r.PathValue("block_id")
 	if blockID == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1041,7 +1148,8 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateFork")
 	defer span.End()
-	stateId := mux.Vars(r)["state_id"]
+
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1081,7 +1189,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1266,7 +1374,7 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeader")
 	defer span.End()
 
-	blockID := mux.Vars(r)["block_id"]
+	blockID := r.PathValue("block_id")
 	if blockID == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1324,7 +1432,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return

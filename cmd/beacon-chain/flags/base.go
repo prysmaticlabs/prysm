@@ -3,9 +3,22 @@
 package flags
 
 import (
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/urfave/cli/v2"
+)
+
+var (
+	DefaultWebDomains        = []string{"http://localhost:4200", "http://127.0.0.1:4200", "http://0.0.0.0:4200"}
+	DefaultHTTPServerDomains = []string{"http://localhost:7500", "http://127.0.0.1:7500", "http://0.0.0.0:7500"}
+	DefaultHTTPCorsDomains   = func() []string {
+		s := []string{"http://localhost:3000", "http://0.0.0.0:3000", "http://127.0.0.1:3000"}
+		s = append(s, DefaultWebDomains...)
+		s = append(s, DefaultHTTPServerDomains...)
+		return s
+	}()
 )
 
 var (
@@ -21,8 +34,9 @@ var (
 		Value: 3,
 	}
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
-		Name:  "max-builder-epoch-missed-slots",
-		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
+		Name: "max-builder-epoch-missed-slots",
+		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window. " +
+			"The values are on the basis of the networks and the default value for mainnet is 5.",
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
@@ -117,30 +131,29 @@ var (
 		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
 		Value: PrysmAPIModule + `,` + EthAPIModule,
 	}
-	// DisableGRPCGateway for JSON-HTTP requests to the beacon node.
-	DisableGRPCGateway = &cli.BoolFlag{
-		Name:  "disable-grpc-gateway",
-		Usage: "Disable the gRPC gateway for JSON-HTTP requests",
+
+	// HTTPServerHost specifies a HTTP server host for the validator client.
+	HTTPServerHost = &cli.StringFlag{
+		Name:    "http-host",
+		Usage:   "Host on which the HTTP server runs on.",
+		Value:   "127.0.0.1",
+		Aliases: []string{"grpc-gateway-host"},
 	}
-	// GRPCGatewayHost specifies a gRPC gateway host for Prysm.
-	GRPCGatewayHost = &cli.StringFlag{
-		Name:  "grpc-gateway-host",
-		Usage: "The host on which the gateway server runs on",
-		Value: "127.0.0.1",
+	// HTTPServerPort enables a REST server port to be exposed for the validator client.
+	HTTPServerPort = &cli.IntFlag{
+		Name:    "http-port",
+		Usage:   "Port on which the HTTP server runs on.",
+		Value:   3500,
+		Aliases: []string{"grpc-gateway-port"},
 	}
-	// GRPCGatewayPort specifies a gRPC gateway port for Prysm.
-	GRPCGatewayPort = &cli.IntFlag{
-		Name:  "grpc-gateway-port",
-		Usage: "The port on which the gateway server runs on",
-		Value: 3500,
+	// HTTPServerCorsDomain serves preflight requests when serving HTTP.
+	HTTPServerCorsDomain = &cli.StringFlag{
+		Name:    "http-cors-domain",
+		Usage:   "Comma separated list of domains from which to accept cross origin requests.",
+		Value:   strings.Join(DefaultHTTPCorsDomains, ", "),
+		Aliases: []string{"grpc-gateway-corsdomain"},
 	}
-	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
-	GPRCGatewayCorsDomain = &cli.StringFlag{
-		Name: "grpc-gateway-corsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests " +
-			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
-	}
+
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
 	MinSyncPeers = &cli.IntFlag{

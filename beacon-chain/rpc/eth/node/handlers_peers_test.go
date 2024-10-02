@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/gorilla/mux"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2ptest "github.com/libp2p/go-libp2p/p2p/host/peerstore/test"
@@ -43,7 +42,7 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/peers/{peer_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"peer_id": rawId})
+		request.SetPathValue("peer_id", rawId)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -60,7 +59,7 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("Invalid ID", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/peers/{peer_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"peer_id": "foo"})
+		request.SetPathValue("peer_id", "foo")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -74,7 +73,7 @@ func TestGetPeer(t *testing.T) {
 
 	t.Run("Peer not found", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/node/peers/{peer_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"peer_id": "16Uiu2HAmQqFdEcHbSmQTQuLoAhnMUrgoWoraKK4cUJT6FuuqHqTU"})
+		request.SetPathValue("peer_id", "16Uiu2HAmQqFdEcHbSmQTQuLoAhnMUrgoWoraKK4cUJT6FuuqHqTU")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
