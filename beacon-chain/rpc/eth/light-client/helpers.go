@@ -68,10 +68,11 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
-	lightClientHeader, err := lightclient.BlockToLightClientHeaderAltair(block)
+	lightClientHeaderContainer, err := lightclient.BlockToLightClientHeader(block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
+	lightClientHeader := lightClientHeaderContainer.GetHeaderAltair()
 
 	apiLightClientHeader := &structs.LightClientHeader{
 		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
@@ -135,10 +136,11 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
-	lightClientHeader, err := lightclient.BlockToLightClientHeaderCapella(ctx, block)
+	lightClientHeaderContainer, err := lightclient.BlockToLightClientHeader(block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
+	lightClientHeader := lightClientHeaderContainer.GetHeaderCapella()
 
 	apiLightClientHeader := &structs.LightClientHeader{
 		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
@@ -202,10 +204,11 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
-	lightClientHeader, err := lightclient.BlockToLightClientHeaderDeneb(ctx, block)
+	lightClientHeaderContainer, err := lightclient.BlockToLightClientHeader(block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
+	lightClientHeader := lightClientHeaderContainer.GetHeaderDeneb()
 
 	apiLightClientHeader := &structs.LightClientHeader{
 		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
