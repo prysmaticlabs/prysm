@@ -1112,7 +1112,7 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		if len(roDataColumns) == 0 {
 			log.
 				WithFields(logrus.Fields{
-					"peers":         peers,
+					"peers":         peersToFilter,
 					"filteredPeers": filteredPeers,
 					"delay":         delay,
 					"start":         startSlot,
