@@ -5,13 +5,12 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
+	consensustypes "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 
 	lightClient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
-	light_client "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
@@ -126,7 +125,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 			payloadInterface, err := l.FinalizedBlock.Block().Body().Execution()
 			require.NoError(t, err)
 			transactionsRoot, err := payloadInterface.TransactionsRoot()
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			if errors.Is(err, consensustypes.ErrUnsupportedField) {
 				transactions, err := payloadInterface.Transactions()
 				require.NoError(t, err)
 				transactionsRootArray, err := ssz.TransactionsRoot(transactions)
@@ -136,7 +135,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 				require.NoError(t, err)
 			}
 			withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			if errors.Is(err, consensustypes.ErrUnsupportedField) {
 				withdrawals, err := payloadInterface.Withdrawals()
 				require.NoError(t, err)
 				withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
@@ -231,7 +230,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 			payloadInterface, err := l.FinalizedBlock.Block().Body().Execution()
 			require.NoError(t, err)
 			transactionsRoot, err := payloadInterface.TransactionsRoot()
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			if errors.Is(err, consensustypes.ErrUnsupportedField) {
 				transactions, err := payloadInterface.Transactions()
 				require.NoError(t, err)
 				transactionsRootArray, err := ssz.TransactionsRoot(transactions)
@@ -241,7 +240,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 				require.NoError(t, err)
 			}
 			withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			if errors.Is(err, consensustypes.ErrUnsupportedField) {
 				withdrawals, err := payloadInterface.Withdrawals()
 				require.NoError(t, err)
 				withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
@@ -303,7 +302,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 			payloadInterface, err := l.FinalizedBlock.Block().Body().Execution()
 			require.NoError(t, err)
 			transactionsRoot, err := payloadInterface.TransactionsRoot()
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			if errors.Is(err, consensustypes.ErrUnsupportedField) {
 				transactions, err := payloadInterface.Transactions()
 				require.NoError(t, err)
 				transactionsRootArray, err := ssz.TransactionsRoot(transactions)
@@ -313,7 +312,7 @@ func TestLightClient_NewLightClientFinalityUpdateFromBeaconState(t *testing.T) {
 				require.NoError(t, err)
 			}
 			withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-			if errors.Is(err, consensus_types.ErrUnsupportedField) {
+			if errors.Is(err, consensustypes.ErrUnsupportedField) {
 				withdrawals, err := payloadInterface.Withdrawals()
 				require.NoError(t, err)
 				withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
@@ -348,8 +347,9 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		l := util.NewTestLightClient(t).SetupTestAltair()
 
-		header, err := lightClient.BlockToLightClientHeaderAltair(l.Block)
+		container, err := lightClient.BlockToLightClientHeader(l.Block)
 		require.NoError(t, err)
+		header := container.GetHeaderAltair()
 		require.NotNil(t, header, "header is nil")
 
 		parentRoot := l.Block.Block().ParentRoot()
@@ -368,8 +368,9 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 		t.Run("Non-Blinded Beacon Block", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestCapella(false)
 
-			header, err := lightClient.BlockToLightClientHeaderCapella(l.Ctx, l.Block)
+			container, err := lightClient.BlockToLightClientHeader(l.Block)
 			require.NoError(t, err)
+			header := container.GetHeaderCapella()
 			require.NotNil(t, header, "header is nil")
 
 			parentRoot := l.Block.Block().ParentRoot()
@@ -380,10 +381,10 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 			payload, err := l.Block.Block().Body().Execution()
 			require.NoError(t, err)
 
-			transactionsRoot, err := light_client.ComputeTransactionsRoot(payload)
+			transactionsRoot, err := lightClient.ComputeTransactionsRoot(payload)
 			require.NoError(t, err)
 
-			withdrawalsRoot, err := light_client.ComputeWithdrawalsRoot(payload)
+			withdrawalsRoot, err := lightClient.ComputeWithdrawalsRoot(payload)
 			require.NoError(t, err)
 
 			executionHeader := &v11.ExecutionPayloadHeaderCapella{
@@ -421,8 +422,9 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 		t.Run("Blinded Beacon Block", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestCapella(true)
 
-			header, err := lightClient.BlockToLightClientHeaderCapella(l.Ctx, l.Block)
+			container, err := lightClient.BlockToLightClientHeader(l.Block)
 			require.NoError(t, err)
+			header := container.GetHeaderCapella()
 			require.NotNil(t, header, "header is nil")
 
 			parentRoot := l.Block.Block().ParentRoot()
@@ -476,8 +478,9 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 		t.Run("Non-Blinded Beacon Block", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestDeneb(false)
 
-			header, err := lightClient.BlockToLightClientHeaderDeneb(l.Ctx, l.Block)
+			container, err := lightClient.BlockToLightClientHeader(l.Block)
 			require.NoError(t, err)
+			header := container.GetHeaderDeneb()
 			require.NotNil(t, header, "header is nil")
 
 			parentRoot := l.Block.Block().ParentRoot()
@@ -488,10 +491,10 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 			payload, err := l.Block.Block().Body().Execution()
 			require.NoError(t, err)
 
-			transactionsRoot, err := light_client.ComputeTransactionsRoot(payload)
+			transactionsRoot, err := lightClient.ComputeTransactionsRoot(payload)
 			require.NoError(t, err)
 
-			withdrawalsRoot, err := light_client.ComputeWithdrawalsRoot(payload)
+			withdrawalsRoot, err := lightClient.ComputeWithdrawalsRoot(payload)
 			require.NoError(t, err)
 
 			blobGasUsed, err := payload.BlobGasUsed()
@@ -537,8 +540,9 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 		t.Run("Blinded Beacon Block", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestDeneb(true)
 
-			header, err := lightClient.BlockToLightClientHeaderDeneb(l.Ctx, l.Block)
+			container, err := lightClient.BlockToLightClientHeader(l.Block)
 			require.NoError(t, err)
+			header := container.GetHeaderDeneb()
 			require.NotNil(t, header, "header is nil")
 
 			parentRoot := l.Block.Block().ParentRoot()

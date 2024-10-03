@@ -302,7 +302,7 @@ func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderContainer, error) {
 	switch block.Version() {
 	case version.Altair, version.Bellatrix:
-		altairHeader, err := BlockToLightClientHeaderAltair(block)
+		altairHeader, err := blockToLightClientHeaderAltair(block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get header")
 		}
@@ -312,7 +312,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 			},
 		}, nil
 	case version.Capella:
-		capellaHeader, err := BlockToLightClientHeaderCapella(context.Background(), block)
+		capellaHeader, err := blockToLightClientHeaderCapella(context.Background(), block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get capella header")
 		}
@@ -322,7 +322,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 			},
 		}, nil
 	case version.Deneb:
-		denebHeader, err := BlockToLightClientHeaderDeneb(context.Background(), block)
+		denebHeader, err := blockToLightClientHeaderDeneb(context.Background(), block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get deneb header")
 		}
@@ -336,9 +336,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 	}
 }
 
-// TODO: make below functions private
-
-func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
+func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
 	if block.Version() != version.Altair {
 		return nil, fmt.Errorf("block version is %s instead of Altair", version.String(block.Version()))
 	}
@@ -361,7 +359,7 @@ func BlockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) 
 	}, nil
 }
 
-func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderCapella, error) {
+func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderCapella, error) {
 	if block.Version() != version.Capella {
 		return nil, fmt.Errorf("block version is %s instead of Capella", version.String(block.Version()))
 	}
@@ -423,7 +421,7 @@ func BlockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 	}, nil
 }
 
-func BlockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderDeneb, error) {
+func blockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderDeneb, error) {
 	if block.Version() != version.Deneb {
 		return nil, fmt.Errorf("block version is %s instead of Deneb", version.String(block.Version()))
 	}
