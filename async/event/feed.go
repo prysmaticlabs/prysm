@@ -22,3 +22,4 @@ import (
 
 // Feed is a re-export of the go-ethereum event feed.
 type Feed = geth_event.Feed
+type Subscription = geth_event.Subscription
