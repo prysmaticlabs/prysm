@@ -351,9 +351,10 @@ func newLightClientUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*structs.LightClientUpdate, error) {
-	result, err := lightclient.NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -366,9 +367,10 @@ func newLightClientFinalityUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*structs.LightClientFinalityUpdate, error) {
-	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -381,8 +383,9 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*structs.LightClientOptimisticUpdate, error) {
-	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
+	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock)
 	if err != nil {
 		return nil, err
 	}
