@@ -65,7 +65,7 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 		return nil, errors.Wrap(err, "could not get block root")
 	}
 	if latestBlockHeaderRoot != beaconBlockRoot {
-		return nil, fmt.Errorf("latest block header root %s not equal to block root %s", latestBlockHeaderRoot, beaconBlockRoot)
+		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
 	lightClientHeader, err := lightclient.BlockToLightClientHeaderAltair(block)
@@ -132,7 +132,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, errors.Wrap(err, "could not get block root")
 	}
 	if latestBlockHeaderRoot != beaconBlockRoot {
-		return nil, fmt.Errorf("latest block header root %s not equal to block root %s", latestBlockHeaderRoot, beaconBlockRoot)
+		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
 	lightClientHeader, err := lightclient.BlockToLightClientHeaderCapella(ctx, block)
@@ -199,7 +199,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 		return nil, errors.Wrap(err, "could not get block root")
 	}
 	if latestBlockHeaderRoot != beaconBlockRoot {
-		return nil, fmt.Errorf("latest block header root %s not equal to block root %s", latestBlockHeaderRoot, beaconBlockRoot)
+		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
 	lightClientHeader, err := lightclient.BlockToLightClientHeaderDeneb(ctx, block)
