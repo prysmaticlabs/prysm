@@ -6,7 +6,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -69,12 +70,54 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)
-	log := log.WithField("handler", p2p.DataColumnSidecarsByRangeName[1:]) // slice the leading slash off the name var
 
 	r, ok := msg.(*pb.DataColumnSidecarsByRangeRequest)
 	if !ok {
 		return errors.New("message is not type *pb.DataColumnSidecarsByRangeRequest")
 	}
+
+	// Compute custody columns.
+	nodeID := s.cfg.p2p.NodeID()
+	numberOfColumns := params.BeaconConfig().NumberOfColumns
+	custodySubnetCount := peerdas.CustodySubnetCount()
+	custodyColumns, err := peerdas.CustodyColumns(nodeID, custodySubnetCount)
+	if err != nil {
+		s.writeErrorResponseToStream(responseCodeServerError, err.Error(), stream)
+		return err
+	}
+
+	custodyColumnsCount := uint64(len(custodyColumns))
+
+	// Compute requested columns.
+	requestedColumns := r.Columns
+	requestedColumnsCount := uint64(len(requestedColumns))
+
+	// Format log fields.
+
+	var (
+		custodyColumnsLog   interface{} = "all"
+		requestedColumnsLog interface{} = "all"
+	)
+
+	if custodyColumnsCount != numberOfColumns {
+		custodyColumnsLog = uint64MapToSortedSlice(custodyColumns)
+	}
+
+	if requestedColumnsCount != numberOfColumns {
+		requestedColumnsLog = requestedColumns
+	}
+
+	// Get the remote peer.
+	remotePeer := stream.Conn().RemotePeer()
+
+	log.WithFields(logrus.Fields{
+		"remotePeer":       remotePeer,
+		"custodyColumns":   custodyColumnsLog,
+		"requestedColumns": requestedColumnsLog,
+		"startSlot":        r.StartSlot,
+		"count":            r.Count,
+	}).Debug("Serving data columns by range request")
+
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
 		return err
 	}
