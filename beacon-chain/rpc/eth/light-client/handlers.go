@@ -47,7 +47,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	bootstrap, err := createLightClientBootstrap(ctx, state, blk.Block())
+	bootstrap, err := createLightClientBootstrap(ctx, state, blk)
 	if err != nil {
 		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 		return
