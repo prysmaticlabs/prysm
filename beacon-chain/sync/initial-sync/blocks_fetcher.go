@@ -1081,7 +1081,7 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 				WithFields(logrus.Fields{
 					"peers":         peersToFilter,
 					"filteredPeers": filteredPeers,
-					"delay":         delay,
+					"waitDuration":  delay,
 					"targetSlot":    lastSlot,
 				}).
 				Warning("No peers available to retrieve missing data columns, retrying later")
