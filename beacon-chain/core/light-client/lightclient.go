@@ -25,16 +25,6 @@ const (
 	executionBranchNumOfLeaves = 4
 )
 
-// createLightClientFinalityUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_finality_update
-// def create_light_client_finality_update(update: LightClientUpdate) -> LightClientFinalityUpdate:
-//
-//	return LightClientFinalityUpdate(
-//	    attested_header=update.attested_header,
-//	    finalized_header=update.finalized_header,
-//	    finality_branch=update.finality_branch,
-//	    sync_aggregate=update.sync_aggregate,
-//	    signature_slot=update.signature_slot,
-//	)
 func createLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
 	finalityUpdate := &ethpbv2.LightClientFinalityUpdate{
 		AttestedHeader:  update.AttestedHeader,
@@ -47,14 +37,6 @@ func createLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2
 	return finalityUpdate
 }
 
-// createLightClientOptimisticUpdate - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_optimistic_update
-// def create_light_client_optimistic_update(update: LightClientUpdate) -> LightClientOptimisticUpdate:
-//
-//	return LightClientOptimisticUpdate(
-//	    attested_header=update.attested_header,
-//	    sync_aggregate=update.sync_aggregate,
-//	    signature_slot=update.signature_slot,
-//	)
 func createLightClientOptimisticUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientOptimisticUpdate {
 	optimisticUpdate := &ethpbv2.LightClientOptimisticUpdate{
 		AttestedHeader: update.AttestedHeader,
@@ -96,63 +78,6 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	return createLightClientOptimisticUpdate(update), nil
 }
 
-// NewLightClientUpdateFromBeaconState implements https://github.com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
-// def create_light_client_update(state: BeaconState,
-//
-//	                           block: SignedBeaconBlock,
-//	                           attested_state: BeaconState,
-//	                           finalized_block: Optional[SignedBeaconBlock]) -> LightClientUpdate:
-//	assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
-//	assert sum(block.message.body.sync_aggregate.sync_committee_bits) >= MIN_SYNC_COMMITTEE_PARTICIPANTS
-//
-//	assert state.slot == state.latest_block_header.slot
-//	header = state.latest_block_header.copy()
-//	header.state_root = hash_tree_root(state)
-//	assert hash_tree_root(header) == hash_tree_root(block.message)
-//	update_signature_period = compute_sync_committee_period(compute_epoch_at_slot(block.message.slot))
-//
-//	assert attested_state.slot == attested_state.latest_block_header.slot
-//	attested_header = attested_state.latest_block_header.copy()
-//	attested_header.state_root = hash_tree_root(attested_state)
-//	assert hash_tree_root(attested_header) == block.message.parent_root
-//	update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-//
-//	# `next_sync_committee` is only useful if the message is signed by the current sync committee
-//	if update_attested_period == update_signature_period:
-//	    next_sync_committee = attested_state.next_sync_committee
-//	    next_sync_committee_branch = compute_merkle_proof_for_state(attested_state, NEXT_SYNC_COMMITTEE_INDEX)
-//	else:
-//	    next_sync_committee = SyncCommittee()
-//	    next_sync_committee_branch = [Bytes32() for _ in range(floorlog2(NEXT_SYNC_COMMITTEE_INDEX))]
-//
-//	# Indicate finality whenever possible
-//	if finalized_block is not None:
-//	    if finalized_block.message.slot != GENESIS_SLOT:
-//	        finalized_header = BeaconBlockHeader(
-//	            slot=finalized_block.message.slot,
-//	            proposer_index=finalized_block.message.proposer_index,
-//	            parent_root=finalized_block.message.parent_root,
-//	            state_root=finalized_block.message.state_root,
-//	            body_root=hash_tree_root(finalized_block.message.body),
-//	        )
-//	        assert hash_tree_root(finalized_header) == attested_state.finalized_checkpoint.root
-//	    else:
-//	        assert attested_state.finalized_checkpoint.root == Bytes32()
-//	        finalized_header = BeaconBlockHeader()
-//	    finality_branch = compute_merkle_proof_for_state(attested_state, FINALIZED_ROOT_INDEX)
-//	else:
-//	    finalized_header = BeaconBlockHeader()
-//	    finality_branch = [Bytes32() for _ in range(floorlog2(FINALIZED_ROOT_INDEX))]
-//
-//	return LightClientUpdate(
-//	    attested_header=attested_header,
-//	    next_sync_committee=next_sync_committee,
-//	    next_sync_committee_branch=next_sync_committee_branch,
-//	    finalized_header=finalized_header,
-//	    finality_branch=finality_branch,
-//	    sync_aggregate=block.message.body.sync_aggregate,
-//	    signature_slot=block.message.slot,
-//	)
 func NewLightClientUpdateFromBeaconState(
 	ctx context.Context,
 	state state.BeaconState,
