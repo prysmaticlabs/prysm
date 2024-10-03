@@ -1071,7 +1071,7 @@ func (f *blocksFetcher) retrieveMissingDataColumnsFromPeers(
 		}
 
 		// Filter peers.
-		filteredPeers, err := f.peersWithSlotAndDataColumns(peersToFilter, lastSlot, missingDataColumns)
+		filteredPeers, err := f.peersWithDataColumns(peersToFilter, lastSlot, missingDataColumns)
 		if err != nil {
 			return errors.Wrap(err, "peers with slot and data columns")
 		}

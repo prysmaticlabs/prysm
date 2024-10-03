@@ -369,14 +369,12 @@ func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch p
 	return headEpoch, targetEpoch, peers
 }
 
-// peersWithSlotAndDataColumns returns a list of peers that should custody all needed data columns for the given slot.
-func (f *blocksFetcher) peersWithSlotAndDataColumns(
+// peersWithDataColumns returns a list of peers that should custody all needed data columns.
+func (f *blocksFetcher) peersWithDataColumns(
 	peers []peer.ID,
 	targetSlot primitives.Slot,
 	dataColumns map[uint64]bool,
 ) ([]peer.ID, error) {
-	peersCount := len(peers)
-
 	// TODO: Uncomment when we are not in devnet any more.
 	// TODO: Find a way to have this uncommented without being in devnet.
 	// // Filter peers based on the percentage of peers to be used in a request.
@@ -390,20 +388,8 @@ func (f *blocksFetcher) peersWithSlotAndDataColumns(
 	// TODO: Modify to retrieve data columns from all possible peers.
 	// TODO: If a peer does respond some of the request columns, do not re-request responded columns.
 
-	peersWithAdmissibleHeadSlot := make([]peer.ID, 0, peersCount)
-
-	// Filter out peers with head slot lower than the target slot.
-	for _, peer := range peers {
-		peerChainState, err := f.p2p.Peers().ChainState(peer)
-		if err != nil || peerChainState == nil || peerChainState.HeadSlot < targetSlot {
-			continue
-		}
-
-		peersWithAdmissibleHeadSlot = append(peersWithAdmissibleHeadSlot, peer)
-	}
-
 	// Filter out peers that do not have all the data columns needed.
-	finalPeers, err := f.custodyAllNeededColumns(peersWithAdmissibleHeadSlot, dataColumns)
+	finalPeers, err := f.custodyAllNeededColumns(peers, dataColumns)
 	if err != nil {
 		return nil, errors.Wrap(err, "custody all needed columns")
 	}
