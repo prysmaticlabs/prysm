@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
@@ -72,10 +71,9 @@ func NewLightClientFinalityUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
-	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*ethpbv2.LightClientFinalityUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +88,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*ethpbv2.LightClientOptimisticUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, nil)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +159,6 @@ func NewLightClientUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
-	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
 	attestedEpoch := slots.ToEpoch(attestedState.Slot())
@@ -229,33 +226,21 @@ func NewLightClientUpdateFromBeaconState(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested block root")
 	}
-	//assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
-	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
-		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
-	attestedBlockRoot, err := attestedBlock.Block().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attested block root")
-	}
 	// assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
 	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
 		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
 	}
 
-	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedHeader.Slot))
+	// update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
+	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate(block.Block().Version())
+	result, err := createDefaultLightClientUpdate()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
 
 	// update.attested_header = block_to_light_client_header(attested_block)
-	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attested light client header")
-	}
-	result.AttestedHeader = attestedLightClientHeader
 	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested light client header")
@@ -323,7 +308,7 @@ func NewLightClientUpdateFromBeaconState(
 	return result, nil
 }
 
-func createDefaultLightClientUpdate(v int) (*ethpbv2.LightClientUpdate, error) {
+func createDefaultLightClientUpdate() (*ethpbv2.LightClientUpdate, error) {
 	syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
 	pubKeys := make([][]byte, syncCommitteeSize)
 	for i := uint64(0); i < syncCommitteeSize; i++ {
@@ -341,98 +326,16 @@ func createDefaultLightClientUpdate(v int) (*ethpbv2.LightClientUpdate, error) {
 	for i := 0; i < executionBranchNumOfLeaves; i++ {
 		executionBranch[i] = make([]byte, 32)
 	}
-	finalizedBlockHeader := &ethpbv1.BeaconBlockHeader{
-		Slot:          0,
-		ProposerIndex: 0,
-		ParentRoot:    make([]byte, 32),
-		StateRoot:     make([]byte, 32),
-		BodyRoot:      make([]byte, 32),
-	}
 	finalityBranch := make([][]byte, FinalityBranchNumOfLeaves)
 	for i := 0; i < FinalityBranchNumOfLeaves; i++ {
 		finalityBranch[i] = make([]byte, 32)
 	}
 
-	var finalizedHeader *ethpbv2.LightClientHeaderContainer
-	switch v {
-	case version.Altair, version.Bellatrix:
-		finalizedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-				HeaderAltair: &ethpbv2.LightClientHeader{
-					Beacon: finalizedBlockHeader,
-				},
-			},
-		}
-	case version.Capella:
-		finalizedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-					Beacon:          finalizedBlockHeader,
-					Execution:       createEmptyExecutionPayloadHeaderCapella(),
-					ExecutionBranch: executionBranch,
-				},
-			},
-		}
-	case version.Deneb:
-		finalizedHeader = &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
-					Beacon:          finalizedBlockHeader,
-					Execution:       createEmptyExecutionPayloadHeaderDeneb(),
-					ExecutionBranch: executionBranch,
-				},
-			},
-		}
-	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(v))
-	}
-
 	return &ethpbv2.LightClientUpdate{
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: nextSyncCommitteeBranch,
-		FinalizedHeader:         finalizedHeader,
 		FinalityBranch:          finalityBranch,
 	}, nil
-}
-
-func createEmptyExecutionPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
-	return &enginev1.ExecutionPayloadHeaderCapella{
-		ParentHash:       make([]byte, 32),
-		FeeRecipient:     make([]byte, 20),
-		StateRoot:        make([]byte, 32),
-		ReceiptsRoot:     make([]byte, 32),
-		LogsBloom:        make([]byte, 256),
-		PrevRandao:       make([]byte, 32),
-		BlockNumber:      0,
-		GasLimit:         0,
-		GasUsed:          0,
-		Timestamp:        0,
-		ExtraData:        make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
-		BlockHash:        make([]byte, 32),
-		TransactionsRoot: make([]byte, 32),
-		WithdrawalsRoot:  make([]byte, 32),
-	}
-}
-
-func createEmptyExecutionPayloadHeaderDeneb() *enginev1.ExecutionPayloadHeaderDeneb {
-	return &enginev1.ExecutionPayloadHeaderDeneb{
-		ParentHash:       make([]byte, 32),
-		FeeRecipient:     make([]byte, 20),
-		StateRoot:        make([]byte, 32),
-		ReceiptsRoot:     make([]byte, 32),
-		LogsBloom:        make([]byte, 256),
-		PrevRandao:       make([]byte, 32),
-		BlockNumber:      0,
-		GasLimit:         0,
-		GasUsed:          0,
-		Timestamp:        0,
-		ExtraData:        make([]byte, 32),
-		BaseFeePerGas:    make([]byte, 32),
-		BlockHash:        make([]byte, 32),
-		TransactionsRoot: make([]byte, 32),
-		WithdrawalsRoot:  make([]byte, 32),
-	}
 }
 
 func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
@@ -476,7 +379,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 	case version.Altair, version.Bellatrix:
 		altairHeader, err := BlockToLightClientHeaderAltair(block)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get altair header")
+			return nil, errors.Wrap(err, "could not get header")
 		}
 		return &ethpbv2.LightClientHeaderContainer{
 			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
