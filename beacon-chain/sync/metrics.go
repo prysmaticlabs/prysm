@@ -170,6 +170,20 @@ var (
 			Help: "The number of blob sidecars that were dropped due to missing parent block",
 		},
 	)
+
+	blobRecoveredFromELCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blob_recovered_from_el_count",
+			Help: "Count the number of times blobs have been recovered from the execution layer.",
+		},
+	)
+
+	blobExistedInDBCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "blob_existed_in_db_count",
+			Help: "Count the number of times blobs have been found in the database.",
+		},
+	)
 )
 
 func (s *Service) updateMetrics() {

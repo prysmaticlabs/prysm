@@ -29,7 +29,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -155,6 +157,10 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
+	capabilities            []string
+	capabilitiesLock        sync.RWMutex
+	verifierWaiter          *verification.InitializerWaiter
+	blobVerifier            verification.NewBlobVerifier
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
@@ -228,6 +234,13 @@ func (s *Service) Start() {
 			log.Fatal("cannot create genesis state: no eth1 http endpoint defined")
 		}
 	}
+
+	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get verification initializer")
+		return
+	}
+	s.blobVerifier = newBlobVerifierFromInitializer(v)
 
 	s.isRunning = true
 
@@ -885,4 +898,10 @@ func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error
 
 func (s *Service) removeStartupState() {
 	s.cfg.finalizedStateAtStartup = nil
+}
+
+func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs)
+	}
 }

@@ -67,6 +67,8 @@ var InitsyncSidecarRequirements = requirementList(GossipSidecarRequirements).exc
 	RequireSidecarProposerExpected,
 )
 
+var ELMemPoolRequirements = []Requirement{RequireSidecarKzgProofVerified}
+
 // BackfillSidecarRequirements is the same as InitsyncSidecarRequirements.
 var BackfillSidecarRequirements = requirementList(InitsyncSidecarRequirements).excluding()
 
