@@ -72,9 +72,10 @@ func NewLightClientFinalityUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*ethpbv2.LightClientFinalityUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +90,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*ethpbv2.LightClientOptimisticUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, nil)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +160,7 @@ func NewLightClientUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
@@ -230,18 +232,30 @@ func NewLightClientUpdateFromBeaconState(
 	//assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
 	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
 		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
+	attestedBlockRoot, err := attestedBlock.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attested block root")
+	}
+	// assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
+	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
+		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
 	}
 
-	//update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
-	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
+	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
+	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedHeader.Slot))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate(block.Block().Version()) // TODO: we should pass finalizedBlock version
+	result, err := createDefaultLightClientUpdate(block.Block().Version())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
 
 	// update.attested_header = block_to_light_client_header(attested_block)
+	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get attested light client header")
+	}
+	result.AttestedHeader = attestedLightClientHeader
 	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested light client header")

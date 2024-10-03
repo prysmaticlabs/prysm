@@ -1,0 +1,4 @@
+package enginev1
+
+type ExecutionPayloadElectra = ExecutionPayloadDeneb
+type ExecutionPayloadHeaderElectra = ExecutionPayloadHeaderDeneb
