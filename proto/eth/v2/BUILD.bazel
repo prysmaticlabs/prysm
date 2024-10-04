@@ -30,8 +30,8 @@ load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 ssz_gen_marshal(
     name = "ssz_generated_files",
-    go_proto = ":go_proto",
     out = "grpc.ssz.go",
+    go_proto = ":go_proto",
     includes = [
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",
@@ -52,6 +52,12 @@ ssz_gen_marshal(
         "BeaconBlockContentsDeneb",
         "SyncCommittee",
         "BlobIdentifier",
+        "LightClientUpdateInternal",
+        "LightClientFinalityUpdateInternal",
+        "LightClientOptimisticUpdateInternal",
+        "LightClientHeader",
+        "LightClientHeaderCapella",
+        "LightClientHeaderDeneb",
     ],
 )
 
@@ -76,13 +82,16 @@ go_proto_library(
 go_library(
     name = "go_default_library",
     srcs = [
-        ":ssz_generated_files",
         "custom.go",
+        "lightclient.ssz.go",
+        ":ssz_generated_files",
     ],
     embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/v5/proto/eth/v2",
     visibility = ["//visibility:public"],
-    deps = SSZ_DEPS,
+    deps = SSZ_DEPS + [
+        "@com_github_pkg_errors//:go_default_library",
+    ],
 )
 
 ssz_proto_files(
