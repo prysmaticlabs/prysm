@@ -2963,7 +2963,7 @@ func TestUpdateValidatorStatusCache(t *testing.T) {
 	for i, pk := range pubkeys {
 		status, exists := v.pubkeyToStatus[pk]
 		require.Equal(t, true, exists)
-		require.DeepEqual(t, pk[:], status.publicKey[:])
+		require.DeepEqual(t, pk[:], status.publicKey)
 		require.Equal(t, mockResponse.Statuses[i], status.status)
 		require.Equal(t, mockResponse.Indices[i], status.index)
 	}
