@@ -773,6 +773,15 @@ func (s *Service) beaconEndpoints(
 			handler: server.GetValidatorBalances,
 			methods: []string{http.MethodGet, http.MethodPost},
 		},
+		{
+			template: "/eth/v1/beacon/deposit_snapshot",
+			name:     namespace + ".GetDepositSnapshot",
+			middleware: []middleware.Middleware{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetDepositSnapshot,
+			methods: []string{http.MethodGet},
+		},
 	}
 }
 
