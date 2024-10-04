@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math"
@@ -23,56 +24,99 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	sse "github.com/r3labs/sse/v2"
 )
 
-type flushableResponseRecorder struct {
-	*httptest.ResponseRecorder
-	flushed bool
+func requireAllEventsReceived(t *testing.T, stn, opn *mockChain.EventFeedWrapper, events []*feed.Event, req *topicRequest, s *Server, w *StreamingResponseWriterRecorder) {
+	// maxBufferSize param copied from sse lib client code
+	sseR := sse.NewEventStreamReader(w.Body(), 1<<24)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	expected := make(map[string]bool)
+	for i := range events {
+		ev := events[i]
+		// serialize the event the same way the server will so that we can compare expectation to results.
+		top := topicForEvent(ev)
+		eb, err := s.lazyReaderForEvent(context.Background(), ev, req)
+		require.NoError(t, err)
+		exb, err := io.ReadAll(eb())
+		require.NoError(t, err)
+		exs := string(exb[0 : len(exb)-2]) // remove trailing double newline
+
+		if topicsForOpsFeed[top] {
+			if err := opn.WaitForSubscription(ctx); err != nil {
+				t.Fatal(err)
+			}
+			// Send the event on the feed.
+			s.OperationNotifier.OperationFeed().Send(ev)
+		} else {
+			if err := stn.WaitForSubscription(ctx); err != nil {
+				t.Fatal(err)
+			}
+			// Send the event on the feed.
+			s.StateNotifier.StateFeed().Send(ev)
+		}
+		expected[exs] = true
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			ev, err := sseR.ReadEvent()
+			if err == io.EOF {
+				return
+			}
+			require.NoError(t, err)
+			str := string(ev)
+			delete(expected, str)
+			if len(expected) == 0 {
+				return
+			}
+		}
+	}()
+	select {
+	case <-done:
+		break
+	case <-ctx.Done():
+		t.Fatalf("context canceled / timed out waiting for events, err=%v", ctx.Err())
+	}
+	require.Equal(t, 0, len(expected), "expected events not seen")
 }
 
-func (f *flushableResponseRecorder) Flush() {
-	f.flushed = true
+func (tr *topicRequest) testHttpRequest(_ *testing.T) *http.Request {
+	tq := make([]string, 0, len(tr.topics))
+	for topic := range tr.topics {
+		tq = append(tq, "topics="+topic)
+	}
+	return httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?%s", strings.Join(tq, "&")), nil)
 }
 
-func TestStreamEvents_OperationsEvents(t *testing.T) {
-	t.Run("operations", func(t *testing.T) {
-		s := &Server{
-			StateNotifier:     &mockChain.MockStateNotifier{},
-			OperationNotifier: &mockChain.MockOperationNotifier{},
-		}
+func operationEventsFixtures(t *testing.T) (*topicRequest, []*feed.Event) {
+	topics, err := newTopicRequest([]string{
+		AttestationTopic,
+		VoluntaryExitTopic,
+		SyncCommitteeContributionTopic,
+		BLSToExecutionChangeTopic,
+		BlobSidecarTopic,
+		AttesterSlashingTopic,
+		ProposerSlashingTopic,
+	})
+	require.NoError(t, err)
+	ro, err := blocks.NewROBlob(util.HydrateBlobSidecar(&eth.BlobSidecar{}))
+	require.NoError(t, err)
+	vblob := blocks.NewVerifiedROBlob(ro)
 
-		topics := []string{
-			AttestationTopic,
-			VoluntaryExitTopic,
-			SyncCommitteeContributionTopic,
-			BLSToExecutionChangeTopic,
-			BlobSidecarTopic,
-			AttesterSlashingTopic,
-			ProposerSlashingTopic,
-		}
-		for i, topic := range topics {
-			topics[i] = "topics=" + topic
-		}
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?%s", strings.Join(topics, "&")), nil)
-		w := &flushableResponseRecorder{
-			ResponseRecorder: httptest.NewRecorder(),
-		}
-
-		go func() {
-			s.StreamEvents(w, request)
-		}()
-		// wait for initiation of StreamEvents
-		time.Sleep(100 * time.Millisecond)
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+	return topics, []*feed.Event{
+		&feed.Event{
 			Type: operation.UnaggregatedAttReceived,
 			Data: &operation.UnAggregatedAttReceivedData{
 				Attestation: util.HydrateAttestation(&eth.Attestation{}),
 			},
-		})
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.AggregatedAttReceived,
 			Data: &operation.AggregatedAttReceivedData{
 				Attestation: &eth.AggregateAttestationAndProof{
@@ -81,8 +125,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					SelectionProof:  make([]byte, 96),
 				},
 			},
-		})
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.ExitReceived,
 			Data: &operation.ExitReceivedData{
 				Exit: &eth.SignedVoluntaryExit{
@@ -93,8 +137,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					Signature: make([]byte, 96),
 				},
 			},
-		})
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.SyncCommitteeContributionReceived,
 			Data: &operation.SyncCommitteeContributionReceivedData{
 				Contribution: &eth.SignedContributionAndProof{
@@ -112,8 +156,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					Signature: make([]byte, 96),
 				},
 			},
-		})
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.BLSToExecutionChangeReceived,
 			Data: &operation.BLSToExecutionChangeReceivedData{
 				Change: &eth.SignedBLSToExecutionChange{
@@ -125,18 +169,14 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					Signature: make([]byte, 96),
 				},
 			},
-		})
-		ro, err := blocks.NewROBlob(util.HydrateBlobSidecar(&eth.BlobSidecar{}))
-		require.NoError(t, err)
-		vblob := blocks.NewVerifiedROBlob(ro)
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.BlobSidecarReceived,
 			Data: &operation.BlobSidecarReceivedData{
 				Blob: &vblob,
 			},
-		})
-
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.AttesterSlashingReceived,
 			Data: &operation.AttesterSlashingReceivedData{
 				AttesterSlashing: &eth.AttesterSlashing{
@@ -168,9 +208,8 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					},
 				},
 			},
-		})
-
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		},
+		&feed.Event{
 			Type: operation.ProposerSlashingReceived,
 			Data: &operation.ProposerSlashingReceivedData{
 				ProposerSlashing: &eth.ProposerSlashing{
@@ -192,100 +231,107 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					},
 				},
 			},
-		})
+		},
+	}
+}
 
-		time.Sleep(1 * time.Second)
-		request.Context().Done()
+func TestStreamEvents_OperationsEvents(t *testing.T) {
+	t.Run("operations", func(t *testing.T) {
+		stn := mockChain.NewEventFeedWrapper()
+		opn := mockChain.NewEventFeedWrapper()
+		s := &Server{
+			StateNotifier:     &mockChain.SimpleNotifier{Feed: stn},
+			OperationNotifier: &mockChain.SimpleNotifier{Feed: opn},
+		}
 
-		resp := w.Result()
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.NotNil(t, body)
-		assert.Equal(t, operationsResult, string(body))
+		topics, events := operationEventsFixtures(t)
+		request := topics.testHttpRequest(t)
+		w := NewStreamingResponseWriterRecorder()
+
+		go func() {
+			s.StreamEvents(w, request)
+		}()
+
+		requireAllEventsReceived(t, stn, opn, events, topics, s, w)
 	})
 	t.Run("state", func(t *testing.T) {
+		stn := mockChain.NewEventFeedWrapper()
+		opn := mockChain.NewEventFeedWrapper()
 		s := &Server{
-			StateNotifier:     &mockChain.MockStateNotifier{},
-			OperationNotifier: &mockChain.MockOperationNotifier{},
+			StateNotifier:     &mockChain.SimpleNotifier{Feed: stn},
+			OperationNotifier: &mockChain.SimpleNotifier{Feed: opn},
 		}
 
-		topics := []string{HeadTopic, FinalizedCheckpointTopic, ChainReorgTopic, BlockTopic}
-		for i, topic := range topics {
-			topics[i] = "topics=" + topic
-		}
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?%s", strings.Join(topics, "&")), nil)
-		w := &flushableResponseRecorder{
-			ResponseRecorder: httptest.NewRecorder(),
+		topics, err := newTopicRequest([]string{
+			HeadTopic,
+			FinalizedCheckpointTopic,
+			ChainReorgTopic,
+			BlockTopic,
+		})
+		require.NoError(t, err)
+		request := topics.testHttpRequest(t)
+		w := NewStreamingResponseWriterRecorder()
+
+		b, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{}))
+		require.NoError(t, err)
+		events := []*feed.Event{
+			&feed.Event{
+				Type: statefeed.BlockProcessed,
+				Data: &statefeed.BlockProcessedData{
+					Slot:        0,
+					BlockRoot:   [32]byte{},
+					SignedBlock: b,
+					Verified:    true,
+					Optimistic:  false,
+				},
+			},
+			&feed.Event{
+				Type: statefeed.NewHead,
+				Data: &ethpb.EventHead{
+					Slot:                      0,
+					Block:                     make([]byte, 32),
+					State:                     make([]byte, 32),
+					EpochTransition:           true,
+					PreviousDutyDependentRoot: make([]byte, 32),
+					CurrentDutyDependentRoot:  make([]byte, 32),
+					ExecutionOptimistic:       false,
+				},
+			},
+			&feed.Event{
+				Type: statefeed.Reorg,
+				Data: &ethpb.EventChainReorg{
+					Slot:                0,
+					Depth:               0,
+					OldHeadBlock:        make([]byte, 32),
+					NewHeadBlock:        make([]byte, 32),
+					OldHeadState:        make([]byte, 32),
+					NewHeadState:        make([]byte, 32),
+					Epoch:               0,
+					ExecutionOptimistic: false,
+				},
+			},
+			&feed.Event{
+				Type: statefeed.FinalizedCheckpoint,
+				Data: &ethpb.EventFinalizedCheckpoint{
+					Block:               make([]byte, 32),
+					State:               make([]byte, 32),
+					Epoch:               0,
+					ExecutionOptimistic: false,
+				},
+			},
 		}
 
 		go func() {
 			s.StreamEvents(w, request)
 		}()
-		// wait for initiation of StreamEvents
-		time.Sleep(100 * time.Millisecond)
-		s.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.NewHead,
-			Data: &ethpb.EventHead{
-				Slot:                      0,
-				Block:                     make([]byte, 32),
-				State:                     make([]byte, 32),
-				EpochTransition:           true,
-				PreviousDutyDependentRoot: make([]byte, 32),
-				CurrentDutyDependentRoot:  make([]byte, 32),
-				ExecutionOptimistic:       false,
-			},
-		})
-		s.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.FinalizedCheckpoint,
-			Data: &ethpb.EventFinalizedCheckpoint{
-				Block:               make([]byte, 32),
-				State:               make([]byte, 32),
-				Epoch:               0,
-				ExecutionOptimistic: false,
-			},
-		})
-		s.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.Reorg,
-			Data: &ethpb.EventChainReorg{
-				Slot:                0,
-				Depth:               0,
-				OldHeadBlock:        make([]byte, 32),
-				NewHeadBlock:        make([]byte, 32),
-				OldHeadState:        make([]byte, 32),
-				NewHeadState:        make([]byte, 32),
-				Epoch:               0,
-				ExecutionOptimistic: false,
-			},
-		})
-		b, err := blocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{}))
-		require.NoError(t, err)
-		s.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{
-				Slot:        0,
-				BlockRoot:   [32]byte{},
-				SignedBlock: b,
-				Verified:    true,
-				Optimistic:  false,
-			},
-		})
 
-		// wait for feed
-		time.Sleep(1 * time.Second)
-		request.Context().Done()
-
-		resp := w.Result()
-		body, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		require.NotNil(t, body)
-		assert.Equal(t, stateResult, string(body))
+		requireAllEventsReceived(t, stn, opn, events, topics, s, w)
 	})
 	t.Run("payload attributes", func(t *testing.T) {
 		type testCase struct {
 			name                      string
 			getState                  func() state.BeaconState
 			getBlock                  func() interfaces.SignedBeaconBlock
-			expected                  string
 			SetTrackedValidatorsCache func(*cache.TrackedValidatorsCache)
 		}
 		testCases := []testCase{
@@ -301,7 +347,6 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					require.NoError(t, err)
 					return b
 				},
-				expected: payloadAttributesBellatrixResult,
 			},
 			{
 				name: "capella",
@@ -315,7 +360,6 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					require.NoError(t, err)
 					return b
 				},
-				expected: payloadAttributesCapellaResult,
 			},
 			{
 				name: "deneb",
@@ -329,7 +373,6 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					require.NoError(t, err)
 					return b
 				},
-				expected: payloadAttributesDenebResult,
 			},
 			{
 				name: "electra",
@@ -343,7 +386,6 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 					require.NoError(t, err)
 					return b
 				},
-				expected: payloadAttributesElectraResultWithTVC,
 				SetTrackedValidatorsCache: func(c *cache.TrackedValidatorsCache) {
 					c.Set(cache.TrackedValidator{
 						Active:       true,
@@ -368,9 +410,11 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Slot:  &currentSlot,
 			}
 
+			stn := mockChain.NewEventFeedWrapper()
+			opn := mockChain.NewEventFeedWrapper()
 			s := &Server{
-				StateNotifier:          &mockChain.MockStateNotifier{},
-				OperationNotifier:      &mockChain.MockOperationNotifier{},
+				StateNotifier:          &mockChain.SimpleNotifier{Feed: stn},
+				OperationNotifier:      &mockChain.SimpleNotifier{Feed: opn},
 				HeadFetcher:            mockChainService,
 				ChainInfoFetcher:       mockChainService,
 				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
@@ -378,100 +422,76 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			if tc.SetTrackedValidatorsCache != nil {
 				tc.SetTrackedValidatorsCache(s.TrackedValidatorsCache)
 			}
-
-			request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com/eth/v1/events?topics=%s", PayloadAttributesTopic), nil)
-			w := &flushableResponseRecorder{
-				ResponseRecorder: httptest.NewRecorder(),
-			}
+			topics, err := newTopicRequest([]string{PayloadAttributesTopic})
+			require.NoError(t, err)
+			request := topics.testHttpRequest(t)
+			w := NewStreamingResponseWriterRecorder()
+			events := []*feed.Event{&feed.Event{Type: statefeed.MissedSlot}}
 
 			go func() {
 				s.StreamEvents(w, request)
 			}()
-			// wait for initiation of StreamEvents
-			time.Sleep(100 * time.Millisecond)
-			s.StateNotifier.StateFeed().Send(&feed.Event{Type: statefeed.MissedSlot})
-
-			// wait for feed
-			time.Sleep(1 * time.Second)
-			request.Context().Done()
-
-			resp := w.Result()
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			require.NotNil(t, body)
-			assert.Equal(t, tc.expected, string(body), "wrong result for "+tc.name)
+			requireAllEventsReceived(t, stn, opn, events, topics, s, w)
 		}
 	})
 }
 
-const operationsResult = `:
+func TestStuckReader(t *testing.T) {
+	topics, events := operationEventsFixtures(t)
+	require.Equal(t, 8, len(events))
+	// set eventFeedDepth to a number lower than the events we intend to send to force the server to drop the reader.
+	stn := mockChain.NewEventFeedWrapper()
+	opn := mockChain.NewEventFeedWrapper()
+	s := &Server{
+		StateNotifier:     &mockChain.SimpleNotifier{Feed: stn},
+		OperationNotifier: &mockChain.SimpleNotifier{Feed: opn},
+		EventFeedDepth:    len(events) - 1,
+	}
 
-event: attestation
-data: {"aggregation_bits":"0x00","data":{"slot":"0","index":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","source":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"target":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"}},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	eventsWritten := make(chan struct{})
+	go func() {
+		for i := range events {
+			ev := events[i]
+			top := topicForEvent(ev)
+			if topicsForOpsFeed[top] {
+				err := opn.WaitForSubscription(ctx)
+				require.NoError(t, err)
+				s.OperationNotifier.OperationFeed().Send(ev)
+			} else {
+				err := stn.WaitForSubscription(ctx)
+				require.NoError(t, err)
+				s.StateNotifier.StateFeed().Send(ev)
+			}
+		}
+		close(eventsWritten)
+	}()
 
-event: attestation
-data: {"aggregation_bits":"0x00","data":{"slot":"0","index":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","source":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"target":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"}},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
+	request := topics.testHttpRequest(t)
+	w := NewStreamingResponseWriterRecorder()
 
-event: voluntary_exit
-data: {"message":{"epoch":"0","validator_index":"0"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
+	handlerFinished := make(chan struct{})
+	go func() {
+		s.StreamEvents(w, request)
+		close(handlerFinished)
+	}()
 
-event: contribution_and_proof
-data: {"message":{"aggregator_index":"0","contribution":{"slot":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","subcommittee_index":"0","aggregation_bits":"0x00000000000000000000000000000000","signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},"selection_proof":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
+	// Make sure that the stream writer shut down when the reader failed to clear the write buffer.
+	select {
+	case <-handlerFinished:
+		// We expect the stream handler to max out the queue buffer and exit gracefully.
+		return
+	case <-ctx.Done():
+		t.Fatalf("context canceled / timed out waiting for handler completion, err=%v", ctx.Err())
+	}
 
-event: bls_to_execution_change
-data: {"message":{"validator_index":"0","from_bls_pubkey":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","to_execution_address":"0x0000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
-
-event: blob_sidecar
-data: {"block_root":"0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c","index":"0","slot":"0","kzg_commitment":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","versioned_hash":"0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"}
-
-event: attester_slashing
-data: {"attestation_1":{"attesting_indices":["0","1"],"data":{"slot":"0","index":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","source":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"target":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"}},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},"attestation_2":{"attesting_indices":["0","1"],"data":{"slot":"0","index":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","source":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"target":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"}},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
-
-event: proposer_slashing
-data: {"signed_header_1":{"message":{"slot":"0","proposer_index":"0","parent_root":"0x0000000000000000000000000000000000000000000000000000000000000000","state_root":"0x0000000000000000000000000000000000000000000000000000000000000000","body_root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},"signed_header_2":{"message":{"slot":"0","proposer_index":"0","parent_root":"0x0000000000000000000000000000000000000000000000000000000000000000","state_root":"0x0000000000000000000000000000000000000000000000000000000000000000","body_root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
-
-`
-
-const stateResult = `:
-
-event: head
-data: {"slot":"0","block":"0x0000000000000000000000000000000000000000000000000000000000000000","state":"0x0000000000000000000000000000000000000000000000000000000000000000","epoch_transition":true,"execution_optimistic":false,"previous_duty_dependent_root":"0x0000000000000000000000000000000000000000000000000000000000000000","current_duty_dependent_root":"0x0000000000000000000000000000000000000000000000000000000000000000"}
-
-event: finalized_checkpoint
-data: {"block":"0x0000000000000000000000000000000000000000000000000000000000000000","state":"0x0000000000000000000000000000000000000000000000000000000000000000","epoch":"0","execution_optimistic":false}
-
-event: chain_reorg
-data: {"slot":"0","depth":"0","old_head_block":"0x0000000000000000000000000000000000000000000000000000000000000000","old_head_state":"0x0000000000000000000000000000000000000000000000000000000000000000","new_head_block":"0x0000000000000000000000000000000000000000000000000000000000000000","new_head_state":"0x0000000000000000000000000000000000000000000000000000000000000000","epoch":"0","execution_optimistic":false}
-
-event: block
-data: {"slot":"0","block":"0xeade62f0457b2fdf48e7d3fc4b60736688286be7c7a3ac4c9a16a5e0600bd9e4","execution_optimistic":false}
-
-`
-
-const payloadAttributesBellatrixResult = `:
-
-event: payload_attributes
-data: {"version":"bellatrix","data":{"proposer_index":"0","proposal_slot":"1","parent_block_number":"0","parent_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","parent_block_hash":"0x0000000000000000000000000000000000000000000000000000000000000000","payload_attributes":{"timestamp":"12","prev_randao":"0x0000000000000000000000000000000000000000000000000000000000000000","suggested_fee_recipient":"0x0000000000000000000000000000000000000000"}}}
-
-`
-
-const payloadAttributesCapellaResult = `:
-
-event: payload_attributes
-data: {"version":"capella","data":{"proposer_index":"0","proposal_slot":"1","parent_block_number":"0","parent_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","parent_block_hash":"0x0000000000000000000000000000000000000000000000000000000000000000","payload_attributes":{"timestamp":"12","prev_randao":"0x0000000000000000000000000000000000000000000000000000000000000000","suggested_fee_recipient":"0x0000000000000000000000000000000000000000","withdrawals":[]}}}
-
-`
-
-const payloadAttributesDenebResult = `:
-
-event: payload_attributes
-data: {"version":"deneb","data":{"proposer_index":"0","proposal_slot":"1","parent_block_number":"0","parent_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","parent_block_hash":"0x0000000000000000000000000000000000000000000000000000000000000000","payload_attributes":{"timestamp":"12","prev_randao":"0x0000000000000000000000000000000000000000000000000000000000000000","suggested_fee_recipient":"0x0000000000000000000000000000000000000000","withdrawals":[],"parent_beacon_block_root":"0xbef96cb938fd48b2403d3e662664325abb0102ed12737cbb80d717520e50cf4a"}}}
-
-`
-
-const payloadAttributesElectraResultWithTVC = `:
-
-event: payload_attributes
-data: {"version":"electra","data":{"proposer_index":"0","proposal_slot":"1","parent_block_number":"0","parent_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","parent_block_hash":"0x0000000000000000000000000000000000000000000000000000000000000000","payload_attributes":{"timestamp":"12","prev_randao":"0x0000000000000000000000000000000000000000000000000000000000000000","suggested_fee_recipient":"0xd2dbd02e4efe087d7d195de828b9dd25f19a89c9","withdrawals":[],"parent_beacon_block_root":"0xf2110e448638f41cb34514ecdbb49c055536cd5f715f1cb259d1287bb900853e"}}}
-
-`
+	// Also make sure all the events were written.
+	select {
+	case <-eventsWritten:
+		// We expect the stream handler to max out the queue buffer and exit gracefully.
+		return
+	case <-ctx.Done():
+		t.Fatalf("context canceled / timed out waiting to write all events, err=%v", ctx.Err())
+	}
+}
