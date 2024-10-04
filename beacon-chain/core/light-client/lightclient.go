@@ -321,10 +321,10 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 				HeaderCapella: capellaHeader,
 			},
 		}, nil
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		denebHeader, err := blockToLightClientHeaderDeneb(context.Background(), block)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get deneb header")
+			return nil, errors.Wrap(err, "could not get header")
 		}
 		return &ethpbv2.LightClientHeaderContainer{
 			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
@@ -423,7 +423,7 @@ func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 
 func blockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderDeneb, error) {
 	if block.Version() != version.Deneb {
-		return nil, fmt.Errorf("block version is %s instead of Deneb", version.String(block.Version()))
+		return nil, fmt.Errorf("block version is %s instead of Deneb/Electra", version.String(block.Version()))
 	}
 
 	payload, err := block.Block().Body().Execution()
