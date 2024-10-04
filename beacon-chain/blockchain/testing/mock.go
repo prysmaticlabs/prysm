@@ -117,7 +117,7 @@ func (w *EventFeedWrapper) Send(value interface{}) int {
 	return w.feed.Send(value)
 }
 
-// WAitForSubscription allows test to wait for the feed to have a subscription before beginning to send events.
+// WaitForSubscription allows test to wait for the feed to have a subscription before beginning to send events.
 func (w *EventFeedWrapper) WaitForSubscription(ctx context.Context) error {
 	select {
 	case <-w.subscribed:

@@ -29,21 +29,6 @@ import (
 	sse "github.com/r3labs/sse/v2"
 )
 
-type flushableResponseRecorder struct {
-	*httptest.ResponseRecorder
-	flushed bool
-}
-
-func (f *flushableResponseRecorder) Flush() {
-	f.flushed = true
-}
-
-func NewFlushabaleResponseRecorder() *flushableResponseRecorder {
-	return &flushableResponseRecorder{
-		ResponseRecorder: httptest.NewRecorder(),
-	}
-}
-
 func requireAllEventsReceived(t *testing.T, stn, opn *mockChain.EventFeedWrapper, events []*feed.Event, req *topicRequest, s *Server, w *StreamingResponseWriterRecorder) {
 	// maxBufferSize param copied from sse lib client code
 	sseR := sse.NewEventStreamReader(w.Body(), 1<<24)
