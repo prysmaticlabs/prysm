@@ -12,7 +12,6 @@ import (
 func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.HandleKeyReload")
 	defer span.End()
-	log.Infof("PRINT CURRENT KEYS NUMBER %d", len(currentKeys))
 	if err := v.updateValidatorStatusCache(ctx, currentKeys); err != nil {
 		return false, err
 	}

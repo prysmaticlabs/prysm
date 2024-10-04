@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/math"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	"github.com/sirupsen/logrus"
 	octrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -126,26 +126,44 @@ func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Spa
 		if err != nil {
 			return v.handleReconnection(ctx, span, err, "Failed to get head slot. Reconnecting...", accountsChangedChan)
 		}
-		if err := waitForNextEpoch(ctx, headSlot); err != nil {
+		if err := v.waitForNextEpoch(ctx, headSlot, v.genesisTime, accountsChangedChan); err != nil {
 			return v.handleReconnection(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
 		}
 		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 }
 
-func waitForNextEpoch(ctx context.Context, headSlot primitives.Slot) error {
-	// Calculate seconds till next epoch
-	secondsTillNextEpoch := uint64(slots.RoundUpToNearestEpoch(headSlot)-headSlot) * params.BeaconConfig().SecondsPerSlot
-
-	// Create a ticker that ticks once after the calculated duration
-	ticker := time.NewTicker(time.Duration(secondsTillNextEpoch) * time.Second)
-	defer ticker.Stop() // Ensure the ticker is stopped when we're done
+// WaitForNextEpoch creates a blocking function to wait until the next epoch start given the current slot
+func (v *validator) waitForNextEpoch(ctx context.Context, slot primitives.Slot, genesisTimeSec uint64, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+	firstSlotOfNextEpoch, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
+	if err != nil {
+		return err
+	}
+	nextEpochStartDuration, err := slots.ToTime(genesisTimeSec, firstSlotOfNextEpoch)
+	if err != nil {
+		return err
+	}
+	ss, err := slots.SecondsSinceSlotStart(slot, genesisTimeSec, uint64(time.Now().Unix()))
+	if err != nil {
+		return err
+	}
+	waitTime := uint64(nextEpochStartDuration.Unix()-time.Now().Unix()) + ss
+	log.WithFields(logrus.Fields{
+		"slot":                   slot,
+		"seconds_sinceStart":     ss,
+		"next_epoch_start_slot":  firstSlotOfNextEpoch,
+		"slots_until_next_start": firstSlotOfNextEpoch - slot,
+	}).Debugf("Waiting %d seconds", waitTime)
 
 	select {
 	case <-ctx.Done():
 		// The context was cancelled
 		return ctx.Err()
-	case <-ticker.C:
+	case <-accountsChangedChan:
+		// Accounts (keys) changed, restart the process.
+		return v.internalWaitForActivation(ctx, accountsChangedChan)
+	case <-time.After(time.Duration(waitTime) * time.Second):
+		log.Debug("Done waiting for epoch start")
 		// The ticker has ticked, indicating we've reached the next epoch
 		return nil
 	}

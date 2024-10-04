@@ -137,7 +137,6 @@ func run(ctx context.Context, v iface.Validator) {
 }
 
 func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byte, ac chan [][fieldparams.BLSPubkeyLength]byte) {
-	log.Warn("DID THIS TRIGGER????!?!")
 	anyActive, err := v.HandleKeyReload(ctx, current)
 	if err != nil {
 		log.WithError(err).Error("Could not properly handle reloaded keys")
