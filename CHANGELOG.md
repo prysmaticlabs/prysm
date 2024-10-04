@@ -14,6 +14,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
 - Light client support: Implement `BlockToLightClientHeader` function.
+- Light client support: SSZ support for `LightClientUpdate`, `LightClientFinalityUpdate`, `LightClientOptimisticUpdate`.
 - GetBeaconStateV2: add Electra case.
 - Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
 - Tests to ensure sepolia config matches the official upstream yaml
