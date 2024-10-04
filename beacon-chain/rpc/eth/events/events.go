@@ -389,15 +389,15 @@ func topicForEvent(event *feed.Event) string {
 }
 
 func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topics *topicRequest) (lazyReader, error) {
-	if event == nil || event.Data == nil {
-		return nil, errors.New("event or event data is nil")
-	}
 	eventName := topicForEvent(event)
 	if !topics.requested(eventName) {
 		return nil, errNotRequested
 	}
 	if eventName == PayloadAttributesTopic {
 		return s.currentPayloadAttributes(ctx)
+	}
+	if event == nil || event.Data == nil {
+		return nil, errors.New("event or event data is nil")
 	}
 	switch v := event.Data.(type) {
 	case *ethpb.EventHead:
