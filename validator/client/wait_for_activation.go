@@ -2,18 +2,19 @@ package client
 
 import (
 	"context"
-	"io"
 	"time"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
+	octrace "go.opentelemetry.io/otel/trace"
 )
 
 // WaitForActivation checks whether the validator pubkey is in the active
@@ -40,99 +41,114 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 	return v.internalWaitForActivation(ctx, accountsChangedChan)
 }
 
-// internalWaitForActivation performs the following:
-// 1) While the key manager is empty, subscribe to keymanager changes until some validator keys exist.
-// 2) Open a server side stream for activation events against the given keys.
-// 3) In another go routine, the key manager is monitored for updates and emits an update event on
-// the accountsChangedChan. When an event signal is received, restart the internalWaitForActivation routine.
-// 4) If the stream is reset in error, restart the routine.
-// 5) If the stream returns a response indicating one or more validators are active, exit the routine.
+// internalWaitForActivation recursively waits for some active validator keys
 func (v *validator) internalWaitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
+
+	// Step 1: Fetch validating public keys.
 	validatingKeys, err := v.km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, msgCouldNotFetchKeys)
 	}
-	// if there are no validating keys, wait for some
+
+	// Step 2: If no keys, wait for accounts change or context cancellation.
 	if len(validatingKeys) == 0 {
 		log.Warn(msgNoKeysFetched)
-		select {
-		case <-ctx.Done():
-			log.Debug("Context closed, exiting fetching validating keys")
-			return ctx.Err()
-		case <-accountsChangedChan:
-			// if the accounts changed try it again
-			return v.internalWaitForActivation(ctx, accountsChangedChan)
-		}
+		return v.waitForAccountsChange(ctx, accountsChangedChan)
 	}
 
-	stream, err := v.validatorClient.WaitForActivation(ctx, &ethpb.ValidatorActivationRequest{
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
-	})
+	// Step 3: update validator statuses in cache.
+	if err := v.updateValidatorStatusCache(ctx, validatingKeys); err != nil {
+		return v.handleReconnection(ctx, span, err, "Connection broken while waiting for activation. Reconnecting...", accountsChangedChan)
+	}
+
+	// Step 4: Fetch validator count.
+	valCount, err := v.getValidatorCount(ctx)
 	if err != nil {
-		tracing.AnnotateError(span, err)
-		attempts := streamAttempts(ctx)
-		log.WithError(err).WithField("attempts", attempts).
-			Error("Stream broken while waiting for activation. Reconnecting...")
-		// Reconnection attempt backoff, up to 60s.
-		time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
+		return err
+	}
+
+	// Step 5: Check and log validator statuses.
+	someAreActive := v.checkAndLogValidatorStatus(valCount)
+	if !someAreActive {
+		// Step 6: If no active validators, wait for accounts change, context cancellation, or next epoch.
+		return v.waitForActivationRetry(ctx, span, accountsChangedChan)
+	}
+	return nil
+}
+
+func (v *validator) getValidatorCount(ctx context.Context) (int64, error) {
+	// TODO: revisit https://github.com/prysmaticlabs/prysm/pull/12471#issuecomment-1568320970 to review if ValidatorCount api can be removed.
+	// "-1" indicates that validator count endpoint is not supported by the beacon node.
+	var valCount int64 = -1
+	valCounts, err := v.prysmChainClient.ValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
+	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
+		return -1, errors.Wrap(err, "could not get active validator count")
+	}
+	if len(valCounts) > 0 {
+		valCount = int64(valCounts[0].Count)
+	}
+	return valCount, nil
+}
+
+func (v *validator) handleReconnection(ctx context.Context, span octrace.Span, err error, message string, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+	tracing.AnnotateError(span, err)
+	attempts := streamAttempts(ctx)
+	log.WithError(err).WithField("attempts", attempts).Error(message)
+	// Reconnection attempt backoff, up to 60s.
+	time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
+	return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
+}
+
+func (v *validator) waitForAccountsChange(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+	select {
+	case <-ctx.Done():
+		log.Debug("Context closed, exiting fetching validating keys")
+		return ctx.Err()
+	case <-accountsChangedChan:
+		// If the accounts changed, try again.
+		return v.internalWaitForActivation(ctx, accountsChangedChan)
+	}
+}
+
+func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Span, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+	select {
+	case <-ctx.Done():
+		log.Debug("Context closed, exiting fetching validating keys")
+		return ctx.Err()
+	case <-accountsChangedChan:
+		// Accounts (keys) changed, restart the process.
+		return v.internalWaitForActivation(ctx, accountsChangedChan)
+	default:
+		log.Warn("No active validator keys provided. Waiting until next epoch to check again...")
+		headSlot, err := v.CanonicalHeadSlot(ctx)
+		if err != nil {
+			return v.handleReconnection(ctx, span, err, "Failed to get head slot. Reconnecting...", accountsChangedChan)
+		}
+		if err := waitForNextEpoch(ctx, headSlot); err != nil {
+			return v.handleReconnection(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
+		}
 		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
+}
 
-	someAreActive := false
-	for !someAreActive {
-		select {
-		case <-ctx.Done():
-			log.Debug("Context closed, exiting fetching validating keys")
-			return ctx.Err()
-		case <-accountsChangedChan:
-			// Accounts (keys) changed, restart the process.
-			return v.internalWaitForActivation(ctx, accountsChangedChan)
-		default:
-			res, err := (stream).Recv() // retrieve from stream one loop at a time
-			// If the stream is closed, we stop the loop.
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			// If context is canceled we return from the function.
-			if errors.Is(ctx.Err(), context.Canceled) {
-				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-			}
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				attempts := streamAttempts(ctx)
-				log.WithError(err).WithField("attempts", attempts).
-					Error("Stream broken while waiting for activation. Reconnecting...")
-				// Reconnection attempt backoff, up to 60s.
-				time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
-				return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
-			}
+func waitForNextEpoch(ctx context.Context, headSlot primitives.Slot) error {
+	// Calculate seconds till next epoch
+	secondsTillNextEpoch := uint64(slots.RoundUpToNearestEpoch(headSlot)-headSlot) * params.BeaconConfig().SecondsPerSlot
 
-			for _, s := range res.Statuses {
-				v.pubkeyToStatus[bytesutil.ToBytes48(s.PublicKey)] = &validatorStatus{
-					publicKey: s.PublicKey,
-					status:    s.Status,
-					index:     s.Index,
-				}
-			}
+	// Create a ticker that ticks once after the calculated duration
+	ticker := time.NewTicker(time.Duration(secondsTillNextEpoch) * time.Second)
+	defer ticker.Stop() // Ensure the ticker is stopped when we're done
 
-			// "-1" indicates that validator count endpoint is not supported by the beacon node.
-			var valCount int64 = -1
-			valCounts, err := v.prysmChainClient.ValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
-			if err != nil && !errors.Is(err, iface.ErrNotSupported) {
-				return errors.Wrap(err, "could not get active validator count")
-			}
-
-			if len(valCounts) > 0 {
-				valCount = int64(valCounts[0].Count)
-			}
-
-			someAreActive = v.checkAndLogValidatorStatus(valCount)
-		}
+	select {
+	case <-ctx.Done():
+		// The context was cancelled
+		return ctx.Err()
+	case <-ticker.C:
+		// The ticker has ticked, indicating we've reached the next epoch
+		return nil
 	}
-
-	return nil
 }
 
 // Preferred way to use context keys is with a non built-in type. See: RVV-B0003
