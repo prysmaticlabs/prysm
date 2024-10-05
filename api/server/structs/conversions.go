@@ -1476,12 +1476,15 @@ func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
 	}
 }
 
-func PendingBalanceDepositsFromConsensus(ds []*eth.PendingBalanceDeposit) []*PendingBalanceDeposit {
-	deposits := make([]*PendingBalanceDeposit, len(ds))
+func PendingDepositsFromConsensus(ds []*eth.PendingDeposit) []*PendingDeposit {
+	deposits := make([]*PendingDeposit, len(ds))
 	for i, d := range ds {
-		deposits[i] = &PendingBalanceDeposit{
-			Index:  fmt.Sprintf("%d", d.Index),
-			Amount: fmt.Sprintf("%d", d.Amount),
+		deposits[i] = &PendingDeposit{
+			Pubkey:                hexutil.Encode(d.PublicKey),
+			WithdrawalCredentials: hexutil.Encode(d.WithdrawalCredentials),
+			Amount:                fmt.Sprintf("%d", d.Amount),
+			Signature:             hexutil.Encode(d.Signature),
+			Slot:                  fmt.Sprintf("%d", d.Slot),
 		}
 	}
 	return deposits

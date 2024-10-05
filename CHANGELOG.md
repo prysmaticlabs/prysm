@@ -14,6 +14,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
 - Light client support: Implement `BlockToLightClientHeader` function.
+- Electra EIP6110: Queue deposit
+- Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
 - GetBeaconStateV2: add Electra case.
 - Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
 - Tests to ensure sepolia config matches the official upstream yaml
@@ -38,6 +40,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
+- Electra EIP6110: Queue deposit requests changes from consensus spec pr #3818
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
 - Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 - Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.

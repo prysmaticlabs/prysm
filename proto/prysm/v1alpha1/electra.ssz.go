@@ -3083,9 +3083,9 @@ func (b *BeaconStateElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (33) 'EarliestConsolidationEpoch'
 	dst = ssz.MarshalUint64(dst, uint64(b.EarliestConsolidationEpoch))
 
-	// Offset (34) 'PendingBalanceDeposits'
+	// Offset (34) 'PendingDeposits'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.PendingBalanceDeposits) * 16
+	offset += len(b.PendingDeposits) * 192
 
 	// Offset (35) 'PendingPartialWithdrawals'
 	dst = ssz.WriteOffset(dst, offset)
@@ -3178,13 +3178,13 @@ func (b *BeaconStateElectra) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		}
 	}
 
-	// Field (34) 'PendingBalanceDeposits'
-	if size := len(b.PendingBalanceDeposits); size > 134217728 {
-		err = ssz.ErrListTooBigFn("--.PendingBalanceDeposits", size, 134217728)
+	// Field (34) 'PendingDeposits'
+	if size := len(b.PendingDeposits); size > 134217728 {
+		err = ssz.ErrListTooBigFn("--.PendingDeposits", size, 134217728)
 		return
 	}
-	for ii := 0; ii < len(b.PendingBalanceDeposits); ii++ {
-		if dst, err = b.PendingBalanceDeposits[ii].MarshalSSZTo(dst); err != nil {
+	for ii := 0; ii < len(b.PendingDeposits); ii++ {
+		if dst, err = b.PendingDeposits[ii].MarshalSSZTo(dst); err != nil {
 			return
 		}
 	}
@@ -3416,7 +3416,7 @@ func (b *BeaconStateElectra) UnmarshalSSZ(buf []byte) error {
 	// Field (33) 'EarliestConsolidationEpoch'
 	b.EarliestConsolidationEpoch = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2736693:2736701]))
 
-	// Offset (34) 'PendingBalanceDeposits'
+	// Offset (34) 'PendingDeposits'
 	if o34 = ssz.ReadOffset(buf[2736701:2736705]); o34 > size || o27 > o34 {
 		return ssz.ErrOffset
 	}
@@ -3562,19 +3562,19 @@ func (b *BeaconStateElectra) UnmarshalSSZ(buf []byte) error {
 		}
 	}
 
-	// Field (34) 'PendingBalanceDeposits'
+	// Field (34) 'PendingDeposits'
 	{
 		buf = tail[o34:o35]
-		num, err := ssz.DivideInt2(len(buf), 16, 134217728)
+		num, err := ssz.DivideInt2(len(buf), 192, 134217728)
 		if err != nil {
 			return err
 		}
-		b.PendingBalanceDeposits = make([]*PendingBalanceDeposit, num)
+		b.PendingDeposits = make([]*PendingDeposit, num)
 		for ii := 0; ii < num; ii++ {
-			if b.PendingBalanceDeposits[ii] == nil {
-				b.PendingBalanceDeposits[ii] = new(PendingBalanceDeposit)
+			if b.PendingDeposits[ii] == nil {
+				b.PendingDeposits[ii] = new(PendingDeposit)
 			}
-			if err = b.PendingBalanceDeposits[ii].UnmarshalSSZ(buf[ii*16 : (ii+1)*16]); err != nil {
+			if err = b.PendingDeposits[ii].UnmarshalSSZ(buf[ii*192 : (ii+1)*192]); err != nil {
 				return err
 			}
 		}
@@ -3652,8 +3652,8 @@ func (b *BeaconStateElectra) SizeSSZ() (size int) {
 	// Field (27) 'HistoricalSummaries'
 	size += len(b.HistoricalSummaries) * 64
 
-	// Field (34) 'PendingBalanceDeposits'
-	size += len(b.PendingBalanceDeposits) * 16
+	// Field (34) 'PendingDeposits'
+	size += len(b.PendingDeposits) * 192
 
 	// Field (35) 'PendingPartialWithdrawals'
 	size += len(b.PendingPartialWithdrawals) * 24
@@ -3952,15 +3952,15 @@ func (b *BeaconStateElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (33) 'EarliestConsolidationEpoch'
 	hh.PutUint64(uint64(b.EarliestConsolidationEpoch))
 
-	// Field (34) 'PendingBalanceDeposits'
+	// Field (34) 'PendingDeposits'
 	{
 		subIndx := hh.Index()
-		num := uint64(len(b.PendingBalanceDeposits))
+		num := uint64(len(b.PendingDeposits))
 		if num > 134217728 {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
-		for _, elem := range b.PendingBalanceDeposits {
+		for _, elem := range b.PendingDeposits {
 			if err = elem.HashTreeRootWith(hh); err != nil {
 				return
 			}
@@ -4004,61 +4004,121 @@ func (b *BeaconStateElectra) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	return
 }
 
-// MarshalSSZ ssz marshals the PendingBalanceDeposit object
-func (p *PendingBalanceDeposit) MarshalSSZ() ([]byte, error) {
+// MarshalSSZ ssz marshals the PendingDeposit object
+func (p *PendingDeposit) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(p)
 }
 
-// MarshalSSZTo ssz marshals the PendingBalanceDeposit object to a target array
-func (p *PendingBalanceDeposit) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+// MarshalSSZTo ssz marshals the PendingDeposit object to a target array
+func (p *PendingDeposit) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
-	// Field (0) 'Index'
-	dst = ssz.MarshalUint64(dst, uint64(p.Index))
+	// Field (0) 'PublicKey'
+	if size := len(p.PublicKey); size != 48 {
+		err = ssz.ErrBytesLengthFn("--.PublicKey", size, 48)
+		return
+	}
+	dst = append(dst, p.PublicKey...)
 
-	// Field (1) 'Amount'
+	// Field (1) 'WithdrawalCredentials'
+	if size := len(p.WithdrawalCredentials); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+		return
+	}
+	dst = append(dst, p.WithdrawalCredentials...)
+
+	// Field (2) 'Amount'
 	dst = ssz.MarshalUint64(dst, p.Amount)
+
+	// Field (3) 'Signature'
+	if size := len(p.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
+		return
+	}
+	dst = append(dst, p.Signature...)
+
+	// Field (4) 'Slot'
+	dst = ssz.MarshalUint64(dst, uint64(p.Slot))
 
 	return
 }
 
-// UnmarshalSSZ ssz unmarshals the PendingBalanceDeposit object
-func (p *PendingBalanceDeposit) UnmarshalSSZ(buf []byte) error {
+// UnmarshalSSZ ssz unmarshals the PendingDeposit object
+func (p *PendingDeposit) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 16 {
+	if size != 192 {
 		return ssz.ErrSize
 	}
 
-	// Field (0) 'Index'
-	p.Index = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.ValidatorIndex(ssz.UnmarshallUint64(buf[0:8]))
+	// Field (0) 'PublicKey'
+	if cap(p.PublicKey) == 0 {
+		p.PublicKey = make([]byte, 0, len(buf[0:48]))
+	}
+	p.PublicKey = append(p.PublicKey, buf[0:48]...)
 
-	// Field (1) 'Amount'
-	p.Amount = ssz.UnmarshallUint64(buf[8:16])
+	// Field (1) 'WithdrawalCredentials'
+	if cap(p.WithdrawalCredentials) == 0 {
+		p.WithdrawalCredentials = make([]byte, 0, len(buf[48:80]))
+	}
+	p.WithdrawalCredentials = append(p.WithdrawalCredentials, buf[48:80]...)
+
+	// Field (2) 'Amount'
+	p.Amount = ssz.UnmarshallUint64(buf[80:88])
+
+	// Field (3) 'Signature'
+	if cap(p.Signature) == 0 {
+		p.Signature = make([]byte, 0, len(buf[88:184]))
+	}
+	p.Signature = append(p.Signature, buf[88:184]...)
+
+	// Field (4) 'Slot'
+	p.Slot = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot(ssz.UnmarshallUint64(buf[184:192]))
 
 	return err
 }
 
-// SizeSSZ returns the ssz encoded size in bytes for the PendingBalanceDeposit object
-func (p *PendingBalanceDeposit) SizeSSZ() (size int) {
-	size = 16
+// SizeSSZ returns the ssz encoded size in bytes for the PendingDeposit object
+func (p *PendingDeposit) SizeSSZ() (size int) {
+	size = 192
 	return
 }
 
-// HashTreeRoot ssz hashes the PendingBalanceDeposit object
-func (p *PendingBalanceDeposit) HashTreeRoot() ([32]byte, error) {
+// HashTreeRoot ssz hashes the PendingDeposit object
+func (p *PendingDeposit) HashTreeRoot() ([32]byte, error) {
 	return ssz.HashWithDefaultHasher(p)
 }
 
-// HashTreeRootWith ssz hashes the PendingBalanceDeposit object with a hasher
-func (p *PendingBalanceDeposit) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+// HashTreeRootWith ssz hashes the PendingDeposit object with a hasher
+func (p *PendingDeposit) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
-	// Field (0) 'Index'
-	hh.PutUint64(uint64(p.Index))
+	// Field (0) 'PublicKey'
+	if size := len(p.PublicKey); size != 48 {
+		err = ssz.ErrBytesLengthFn("--.PublicKey", size, 48)
+		return
+	}
+	hh.PutBytes(p.PublicKey)
 
-	// Field (1) 'Amount'
+	// Field (1) 'WithdrawalCredentials'
+	if size := len(p.WithdrawalCredentials); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+		return
+	}
+	hh.PutBytes(p.WithdrawalCredentials)
+
+	// Field (2) 'Amount'
 	hh.PutUint64(p.Amount)
+
+	// Field (3) 'Signature'
+	if size := len(p.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
+		return
+	}
+	hh.PutBytes(p.Signature)
+
+	// Field (4) 'Slot'
+	hh.PutUint64(uint64(p.Slot))
 
 	hh.Merkleize(indx)
 	return
