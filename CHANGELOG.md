@@ -50,6 +50,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Update light client helper functions to reference `dev` branch of CL specs
 - Updated Libp2p Dependencies to allow prysm to use gossipsub v1.2 .
 - Updated Sepolia bootnodes.
+- Switch to compounding when consolidating with source==target.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.

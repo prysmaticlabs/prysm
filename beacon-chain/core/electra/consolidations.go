@@ -32,8 +32,6 @@ import (
 //	        if source_validator.withdrawable_epoch > get_current_epoch(state):
 //	            break
 //
-//	        # Churn any target excess active balance of target and raise its max
-//	        switch_to_compounding_validator(state, pending_consolidation.target_index)
 //	        # Move active balance to target. Excess balance is withdrawable.
 //	        active_balance = get_active_balance(state, pending_consolidation.source_index)
 //	        decrease_balance(state, pending_consolidation.source_index, active_balance)
@@ -70,10 +68,6 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 			break
 		}
 
-		if err := SwitchToCompoundingValidator(st, pc.TargetIndex); err != nil {
-			return err
-		}
-
 		activeBalance, err := st.ActiveBalanceAtIndex(pc.SourceIndex)
 		if err != nil {
 			return err
@@ -101,6 +95,16 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 //	    state: BeaconState,
 //	    consolidation_request: ConsolidationRequest
 //	) -> None:
+//	    if is_valid_switch_to_compounding_request(state, consolidation_request):
+//	        validator_pubkeys = [v.pubkey for v in state.validators]
+//	        request_source_pubkey = consolidation_request.source_pubkey
+//	        source_index = ValidatorIndex(validator_pubkeys.index(request_source_pubkey))
+//	        switch_to_compounding_validator(state, source_index)
+//	        return
+//
+//	    # Verify that source != target, so a consolidation cannot be used as an exit.
+//	    if consolidation_request.source_pubkey == consolidation_request.target_pubkey:
+//	        return
 //	    # If the pending consolidations queue is full, consolidation requests are ignored
 //	    if len(state.pending_consolidations) == PENDING_CONSOLIDATIONS_LIMIT:
 //	        return
@@ -120,10 +124,6 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 //	    target_index = ValidatorIndex(validator_pubkeys.index(request_target_pubkey))
 //	    source_validator = state.validators[source_index]
 //	    target_validator = state.validators[target_index]
-//
-//	    # Verify that source != target, so a consolidation cannot be used as an exit.
-//	    if source_index == target_index:
-//	        return
 //
 //	    # Verify source withdrawal credentials
 //	    has_correct_credential = has_execution_withdrawal_credential(source_validator)
@@ -160,6 +160,10 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 //	        source_index=source_index,
 //	        target_index=target_index
 //	    ))
+//
+//	    # Churn any target excess active balance of target and raise its max
+//	    if has_eth1_withdrawal_credential(target_validator):
+//	        switch_to_compounding_validator(state, target_index)
 func ProcessConsolidationRequests(ctx context.Context, st state.BeaconState, reqs []*enginev1.ConsolidationRequest) error {
 	if len(reqs) == 0 || st == nil {
 		return nil
@@ -182,22 +186,38 @@ func ProcessConsolidationRequests(ctx context.Context, st state.BeaconState, req
 		if ctx.Err() != nil {
 			return fmt.Errorf("cannot process consolidation requests: %w", ctx.Err())
 		}
+		canSwitch, err := IsValidSwitchToCompoundingRequest(ctx, st, cr)
+		if err != nil {
+			return fmt.Errorf("failed to validate consolidation request: %w", err)
+		}
+		if canSwitch {
+			srcIdx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(cr.SourcePubkey))
+			if !ok {
+				return errors.New("could not find validator in registry")
+			}
+			if err := SwitchToCompoundingValidator(st, srcIdx); err != nil {
+				return fmt.Errorf("failed to switch to compounding validator: %w", err)
+			}
+			return nil
+		}
+		sourcePubkey := bytesutil.ToBytes48(cr.SourcePubkey)
+		targetPubkey := bytesutil.ToBytes48(cr.TargetPubkey)
+		if sourcePubkey == targetPubkey {
+			continue
+		}
+
 		if npc, err := st.NumPendingConsolidations(); err != nil {
 			return fmt.Errorf("failed to fetch number of pending consolidations: %w", err) // This should never happen.
 		} else if npc >= pcLimit {
 			return nil
 		}
 
-		srcIdx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(cr.SourcePubkey))
+		srcIdx, ok := st.ValidatorIndexByPubkey(sourcePubkey)
 		if !ok {
 			continue
 		}
-		tgtIdx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(cr.TargetPubkey))
+		tgtIdx, ok := st.ValidatorIndexByPubkey(targetPubkey)
 		if !ok {
-			continue
-		}
-
-		if srcIdx == tgtIdx {
 			continue
 		}
 
@@ -248,7 +268,94 @@ func ProcessConsolidationRequests(ctx context.Context, st state.BeaconState, req
 		if err := st.AppendPendingConsolidation(&eth.PendingConsolidation{SourceIndex: srcIdx, TargetIndex: tgtIdx}); err != nil {
 			return fmt.Errorf("failed to append pending consolidation: %w", err) // This should never happen.
 		}
+
+		if helpers.HasETH1WithdrawalCredential(tgtV) {
+			if err := SwitchToCompoundingValidator(st, tgtIdx); err != nil {
+				return fmt.Errorf("failed to switch to compounding validator: %w", err)
+			}
+		}
 	}
 
 	return nil
+}
+
+// IsValidSwitchToCompoundingRequest returns true if the given consolidation request is valid for switching to compounding.
+//
+// Spec code:
+//
+// def is_valid_switch_to_compounding_request(
+//
+//	state: BeaconState,
+//	consolidation_request: ConsolidationRequest
+//
+// ) -> bool:
+//
+//	# Switch to compounding requires source and target be equal
+//	if consolidation_request.source_pubkey != consolidation_request.target_pubkey:
+//	    return False
+//
+//	# Verify pubkey exists
+//	source_pubkey = consolidation_request.source_pubkey
+//	validator_pubkeys = [v.pubkey for v in state.validators]
+//	if source_pubkey not in validator_pubkeys:
+//	    return False
+//
+//	source_validator = state.validators[ValidatorIndex(validator_pubkeys.index(source_pubkey))]
+//
+//	# Verify request has been authorized
+//	if source_validator.withdrawal_credentials[12:] != consolidation_request.source_address:
+//	    return False
+//
+//	# Verify source withdrawal credentials
+//	if not has_eth1_withdrawal_credential(source_validator):
+//	    return False
+//
+//	# Verify the source is active
+//	current_epoch = get_current_epoch(state)
+//	if not is_active_validator(source_validator, current_epoch):
+//	    return False
+//
+//	# Verify exit for source have not been initiated
+//	if source_validator.exit_epoch != FAR_FUTURE_EPOCH:
+//	    return False
+//
+//	return True
+func IsValidSwitchToCompoundingRequest(ctx context.Context, st state.BeaconState, req *enginev1.ConsolidationRequest) (bool, error) {
+	if req.SourcePubkey == nil || req.TargetPubkey == nil {
+		return false, errors.New("nil source or target pubkey")
+	}
+
+	sourcePubKey := bytesutil.ToBytes48(req.SourcePubkey)
+	targetPubKey := bytesutil.ToBytes48(req.TargetPubkey)
+	if sourcePubKey != targetPubKey {
+		return false, nil
+	}
+
+	srcIdx, ok := st.ValidatorIndexByPubkey(sourcePubKey)
+	if !ok {
+		return false, nil
+	}
+	srcV, err := st.ValidatorAtIndex(srcIdx)
+	if err != nil {
+		return false, err
+	}
+	sourceAddress := req.SourceAddress
+	withdrawalCreds := srcV.WithdrawalCredentials
+	if len(withdrawalCreds) != 32 || len(sourceAddress) != 20 || !bytes.HasSuffix(withdrawalCreds, sourceAddress) {
+		return false, nil
+	}
+
+	if !helpers.HasETH1WithdrawalCredential(srcV) {
+		return false, nil
+	}
+
+	curEpoch := slots.ToEpoch(st.Slot())
+	if !helpers.IsActiveValidator(srcV, curEpoch) {
+		return false, nil
+	}
+
+	if srcV.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		return false, nil
+	}
+	return true, nil
 }
