@@ -337,7 +337,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethp
 }
 
 func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
-	if block.Version() != version.Altair {
+	if block.Version() < version.Altair {
 		return nil, fmt.Errorf("block version is %s instead of Altair", version.String(block.Version()))
 	}
 
@@ -360,7 +360,7 @@ func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) 
 }
 
 func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderCapella, error) {
-	if block.Version() != version.Capella {
+	if block.Version() < version.Capella {
 		return nil, fmt.Errorf("block version is %s instead of Capella", version.String(block.Version()))
 	}
 
@@ -422,7 +422,7 @@ func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 }
 
 func blockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderDeneb, error) {
-	if block.Version() != version.Deneb {
+	if block.Version() < version.Deneb {
 		return nil, fmt.Errorf("block version is %s instead of Deneb/Electra", version.String(block.Version()))
 	}
 
