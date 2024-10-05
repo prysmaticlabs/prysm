@@ -35,6 +35,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	}
 
 	t.Run("no atts", func(t *testing.T) {
+		feat := features.Get()
+		feat.DisableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		atts := getAtts([]testData{})
 		want := getAtts([]testData{})
 		atts, err := atts.sort()
@@ -45,6 +50,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	})
 
 	t.Run("single att", func(t *testing.T) {
+		feat := features.Get()
+		feat.DisableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		atts := getAtts([]testData{
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
@@ -59,6 +69,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	})
 
 	t.Run("single att per slot", func(t *testing.T) {
+		feat := features.Get()
+		feat.DisableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		atts := getAtts([]testData{
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
@@ -75,6 +90,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	})
 
 	t.Run("two atts on one of the slots", func(t *testing.T) {
+		feat := features.Get()
+		feat.DisableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		atts := getAtts([]testData{
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
@@ -96,6 +116,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
 		// (since it has two new/unknown bits).
 		t.Run("max-cover", func(t *testing.T) {
+			feat := features.Get()
+			feat.DisableCommitteeAwarePacking = true
+			reset := features.InitWithReset(feat)
+			defer reset()
+
 			atts := getAtts([]testData{
 				{1, bitfield.Bitlist{0b11000011, 0b1}},
 				{1, bitfield.Bitlist{0b11001000, 0b1}},
@@ -115,6 +140,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	})
 
 	t.Run("multiple slots", func(t *testing.T) {
+		feat := features.Get()
+		feat.DisableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		atts := getAtts([]testData{
 			{2, bitfield.Bitlist{0b11100000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
@@ -139,6 +169,11 @@ func TestProposer_ProposerAtts_sort(t *testing.T) {
 	})
 
 	t.Run("follows max-cover", func(t *testing.T) {
+		feat := features.Get()
+		feat.DisableCommitteeAwarePacking = true
+		reset := features.InitWithReset(feat)
+		defer reset()
+
 		// Items at slot 4, must be first split into two lists by max-cover, with
 		// 0b10000011 scoring higher (as it provides more info in addition to already selected
 		// attestations) than 0b11100001 (despite naive bit count suggesting otherwise). Then,
@@ -186,11 +221,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	}
 
 	t.Run("no atts", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		atts := getAtts([]testData{})
 		want := getAtts([]testData{})
 		atts, err := atts.sort()
@@ -201,11 +231,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("single att", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		atts := getAtts([]testData{
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
 		})
@@ -220,11 +245,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("single att per slot", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		atts := getAtts([]testData{
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
@@ -241,11 +261,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("two atts on one of the slots", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		atts := getAtts([]testData{
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
@@ -263,11 +278,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("compare to native sort", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		// The max-cover based approach will select 0b00001100 instead, despite lower bit count
 		// (since it has two new/unknown bits).
 		t.Run("max-cover", func(t *testing.T) {
@@ -289,11 +299,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("multiple slots", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		atts := getAtts([]testData{
 			{2, bitfield.Bitlist{0b11100000, 0b1}},
 			{4, bitfield.Bitlist{0b11100000, 0b1}},
@@ -316,11 +321,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("follows max-cover", func(t *testing.T) {
-		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
-		reset := features.InitWithReset(feat)
-		defer reset()
-
 		// Items at slot 4 must be first split into two lists by max-cover, with
 		// 0b10000011 being selected and 0b11100001 being leftover (despite naive bit count suggesting otherwise).
 		atts := getAtts([]testData{
@@ -351,7 +351,7 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 func TestProposer_sort_DifferentCommittees(t *testing.T) {
 	t.Run("one att per committee", func(t *testing.T) {
 		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
+		feat.DisableCommitteeAwarePacking = true
 		reset := features.InitWithReset(feat)
 		defer reset()
 
@@ -365,7 +365,7 @@ func TestProposer_sort_DifferentCommittees(t *testing.T) {
 	})
 	t.Run("multiple atts per committee", func(t *testing.T) {
 		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
+		feat.DisableCommitteeAwarePacking = true
 		reset := features.InitWithReset(feat)
 		defer reset()
 
@@ -382,7 +382,7 @@ func TestProposer_sort_DifferentCommittees(t *testing.T) {
 	})
 	t.Run("multiple atts per committee, multiple slots", func(t *testing.T) {
 		feat := features.Get()
-		feat.EnableCommitteeAwarePacking = true
+		feat.DisableCommitteeAwarePacking = true
 		reset := features.InitWithReset(feat)
 		defer reset()
 
