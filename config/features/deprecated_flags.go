@@ -100,7 +100,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedBeaconRPCGatewayProviderFlag,
 	deprecatedDisableGRPCGateway,
 	deprecatedEnableExperimentalState,
-	DisableCommitteeAwarePacking,
+	deprecatedEnableCommitteeAwarePacking,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
