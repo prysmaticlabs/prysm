@@ -13,6 +13,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 )
 
 func TestProcessPendingConsolidations(t *testing.T) {
@@ -395,4 +396,97 @@ func TestProcessConsolidationRequests(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsValidSwitchToCompoundingRequest(t *testing.T) {
+	ctx := context.Background()
+	st, _ := util.DeterministicGenesisStateElectra(t, 1)
+	t.Run("nil source pubkey", func(t *testing.T) {
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			SourcePubkey: nil,
+			TargetPubkey: []byte{'a'},
+		})
+		require.ErrorContains(t, "nil source or target pubkey", err)
+		require.Equal(t, false, ok)
+	})
+	t.Run("nil target pubkey", func(t *testing.T) {
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			TargetPubkey: nil,
+			SourcePubkey: []byte{'a'},
+		})
+		require.ErrorContains(t, "nil source or target pubkey", err)
+		require.Equal(t, false, ok)
+	})
+	t.Run("different source and target pubkey", func(t *testing.T) {
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			TargetPubkey: []byte{'a'},
+			SourcePubkey: []byte{'b'},
+		})
+		require.NoError(t, err)
+		require.Equal(t, false, ok)
+	})
+	t.Run("source validator not found in state", func(t *testing.T) {
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			SourceAddress: make([]byte, 20),
+			TargetPubkey:  []byte{'a'},
+			SourcePubkey:  []byte{'a'},
+		})
+		require.NoError(t, err)
+		require.Equal(t, false, ok)
+	})
+	t.Run("incorrect source address", func(t *testing.T) {
+		v, err := st.ValidatorAtIndex(0)
+		require.NoError(t, err)
+		pubkey := v.PublicKey
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			SourceAddress: make([]byte, 20),
+			TargetPubkey:  pubkey,
+			SourcePubkey:  pubkey,
+		})
+		require.NoError(t, err)
+		require.Equal(t, false, ok)
+	})
+	t.Run("incorrect eth1 withdrawal credential", func(t *testing.T) {
+		v, err := st.ValidatorAtIndex(0)
+		require.NoError(t, err)
+		pubkey := v.PublicKey
+		wc := v.WithdrawalCredentials
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			SourceAddress: wc[12:],
+			TargetPubkey:  pubkey,
+			SourcePubkey:  pubkey,
+		})
+		require.NoError(t, err)
+		require.Equal(t, false, ok)
+	})
+	t.Run("is valid compounding request", func(t *testing.T) {
+		v, err := st.ValidatorAtIndex(0)
+		require.NoError(t, err)
+		pubkey := v.PublicKey
+		wc := v.WithdrawalCredentials
+		v.WithdrawalCredentials[0] = 1
+		require.NoError(t, st.UpdateValidatorAtIndex(0, v))
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			SourceAddress: wc[12:],
+			TargetPubkey:  pubkey,
+			SourcePubkey:  pubkey,
+		})
+		require.NoError(t, err)
+		require.Equal(t, true, ok)
+	})
+	t.Run("already has an exit epoch", func(t *testing.T) {
+		v, err := st.ValidatorAtIndex(0)
+		require.NoError(t, err)
+		pubkey := v.PublicKey
+		wc := v.WithdrawalCredentials
+		v.ExitEpoch = 100
+		require.NoError(t, st.UpdateValidatorAtIndex(0, v))
+		ok, err := electra.IsValidSwitchToCompoundingRequest(ctx, st, &enginev1.ConsolidationRequest{
+			SourceAddress: wc[12:],
+			TargetPubkey:  pubkey,
+			SourcePubkey:  pubkey,
+		})
+		require.NoError(t, err)
+		require.Equal(t, false, ok)
+	})
 }

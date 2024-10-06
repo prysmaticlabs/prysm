@@ -22,23 +22,29 @@ import (
 //
 // Spec definition:
 //
-//	def process_pending_consolidations(state: BeaconState) -> None:
-//	    next_pending_consolidation = 0
-//	    for pending_consolidation in state.pending_consolidations:
-//	        source_validator = state.validators[pending_consolidation.source_index]
-//	        if source_validator.slashed:
-//	            next_pending_consolidation += 1
 //	            continue
-//	        if source_validator.withdrawable_epoch > get_current_epoch(state):
-//	            break
+// def process_pending_consolidations(state: BeaconState) -> None:
 //
-//	        # Move active balance to target. Excess balance is withdrawable.
-//	        active_balance = get_active_balance(state, pending_consolidation.source_index)
-//	        decrease_balance(state, pending_consolidation.source_index, active_balance)
-//	        increase_balance(state, pending_consolidation.target_index, active_balance)
+//	next_epoch = Epoch(get_current_epoch(state) + 1)
+//	next_pending_consolidation = 0
+//	for pending_consolidation in state.pending_consolidations:
+//	    source_validator = state.validators[pending_consolidation.source_index]
+//	    if source_validator.slashed:
 //	        next_pending_consolidation += 1
+//	        continue
+//	    if source_validator.withdrawable_epoch > next_epoch:
+//	        break
 //
-//	    state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
+//	    # Calculate the consolidated balance
+//	    max_effective_balance = get_max_effective_balance(source_validator)
+//	    source_effective_balance = min(state.balances[pending_consolidation.source_index], max_effective_balance)
+//
+//	    # Move active balance to target. Excess balance is withdrawable.
+//	    decrease_balance(state, pending_consolidation.source_index, source_effective_balance)
+//	    increase_balance(state, pending_consolidation.target_index, source_effective_balance)
+//	    next_pending_consolidation += 1
+//
+//	state.pending_consolidations = state.pending_consolidations[next_pending_consolidation:]
 func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) error {
 	_, span := trace.StartSpan(ctx, "electra.ProcessPendingConsolidations")
 	defer span.End()
@@ -68,14 +74,19 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 			break
 		}
 
-		activeBalance, err := st.ActiveBalanceAtIndex(pc.SourceIndex)
+		sourceEffectiveBalance := helpers.ValidatorMaxEffectiveBalance(sourceValidator)
+		validatorBalance, err := st.BalanceAtIndex(pc.SourceIndex)
 		if err != nil {
 			return err
 		}
-		if err := helpers.DecreaseBalance(st, pc.SourceIndex, activeBalance); err != nil {
+		if sourceEffectiveBalance > validatorBalance {
+			sourceEffectiveBalance = validatorBalance
+		}
+
+		if err := helpers.DecreaseBalance(st, pc.SourceIndex, sourceEffectiveBalance); err != nil {
 			return err
 		}
-		if err := helpers.IncreaseBalance(st, pc.TargetIndex, activeBalance); err != nil {
+		if err := helpers.IncreaseBalance(st, pc.TargetIndex, sourceEffectiveBalance); err != nil {
 			return err
 		}
 		nextPendingConsolidation++
@@ -168,15 +179,6 @@ func ProcessConsolidationRequests(ctx context.Context, st state.BeaconState, req
 	if len(reqs) == 0 || st == nil {
 		return nil
 	}
-
-	activeBal, err := helpers.TotalActiveBalance(st)
-	if err != nil {
-		return err
-	}
-	churnLimit := helpers.ConsolidationChurnLimit(primitives.Gwei(activeBal))
-	if churnLimit <= primitives.Gwei(params.BeaconConfig().MinActivationBalance) {
-		return nil
-	}
 	curEpoch := slots.ToEpoch(st.Slot())
 	ffe := params.BeaconConfig().FarFutureEpoch
 	minValWithdrawDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
@@ -209,6 +211,15 @@ func ProcessConsolidationRequests(ctx context.Context, st state.BeaconState, req
 		if npc, err := st.NumPendingConsolidations(); err != nil {
 			return fmt.Errorf("failed to fetch number of pending consolidations: %w", err) // This should never happen.
 		} else if npc >= pcLimit {
+			return nil
+		}
+
+		activeBal, err := helpers.TotalActiveBalance(st)
+		if err != nil {
+			return err
+		}
+		churnLimit := helpers.ConsolidationChurnLimit(primitives.Gwei(activeBal))
+		if churnLimit <= primitives.Gwei(params.BeaconConfig().MinActivationBalance) {
 			return nil
 		}
 
