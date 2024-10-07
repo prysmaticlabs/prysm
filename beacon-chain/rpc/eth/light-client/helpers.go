@@ -226,8 +226,13 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
-
-	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	var branch []string
+	switch block.Version() {
+	case version.Deneb:
+		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	case version.Electra:
+		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepth+1)
+	}
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
