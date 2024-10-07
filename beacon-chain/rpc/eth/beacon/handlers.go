@@ -201,6 +201,9 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	blk, isOptimistic, root := s.blockData(ctx, w, r)
+	if blk == nil {
+		return
+	}
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*structs.Attestation, len(consensusAtts))
 	for i, att := range consensusAtts {
@@ -231,14 +234,20 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 	}
 	consensusAtts := blk.Block().Body().Attestations()
 
-	var atts = make([]interface{}, len(consensusAtts))
+	atts := make([]json.RawMessage, len(consensusAtts))
 	v := blk.Block().Version()
 
 	if v >= version.Electra {
 		for i, att := range consensusAtts {
 			a, ok := att.(*eth.AttestationElectra)
 			if ok {
-				atts[i] = structs.AttElectraFromConsensus(a)
+				attStruct := structs.AttElectraFromConsensus(a)
+				attBytes, err := json.Marshal(attStruct)
+				if err != nil {
+					httputil.HandleError(w, fmt.Sprintf("failed to marshal attestation: %v", err), http.StatusInternalServerError)
+					return
+				}
+				atts[i] = attBytes
 			} else {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations electra of type %T", att), http.StatusInternalServerError)
 				return
@@ -248,7 +257,13 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 		for i, att := range consensusAtts {
 			a, ok := att.(*eth.Attestation)
 			if ok {
-				atts[i] = structs.AttFromConsensus(a)
+				attStruct := structs.AttFromConsensus(a)
+				attBytes, err := json.Marshal(attStruct)
+				if err != nil {
+					httputil.HandleError(w, fmt.Sprintf("failed to marshal attestation: %v", err), http.StatusInternalServerError)
+					return
+				}
+				atts[i] = attBytes
 			} else {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
 				return

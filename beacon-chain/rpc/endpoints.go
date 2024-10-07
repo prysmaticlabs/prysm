@@ -587,7 +587,7 @@ func (s *Service) beaconEndpoints(
 		},
 		{
 			template: "/eth/v2/beacon/blocks/{block_id}/attestations",
-			name:     namespace + ".GetBlockAttestations",
+			name:     namespace + ".GetBlockAttestationsV2",
 			middleware: []middleware.Middleware{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
