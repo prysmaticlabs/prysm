@@ -483,10 +483,10 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: slashings})
 }
 
-// SubmitAttesterSlashing submits an attester slashing object to node's pool and
+// SubmitAttesterSlashings submits an attester slashing object to node's pool and
 // if passes validation node MUST broadcast it to network.
-func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
+func (s *Server) SubmitAttesterSlashings(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashings")
 	defer span.End()
 
 	var req structs.AttesterSlashing
@@ -508,10 +508,10 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 	s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
 }
 
-// SubmitAttesterSlashingV2 submits an attester slashing object to node's pool and
+// SubmitAttesterSlashingsV2 submits an attester slashing object to node's pool and
 // if passes validation node MUST broadcast it to network.
-func (s *Server) SubmitAttesterSlashingV2(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
+func (s *Server) SubmitAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashingsV2")
 	defer span.End()
 
 	versionHeader := r.Header.Get(api.VersionHeader)

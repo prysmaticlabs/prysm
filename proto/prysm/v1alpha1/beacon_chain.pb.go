@@ -4497,7 +4497,7 @@ var file_proto_prysm_v1alpha1_beacon_chain_proto_depIdxs = []int32{
 	22, // 42: ethereum.eth.v1alpha1.BeaconChain.ListValidatorAssignments:input_type -> ethereum.eth.v1alpha1.ListValidatorAssignmentsRequest
 	24, // 43: ethereum.eth.v1alpha1.BeaconChain.GetValidatorParticipation:input_type -> ethereum.eth.v1alpha1.GetValidatorParticipationRequest
 	57, // 44: ethereum.eth.v1alpha1.BeaconChain.GetBeaconConfig:input_type -> google.protobuf.Empty
-	58, // 45: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashing:input_type -> ethereum.eth.v1alpha1.AttesterSlashing
+	58, // 45: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashings:input_type -> ethereum.eth.v1alpha1.AttesterSlashing
 	59, // 46: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashingElectra:input_type -> ethereum.eth.v1alpha1.AttesterSlashingElectra
 	60, // 47: ethereum.eth.v1alpha1.BeaconChain.SubmitProposerSlashing:input_type -> ethereum.eth.v1alpha1.ProposerSlashing
 	31, // 48: ethereum.eth.v1alpha1.BeaconChain.GetIndividualVotes:input_type -> ethereum.eth.v1alpha1.IndividualVotesRequest
@@ -4519,7 +4519,7 @@ var file_proto_prysm_v1alpha1_beacon_chain_proto_depIdxs = []int32{
 	23, // 64: ethereum.eth.v1alpha1.BeaconChain.ListValidatorAssignments:output_type -> ethereum.eth.v1alpha1.ValidatorAssignments
 	25, // 65: ethereum.eth.v1alpha1.BeaconChain.GetValidatorParticipation:output_type -> ethereum.eth.v1alpha1.ValidatorParticipationResponse
 	29, // 66: ethereum.eth.v1alpha1.BeaconChain.GetBeaconConfig:output_type -> ethereum.eth.v1alpha1.BeaconConfig
-	30, // 67: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashing:output_type -> ethereum.eth.v1alpha1.SubmitSlashingResponse
+	30, // 67: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashings:output_type -> ethereum.eth.v1alpha1.SubmitSlashingResponse
 	30, // 68: ethereum.eth.v1alpha1.BeaconChain.SubmitAttesterSlashingElectra:output_type -> ethereum.eth.v1alpha1.SubmitSlashingResponse
 	30, // 69: ethereum.eth.v1alpha1.BeaconChain.SubmitProposerSlashing:output_type -> ethereum.eth.v1alpha1.SubmitSlashingResponse
 	32, // 70: ethereum.eth.v1alpha1.BeaconChain.GetIndividualVotes:output_type -> ethereum.eth.v1alpha1.IndividualVotesRespond
@@ -5294,7 +5294,7 @@ func (c *beaconChainClient) GetBeaconConfig(ctx context.Context, in *emptypb.Emp
 
 func (c *beaconChainClient) SubmitAttesterSlashing(ctx context.Context, in *AttesterSlashing, opts ...grpc.CallOption) (*SubmitSlashingResponse, error) {
 	out := new(SubmitSlashingResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/SubmitAttesterSlashing", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconChain/SubmitAttesterSlashings", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5415,7 +5415,7 @@ func (*UnimplementedBeaconChainServer) GetBeaconConfig(context.Context, *emptypb
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconConfig not implemented")
 }
 func (*UnimplementedBeaconChainServer) SubmitAttesterSlashing(context.Context, *AttesterSlashing) (*SubmitSlashingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitAttesterSlashing not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitAttesterSlashings not implemented")
 }
 func (*UnimplementedBeaconChainServer) SubmitAttesterSlashingElectra(context.Context, *AttesterSlashingElectra) (*SubmitSlashingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitAttesterSlashingElectra not implemented")
@@ -5765,7 +5765,7 @@ func _BeaconChain_SubmitAttesterSlashing_Handler(srv interface{}, ctx context.Co
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/SubmitAttesterSlashing",
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconChain/SubmitAttesterSlashings",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BeaconChainServer).SubmitAttesterSlashing(ctx, req.(*AttesterSlashing))
