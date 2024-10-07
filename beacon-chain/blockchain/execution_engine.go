@@ -27,8 +27,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blobCommitmentVersionKZG uint8 = 0x01
-
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
