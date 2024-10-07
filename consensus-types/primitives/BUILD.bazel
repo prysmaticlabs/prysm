@@ -9,6 +9,7 @@ go_library(
         "domain.go",
         "epoch.go",
         "execution_address.go",
+        "kzg.go",
         "payload_id.go",
         "randao.go",
         "slot.go",
@@ -21,6 +22,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//math:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],

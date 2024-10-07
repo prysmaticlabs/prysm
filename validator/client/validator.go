@@ -1262,7 +1262,8 @@ func (v *validator) updateValidatorStatusCache(ctx context.Context, pubkeys [][f
 	if len(resp.Statuses) != len(resp.Indices) {
 		return fmt.Errorf("expected %d indices in status, received %d", len(resp.Statuses), len(resp.Indices))
 	}
-	pubkeyToStatus := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus)
+
+	pubkeyToStatus := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus, len(resp.Statuses))
 	for i, s := range resp.Statuses {
 		pubkeyToStatus[bytesutil.ToBytes48(resp.PublicKeys[i])] = &validatorStatus{
 			publicKey: resp.PublicKeys[i],
@@ -1270,8 +1271,8 @@ func (v *validator) updateValidatorStatusCache(ctx context.Context, pubkeys [][f
 			index:     resp.Indices[i],
 		}
 	}
-	// reset the cache
 	v.pubkeyToStatus = pubkeyToStatus
+
 	return nil
 }
 

@@ -48,7 +48,7 @@ type Flags struct {
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
-	EnableCommitteeAwarePacking         bool // EnableCommitteeAwarePacking TODO
+	DisableCommitteeAwarePacking        bool // DisableCommitteeAwarePacking changes the attestation packing algorithm to one that is not aware of attesting committees.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 	EnableFullSSZDataLogging  bool // Enables logging for full ssz data on rejected gossip messages
@@ -256,9 +256,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
 	}
-	if ctx.IsSet(EnableCommitteeAwarePacking.Name) {
-		logEnabled(EnableCommitteeAwarePacking)
-		cfg.EnableCommitteeAwarePacking = true
+	if ctx.IsSet(DisableCommitteeAwarePacking.Name) {
+		logEnabled(DisableCommitteeAwarePacking)
+		cfg.DisableCommitteeAwarePacking = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
