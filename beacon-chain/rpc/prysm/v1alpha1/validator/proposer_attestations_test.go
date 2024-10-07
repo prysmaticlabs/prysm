@@ -231,10 +231,6 @@ func TestProposer_ProposerAtts_committeeAwareSort(t *testing.T) {
 	})
 
 	t.Run("two atts on one of the slots", func(t *testing.T) {
-		p := features.Get().DisableCommitteeAwarePacking
-		if p == true {
-
-		}
 
 		atts := getAtts([]testData{
 			{1, bitfield.Bitlist{0b11000000, 0b1}},
