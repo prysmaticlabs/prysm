@@ -14,13 +14,17 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
 - Electra EIP6110: Queue deposit
-- Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
+- Light client support: Implement `BlockToLightClientHeader` function.
 - GetBeaconStateV2: add Electra case.
 - Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
 - Tests to ensure sepolia config matches the official upstream yaml
+- HTTP endpoint for PublishBlobs
+- GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
+- SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
 
 ### Changed
 
+- Electra: Updated interop genesis generator to support Electra.
 - `getLocalPayload` has been refactored to enable work in ePBS branch.
 - `TestNodeServer_GetPeer` and `TestNodeServer_ListPeers` test flakes resolved by iterating the whole peer list to find
   a match rather than taking the first peer in the map.
@@ -42,8 +46,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated k8s-io/client-go to v0.30.4 and k8s-io/apimachinery to v0.30.4
 - Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 - Refactored light client code to make it more readable and make future PRs easier.
+- Update light client helper functions to reference `dev` branch of CL specs
 - Updated Libp2p Dependencies to allow prysm to use gossipsub v1.2 .
 - Updated Sepolia bootnodes.
+- Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
+- Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
@@ -68,7 +75,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Core: Fixed slash processing causing extra hashing.
 - Core: Fixed extra allocations when processing slashings.
 - remove unneeded container in blob sidecar ssz response
+- Light client support: create finalized header based on finalizedBlock's version, not attestedBlock.
+- Light client support: fix light client attested header execution fields' wrong version bug.
 - Testing: added custom matcher for better push settings testing.
+- Registered `GetDepositSnapshot` Beacon API endpoint.
 
 ### Security
 

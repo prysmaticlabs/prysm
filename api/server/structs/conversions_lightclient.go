@@ -84,6 +84,11 @@ func syncAggregateToJSON(input *v1.SyncAggregate) *SyncAggregate {
 }
 
 func lightClientHeaderContainerToJSON(container *v2.LightClientHeaderContainer) (json.RawMessage, error) {
+	// In the case that a finalizedHeader is nil.
+	if container == nil {
+		return nil, nil
+	}
+
 	beacon, err := container.GetBeacon()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get beacon block header")
