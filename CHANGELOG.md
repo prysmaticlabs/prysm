@@ -59,6 +59,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
 - reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
 - Fix `engine_exchangeCapabilities` implementation.
+- Switch to compounding when consolidating with source==target.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
