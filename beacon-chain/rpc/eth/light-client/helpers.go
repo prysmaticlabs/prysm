@@ -231,7 +231,7 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	case version.Deneb:
 		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepth)
 	case version.Electra:
-		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepth+1)
+		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepthElectra)
 	}
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)

@@ -48,4 +48,5 @@ const (
 	MaxDeposits                           = 16            // Maximum number of deposits in a block.
 	MaxVoluntaryExits                     = 16            // Maximum number of voluntary exits in a block.
 	MaxBlsToExecutionChanges              = 16            // Maximum number of bls to execution changes in a block.
+	NextSyncCommitteeBranchDepthElectra   = 6             // NextSyncCommitteeBranchDepthElectra defines the depth of the next sync committee branch for Electra.
 )
