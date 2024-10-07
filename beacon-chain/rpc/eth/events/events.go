@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -21,6 +20,7 @@ import (
 	chaintime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
@@ -447,7 +447,7 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 		}, nil
 	case *operation.BlobSidecarReceivedData:
 		return func() io.Reader {
-			versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(v.Blob.KzgCommitment)
+			versionedHash := primitives.ConvertKzgCommitmentToVersionedHash(v.Blob.KzgCommitment)
 			return jsonMarshalReader(eventName, &structs.BlobSidecarEvent{
 				BlockRoot:     hexutil.Encode(v.Blob.BlockRootSlice()),
 				Index:         fmt.Sprintf("%d", v.Blob.Index),

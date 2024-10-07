@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -402,13 +401,7 @@ func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([
 
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
-		versionedHashes[i] = ConvertKzgCommitmentToVersionedHash(commitment)
+		versionedHashes[i] = primitives.ConvertKzgCommitmentToVersionedHash(commitment)
 	}
 	return versionedHashes, nil
-}
-
-func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
-	versionedHash := sha256.Sum256(commitment)
-	versionedHash[0] = blobCommitmentVersionKZG
-	return versionedHash
 }
