@@ -2834,6 +2834,12 @@ def prysm_deps():
         version = "v0.8.0",
     )
     go_repository(
+        name = "com_github_r3labs_sse_v2",
+        importpath = "github.com/r3labs/sse/v2",
+        sum = "h1:hFEkLLFY4LDifoHdiCN/LlGBAdVJYsANaLqNYa1l/v0=",
+        version = "v2.10.0",
+    )
+    go_repository(
         name = "com_github_raulk_go_watchdog",
         importpath = "github.com/raulk/go-watchdog",
         sum = "h1:oUmdlHxdkXRJlwfG0O9omj8ukerm8MEQavSiDTEtBsk=",
@@ -4303,6 +4309,12 @@ def prysm_deps():
         importpath = "gopkg.in/bsm/ratelimit.v1",
         sum = "h1:stTHdEoWg1pQ8riaP5ROrjS6zy6wewH/Q2iwnLCQUXY=",
         version = "v1.0.0-20160220154919-db14e161995a",
+    )
+    go_repository(
+        name = "in_gopkg_cenkalti_backoff_v1",
+        importpath = "gopkg.in/cenkalti/backoff.v1",
+        sum = "h1:Arh75ttbsvlpVA7WtVpH4u9h6Zl46xuptxqLxPiSo4Y=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "in_gopkg_check_v1",
