@@ -327,46 +327,6 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	assert.Equal(t, primitives.Slot(0), headSlot, "Mismatch slots")
 }
 
-//func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
-//	ctx := context.Background()
-//	hook := logTest.NewGlobal()
-//	ctrl := gomock.NewController(t)
-//	defer ctrl.Finish()
-//	client := validatormock.NewMockValidatorClient(ctrl)
-//	chainClient := validatormock.NewMockChainClient(ctrl)
-//	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
-//
-//	kp := randKeypair(t)
-//	v := validator{
-//		validatorClient:  client,
-//		km:               newMockKeymanager(t, kp),
-//		chainClient:      chainClient,
-//		prysmChainClient: prysmChainClient,
-//		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
-//	}
-//
-//	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
-//	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-//	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-//	client.EXPECT().WaitForActivation(
-//		gomock.Any(),
-//		&ethpb.ValidatorActivationRequest{
-//			PublicKeys: [][]byte{kp.pub[:]},
-//		},
-//	).Return(clientStream, nil)
-//	clientStream.EXPECT().Recv().Return(
-//		resp,
-//		nil,
-//	)
-//	prysmChainClient.EXPECT().ValidatorCount(
-//		gomock.Any(),
-//		"head",
-//		[]validatorType.Status{validatorType.Active},
-//	).Return([]iface.ValidatorCount{}, nil)
-//	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
-//	require.LogsContain(t, hook, "Validator activated")
-//}
-
 func TestWaitSync_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
