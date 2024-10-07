@@ -133,7 +133,7 @@ func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Spa
 	}
 }
 
-// WaitForNextEpoch creates a blocking function to wait until the next epoch start given the current slot
+// waitForNextEpoch creates a blocking function to wait until the next epoch start given the current slot
 func (v *validator) waitForNextEpoch(ctx context.Context, slot primitives.Slot, genesisTimeSec uint64, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	firstSlotOfNextEpoch, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
 	if err != nil {
