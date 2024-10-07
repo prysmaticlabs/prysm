@@ -47,6 +47,35 @@ func VerifyKZGInclusionProof(blob ROBlob) error {
 	return nil
 }
 
+// VerifyKZGInclusionProofColumn verifies the Merkle proof in a data column sidecar against
+// the beacon block body root.
+func VerifyKZGInclusionProofColumn(sc RODataColumn) error {
+	if sc.SignedBlockHeader == nil {
+		return errNilBlockHeader
+	}
+	if sc.SignedBlockHeader.Header == nil {
+		return errNilBlockHeader
+	}
+	root := sc.SignedBlockHeader.Header.BodyRoot
+	if len(root) != field_params.RootLength {
+		return errInvalidBodyRoot
+	}
+	leaves := leavesFromCommitments(sc.KzgCommitments)
+	sparse, err := trie.GenerateTrieFromItems(leaves, field_params.LogMaxBlobCommitments)
+	if err != nil {
+		return err
+	}
+	rt, err := sparse.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	verified := trie.VerifyMerkleProof(root, rt[:], kzgPosition, sc.KzgCommitmentsInclusionProof)
+	if !verified {
+		return errInvalidInclusionProof
+	}
+	return nil
+}
+
 // MerkleProofKZGCommitment constructs a Merkle proof of inclusion of the KZG
 // commitment of index `index` into the Beacon Block with the given `body`
 func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int) ([][]byte, error) {
@@ -77,6 +106,35 @@ func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int
 	// sparse.MerkleProof always includes the length of the slice this is
 	// why we remove the last element that is not needed in topProof
 	proof = append(proof, topProof[:len(topProof)-1]...)
+	return proof, nil
+}
+
+// MerkleProofKZGCommitments constructs a Merkle proof of inclusion of the KZG
+// commitments into the Beacon Block with the given `body`
+func MerkleProofKZGCommitments(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
+	bodyVersion := body.Version()
+	if bodyVersion < version.Deneb {
+		return nil, errUnsupportedBeaconBlockBody
+	}
+
+	membersRoots, err := topLevelRoots(body)
+	if err != nil {
+		return nil, errors.Wrap(err, "top level roots")
+	}
+
+	sparse, err := trie.GenerateTrieFromItems(membersRoots, logBodyLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "generate trie from items")
+	}
+
+	proof, err := sparse.MerkleProof(kzgPosition)
+	if err != nil {
+		return nil, errors.Wrap(err, "merkle proof")
+	}
+	// Remove the last element as it is a mix in with the number of
+	// elements in the trie.
+	proof = proof[:len(proof)-1]
+
 	return proof, nil
 }
 

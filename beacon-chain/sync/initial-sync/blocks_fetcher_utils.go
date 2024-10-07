@@ -6,6 +6,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -236,18 +237,18 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 		Count:     reqCount,
 		Step:      1,
 	}
-	blocks, err := f.requestBlocks(ctx, req, pid)
+	reqBlocks, err := f.requestBlocks(ctx, req, pid)
 	if err != nil {
 		return nil, fmt.Errorf("cannot fetch blocks: %w", err)
 	}
-	if len(blocks) == 0 {
+	if len(reqBlocks) == 0 {
 		return nil, errNoAlternateBlocks
 	}
 
 	// If the first block is not connected to the current canonical chain, we'll stop processing this batch.
 	// Instead, we'll work backwards from the first block until we find a common ancestor,
 	// and then begin processing from there.
-	first := blocks[0]
+	first := reqBlocks[0]
 	if !f.chain.HasBlock(ctx, first.Block().ParentRoot()) {
 		// Backtrack on a root, to find a common ancestor from which we can resume syncing.
 		fork, err := f.findAncestor(ctx, pid, first)
@@ -260,8 +261,8 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	// Note that we start from the second element in the array, because we know that the first element is in the db,
 	// otherwise we would have gone into the findAncestor early return path above.
-	for i := 1; i < len(blocks); i++ {
-		block := blocks[i]
+	for i := 1; i < len(reqBlocks); i++ {
+		block := reqBlocks[i]
 		parentRoot := block.Block().ParentRoot()
 		// Step through blocks until we find one that is not in the chain. The goal is to find the point where the
 		// chain observed in the peer diverges from the locally known chain, and then collect up the remainder of the
@@ -274,16 +275,22 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 			"slot": block.Block().Slot(),
 			"root": fmt.Sprintf("%#x", parentRoot),
 		}).Debug("Block with unknown parent root has been found")
-		altBlocks, err := sortedBlockWithVerifiedBlobSlice(blocks[i-1:])
+		bwb, err := sortedBlockWithVerifiedBlobSlice(reqBlocks[i-1:])
 		if err != nil {
 			return nil, errors.Wrap(err, "invalid blocks received in findForkWithPeer")
 		}
+		if coreTime.PeerDASIsActive(block.Block().Slot()) {
+			if err := f.fetchDataColumnsFromPeers(ctx, bwb, []peer.ID{pid}); err != nil {
+				return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findForkWithPeer")
+			}
+		} else {
+			if err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid}); err != nil {
+				return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findForkWithPeer")
+			}
+		}
 		// We need to fetch the blobs for the given alt-chain if any exist, so that we can try to verify and import
 		// the blocks.
-		bwb, err := f.fetchBlobsFromPeer(ctx, altBlocks, pid, []peer.ID{pid})
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findForkWithPeer")
-		}
+
 		// The caller will use the BlocksWith VerifiedBlobs in bwb as the starting point for
 		// round-robin syncing the alternate chain.
 		return &forkData{peer: pid, bwb: bwb}, nil
@@ -302,9 +309,14 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfa
 			if err != nil {
 				return nil, errors.Wrap(err, "received invalid blocks in findAncestor")
 			}
-			bwb, err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid})
-			if err != nil {
-				return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findAncestor")
+			if coreTime.PeerDASIsActive(b.Block().Slot()) {
+				if err := f.fetchDataColumnsFromPeers(ctx, bwb, []peer.ID{pid}); err != nil {
+					return nil, errors.Wrap(err, "unable to retrieve columns for blocks found in findAncestor")
+				}
+			} else {
+				if err = f.fetchBlobsFromPeer(ctx, bwb, pid, []peer.ID{pid}); err != nil {
+					return nil, errors.Wrap(err, "unable to retrieve blobs for blocks found in findAncestor")
+				}
 			}
 			return &forkData{
 				peer: pid,
@@ -347,9 +359,89 @@ func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch p
 		cp := f.chain.FinalizedCheckpt()
 		headEpoch = cp.Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	} else {
-		headEpoch = slots.ToEpoch(f.chain.HeadSlot())
-		targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+
+		return headEpoch, targetEpoch, peers
 	}
+
+	headEpoch = slots.ToEpoch(f.chain.HeadSlot())
+	targetEpoch, peers = f.p2p.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, headEpoch)
+
 	return headEpoch, targetEpoch, peers
+}
+
+// peersWithSlotAndDataColumns returns a list of peers that should custody all needed data columns for the given slot.
+func (f *blocksFetcher) peersWithSlotAndDataColumns(
+	peers []peer.ID,
+	targetSlot primitives.Slot,
+	dataColumns map[uint64]bool,
+) (map[peer.ID]bool, []string, error) {
+	peersCount := len(peers)
+
+	// TODO: Uncomment when we are not in devnet any more.
+	// TODO: Find a way to have this uncommented without being in devnet.
+	// // Filter peers based on the percentage of peers to be used in a request.
+	// peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
+
+	// // Filter peers on bandwidth.
+	// peers = f.hasSufficientBandwidth(peers, blocksCount)
+
+	// Select peers which custody ALL wanted columns.
+	// Basically, it is very unlikely that a non-supernode peer will have custody of all columns.
+	// TODO: Modify to retrieve data columns from all possible peers.
+	// TODO: If a peer does respond some of the request columns, do not re-request responded columns.
+
+	// Compute the target epoch from the target slot.
+	targetEpoch := slots.ToEpoch(targetSlot)
+
+	peersWithAdmissibleHeadEpoch := make(map[peer.ID]bool, peersCount)
+	descriptions := make([]string, 0, peersCount)
+
+	// Filter out peers with head epoch lower than our target epoch.
+	// Technically, we should be able to use the head slot from the peer.
+	// However, our vision of the head slot of the peer is updated twice per epoch
+	// via P2P messages. So it is likely that we think the peer is lagging behind
+	// while it is actually not.
+	// ==> We use the head epoch as a proxy instead.
+	// However, if the peer is actually lagging for a few slots,
+	// we may requests some data columns it doesn't have yet.
+	for _, peer := range peers {
+		peerChainState, err := f.p2p.Peers().ChainState(peer)
+
+		if err != nil {
+			description := fmt.Sprintf("peer %s: error: %s", peer, err)
+			descriptions = append(descriptions, description)
+			continue
+		}
+
+		if peerChainState == nil {
+			description := fmt.Sprintf("peer %s: chain state is nil", peer)
+			descriptions = append(descriptions, description)
+			continue
+		}
+
+		peerHeadEpoch := slots.ToEpoch(peerChainState.HeadSlot)
+
+		if peerHeadEpoch < targetEpoch {
+			description := fmt.Sprintf("peer %s: head epoch %d < target epoch %d", peer, peerHeadEpoch, targetEpoch)
+			descriptions = append(descriptions, description)
+			continue
+		}
+
+		peersWithAdmissibleHeadEpoch[peer] = true
+	}
+
+	// Filter out peers that do not have all the data columns needed.
+	finalPeers, err := f.custodyAllNeededColumns(peersWithAdmissibleHeadEpoch, dataColumns)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "custody all needed columns")
+	}
+
+	for peer := range peersWithAdmissibleHeadEpoch {
+		if _, ok := finalPeers[peer]; !ok {
+			description := fmt.Sprintf("peer %s: does not custody all needed columns", peer)
+			descriptions = append(descriptions, description)
+		}
+	}
+
+	return finalPeers, descriptions, nil
 }

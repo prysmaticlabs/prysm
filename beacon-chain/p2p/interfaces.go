@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/connmgr"
@@ -12,6 +13,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
 	"google.golang.org/protobuf/proto"
@@ -28,6 +30,12 @@ type P2P interface {
 	ConnectionHandler
 	PeersProvider
 	MetadataProvider
+	DataColumnsHandler
+}
+
+type Acceser interface {
+	Broadcaster
+	PeerManager
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
@@ -36,6 +44,7 @@ type Broadcaster interface {
 	BroadcastAttestation(ctx context.Context, subnet uint64, att ethpb.Att) error
 	BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage) error
 	BroadcastBlob(ctx context.Context, subnet uint64, blob *ethpb.BlobSidecar) error
+	BroadcastDataColumn(ctx context.Context, root [fieldparams.RootLength]byte, columnSubnet uint64, dataColumnSidecar *ethpb.DataColumnSidecar) error
 }
 
 // SetStreamHandler configures p2p to handle streams of a certain topic ID.
@@ -81,8 +90,9 @@ type PeerManager interface {
 	PeerID() peer.ID
 	Host() host.Host
 	ENR() *enr.Record
+	NodeID() enode.ID
 	DiscoveryAddresses() ([]multiaddr.Multiaddr, error)
-	RefreshENR()
+	RefreshPersistentSubnets()
 	FindPeersWithSubnet(ctx context.Context, topic string, subIndex uint64, threshold int) (bool, error)
 	AddPingMethod(reqFunc func(ctx context.Context, id peer.ID) error)
 }
@@ -101,4 +111,10 @@ type PeersProvider interface {
 type MetadataProvider interface {
 	Metadata() metadata.Metadata
 	MetadataSeq() uint64
+}
+
+type DataColumnsHandler interface {
+	DataColumnsCustodyCountFromRemotePeer(peer.ID) uint64
+	DataColumnsAdmissibleCustodyPeers([]peer.ID) ([]peer.ID, error)
+	DataColumnsAdmissibleSubnetSamplingPeers([]peer.ID) ([]peer.ID, error)
 }

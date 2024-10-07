@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -51,7 +52,9 @@ func (s *Service) registerRPCHandlers() {
 			s.pingHandler,
 		)
 		s.registerRPCHandlersAltair()
-		if currEpoch >= params.BeaconConfig().DenebForkEpoch {
+		if coreTime.PeerDASIsActive(slots.UnsafeEpochStart(currEpoch)) {
+			s.registerRPCHandlersPeerDAS()
+		} else if currEpoch >= params.BeaconConfig().DenebForkEpoch {
 			s.registerRPCHandlersDeneb()
 		}
 		return
@@ -109,6 +112,21 @@ func (s *Service) registerRPCHandlersDeneb() {
 	)
 }
 
+func (s *Service) registerRPCHandlersPeerDAS() {
+	s.registerRPC(
+		p2p.RPCDataColumnSidecarsByRootTopicV1,
+		s.dataColumnSidecarByRootRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCDataColumnSidecarsByRangeTopicV1,
+		s.dataColumnSidecarsByRangeRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCMetaDataTopicV3,
+		s.metaDataHandler,
+	)
+}
+
 // Remove all v1 Stream handlers that are no longer supported
 // from altair onwards.
 func (s *Service) unregisterPhase0Handlers() {
@@ -119,6 +137,14 @@ func (s *Service) unregisterPhase0Handlers() {
 	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlockRangeTopic))
 	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlockRootTopic))
 	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullMetadataTopic))
+}
+
+func (s *Service) unregisterBlobHandlers() {
+	fullBlobRangeTopic := p2p.RPCBlobSidecarsByRangeTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
+	fullBlobRootTopic := p2p.RPCBlobSidecarsByRootTopicV1 + s.cfg.p2p.Encoding().ProtocolSuffix()
+
+	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlobRangeTopic))
+	s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(fullBlobRootTopic))
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
@@ -137,6 +163,9 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
+
+		conn := stream.Conn()
+		remotePeer := conn.RemotePeer()
 
 		// Resetting after closing is a no-op so defer a reset in case something goes wrong.
 		// It's up to the handler to Close the stream (send an EOF) if
@@ -157,12 +186,12 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
 		span.SetAttributes(trace.StringAttribute("topic", topic))
-		span.SetAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().String()))
+		span.SetAttributes(trace.StringAttribute("peer", remotePeer.String()))
 		log := log.WithField("peer", stream.Conn().RemotePeer().String()).WithField("topic", string(stream.Protocol()))
 
 		// Check before hand that peer is valid.
-		if s.cfg.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
-			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
+		if err := s.cfg.p2p.Peers().IsBad(remotePeer); err != nil {
+			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, remotePeer); err != nil {
 				log.WithError(err).Debug("Could not disconnect from peer")
 			}
 			return
@@ -193,7 +222,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		// since metadata requests do not have any data in the payload, we
 		// do not decode anything.
-		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
+		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 || baseTopic == p2p.RPCMetaDataTopicV3 {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if !errors.Is(err, p2ptypes.ErrWrongForkDigestVersion) {

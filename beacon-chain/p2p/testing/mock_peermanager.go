@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -20,7 +21,7 @@ type MockPeerManager struct {
 }
 
 // Disconnect .
-func (_ *MockPeerManager) Disconnect(peer.ID) error {
+func (*MockPeerManager) Disconnect(peer.ID) error {
 	return nil
 }
 
@@ -39,6 +40,11 @@ func (m MockPeerManager) ENR() *enr.Record {
 	return m.Enr
 }
 
+// NodeID .
+func (m MockPeerManager) NodeID() enode.ID {
+	return [32]byte{}
+}
+
 // DiscoveryAddresses .
 func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	if m.FailDiscoveryAddr {
@@ -47,13 +53,13 @@ func (m MockPeerManager) DiscoveryAddresses() ([]multiaddr.Multiaddr, error) {
 	return m.DiscoveryAddr, nil
 }
 
-// RefreshENR .
-func (_ MockPeerManager) RefreshENR() {}
+// RefreshPersistentSubnets .
+func (MockPeerManager) RefreshPersistentSubnets() {}
 
 // FindPeersWithSubnet .
-func (_ MockPeerManager) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
+func (MockPeerManager) FindPeersWithSubnet(_ context.Context, _ string, _ uint64, _ int) (bool, error) {
 	return true, nil
 }
 
 // AddPingMethod .
-func (_ MockPeerManager) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {}
+func (MockPeerManager) AddPingMethod(_ func(ctx context.Context, id peer.ID) error) {}

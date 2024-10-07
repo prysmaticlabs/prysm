@@ -14,6 +14,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	cmdshared "github.com/prysmaticlabs/prysm/v5/cmd"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
@@ -270,12 +271,16 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
 		fmt.Sprintf("--%s=%d", flags.BlobBatchLimitBurstFactor.Name, 16),
 		fmt.Sprintf("--%s=%d", flags.BlobBatchLimit.Name, 256),
+		fmt.Sprintf("--%s=%d", flags.DataColumnBatchLimit.Name, 8192),
+		fmt.Sprintf("--%s=%d", flags.DataColumnBatchLimitBurstFactor.Name, 2),
 		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
 		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=1",
 		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=2",
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + features.EnableQUIC.Name,
+		"--" + flags.SubscribeToAllSubnets.Name,
+		fmt.Sprintf("--%s=%d", features.DataColumnsWithholdCount.Name, 3),
 	}
 	if config.UsePprof {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index))
