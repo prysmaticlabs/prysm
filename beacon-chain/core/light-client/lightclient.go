@@ -243,8 +243,8 @@ func createDefaultLightClientUpdate() (*ethpbv2.LightClientUpdate, error) {
 		Pubkeys:         pubKeys,
 		AggregatePubkey: make([]byte, fieldparams.BLSPubkeyLength),
 	}
-	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
-	for i := 0; i < fieldparams.NextSyncCommitteeBranchDepth; i++ {
+	nextSyncCommitteeBranch := make([][]byte, fieldparams.SyncCommitteeBranchDepth)
+	for i := 0; i < fieldparams.SyncCommitteeBranchDepth; i++ {
 		nextSyncCommitteeBranch[i] = make([]byte, fieldparams.RootLength)
 	}
 	executionBranch := make([][]byte, executionBranchNumOfLeaves)
