@@ -54,6 +54,7 @@ go_test(
         "deposit_fuzz_test.go",
         "deposits_test.go",
         "effective_balance_updates_test.go",
+        "export_test.go",
         "registry_updates_test.go",
         "transition_test.go",
         "upgrade_test.go",

@@ -248,6 +248,27 @@ func TestProcessPendingDeposits(t *testing.T) {
 	}
 }
 
+func TestBatchProcessNewPendingDeposits(t *testing.T) {
+	t.Run("invalid batch initiates correct individual validation", func(t *testing.T) {
+		st := stateWithActiveBalanceETH(t, 0)
+		require.Equal(t, 0, len(st.Validators()))
+		require.Equal(t, 0, len(st.Balances()))
+		sk, err := bls.RandKey()
+		require.NoError(t, err)
+		wc := make([]byte, 32)
+		wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+		wc[31] = byte(0)
+		validDep := stateTesting.GeneratePendingDeposit(t, sk, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(wc), 0)
+		invalidDep := &eth.PendingDeposit{}
+		// have a combination of valid and invalid deposits
+		deps := []*eth.PendingDeposit{validDep, invalidDep}
+		require.NoError(t, electra.BatchProcessNewPendingDeposits(context.Background(), st, deps))
+		// successfully added to register
+		require.Equal(t, 1, len(st.Validators()))
+		require.Equal(t, 1, len(st.Balances()))
+	})
+}
+
 func TestProcessDepositRequests(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateElectra(t, 1)
 	sk, err := bls.RandKey()
