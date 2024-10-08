@@ -349,7 +349,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	}
 
 	// Perform batch signature verification on deposits on unfound validators
-	if err = batchProcessPendingDeposts(ctx, st, depositsToPostpone); err != nil {
+	if err = batchProcessNewPendingDeposits(ctx, st, depositsToPostpone); err != nil {
 		return errors.Wrap(err, "could not process pending deposits with new public keys")
 	}
 
@@ -369,7 +369,8 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	return st.SetDepositBalanceToConsume(0)
 }
 
-func batchProcessPendingDeposts(ctx context.Context, st state.BeaconState, depositsToVerify []*ethpb.PendingDeposit) error {
+// batchProcessNewPendingDeposits should only be used to process new deposits that require validator registration
+func batchProcessNewPendingDeposits(ctx context.Context, st state.BeaconState, depositsToVerify []*ethpb.PendingDeposit) error {
 	if len(depositsToVerify) > 0 {
 		verified, err := blocks.BatchVerifyPendingDepositsSignatures(ctx, depositsToVerify)
 		if err != nil {
