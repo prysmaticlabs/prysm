@@ -205,6 +205,10 @@ func (s *Service) listenForNewNodes() {
 		case <-s.ctx.Done():
 			return
 		case <-connectivityTicker.C:
+			// Skip the connectivity check if not enabled.
+			if !features.Get().EnableDiscoveryReboot {
+				continue
+			}
 			if s.isBelowThreshold() {
 				thresholdCount++
 			}

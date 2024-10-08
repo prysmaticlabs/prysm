@@ -170,6 +170,10 @@ var (
 		Name:  "enable-committee-aware-packing",
 		Usage: "Changes the attestation packing algorithm to one that is aware of attesting committees.",
 	}
+	EnableDiscoveryReboot = &cli.BoolFlag{
+		Name:  "enable-discovery-reboot",
+		Usage: "Experimental: Enables the discovery listener to rebooted in the event of connectivity issues.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -227,6 +231,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	BlobSaveFsync,
 	EnableQUIC,
 	EnableCommitteeAwarePacking,
+	EnableDiscoveryReboot,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
