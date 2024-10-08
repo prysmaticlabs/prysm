@@ -95,7 +95,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 
 	bootNode := bootListener.Self()
 
-	var listeners []*discover.UDPv5
+	var listeners []*listenerWrapper
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
 		cfg := &Config{
@@ -229,6 +229,37 @@ func TestCreateLocalNode(t *testing.T) {
 			require.DeepSSZEqual(t, []byte{0}, *syncSubnets)
 		})
 	}
+}
+
+func TestRebootDiscoveryListener(t *testing.T) {
+	port := 1024
+	ipAddr, pkey := createAddrAndPrivKey(t)
+	s := &Service{
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		cfg:                   &Config{UDPPort: uint(port)},
+	}
+	createListener := func() (*discover.UDPv5, error) {
+		return s.createListener(ipAddr, pkey)
+	}
+	listener, err := NewListener(createListener)
+	require.NoError(t, err)
+	currentPubkey := listener.Self().Pubkey()
+	currentID := listener.Self().ID()
+	currentPort := listener.Self().UDP()
+	currentAddr := listener.Self().IP()
+
+	assert.NoError(t, listener.RebootListener())
+
+	newPubkey := listener.Self().Pubkey()
+	newID := listener.Self().ID()
+	newPort := listener.Self().UDP()
+	newAddr := listener.Self().IP()
+
+	assert.Equal(t, true, currentPubkey.Equal(newPubkey))
+	assert.Equal(t, currentID, newID)
+	assert.Equal(t, currentPort, newPort)
+	assert.Equal(t, currentAddr.String(), newAddr.String())
 }
 
 func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
@@ -370,7 +401,11 @@ func TestUDPMultiAddress(t *testing.T) {
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
-	listener, err := s.createListener(ipAddr, pkey)
+
+	createListener := func() (*discover.UDPv5, error) {
+		return s.createListener(ipAddr, pkey)
+	}
+	listener, err := NewListener(createListener)
 	require.NoError(t, err)
 	defer listener.Close()
 	s.dv5Listener = listener
@@ -455,7 +490,10 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
-				listener, err := s.createListener(ipAddr, pkey)
+				createListener := func() (*discover.UDPv5, error) {
+					return s.createListener(ipAddr, pkey)
+				}
+				listener, err := NewListener(createListener)
 				assert.NoError(t, err)
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
@@ -484,7 +522,10 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
-				listener, err := s.createListener(ipAddr, pkey)
+				createListener := func() (*discover.UDPv5, error) {
+					return s.createListener(ipAddr, pkey)
+				}
+				listener, err := NewListener(createListener)
 				assert.NoError(t, err)
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
@@ -506,7 +547,10 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
-				listener, err := s.createListener(ipAddr, pkey)
+				createListener := func() (*discover.UDPv5, error) {
+					return s.createListener(ipAddr, pkey)
+				}
+				listener, err := NewListener(createListener)
 				assert.NoError(t, err)
 
 				// Update params
@@ -537,7 +581,10 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
-				listener, err := s.createListener(ipAddr, pkey)
+				createListener := func() (*discover.UDPv5, error) {
+					return s.createListener(ipAddr, pkey)
+				}
+				listener, err := NewListener(createListener)
 				assert.NoError(t, err)
 
 				// Update params
@@ -575,7 +622,10 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
 					cfg:                   &Config{UDPPort: uint(port)},
 				}
-				listener, err := s.createListener(ipAddr, pkey)
+				createListener := func() (*discover.UDPv5, error) {
+					return s.createListener(ipAddr, pkey)
+				}
+				listener, err := NewListener(createListener)
 				assert.NoError(t, err)
 
 				// Update params
