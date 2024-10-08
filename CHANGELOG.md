@@ -20,6 +20,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Tests to ensure sepolia config matches the official upstream yaml
 - HTTP endpoint for PublishBlobs
 - GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
+- Add Electra support and tests for light client functions
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
 
 ### Changed
