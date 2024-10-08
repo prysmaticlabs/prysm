@@ -34,6 +34,7 @@ const (
 	BlobSidecarSize                       = 131928        // defined to match blob sidecar size in bazel ssz codegen
 	KzgCommitmentInclusionProofDepth      = 17            // Merkle proof depth for blob_kzg_commitments list item
 	NextSyncCommitteeBranchDepth          = 5             // NextSyncCommitteeBranchDepth defines the depth of the next sync committee branch.
+	NextSyncCommitteeBranchDepthElectra   = 6             // NextSyncCommitteeBranchDepthElectra defines the depth of the next sync committee branch.
 	PendingBalanceDepositsLimit           = 134217728     // Maximum number of pending balance deposits in the beacon state.
 	PendingPartialWithdrawalsLimit        = 64            // Maximum number of pending partial withdrawals in the beacon state.
 	PendingConsolidationsLimit            = 64            // Maximum number of pending consolidations in the beacon state.
