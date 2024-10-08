@@ -17,6 +17,41 @@ import (
 )
 
 func TestBatchVerifyDepositsSignatures_Ok(t *testing.T) {
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	require.NoError(t, err)
+	deposit := &ethpb.Deposit{
+		Data: &ethpb.Deposit_Data{
+			PublicKey:             sk.PublicKey().Marshal(),
+			WithdrawalCredentials: make([]byte, 32),
+			Amount:                3000,
+		},
+	}
+	sr, err := signing.ComputeSigningRoot(&ethpb.DepositMessage{
+		PublicKey:             deposit.Data.PublicKey,
+		WithdrawalCredentials: deposit.Data.WithdrawalCredentials,
+		Amount:                3000,
+	}, domain)
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	deposit.Data.Signature = sig.Marshal()
+	leaf, err := deposit.Data.HashTreeRoot()
+	require.NoError(t, err)
+	// We then create a merkle branch for the test.
+	depositTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	require.NoError(t, err, "Could not generate trie")
+	proof, err := depositTrie.MerkleProof(0)
+	require.NoError(t, err, "Could not generate proof")
+
+	deposit.Proof = proof
+	require.NoError(t, err)
+	verified, err := blocks.BatchVerifyDepositsSignatures(context.Background(), []*ethpb.Deposit{deposit})
+	require.NoError(t, err)
+	require.Equal(t, true, verified)
+}
+
+func TestBatchVerifyDepositsSignatures_InvalidSignature(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
 			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, 48),
@@ -34,9 +69,9 @@ func TestBatchVerifyDepositsSignatures_Ok(t *testing.T) {
 
 	deposit.Proof = proof
 	require.NoError(t, err)
-	ok, err := blocks.BatchVerifyDepositsSignatures(context.Background(), []*ethpb.Deposit{deposit})
+	verified, err := blocks.BatchVerifyDepositsSignatures(context.Background(), []*ethpb.Deposit{deposit})
 	require.NoError(t, err)
-	require.Equal(t, true, ok)
+	require.Equal(t, false, verified)
 }
 
 func TestVerifyDeposit_MerkleBranchFailsVerification(t *testing.T) {

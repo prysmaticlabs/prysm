@@ -361,7 +361,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := electra.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := electra.ProcessDeposit(beaconState, dep[0], false)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {
