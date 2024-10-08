@@ -21,6 +21,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - HTTP endpoint for PublishBlobs
 - GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
 - Add Electra support and tests for light client functions
+- fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
 
 ### Changed
