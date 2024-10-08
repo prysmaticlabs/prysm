@@ -13,9 +13,8 @@ import (
 )
 
 type attGroup struct {
-	slot     primitives.Slot
-	local    ethpb.Att
-	external []ethpb.Att
+	slot primitives.Slot
+	atts []ethpb.Att
 }
 
 type AttestationCache struct {
@@ -48,8 +47,10 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 	if group == nil {
 		group = &attGroup{
 			slot: att.GetData().Slot,
+			atts: []ethpb.Att{att},
 		}
 		c.atts[id] = group
+		return nil
 	}
 
 	if att.IsAggregated() {
@@ -58,27 +59,29 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 			log.WithError(err).Error("Unable to check if attestation is redundant, skipping insertion")
 		}
 		if !redundant {
-			group.external = append(group.external, att.Clone())
+			group.atts = append(group.atts, att.Clone())
 		}
 		return nil
 	}
 
-	local := c.atts[id].local
-	if local == nil {
-		c.atts[id].local = att.Clone()
+	// This should never happen because we return early for a new group.
+	if len(group.atts) == 0 {
+		log.Error("Attestation group contains no attestations, skipping insertion")
 		return nil
 	}
+
+	a := group.atts[0]
 	bit := att.GetAggregationBits().BitIndices()[0]
-	if local.GetAggregationBits().BitAt(uint64(bit)) {
+	if a.GetAggregationBits().BitAt(uint64(bit)) {
 		return nil
 	}
-	sig, err := aggregateSig(local, att)
+	sig, err := aggregateSig(a, att)
 	if err != nil {
 		return errors.Wrapf(err, "could not aggregate signatures")
 	}
 
-	local.GetAggregationBits().SetBitAt(uint64(bit), true)
-	local.SetSignature(sig)
+	a.GetAggregationBits().SetBitAt(uint64(bit), true)
+	a.SetSignature(sig)
 
 	return nil
 }
@@ -89,12 +92,7 @@ func (c *AttestationCache) GetAll() []ethpb.Att {
 
 	var result []ethpb.Att
 	for _, group := range c.atts {
-		if group.local != nil {
-			result = append(result, group.local)
-		}
-		for _, a := range group.external {
-			result = append(result, a)
-		}
+		result = append(result, group.atts...)
 	}
 	return result
 }
@@ -105,10 +103,7 @@ func (c *AttestationCache) Count() int {
 
 	count := 0
 	for _, group := range c.atts {
-		if group.local != nil {
-			count++
-		}
-		count += len(group.external)
+		count += len(group.atts)
 	}
 	return count
 }
@@ -131,27 +126,18 @@ func (c *AttestationCache) DeleteCovered(att ethpb.Att) error {
 		return nil
 	}
 
-	local := group.local
-	if local != nil {
-		if covered, err := att.GetAggregationBits().Contains(local.GetAggregationBits()); err != nil {
-			return err
-		} else if covered {
-			group.local = nil
-		}
-	}
-
 	idx := 0
-	for _, a := range group.external {
+	for _, a := range group.atts {
 		if covered, err := att.GetAggregationBits().Contains(a.GetAggregationBits()); err != nil {
 			return err
 		} else if !covered {
-			group.external[idx] = a
+			group.atts[idx] = a
 			idx++
 		}
 	}
-	group.external = group.external[:idx]
+	group.atts = group.atts[:idx]
 
-	if group.local == nil && len(group.external) == 0 {
+	if len(group.atts) == 0 {
 		delete(c.atts, id)
 	}
 
@@ -165,10 +151,7 @@ func (c *AttestationCache) PruneBefore(slot primitives.Slot) uint64 {
 	var pruneCount uint64
 	for id, group := range c.atts {
 		if group.slot < slot {
-			if group.local != nil {
-				pruneCount++
-			}
-			pruneCount += uint64(len(group.external))
+			pruneCount += uint64(len(group.atts))
 			delete(c.atts, id)
 		}
 	}
@@ -193,14 +176,7 @@ func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
 		return false, nil
 	}
 
-	if group.local != nil {
-		if redundant, err := group.local.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
-			return true, err
-		} else if redundant {
-			return true, nil
-		}
-	}
-	for _, a := range group.external {
+	for _, a := range group.atts {
 		if redundant, err := a.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
 			return true, err
 		} else if redundant {
@@ -233,29 +209,17 @@ func GetBySlotAndCommitteeIndex[T ethpb.Att](c *AttestationCache, slot primitive
 	var result []T
 
 	for _, group := range c.atts {
-		addExternal := false
-		local, ok := group.local.(T)
-		if ok {
-			if local.GetData().Slot != slot || !local.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
-				continue
-			}
-			result = append(result, local)
-			addExternal = true
-		} else if len(group.external) > 0 {
+		if len(group.atts) > 0 {
 			// We can safely compare the first attestation because all attestations in a group
 			// must have the same slot and committee index, since they are under the same key.
-			a, ok := group.external[0].(T)
+			a, ok := group.atts[0].(T)
 			if ok && a.GetData().Slot == slot && a.CommitteeBitsVal().BitAt(uint64(committeeIndex)) {
-				addExternal = true
-			}
-		}
-		if !addExternal {
-			continue
-		}
-		for _, a := range group.external {
-			a, ok := a.(T)
-			if ok {
-				result = append(result, a)
+				for _, a := range group.atts {
+					a, ok := a.(T)
+					if ok {
+						result = append(result, a)
+					}
+				}
 			}
 		}
 	}
