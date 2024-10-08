@@ -283,7 +283,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	}
 	// constants
 	ffe := params.BeaconConfig().FarFutureEpoch
-	curEpoch := slots.ToEpoch(st.Slot())
+	nextEpoch := slots.ToEpoch(st.Slot()) + 1
 
 	// Slice to collect deposits needing signature verification
 	var depositsToVerify []*ethpb.PendingDeposit
@@ -317,7 +317,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 				return errors.Wrap(err, "could not get validator")
 			}
 			isValidatorExited = val.ExitEpoch() < ffe
-			isValidatorWithdrawn = val.WithdrawableEpoch() < curEpoch
+			isValidatorWithdrawn = val.WithdrawableEpoch() < nextEpoch
 		}
 
 		if isValidatorWithdrawn {
@@ -381,8 +381,12 @@ func batchProcessNewPendingDeposits(ctx context.Context, st state.BeaconState, d
 			return errors.Wrap(err, "could not batch verify deposit signatures")
 		}
 		for _, dep := range depositsToVerify {
-			if !verified {
-				verified, err = blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
+			if verified {
+				if err := AddValidatorToRegistry(st, dep.PublicKey, dep.WithdrawalCredentials, dep.Amount); err != nil {
+					return errors.Wrap(err, "could not add validator to registry")
+				}
+			} else {
+				valid, err := blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
 					PublicKey:             bytesutil.SafeCopyBytes(dep.PublicKey),
 					WithdrawalCredentials: bytesutil.SafeCopyBytes(dep.WithdrawalCredentials),
 					Amount:                dep.Amount,
@@ -391,10 +395,10 @@ func batchProcessNewPendingDeposits(ctx context.Context, st state.BeaconState, d
 				if err != nil {
 					return errors.Wrap(err, "could not verify deposit signature")
 				}
-			}
-			if verified {
-				if err := AddValidatorToRegistry(st, dep.PublicKey, dep.WithdrawalCredentials, dep.Amount); err != nil {
-					return errors.Wrap(err, "could not add validator to registry")
+				if valid {
+					if err := AddValidatorToRegistry(st, dep.PublicKey, dep.WithdrawalCredentials, dep.Amount); err != nil {
+						return errors.Wrap(err, "could not add validator to registry")
+					}
 				}
 			}
 		}
