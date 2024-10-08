@@ -59,7 +59,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 
 	// Step 3: update validator statuses in cache.
 	if err := v.updateValidatorStatusCache(ctx, validatingKeys); err != nil {
-		return v.handleReconnection(ctx, span, err, "Connection broken while waiting for activation. Reconnecting...", accountsChangedChan)
+		return v.retryWaitForActivation(ctx, span, err, "Connection broken while waiting for activation. Reconnecting...", accountsChangedChan)
 	}
 
 	// Step 4: Fetch validator count.
@@ -77,9 +77,11 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 	return nil
 }
 
+// getValidatorCount is an api call to get the current validator count
+// "-1" indicates that validator count endpoint is not supported by the beacon node.
 func (v *validator) getValidatorCount(ctx context.Context) (int64, error) {
 	// TODO: revisit https://github.com/prysmaticlabs/prysm/pull/12471#issuecomment-1568320970 to review if ValidatorCount api can be removed.
-	// "-1" indicates that validator count endpoint is not supported by the beacon node.
+
 	var valCount int64 = -1
 	valCounts, err := v.prysmChainClient.ValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
 	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
@@ -91,9 +93,9 @@ func (v *validator) getValidatorCount(ctx context.Context) (int64, error) {
 	return valCount, nil
 }
 
-func (v *validator) handleReconnection(ctx context.Context, span octrace.Span, err error, message string, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+func (v *validator) retryWaitForActivation(ctx context.Context, span octrace.Span, err error, message string, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	tracing.AnnotateError(span, err)
-	attempts := streamAttempts(ctx)
+	attempts := activationAttempts(ctx)
 	log.WithError(err).WithField("attempts", attempts).Error(message)
 	// Reconnection attempt backoff, up to 60s.
 	time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
@@ -114,7 +116,7 @@ func (v *validator) waitForAccountsChange(ctx context.Context, accountsChangedCh
 func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Span, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	select {
 	case <-ctx.Done():
-		log.Debug("Context closed, exiting fetching validating keys")
+		log.Debug("Context closed, exiting waitForActivationRetry")
 		return ctx.Err()
 	case <-accountsChangedChan:
 		// Accounts (keys) changed, restart the process.
@@ -123,10 +125,10 @@ func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Spa
 		log.Warn("No active validator keys provided. Waiting until next epoch to check again...")
 		headSlot, err := v.CanonicalHeadSlot(ctx)
 		if err != nil {
-			return v.handleReconnection(ctx, span, err, "Failed to get head slot. Reconnecting...", accountsChangedChan)
+			return v.retryWaitForActivation(ctx, span, err, "Failed to get head slot. Reconnecting...", accountsChangedChan)
 		}
 		if err := v.waitForNextEpoch(ctx, headSlot, v.genesisTime, accountsChangedChan); err != nil {
-			return v.handleReconnection(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
+			return v.retryWaitForActivation(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
 		}
 		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
@@ -141,7 +143,7 @@ func (v *validator) waitForNextEpoch(ctx context.Context, slot primitives.Slot, 
 
 	select {
 	case <-ctx.Done():
-		// The context was cancelled
+		log.Debug("Context closed, exiting waitForNextEpoch")
 		return ctx.Err()
 	case <-accountsChangedChan:
 		// Accounts (keys) changed, restart the process.
@@ -158,7 +160,7 @@ type waitForActivationContextKey string
 
 const waitForActivationAttemptsContextKey = waitForActivationContextKey("WaitForActivation-attempts")
 
-func streamAttempts(ctx context.Context) int {
+func activationAttempts(ctx context.Context) int {
 	attempts, ok := ctx.Value(waitForActivationAttemptsContextKey).(int)
 	if !ok {
 		return 1
@@ -167,6 +169,6 @@ func streamAttempts(ctx context.Context) int {
 }
 
 func incrementRetries(ctx context.Context) context.Context {
-	attempts := streamAttempts(ctx)
+	attempts := activationAttempts(ctx)
 	return context.WithValue(ctx, waitForActivationAttemptsContextKey, attempts+1)
 }

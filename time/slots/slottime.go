@@ -299,15 +299,10 @@ func SecondsUntilNextEpochStart(slot primitives.Slot, genesisTimeSec uint64) (ui
 		return 0, err
 	}
 	es := nextEpochStartTime.Unix()
-	ss, err := SecondsSinceSlotStart(slot, genesisTimeSec, uint64(time.Now().Unix()))
-	if err != nil {
-		return 0, err
-	}
 	n := time.Now().Unix()
-	waitTime := uint64(es-n) + ss
+	waitTime := uint64(es - n)
 	log.WithFields(logrus.Fields{
 		"slot":                   slot,
-		"seconds_since_start":    ss,
 		"next_epoch_start_slot":  firstSlotOfNextEpoch,
 		"slots_until_next_start": firstSlotOfNextEpoch - slot,
 		"total_wait_time":        waitTime,
