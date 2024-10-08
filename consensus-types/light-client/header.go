@@ -91,6 +91,10 @@ func NewWrappedHeaderCapella(p *pb.LightClientHeaderCapella) (interfaces.LightCl
 		p.ExecutionBranch,
 		fieldparams.ExecutionBranchDepth,
 	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &headerCapella{
 		p:               p,
 		execution:       execution,
@@ -148,6 +152,9 @@ func NewWrappedHeaderDeneb(p *pb.LightClientHeaderDeneb) (interfaces.LightClient
 		p.ExecutionBranch,
 		fieldparams.ExecutionBranchDepth,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return &headerDeneb{
 		p:               p,
