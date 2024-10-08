@@ -320,7 +320,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 
 		if isValidatorWithdrawn {
 			// Deposited balance will never become active. Increase balance but do not consume churn
-			if err := ApplyPendingDeposit(ctx, st, pendingDeposit, true); err != nil {
+			if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
 				return errors.Wrap(err, "could not apply pending deposit")
 			}
 		} else if isValidatorExited {
@@ -420,23 +420,21 @@ func batchProcessPendingDeposts(ctx context.Context, st state.BeaconState, depos
 //	    validator_index = ValidatorIndex(validator_pubkeys.index(deposit.pubkey))
 //	    # Increase balance
 //	    increase_balance(state, validator_index, deposit.amount)
-func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *ethpb.PendingDeposit, verified bool) error {
+func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *ethpb.PendingDeposit) error {
 	_, span := trace.StartSpan(ctx, "electra.ApplyPendingDeposit")
 	defer span.End()
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(deposit.PublicKey))
 	if !ok {
-		var err error
-		if !verified {
-			verified, err = blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
-				PublicKey:             bytesutil.SafeCopyBytes(deposit.PublicKey),
-				WithdrawalCredentials: bytesutil.SafeCopyBytes(deposit.WithdrawalCredentials),
-				Amount:                deposit.Amount,
-				Signature:             bytesutil.SafeCopyBytes(deposit.Signature),
-			})
-			if err != nil {
-				return errors.Wrap(err, "could not verify deposit signature")
-			}
+		verified, err := blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
+			PublicKey:             bytesutil.SafeCopyBytes(deposit.PublicKey),
+			WithdrawalCredentials: bytesutil.SafeCopyBytes(deposit.WithdrawalCredentials),
+			Amount:                deposit.Amount,
+			Signature:             bytesutil.SafeCopyBytes(deposit.Signature),
+		})
+		if err != nil {
+			return errors.Wrap(err, "could not verify deposit signature")
 		}
+
 		if verified {
 			if err := AddValidatorToRegistry(st, deposit.PublicKey, deposit.WithdrawalCredentials, deposit.Amount); err != nil {
 				return errors.Wrap(err, "could not add validator to registry")
