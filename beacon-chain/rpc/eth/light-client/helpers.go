@@ -91,7 +91,7 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
-	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	branch := make([]string, fieldparams.SyncCommitteeBranchDepth)
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
@@ -159,7 +159,7 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
-	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	branch := make([]string, fieldparams.SyncCommitteeBranchDepth)
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
@@ -229,9 +229,9 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	var branch []string
 	switch block.Version() {
 	case version.Deneb:
-		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+		branch = make([]string, fieldparams.SyncCommitteeBranchDepth)
 	case version.Electra:
-		branch = make([]string, fieldparams.NextSyncCommitteeBranchDepthElectra)
+		branch = make([]string, fieldparams.SyncCommitteeBranchDepthElectra)
 	}
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
@@ -293,7 +293,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 }
 
 func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
-	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
+	nextSyncCommitteeBranch := make([][]byte, fieldparams.SyncCommitteeBranchDepth)
 	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
 }
 
