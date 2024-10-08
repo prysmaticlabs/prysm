@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
-	"github.com/sirupsen/logrus"
 	octrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -135,25 +134,10 @@ func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Spa
 
 // waitForNextEpoch creates a blocking function to wait until the next epoch start given the current slot
 func (v *validator) waitForNextEpoch(ctx context.Context, slot primitives.Slot, genesisTimeSec uint64, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
-	firstSlotOfNextEpoch, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
+	waitTime, err := slots.SecondsUntilNextEpochStart(slot, genesisTimeSec)
 	if err != nil {
 		return err
 	}
-	nextEpochStartDuration, err := slots.ToTime(genesisTimeSec, firstSlotOfNextEpoch)
-	if err != nil {
-		return err
-	}
-	ss, err := slots.SecondsSinceSlotStart(slot, genesisTimeSec, uint64(time.Now().Unix()))
-	if err != nil {
-		return err
-	}
-	waitTime := uint64(nextEpochStartDuration.Unix()-time.Now().Unix()) + ss
-	log.WithFields(logrus.Fields{
-		"slot":                   slot,
-		"seconds_sinceStart":     ss,
-		"next_epoch_start_slot":  firstSlotOfNextEpoch,
-		"slots_until_next_start": firstSlotOfNextEpoch - slot,
-	}).Debugf("Waiting %d seconds", waitTime)
 
 	select {
 	case <-ctx.Done():

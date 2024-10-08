@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
+	"github.com/sirupsen/logrus"
 )
 
 // MaxSlotBuffer specifies the max buffer given to slots from
@@ -285,4 +286,31 @@ func WithinVotingWindow(genesisTime uint64, slot primitives.Slot) bool {
 // MaxSafeEpoch gives the largest epoch value that can be safely converted to a slot.
 func MaxSafeEpoch() primitives.Epoch {
 	return primitives.Epoch(math.MaxUint64 / uint64(params.BeaconConfig().SlotsPerEpoch))
+}
+
+// SecondsUntilNextEpochStart returns how many seconds until the next Epoch start from the current time and slot
+func SecondsUntilNextEpochStart(slot primitives.Slot, genesisTimeSec uint64) (uint64, error) {
+	firstSlotOfNextEpoch, err := EpochStart(ToEpoch(slot) + 1)
+	if err != nil {
+		return 0, err
+	}
+	nextEpochStartTime, err := ToTime(genesisTimeSec, firstSlotOfNextEpoch)
+	if err != nil {
+		return 0, err
+	}
+	es := nextEpochStartTime.Unix()
+	ss, err := SecondsSinceSlotStart(slot, genesisTimeSec, uint64(time.Now().Unix()))
+	if err != nil {
+		return 0, err
+	}
+	n := time.Now().Unix()
+	waitTime := uint64(es-n) + ss
+	log.WithFields(logrus.Fields{
+		"slot":                   slot,
+		"seconds_since_start":    ss,
+		"next_epoch_start_slot":  firstSlotOfNextEpoch,
+		"slots_until_next_start": firstSlotOfNextEpoch - slot,
+		"total_wait_time":        waitTime,
+	}).Debug("Waiting until next epoch before re-checking validator statuses...")
+	return waitTime, nil
 }
