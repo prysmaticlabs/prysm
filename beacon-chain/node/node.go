@@ -400,7 +400,7 @@ func initSyncWaiter(ctx context.Context, complete chan struct{}) func() error {
 }
 
 // StateFeed implements statefeed.Notifier.
-func (b *BeaconNode) StateFeed() *event.Feed {
+func (b *BeaconNode) StateFeed() event.SubscriberSender {
 	return b.stateFeed
 }
 
@@ -410,7 +410,7 @@ func (b *BeaconNode) BlockFeed() *event.Feed {
 }
 
 // OperationFeed implements opfeed.Notifier.
-func (b *BeaconNode) OperationFeed() *event.Feed {
+func (b *BeaconNode) OperationFeed() event.SubscriberSender {
 	return b.opFeed
 }
 

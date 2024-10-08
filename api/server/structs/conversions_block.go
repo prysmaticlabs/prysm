@@ -2554,6 +2554,8 @@ func SignedBeaconBlockMessageJsoner(block interfaces.ReadOnlySignedBeaconBlock) 
 		return SignedBlindedBeaconBlockDenebFromConsensus(pbStruct)
 	case *eth.SignedBeaconBlockDeneb:
 		return SignedBeaconBlockDenebFromConsensus(pbStruct)
+	case *eth.SignedBlindedBeaconBlockElectra:
+		return SignedBlindedBeaconBlockElectraFromConsensus(pbStruct)
 	case *eth.SignedBeaconBlockElectra:
 		return SignedBeaconBlockElectraFromConsensus(pbStruct)
 	default:

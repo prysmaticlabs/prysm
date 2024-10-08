@@ -219,10 +219,10 @@ func (a proposerAtts) sort() (proposerAtts, error) {
 		return a, nil
 	}
 
-	if features.Get().EnableCommitteeAwarePacking {
-		return a.sortBySlotAndCommittee()
+	if features.Get().DisableCommitteeAwarePacking {
+		return a.sortByProfitabilityUsingMaxCover()
 	}
-	return a.sortByProfitabilityUsingMaxCover()
+	return a.sortBySlotAndCommittee()
 }
 
 // Separate attestations by slot, as slot number takes higher precedence when sorting.
