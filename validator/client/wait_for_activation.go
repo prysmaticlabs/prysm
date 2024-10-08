@@ -41,7 +41,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 	return v.internalWaitForActivation(ctx, accountsChangedChan)
 }
 
-// internalWaitForActivation recursively waits for some active validator keys
+// internalWaitForActivation recursively waits for at least one active validator key
 func (v *validator) internalWaitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
