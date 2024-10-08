@@ -30,7 +30,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState, bl
 		return createLightClientBootstrapAltair(ctx, state, blk)
 	case version.Capella:
 		return createLightClientBootstrapCapella(ctx, state, blk)
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		return createLightClientBootstrapDeneb(ctx, state, blk)
 	}
 	return nil, fmt.Errorf("unsupported block version %s", version.String(blk.Version()))
@@ -226,8 +226,13 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
-
-	branch := make([]string, fieldparams.SyncCommitteeBranchDepth)
+	var branch []string
+	switch block.Version() {
+	case version.Deneb:
+		branch = make([]string, fieldparams.SyncCommitteeBranchDepth)
+	case version.Electra:
+		branch = make([]string, fieldparams.SyncCommitteeBranchDepthElectra)
+	}
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
