@@ -2908,3 +2908,63 @@ func TestValidator_ChangeHost(t *testing.T) {
 	v.ChangeHost()
 	assert.Equal(t, uint64(0), v.currentHostIndex)
 }
+
+func TestUpdateValidatorStatusCache(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{
+		{0x01},
+		{0x02},
+	}
+	statusRequestKeys := [][]byte{
+		pubkeys[0][:],
+		pubkeys[1][:],
+	}
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	mockResponse := &ethpb.MultipleValidatorStatusResponse{
+		PublicKeys: statusRequestKeys,
+		Statuses: []*ethpb.ValidatorStatusResponse{
+			{
+				Status: ethpb.ValidatorStatus_ACTIVE,
+			}, {
+				Status: ethpb.ValidatorStatus_EXITING,
+			}},
+		Indices: []primitives.ValidatorIndex{1, 2},
+	}
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(),
+		gomock.Any()).Return(mockResponse, nil)
+
+	v := &validator{
+		validatorClient:  client,
+		beaconNodeHosts:  []string{"http://localhost:8080", "http://localhost:8081"},
+		currentHostIndex: 0,
+		pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+			[fieldparams.BLSPubkeyLength]byte{0x03}: &validatorStatus{ // add non existant key and status to cache, should be fully removed on update
+				publicKey: []byte{0x03},
+				status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_ACTIVE,
+				},
+				index: 3,
+			},
+		},
+	}
+
+	err := v.updateValidatorStatusCache(ctx, pubkeys)
+	assert.NoError(t, err)
+
+	// make sure the nonexistant key is fully removed
+	_, ok := v.pubkeyToStatus[[fieldparams.BLSPubkeyLength]byte{0x03}]
+	require.Equal(t, false, ok)
+	// make sure we only have the added values
+	assert.Equal(t, 2, len(v.pubkeyToStatus))
+	for i, pk := range pubkeys {
+		status, exists := v.pubkeyToStatus[pk]
+		require.Equal(t, true, exists)
+		require.DeepEqual(t, pk[:], status.publicKey)
+		require.Equal(t, mockResponse.Statuses[i], status.status)
+		require.Equal(t, mockResponse.Indices[i], status.index)
+	}
+}
