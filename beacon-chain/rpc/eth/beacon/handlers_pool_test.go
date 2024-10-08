@@ -1079,6 +1079,7 @@ func TestGetAttesterSlashings(t *testing.T) {
 func TestGetAttesterSlashingsV2(t *testing.T) {
 	bs, err := util.NewBeaconStateElectra()
 	require.NoError(t, err)
+
 	slashing1 := &ethpbv1alpha1.AttesterSlashingElectra{
 		Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
 			AttestingIndices: []uint64{1, 10},
@@ -1167,10 +1168,14 @@ func TestGetAttesterSlashingsV2(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
-	dataSlice, ok := resp.Data.([]interface{})
-	assert.Equal(t, true, ok)
-	assert.Equal(t, 2, len(dataSlice))
 	assert.Equal(t, "electra", resp.Version)
+	assert.Equal(t, 2, len(resp.Data))
+
+	var unmarshaledSlashing1, unmarshaledSlashing2 ethpbv1alpha1.AttesterSlashingElectra
+	require.NoError(t, json.Unmarshal(resp.Data[0], &unmarshaledSlashing1))
+	require.NoError(t, json.Unmarshal(resp.Data[1], &unmarshaledSlashing2))
+	require.DeepEqual(t, slashing1, &unmarshaledSlashing1)
+	require.DeepEqual(t, slashing2, &unmarshaledSlashing2)
 }
 
 func TestGetProposerSlashings(t *testing.T) {

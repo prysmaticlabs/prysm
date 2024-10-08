@@ -501,35 +501,48 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 	v := headState.Version()
 	resp := &structs.GetAttesterSlashingsV2Response{Version: version.String(v)}
 
-	// Retrieve the slashings based on the version
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
+
 	if v >= version.Electra {
-		// Handle Electra version
-		ss := make([]*eth.AttesterSlashingElectra, 0, len(sourceSlashings))
-		for _, slashing := range sourceSlashings {
-			s, ok := slashing.(*eth.AttesterSlashingElectra)
+		// Initialize the slice with length equal to len(sourceSlashings) so that we can index into it
+		ss := make([]*eth.AttesterSlashingElectra, len(sourceSlashings))
+		for i, slashing := range sourceSlashings {
+			a, ok := slashing.(*eth.AttesterSlashingElectra)
 			if ok {
-				ss = append(ss, s)
+				ss[i] = a // Safe to index here because the slice has the correct length
 			} else {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert electra slashing of type %T", slashing), http.StatusInternalServerError)
 				return
 			}
 		}
-		// Convert Electra slashings to the appropriate struct and store in interface slice
-		resp.Data = structs.AttesterSlashingsElectraFromConsensus(ss)
+		for _, slashing := range ss {
+			slashingBytes, err := json.Marshal(slashing)
+			if err != nil {
+				httputil.HandleError(w, fmt.Sprintf("failed to marshal electra slashing: %v", err), http.StatusInternalServerError)
+				return
+			}
+			resp.Data = append(resp.Data, slashingBytes)
+		}
 	} else {
-		// Handle regular version
-		ss := make([]*eth.AttesterSlashing, 0, len(sourceSlashings))
-		for _, slashing := range sourceSlashings {
-			s, ok := slashing.(*eth.AttesterSlashing)
+		// Initialize the slice with length equal to len(sourceSlashings) so that we can index into it
+		ss := make([]*eth.AttesterSlashing, len(sourceSlashings))
+		for i, slashing := range sourceSlashings {
+			a, ok := slashing.(*eth.AttesterSlashing)
 			if ok {
-				ss = append(ss, s)
+				ss[i] = a // Safe to index here because the slice has the correct length
 			} else {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
 				return
 			}
 		}
-		resp.Data = structs.AttesterSlashingsFromConsensus(ss)
+		for _, slashing := range ss {
+			slashingBytes, err := json.Marshal(slashing)
+			if err != nil {
+				httputil.HandleError(w, fmt.Sprintf("failed to marshal slashing: %v", err), http.StatusInternalServerError)
+				return
+			}
+			resp.Data = append(resp.Data, slashingBytes)
+		}
 	}
 	httputil.WriteJson(w, resp)
 }

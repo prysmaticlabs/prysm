@@ -681,7 +681,7 @@ func (s *Service) beaconEndpoints(
 		},
 		{
 			template: "/eth/v2/beacon/pool/attester_slashings",
-			name:     namespace + ".GetAttesterSlashings",
+			name:     namespace + ".GetAttesterSlashingsV2",
 			middleware: []middleware.Middleware{
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
@@ -695,7 +695,7 @@ func (s *Service) beaconEndpoints(
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.SubmitAttesterSlashing,
+			handler: server.SubmitAttesterSlashings,
 			methods: []string{http.MethodPost},
 		},
 		{
