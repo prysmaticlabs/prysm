@@ -481,7 +481,7 @@ func TestApplyPendingDeposit_TopUp(t *testing.T) {
 	require.NoError(t, st.SetValidators(validators))
 	st.SaveValidatorIndices()
 
-	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep, false))
+	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
 
 	b, err := st.BalanceAtIndex(0)
 	require.NoError(t, err)
@@ -497,7 +497,7 @@ func TestApplyPendingDeposit_UnknownKey(t *testing.T) {
 	wc[31] = byte(0)
 	dep := stateTesting.GeneratePendingDeposit(t, sk, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(wc), 0)
 	require.Equal(t, 0, len(st.Validators()))
-	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep, false))
+	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
 	// activates new validator
 	require.Equal(t, 1, len(st.Validators()))
 	b, err := st.BalanceAtIndex(0)
@@ -519,7 +519,7 @@ func TestApplyPendingDeposit_InvalidSignature(t *testing.T) {
 		Amount:                100,
 	}
 	require.Equal(t, 0, len(st.Validators()))
-	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep, false))
+	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
 	// no validator added
 	require.Equal(t, 0, len(st.Validators()))
 	// no topup either

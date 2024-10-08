@@ -15,11 +15,12 @@ import (
 //
 // Spec definition:
 //
-//	 def switch_to_compounding_validator(state: BeaconState, index: ValidatorIndex) -> None:
-//		validator = state.validators[index]
-//		if has_eth1_withdrawal_credential(validator):
-//		    validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
-//		    queue_excess_active_balance(state, index)
+// def switch_to_compounding_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//
+//	validator = state.validators[index]
+//	if has_eth1_withdrawal_credential(validator):
+//		validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
+//		queue_excess_active_balance(state, index)
 func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	v, err := s.ValidatorAtIndex(idx)
 	if err != nil {
@@ -42,19 +43,20 @@ func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorI
 //
 // Spec definition:
 //
-//		def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
-//		    balance = state.balances[index]
-//		    if balance > MIN_ACTIVATION_BALANCE:
-//		        excess_balance = balance - MIN_ACTIVATION_BALANCE
-//		        state.balances[index] = MIN_ACTIVATION_BALANCE
-//		        validator = state.validators[index]
-//	         state.pending_deposits.append(PendingDeposit(
-//	           pubkey=validator.pubkey,
-//	           withdrawal_credentials=validator.withdrawal_credentials,
-//	           amount=excess_balance,
-//	           signature=bls.G2_POINT_AT_INFINITY,
-//	           slot=GENESIS_SLOT,
-//	         ))
+// def queue_excess_active_balance(state: BeaconState, index: ValidatorIndex) -> None:
+//
+//	balance = state.balances[index]
+//	if balance > MIN_ACTIVATION_BALANCE:
+//		excess_balance = balance - MIN_ACTIVATION_BALANCE
+//		state.balances[index] = MIN_ACTIVATION_BALANCE
+//		validator = state.validators[index]
+//	 state.pending_deposits.append(PendingDeposit(
+//	   pubkey=validator.pubkey,
+//	   withdrawal_credentials=validator.withdrawal_credentials,
+//	   amount=excess_balance,
+//	   signature=bls.G2_POINT_AT_INFINITY,
+//	   slot=GENESIS_SLOT,
+//	 ))
 func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	bal, err := s.BalanceAtIndex(idx)
 	if err != nil {
@@ -85,19 +87,21 @@ func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex
 //
 // Spec definition:
 //
-//		def queue_entire_balance_and_reset_validator(state: BeaconState, index: ValidatorIndex) -> None:
-//		    balance = state.balances[index]
-//		    state.balances[index] = 0
-//		    validator = state.validators[index]
-//		    validator.effective_balance = 0
-//		    validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
-//		    state.pending_deposits.append(PendingDeposit(
-//	       pubkey=validator.pubkey,
-//	       withdrawal_credentials=validator.withdrawal_credentials,
-//	       amount=balance,
-//	       signature=bls.G2_POINT_AT_INFINITY,
-//	       slot=GENESIS_SLOT,
-//	     ))
+// def queue_entire_balance_and_reset_validator(state: BeaconState, index: ValidatorIndex) -> None:
+//
+//		balance = state.balances[index]
+//		state.balances[index] = 0
+//		validator = state.validators[index]
+//		validator.effective_balance = 0
+//		validator.activation_eligibility_epoch = FAR_FUTURE_EPOCH
+//		state.pending_deposits.append(PendingDeposit(
+//	  		pubkey=validator.pubkey,
+//	  		withdrawal_credentials=validator.withdrawal_credentials,
+//	  		amount=balance,
+//	  		signature=bls.G2_POINT_AT_INFINITY,
+//	  		slot=GENESIS_SLOT,
+//
+// ))
 //
 //nolint:dupword
 func QueueEntireBalanceAndResetValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
