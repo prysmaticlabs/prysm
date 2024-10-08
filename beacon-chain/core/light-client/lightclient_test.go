@@ -364,6 +364,26 @@ func TestLightClient_BlockToLightClientHeader(t *testing.T) {
 		require.DeepSSZEqual(t, bodyRoot[:], header.Beacon.BodyRoot, "Body root is not equal")
 	})
 
+	t.Run("Bellatrix", func(t *testing.T) {
+		l := util.NewTestLightClient(t).SetupTestBellatrix()
+
+		container, err := lightClient.BlockToLightClientHeader(l.Block)
+		require.NoError(t, err)
+		header := container.GetHeaderAltair()
+		require.NotNil(t, header, "header is nil")
+
+		parentRoot := l.Block.Block().ParentRoot()
+		stateRoot := l.Block.Block().StateRoot()
+		bodyRoot, err := l.Block.Block().Body().HashTreeRoot()
+		require.NoError(t, err)
+
+		require.Equal(t, l.Block.Block().Slot(), header.Beacon.Slot, "Slot is not equal")
+		require.Equal(t, l.Block.Block().ProposerIndex(), header.Beacon.ProposerIndex, "Proposer index is not equal")
+		require.DeepSSZEqual(t, parentRoot[:], header.Beacon.ParentRoot, "Parent root is not equal")
+		require.DeepSSZEqual(t, stateRoot[:], header.Beacon.StateRoot, "State root is not equal")
+		require.DeepSSZEqual(t, bodyRoot[:], header.Beacon.BodyRoot, "Body root is not equal")
+	})
+
 	t.Run("Capella", func(t *testing.T) {
 		t.Run("Non-Blinded Beacon Block", func(t *testing.T) {
 			l := util.NewTestLightClient(t).SetupTestCapella(false)
