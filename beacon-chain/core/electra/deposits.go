@@ -335,8 +335,8 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 			// Consume churn and apply pendingDeposit.
 			processedAmount += pendingDeposit.Amount
 			if found {
-				if err := ApplyPendingDeposit(ctx, st, pendingDeposit, true); err != nil {
-					return errors.Wrap(err, "could not apply pending deposit")
+				if err := helpers.IncreaseBalance(st, index, pendingDeposit.Amount); err != nil {
+					return errors.Wrap(err, "could not increase balance")
 				}
 			} else {
 				// Collect deposit for batch signature verification
@@ -349,17 +349,8 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	}
 
 	// Perform batch signature verification on deposits on unfound validators
-	if len(depositsToVerify) > 0 {
-		verified, err := blocks.BatchVerifyPendingDepositsSignatures(ctx, depositsToVerify)
-		if err != nil {
-			return errors.Wrap(err, "could not batch verify deposit signatures")
-		}
-		// Apply deposits that passed verification
-		for _, dep := range depositsToVerify {
-			if err := ApplyPendingDeposit(ctx, st, dep, verified); err != nil {
-				return errors.Wrap(err, "could not apply pending deposit")
-			}
-		}
+	if err = batchProcessPendingDeposts(ctx, st, depositsToPostpone); err != nil {
+		return errors.Wrap(err, "could not process pending deposits with new public keys")
 	}
 
 	// Combined operation:
@@ -376,6 +367,34 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 		return st.SetDepositBalanceToConsume(availableForProcessing - primitives.Gwei(processedAmount))
 	}
 	return st.SetDepositBalanceToConsume(0)
+}
+
+func batchProcessPendingDeposts(ctx context.Context, st state.BeaconState, depositsToVerify []*ethpb.PendingDeposit) error {
+	if len(depositsToVerify) > 0 {
+		verified, err := blocks.BatchVerifyPendingDepositsSignatures(ctx, depositsToVerify)
+		if err != nil {
+			return errors.Wrap(err, "could not batch verify deposit signatures")
+		}
+		for _, dep := range depositsToVerify {
+			if !verified {
+				verified, err = blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
+					PublicKey:             bytesutil.SafeCopyBytes(dep.PublicKey),
+					WithdrawalCredentials: bytesutil.SafeCopyBytes(dep.WithdrawalCredentials),
+					Amount:                dep.Amount,
+					Signature:             bytesutil.SafeCopyBytes(dep.Signature),
+				})
+				if err != nil {
+					return errors.Wrap(err, "could not verify deposit signature")
+				}
+			}
+			if verified {
+				if err := AddValidatorToRegistry(st, dep.PublicKey, dep.WithdrawalCredentials, dep.Amount); err != nil {
+					return errors.Wrap(err, "could not add validator to registry")
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // ApplyPendingDeposit implements the spec definition below.
