@@ -6,7 +6,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	consensustypes "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -44,19 +43,13 @@ func NewWrappedBootstrapAltair(p *pb.LightClientBootstrapAltair) (interfaces.Lig
 	if err != nil {
 		return nil, err
 	}
-	if len(p.CurrentSyncCommitteeBranch) != interfaces.SyncCommitteeBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"sync committee branch has %d leaves instead of expected %d",
-			len(p.CurrentSyncCommitteeBranch),
-			interfaces.SyncCommitteeBranchNumOfLeaves,
-		)
-	}
-	branch := interfaces.LightClientSyncCommitteeBranch{}
-	for i, leaf := range p.CurrentSyncCommitteeBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("sync committee branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
+	branch, err := createBranch[interfaces.LightClientSyncCommitteeBranch](
+		"sync committee",
+		p.CurrentSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &bootstrapAltair{
@@ -110,19 +103,13 @@ func NewWrappedBootstrapCapella(p *pb.LightClientBootstrapCapella) (interfaces.L
 	if err != nil {
 		return nil, err
 	}
-	if len(p.CurrentSyncCommitteeBranch) != interfaces.SyncCommitteeBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"sync committee branch has %d leaves instead of expected %d",
-			len(p.CurrentSyncCommitteeBranch),
-			interfaces.SyncCommitteeBranchNumOfLeaves,
-		)
-	}
-	branch := interfaces.LightClientSyncCommitteeBranch{}
-	for i, leaf := range p.CurrentSyncCommitteeBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("sync committee branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
+	branch, err := createBranch[interfaces.LightClientSyncCommitteeBranch](
+		"sync committee",
+		p.CurrentSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &bootstrapCapella{
@@ -176,19 +163,13 @@ func NewWrappedBootstrapDeneb(p *pb.LightClientBootstrapDeneb) (interfaces.Light
 	if err != nil {
 		return nil, err
 	}
-	if len(p.CurrentSyncCommitteeBranch) != interfaces.SyncCommitteeBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"sync committee branch has %d leaves instead of expected %d",
-			len(p.CurrentSyncCommitteeBranch),
-			interfaces.SyncCommitteeBranchNumOfLeaves,
-		)
-	}
-	branch := interfaces.LightClientSyncCommitteeBranch{}
-	for i, leaf := range p.CurrentSyncCommitteeBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("sync committee branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
+	branch, err := createBranch[interfaces.LightClientSyncCommitteeBranch](
+		"sync committee",
+		p.CurrentSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &bootstrapDeneb{

@@ -6,6 +6,7 @@ go_library(
         "bootstrap.go",
         "finality_update.go",
         "header.go",
+        "helpers.go",
         "optimistic_update.go",
         "update.go",
     ],

@@ -7,7 +7,6 @@ import (
 	consensustypes "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -50,19 +49,13 @@ func NewWrappedFinalityUpdateAltair(p *pb.LightClientFinalityUpdateAltair) (inte
 	if err != nil {
 		return nil, err
 	}
-	if len(p.FinalityBranch) != interfaces.FinalityBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"finality branch has %d leaves instead of expected %d",
-			len(p.FinalityBranch),
-			interfaces.FinalityBranchNumOfLeaves,
-		)
-	}
-	branch := interfaces.LightClientFinalityBranch{}
-	for i, leaf := range p.FinalityBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("finality branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
+	branch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &finalityUpdateAltair{
@@ -130,19 +123,13 @@ func NewWrappedFinalityUpdateCapella(p *pb.LightClientFinalityUpdateCapella) (in
 	if err != nil {
 		return nil, err
 	}
-	if len(p.FinalityBranch) != interfaces.FinalityBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"finality branch has %d leaves instead of expected %d",
-			len(p.FinalityBranch),
-			interfaces.FinalityBranchNumOfLeaves,
-		)
-	}
-	branch := interfaces.LightClientFinalityBranch{}
-	for i, leaf := range p.FinalityBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("finality branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
+	branch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &finalityUpdateCapella{
@@ -210,19 +197,13 @@ func NewWrappedFinalityUpdateDeneb(p *pb.LightClientFinalityUpdateDeneb) (interf
 	if err != nil {
 		return nil, err
 	}
-	if len(p.FinalityBranch) != interfaces.FinalityBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"finality branch has %d leaves instead of expected %d",
-			len(p.FinalityBranch),
-			interfaces.FinalityBranchNumOfLeaves,
-		)
-	}
-	branch := interfaces.LightClientFinalityBranch{}
-	for i, leaf := range p.FinalityBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("finality branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
+	branch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &finalityUpdateDeneb{

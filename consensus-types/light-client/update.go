@@ -7,7 +7,6 @@ import (
 	consensustypes "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -51,33 +50,21 @@ func NewWrappedUpdateAltair(p *pb.LightClientUpdateAltair) (interfaces.LightClie
 	if err != nil {
 		return nil, err
 	}
-	if len(p.NextSyncCommitteeBranch) != interfaces.SyncCommitteeBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"sync committee branch has %d leaves instead of expected %d",
-			len(p.NextSyncCommitteeBranch),
-			interfaces.SyncCommitteeBranchNumOfLeaves,
-		)
+	scBranch, err := createBranch[interfaces.LightClientSyncCommitteeBranch](
+		"sync committee",
+		p.NextSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
-	scBranch := interfaces.LightClientSyncCommitteeBranch{}
-	for i, leaf := range p.NextSyncCommitteeBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("sync committee branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		scBranch[i] = bytesutil.ToBytes32(leaf)
-	}
-	if len(p.FinalityBranch) != interfaces.FinalityBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"finality branch has %d leaves instead of expected %d",
-			len(p.FinalityBranch),
-			interfaces.FinalityBranchNumOfLeaves,
-		)
-	}
-	finalityBranch := interfaces.LightClientFinalityBranch{}
-	for i, leaf := range p.FinalityBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("finality branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		scBranch[i] = bytesutil.ToBytes32(leaf)
+	finalityBranch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &updateAltair{
@@ -155,33 +142,21 @@ func NewWrappedUpdateCapella(p *pb.LightClientUpdateCapella) (interfaces.LightCl
 	if err != nil {
 		return nil, err
 	}
-	if len(p.NextSyncCommitteeBranch) != interfaces.SyncCommitteeBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"sync committee branch has %d leaves instead of expected %d",
-			len(p.NextSyncCommitteeBranch),
-			interfaces.SyncCommitteeBranchNumOfLeaves,
-		)
+	scBranch, err := createBranch[interfaces.LightClientSyncCommitteeBranch](
+		"sync committee",
+		p.NextSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
-	scBranch := interfaces.LightClientSyncCommitteeBranch{}
-	for i, leaf := range p.NextSyncCommitteeBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("sync committee branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		scBranch[i] = bytesutil.ToBytes32(leaf)
-	}
-	if len(p.FinalityBranch) != interfaces.FinalityBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"finality branch has %d leaves instead of expected %d",
-			len(p.FinalityBranch),
-			interfaces.FinalityBranchNumOfLeaves,
-		)
-	}
-	finalityBranch := interfaces.LightClientFinalityBranch{}
-	for i, leaf := range p.FinalityBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("finality branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		scBranch[i] = bytesutil.ToBytes32(leaf)
+	finalityBranch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &updateCapella{
@@ -259,33 +234,21 @@ func NewWrappedUpdateDeneb(p *pb.LightClientUpdateDeneb) (interfaces.LightClient
 	if err != nil {
 		return nil, err
 	}
-	if len(p.NextSyncCommitteeBranch) != interfaces.SyncCommitteeBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"sync committee branch has %d leaves instead of expected %d",
-			len(p.NextSyncCommitteeBranch),
-			interfaces.SyncCommitteeBranchNumOfLeaves,
-		)
+	scBranch, err := createBranch[interfaces.LightClientSyncCommitteeBranch](
+		"sync committee",
+		p.NextSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
-	scBranch := interfaces.LightClientSyncCommitteeBranch{}
-	for i, leaf := range p.NextSyncCommitteeBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("sync committee branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		scBranch[i] = bytesutil.ToBytes32(leaf)
-	}
-	if len(p.FinalityBranch) != interfaces.FinalityBranchNumOfLeaves {
-		return nil, fmt.Errorf(
-			"finality branch has %d leaves instead of expected %d",
-			len(p.FinalityBranch),
-			interfaces.FinalityBranchNumOfLeaves,
-		)
-	}
-	finalityBranch := interfaces.LightClientFinalityBranch{}
-	for i, leaf := range p.FinalityBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("finality branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		scBranch[i] = bytesutil.ToBytes32(leaf)
+	finalityBranch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &updateDeneb{

@@ -86,8 +86,8 @@ func NewWrappedHeaderCapella(p *pb.LightClientHeaderCapella) (interfaces.LightCl
 	if err != nil {
 		return nil, err
 	}
-	if len(p.ExecutionBranch) != interfaces.ExecutionBranchNumOfLeaves {
-		return nil, fmt.Errorf("execution branch has %d leaves instead of expected %d", len(p.ExecutionBranch), interfaces.ExecutionBranchNumOfLeaves)
+	if len(p.ExecutionBranch) != fieldparams.ExecutionBranchDepth {
+		return nil, fmt.Errorf("execution branch has %d leaves instead of expected %d", len(p.ExecutionBranch), fieldparams.ExecutionBranchDepth)
 	}
 	branch := interfaces.LightClientExecutionBranch{}
 	for i, leaf := range p.ExecutionBranch {
@@ -148,8 +148,8 @@ func NewWrappedHeaderDeneb(p *pb.LightClientHeaderDeneb) (interfaces.LightClient
 	if err != nil {
 		return nil, err
 	}
-	if len(p.ExecutionBranch) != interfaces.ExecutionBranchNumOfLeaves {
-		return nil, fmt.Errorf("execution branch has %d leaves instead of expected %d", len(p.ExecutionBranch), interfaces.ExecutionBranchNumOfLeaves)
+	if len(p.ExecutionBranch) != fieldparams.ExecutionBranchDepth {
+		return nil, fmt.Errorf("execution branch has %d leaves instead of expected %d", len(p.ExecutionBranch), fieldparams.ExecutionBranchDepth)
 	}
 	branch := interfaces.LightClientExecutionBranch{}
 	for i, leaf := range p.ExecutionBranch {

@@ -7,15 +7,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-const (
-	ExecutionBranchNumOfLeaves     = 4
-	SyncCommitteeBranchNumOfLeaves = 5
-	FinalityBranchNumOfLeaves      = 6
-)
-
-type LightClientExecutionBranch = [ExecutionBranchNumOfLeaves][fieldparams.RootLength]byte
-type LightClientSyncCommitteeBranch = [SyncCommitteeBranchNumOfLeaves][fieldparams.RootLength]byte
-type LightClientFinalityBranch = [FinalityBranchNumOfLeaves][fieldparams.RootLength]byte
+type LightClientExecutionBranch = [fieldparams.ExecutionBranchDepth][fieldparams.RootLength]byte
+type LightClientSyncCommitteeBranch = [fieldparams.SyncCommitteeBranchDepth][fieldparams.RootLength]byte
+type LightClientFinalityBranch = [fieldparams.FinalityBranchDepth][fieldparams.RootLength]byte
 
 type LightClientHeader interface {
 	ssz.Marshaler
