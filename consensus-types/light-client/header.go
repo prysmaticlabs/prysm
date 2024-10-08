@@ -7,7 +7,6 @@ import (
 	consensustypes "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -86,17 +85,12 @@ func NewWrappedHeaderCapella(p *pb.LightClientHeaderCapella) (interfaces.LightCl
 	if err != nil {
 		return nil, err
 	}
-	if len(p.ExecutionBranch) != fieldparams.ExecutionBranchDepth {
-		return nil, fmt.Errorf("execution branch has %d leaves instead of expected %d", len(p.ExecutionBranch), fieldparams.ExecutionBranchDepth)
-	}
-	branch := interfaces.LightClientExecutionBranch{}
-	for i, leaf := range p.ExecutionBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("execution branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
-	}
 
+	branch, err := createBranch[interfaces.LightClientExecutionBranch](
+		"execution",
+		p.ExecutionBranch,
+		fieldparams.ExecutionBranchDepth,
+	)
 	return &headerCapella{
 		p:               p,
 		execution:       execution,
@@ -148,16 +142,12 @@ func NewWrappedHeaderDeneb(p *pb.LightClientHeaderDeneb) (interfaces.LightClient
 	if err != nil {
 		return nil, err
 	}
-	if len(p.ExecutionBranch) != fieldparams.ExecutionBranchDepth {
-		return nil, fmt.Errorf("execution branch has %d leaves instead of expected %d", len(p.ExecutionBranch), fieldparams.ExecutionBranchDepth)
-	}
-	branch := interfaces.LightClientExecutionBranch{}
-	for i, leaf := range p.ExecutionBranch {
-		if len(leaf) != fieldparams.RootLength {
-			return nil, fmt.Errorf("execution branch leaf at index %d has length %d instead of expected %d", i, len(leaf), fieldparams.RootLength)
-		}
-		branch[i] = bytesutil.ToBytes32(leaf)
-	}
+
+	branch, err := createBranch[interfaces.LightClientExecutionBranch](
+		"execution",
+		p.ExecutionBranch,
+		fieldparams.ExecutionBranchDepth,
+	)
 
 	return &headerDeneb{
 		p:               p,
