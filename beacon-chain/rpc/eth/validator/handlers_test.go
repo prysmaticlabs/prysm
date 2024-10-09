@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	mockChain "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v5/beacon-chain/builder/testing"
@@ -45,394 +46,527 @@ import (
 )
 
 func TestGetAggregateAttestation(t *testing.T) {
-	root1 := bytesutil.PadTo([]byte("root1"), 32)
-	sig1 := bytesutil.PadTo([]byte("sig1"), fieldparams.BLSSignatureLength)
-	attSlot1 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            1,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root1,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root1,
+	t.Run("V1", func(t *testing.T) {
+		root1 := bytesutil.PadTo([]byte("root1"), 32)
+		sig1 := bytesutil.PadTo([]byte("sig1"), fieldparams.BLSSignatureLength)
+		attSlot1 := &ethpbalpha.Attestation{
+			AggregationBits: []byte{0, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root1,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root1,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root1,
+				},
 			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root1,
+			Signature: sig1,
+		}
+		root21 := bytesutil.PadTo([]byte("root2_1"), 32)
+		sig21 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
+		attslot21 := &ethpbalpha.Attestation{
+			AggregationBits: []byte{0, 1, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            2,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root21,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root21,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root21,
+				},
 			},
-		},
-		Signature: sig1,
-	}
-	root21 := bytesutil.PadTo([]byte("root2_1"), 32)
-	sig21 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
-	attslot21 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1, 1},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            2,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root21,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root21,
+			Signature: sig21,
+		}
+		root22 := bytesutil.PadTo([]byte("root2_2"), 32)
+		sig22 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
+		attslot22 := &ethpbalpha.Attestation{
+			AggregationBits: []byte{0, 1, 1, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            2,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root22,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root22,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root22,
+				},
 			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root21,
+			Signature: sig22,
+		}
+		root31 := bytesutil.PadTo([]byte("root3_1"), 32)
+		sig31 := bls.NewAggregateSignature().Marshal()
+		attslot31 := &ethpbalpha.Attestation{
+			AggregationBits: []byte{1, 0},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            3,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root31,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root31,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root31,
+				},
 			},
-		},
-		Signature: sig21,
-	}
-	root22 := bytesutil.PadTo([]byte("root2_2"), 32)
-	sig22 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
-	attslot22 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1, 1, 1},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            2,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root22,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root22,
+			Signature: sig31,
+		}
+		root32 := bytesutil.PadTo([]byte("root3_2"), 32)
+		sig32 := bls.NewAggregateSignature().Marshal()
+		attslot32 := &ethpbalpha.Attestation{
+			AggregationBits: []byte{0, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            3,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root32,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root32,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root32,
+				},
 			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root22,
+			Signature: sig32,
+		}
+
+		pool := attestations.NewPool()
+		err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{attSlot1, attslot21, attslot22})
+		assert.NoError(t, err)
+		err = pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{attslot31, attslot32})
+		assert.NoError(t, err)
+
+		s := &Server{
+			AttestationsPool: pool,
+		}
+		t.Run("matching aggregated att", func(t *testing.T) {
+			reqRoot, err := attslot22.Data.HashTreeRoot()
+			require.NoError(t, err)
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+
+			resp := &structs.AggregateAttestationResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.NotNil(t, resp)
+			require.NotNil(t, resp.Data)
+
+			var attestation structs.Attestation
+			require.NoError(t, json.Unmarshal(resp.Data, &attestation))
+
+			assert.Equal(t, "0x00010101", attestation.AggregationBits)
+			assert.Equal(t, hexutil.Encode(sig22), attestation.Signature)
+			assert.Equal(t, "2", attestation.Data.Slot)
+			assert.Equal(t, "1", attestation.Data.CommitteeIndex)
+			assert.Equal(t, hexutil.Encode(root22), attestation.Data.BeaconBlockRoot)
+
+			// Source checkpoint checks
+			require.NotNil(t, attestation.Data.Source)
+			assert.Equal(t, "1", attestation.Data.Source.Epoch)
+			assert.Equal(t, hexutil.Encode(root22), attestation.Data.Source.Root)
+
+			// Target checkpoint checks
+			require.NotNil(t, attestation.Data.Target)
+			assert.Equal(t, "1", attestation.Data.Target.Epoch)
+			assert.Equal(t, hexutil.Encode(root22), attestation.Data.Target.Root)
+		})
+		t.Run("matching unaggregated att", func(t *testing.T) {
+			reqRoot, err := attslot32.Data.HashTreeRoot()
+			require.NoError(t, err)
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+
+			resp := &structs.AggregateAttestationResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.NotNil(t, resp)
+			require.NotNil(t, resp.Data)
+
+			var attestation structs.Attestation
+			require.NoError(t, json.Unmarshal(resp.Data, &attestation))
+
+			assert.Equal(t, "0x0001", attestation.AggregationBits)
+			assert.Equal(t, hexutil.Encode(sig32), attestation.Signature)
+			assert.Equal(t, "3", attestation.Data.Slot)
+			assert.Equal(t, "1", attestation.Data.CommitteeIndex)
+			assert.Equal(t, hexutil.Encode(root32), attestation.Data.BeaconBlockRoot)
+
+			// Source checkpoint checks
+			require.NotNil(t, attestation.Data.Source)
+			assert.Equal(t, "1", attestation.Data.Source.Epoch)
+			assert.Equal(t, hexutil.Encode(root32), attestation.Data.Source.Root)
+
+			// Target checkpoint checks
+			require.NotNil(t, attestation.Data.Target)
+			assert.Equal(t, "1", attestation.Data.Target.Epoch)
+			assert.Equal(t, hexutil.Encode(root32), attestation.Data.Target.Root)
+		})
+		t.Run("no matching attestation", func(t *testing.T) {
+			attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusNotFound, writer.Code)
+
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusNotFound, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
+		})
+		t.Run("no attestation_data_root provided", func(t *testing.T) {
+			url := "http://example.com?slot=2"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is required"))
+		})
+		t.Run("invalid attestation_data_root provided", func(t *testing.T) {
+			url := "http://example.com?attestation_data_root=foo&slot=2"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is invalid"))
+		})
+		t.Run("no slot provided", func(t *testing.T) {
+			attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			url := "http://example.com?attestation_data_root=" + attDataRoot
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "slot is required"))
+		})
+		t.Run("invalid slot provided", func(t *testing.T) {
+			attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=foo"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetAggregateAttestation(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "slot is invalid"))
+		})
+	})
+	t.Run("V2", func(t *testing.T) {
+		committeeBits := bitfield.NewBitvector64()
+		root1 := bytesutil.PadTo([]byte("root1"), 32)
+		sig1 := bytesutil.PadTo([]byte("sig1"), fieldparams.BLSSignatureLength)
+		committeeBits.SetBitAt(1, true)
+		attSlot1 := &ethpbalpha.AttestationElectra{
+			AggregationBits: []byte{0, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root1,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root1,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root1,
+				},
 			},
-		},
-		Signature: sig22,
-	}
-	root31 := bytesutil.PadTo([]byte("root3_1"), 32)
-	sig31 := bls.NewAggregateSignature().Marshal()
-	attslot31 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{1, 0},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            3,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root31,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root31,
+			Signature:     sig1,
+			CommitteeBits: committeeBits,
+		}
+		root21 := bytesutil.PadTo([]byte("root2_1"), 32)
+		sig21 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
+		attslot21 := &ethpbalpha.AttestationElectra{
+			AggregationBits: []byte{0, 1, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            2,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root21,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root21,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root21,
+				},
 			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root31,
+			Signature:     sig21,
+			CommitteeBits: committeeBits,
+		}
+		root22 := bytesutil.PadTo([]byte("root2_2"), 32)
+		sig22 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
+		attslot22 := &ethpbalpha.AttestationElectra{
+			AggregationBits: []byte{0, 1, 1, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            2,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root22,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root22,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root22,
+				},
 			},
-		},
-		Signature: sig31,
-	}
-	root32 := bytesutil.PadTo([]byte("root3_2"), 32)
-	sig32 := bls.NewAggregateSignature().Marshal()
-	attslot32 := &ethpbalpha.Attestation{
-		AggregationBits: []byte{0, 1},
-		Data: &ethpbalpha.AttestationData{
-			Slot:            3,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: root32,
-			Source: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root32,
+			Signature:     sig22,
+			CommitteeBits: committeeBits,
+		}
+		root31 := bytesutil.PadTo([]byte("root3_1"), 32)
+		sig31 := bls.NewAggregateSignature().Marshal()
+		attslot31 := &ethpbalpha.AttestationElectra{
+			AggregationBits: []byte{1, 0},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            3,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root31,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root31,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root31,
+				},
 			},
-			Target: &ethpbalpha.Checkpoint{
-				Epoch: 1,
-				Root:  root32,
+			Signature:     sig31,
+			CommitteeBits: committeeBits,
+		}
+		root32 := bytesutil.PadTo([]byte("root3_2"), 32)
+		sig32 := bls.NewAggregateSignature().Marshal()
+		attslot32 := &ethpbalpha.AttestationElectra{
+			AggregationBits: []byte{0, 1},
+			Data: &ethpbalpha.AttestationData{
+				Slot:            3,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: root32,
+				Source: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root32,
+				},
+				Target: &ethpbalpha.Checkpoint{
+					Epoch: 1,
+					Root:  root32,
+				},
 			},
-		},
-		Signature: sig32,
-	}
+			Signature:     sig32,
+			CommitteeBits: committeeBits,
+		}
 
-	pool := attestations.NewPool()
-	err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{attSlot1, attslot21, attslot22})
-	assert.NoError(t, err)
-	err = pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{attslot31, attslot32})
-	assert.NoError(t, err)
+		pool := attestations.NewPool()
+		err := pool.SaveAggregatedAttestations([]ethpbalpha.Att{attSlot1, attslot21, attslot22})
+		assert.NoError(t, err)
+		err = pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{attslot31, attslot32})
+		assert.NoError(t, err)
 
-	s := &Server{
-		AttestationsPool: pool,
-	}
+		s := &Server{
+			AttestationsPool: pool,
+		}
+		t.Run("matching aggregated att", func(t *testing.T) {
+			reqRoot, err := attslot22.Data.HashTreeRoot()
+			require.NoError(t, err)
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=1"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-	t.Run("matching aggregated att", func(t *testing.T) {
-		reqRoot, err := attslot22.Data.HashTreeRoot()
-		require.NoError(t, err)
-		attDataRoot := hexutil.Encode(reqRoot[:])
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
 
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.AggregateAttestationResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Data)
-		assert.DeepEqual(t, "0x00010101", resp.Data.AggregationBits)
-		assert.DeepEqual(t, hexutil.Encode(sig22), resp.Data.Signature)
-		assert.Equal(t, "2", resp.Data.Data.Slot)
-		assert.Equal(t, "1", resp.Data.Data.CommitteeIndex)
-		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.BeaconBlockRoot)
-		require.NotNil(t, resp.Data.Data.Source)
-		assert.Equal(t, "1", resp.Data.Data.Source.Epoch)
-		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.Source.Root)
-		require.NotNil(t, resp.Data.Data.Target)
-		assert.Equal(t, "1", resp.Data.Data.Target.Epoch)
-		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.Target.Root)
-	})
-	t.Run("matching aggregated att V2", func(t *testing.T) {
-		reqRoot, err := attslot22.Data.HashTreeRoot()
-		require.NoError(t, err)
-		attDataRoot := hexutil.Encode(reqRoot[:])
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=1"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			resp := &structs.AggregateAttestationResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.NotNil(t, resp)
+			require.NotNil(t, resp.Data)
 
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.AggregateAttestationV2Response{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Data)
+			var attestation structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &attestation))
 
-		dataMap, ok := resp.Data.(map[string]interface{})
-		require.Equal(t, true, ok)
+			assert.Equal(t, "0x00010101", attestation.AggregationBits)
+			assert.Equal(t, "0x0200000000000000", attestation.CommitteeBits)
+			assert.Equal(t, hexutil.Encode(sig22), attestation.Signature)
+			assert.Equal(t, "2", attestation.Data.Slot)
+			assert.Equal(t, "1", attestation.Data.CommitteeIndex)
+			assert.Equal(t, hexutil.Encode(root22), attestation.Data.BeaconBlockRoot)
 
-		assert.Equal(t, "0x00010101", dataMap["aggregation_bits"])
-		assert.Equal(t, hexutil.Encode(sig22), dataMap["signature"])
+			// Source checkpoint checks
+			require.NotNil(t, attestation.Data.Source)
+			assert.Equal(t, "1", attestation.Data.Source.Epoch)
+			assert.Equal(t, hexutil.Encode(root22), attestation.Data.Source.Root)
 
-		attData, ok := dataMap["data"].(map[string]interface{})
-		require.Equal(t, true, ok)
-		assert.Equal(t, "2", attData["slot"])
-		assert.Equal(t, "1", attData["index"])
-		assert.Equal(t, hexutil.Encode(root22), attData["beacon_block_root"])
+			// Target checkpoint checks
+			require.NotNil(t, attestation.Data.Target)
+			assert.Equal(t, "1", attestation.Data.Target.Epoch)
+			assert.Equal(t, hexutil.Encode(root22), attestation.Data.Target.Root)
+		})
+		t.Run("matching unaggregated att", func(t *testing.T) {
+			reqRoot, err := attslot32.Data.HashTreeRoot()
+			require.NoError(t, err)
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=1"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		sourceData, ok := attData["source"].(map[string]interface{})
-		require.Equal(t, true, ok)
-		assert.Equal(t, "1", sourceData["epoch"])
-		assert.Equal(t, hexutil.Encode(root22), sourceData["root"])
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
 
-		targetData, ok := attData["target"].(map[string]interface{})
-		require.Equal(t, true, ok)
-		assert.Equal(t, "1", targetData["epoch"])
-		assert.Equal(t, hexutil.Encode(root22), targetData["root"])
-	})
-	t.Run("matching unaggregated att", func(t *testing.T) {
-		reqRoot, err := attslot32.Data.HashTreeRoot()
-		require.NoError(t, err)
-		attDataRoot := hexutil.Encode(reqRoot[:])
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			resp := &structs.AggregateAttestationResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.NotNil(t, resp)
+			require.NotNil(t, resp.Data)
 
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.AggregateAttestationResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Data)
-		assert.DeepEqual(t, "0x0001", resp.Data.AggregationBits)
-		assert.DeepEqual(t, hexutil.Encode(sig32), resp.Data.Signature)
-		assert.Equal(t, "3", resp.Data.Data.Slot)
-		assert.Equal(t, "1", resp.Data.Data.CommitteeIndex)
-		assert.DeepEqual(t, hexutil.Encode(root32), resp.Data.Data.BeaconBlockRoot)
-		require.NotNil(t, resp.Data.Data.Source)
-		assert.Equal(t, "1", resp.Data.Data.Source.Epoch)
-		assert.DeepEqual(t, hexutil.Encode(root32), resp.Data.Data.Source.Root)
-		require.NotNil(t, resp.Data.Data.Target)
-		assert.Equal(t, "1", resp.Data.Data.Target.Epoch)
-		assert.DeepEqual(t, hexutil.Encode(root32), resp.Data.Data.Target.Root)
-	})
-	t.Run("matching unaggregated att V2", func(t *testing.T) {
-		reqRoot, err := attslot32.Data.HashTreeRoot()
-		require.NoError(t, err)
-		attDataRoot := hexutil.Encode(reqRoot[:])
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=1"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			var attestation structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &attestation))
 
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.AggregateAttestationV2Response{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Data)
+			assert.Equal(t, "0x0001", attestation.AggregationBits)
+			assert.Equal(t, "0x0200000000000000", attestation.CommitteeBits)
+			assert.Equal(t, hexutil.Encode(sig32), attestation.Signature)
+			assert.Equal(t, "3", attestation.Data.Slot)
+			assert.Equal(t, "1", attestation.Data.CommitteeIndex)
+			assert.Equal(t, hexutil.Encode(root32), attestation.Data.BeaconBlockRoot)
 
-		dataMap, ok := resp.Data.(map[string]interface{})
-		require.Equal(t, true, ok)
+			// Source checkpoint checks
+			require.NotNil(t, attestation.Data.Source)
+			assert.Equal(t, "1", attestation.Data.Source.Epoch)
+			assert.Equal(t, hexutil.Encode(root32), attestation.Data.Source.Root)
 
-		assert.Equal(t, "0x0001", dataMap["aggregation_bits"])
-		assert.Equal(t, hexutil.Encode(sig32), dataMap["signature"])
+			// Target checkpoint checks
+			require.NotNil(t, attestation.Data.Target)
+			assert.Equal(t, "1", attestation.Data.Target.Epoch)
+			assert.Equal(t, hexutil.Encode(root32), attestation.Data.Target.Root)
+		})
+		t.Run("no matching attestation", func(t *testing.T) {
+			//attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			reqRoot, err := attslot32.Data.HashTreeRoot()
+			require.NoError(t, err)
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=2"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		attData, ok := dataMap["data"].(map[string]interface{})
-		require.Equal(t, true, ok)
-		assert.Equal(t, "3", attData["slot"])
-		assert.Equal(t, "1", attData["index"])
-		assert.Equal(t, hexutil.Encode(root32), attData["beacon_block_root"])
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusNotFound, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusNotFound, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
+		})
+		t.Run("no attestation_data_root provided", func(t *testing.T) {
+			url := "http://example.com?slot=2"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		sourceData, ok := attData["source"].(map[string]interface{})
-		require.Equal(t, true, ok)
-		assert.Equal(t, "1", sourceData["epoch"])
-		assert.Equal(t, hexutil.Encode(root32), sourceData["root"])
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is required"))
+		})
 
-		targetData, ok := attData["target"].(map[string]interface{})
-		require.Equal(t, true, ok)
-		assert.Equal(t, "1", targetData["epoch"])
-		assert.Equal(t, hexutil.Encode(root32), targetData["root"])
-	})
-	t.Run("no matching attestation", func(t *testing.T) {
-		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+		t.Run("invalid attestation_data_root provided", func(t *testing.T) {
+			url := "http://example.com?attestation_data_root=foo&slot=2&committee_index=1"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusNotFound, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
-	})
-	t.Run("no matching attestation V2", func(t *testing.T) {
-		//attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		reqRoot, err := attslot32.Data.HashTreeRoot()
-		require.NoError(t, err)
-		attDataRoot := hexutil.Encode(reqRoot[:])
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=2"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is invalid"))
+		})
+		t.Run("no slot provided", func(t *testing.T) {
+			attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			url := "http://example.com?attestation_data_root=" + attDataRoot
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusNotFound, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
-	})
-	t.Run("no attestation_data_root provided", func(t *testing.T) {
-		url := "http://example.com?slot=2"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "slot is required"))
+		})
+		t.Run("invalid slot provided", func(t *testing.T) {
+			attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=foo"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is required"))
-	})
-	t.Run("no attestation_data_root provided V2", func(t *testing.T) {
-		url := "http://example.com?slot=2"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "slot is invalid"))
+		})
+		t.Run("invalid committee_index provided", func(t *testing.T) {
+			attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3&committee_index=foo"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is required"))
-	})
-	t.Run("invalid attestation_data_root provided", func(t *testing.T) {
-		url := "http://example.com?attestation_data_root=foo&slot=2"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is invalid"))
-	})
-	t.Run("invalid attestation_data_root provided V2", func(t *testing.T) {
-		url := "http://example.com?attestation_data_root=foo&slot=2&committee_index=1"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "attestation_data_root is invalid"))
-	})
-	t.Run("no slot provided", func(t *testing.T) {
-		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		url := "http://example.com?attestation_data_root=" + attDataRoot
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "slot is required"))
-	})
-	t.Run("no slot provided V2", func(t *testing.T) {
-		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		url := "http://example.com?attestation_data_root=" + attDataRoot
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "slot is required"))
-	})
-	t.Run("invalid slot provided", func(t *testing.T) {
-		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=foo"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestation(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "slot is invalid"))
-	})
-	t.Run("invalid slot provided V2", func(t *testing.T) {
-		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=foo"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "slot is invalid"))
-	})
-	t.Run("invalid committee_index provided V2", func(t *testing.T) {
-		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
-		url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3&committee_index=foo"
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetAggregateAttestationV2(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "committee_index is invalid"))
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.Equal(t, true, strings.Contains(e.Message, "committee_index is invalid"))
+		})
 	})
 }
 
@@ -492,7 +626,10 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 	resp := &structs.AggregateAttestationResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
-	assert.DeepEqual(t, "0x03000001", resp.Data.AggregationBits)
+
+	var attestation structs.Attestation
+	require.NoError(t, json.Unmarshal(resp.Data, &attestation))
+	assert.DeepEqual(t, "0x03000001", attestation.AggregationBits)
 }
 
 func TestSubmitContributionAndProofs(t *testing.T) {

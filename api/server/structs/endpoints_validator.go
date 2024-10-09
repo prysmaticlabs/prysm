@@ -7,12 +7,8 @@ import (
 )
 
 type AggregateAttestationResponse struct {
-	Data *Attestation `json:"data"`
-}
-
-type AggregateAttestationV2Response struct {
-	Version string      `json:"version"`
-	Data    interface{} `json:"data"`
+	Version string          `json:"version,omitempty"`
+	Data    json.RawMessage `json:"data"`
 }
 
 type SubmitContributionAndProofsRequest struct {

@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
@@ -53,104 +54,96 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	match := s.aggregateAttestation(w, slot, 0, attDataRoot)
+	match := s.aggregateAttestation(w, primitives.Slot(slot), "", attDataRoot)
 	if match == nil {
 		return
 	}
-	response := &structs.AggregateAttestationResponse{
-		Data: &structs.Attestation{
-			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
-			Data: &structs.AttestationData{
-				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
-				Source: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
-					Root:  hexutil.Encode(match.GetData().Source.Root),
-				},
-				Target: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
-					Root:  hexutil.Encode(match.GetData().Target.Root),
-				},
+	att := &structs.Attestation{
+		AggregationBits: hexutil.Encode(match.GetAggregationBits()),
+		Data: &structs.AttestationData{
+			Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
+			CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
+			BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
+			Source: &structs.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
+				Root:  hexutil.Encode(match.GetData().Source.Root),
 			},
-			Signature: hexutil.Encode(match.GetSignature()),
-		}}
-	httputil.WriteJson(w, response)
+			Target: &structs.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
+				Root:  hexutil.Encode(match.GetData().Target.Root),
+			},
+		},
+		Signature: hexutil.Encode(match.GetSignature()),
+	}
+
+	data, err := json.Marshal(att)
+	if err != nil {
+		httputil.HandleError(w, "Could not get marshal attestation data: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &structs.AggregateAttestationResponse{Data: data})
 }
 
 // GetAggregateAttestationV2 aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
+	_, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestationV2")
 	defer span.End()
 
 	_, attDataRoot, ok := shared.HexFromQuery(w, r, "attestation_data_root", fieldparams.RootLength, true)
 	if !ok {
 		return
 	}
-
 	_, slot, ok := shared.UintFromQuery(w, r, "slot", true)
 	if !ok {
 		return
 	}
-
 	_, index, ok := shared.UintFromQuery(w, r, "committee_index", true)
 	if !ok {
 		return
 	}
-
-	match := s.aggregateAttestation(w, slot, index, attDataRoot)
+	i := strconv.FormatUint(index, 10)
+	match := s.aggregateAttestation(w, primitives.Slot(slot), i, attDataRoot)
 	if match == nil {
 		return
 	}
-	resp := &structs.AggregateAttestationV2Response{
+	resp := &structs.AggregateAttestationResponse{
 		Version: version.String(match.Version()),
 	}
 	if match.Version() >= version.Electra {
-		resp.Data = &structs.AttestationElectra{
-			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
-			Data: &structs.AttestationData{
-				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
-				Source: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
-					Root:  hexutil.Encode(match.GetData().Source.Root),
-				},
-				Target: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
-					Root:  hexutil.Encode(match.GetData().Target.Root),
-				},
-			},
-			Signature:     hexutil.Encode(match.GetSignature()),
-			CommitteeBits: hexutil.Encode(match.CommitteeBitsVal().Bytes()),
+		attPostElectra, ok := match.(*ethpbalpha.AttestationElectra)
+		if !ok {
+			httputil.HandleError(w, "Match is not of type AttestationElectra", http.StatusInternalServerError)
+			return
 		}
+		att := structs.AttElectraFromConsensus(attPostElectra)
+		data, err := json.Marshal(att)
+		if err != nil {
+			httputil.HandleError(w, "Could not get marshal attestation data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp.Data = data
 	} else {
-		resp.Data = &structs.Attestation{
-			AggregationBits: hexutil.Encode(match.GetAggregationBits()),
-			Data: &structs.AttestationData{
-				Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
-				Source: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
-					Root:  hexutil.Encode(match.GetData().Source.Root),
-				},
-				Target: &structs.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
-					Root:  hexutil.Encode(match.GetData().Target.Root),
-				},
-			},
-			Signature: hexutil.Encode(match.GetSignature()),
+		attPreElectra, ok := match.(*ethpbalpha.Attestation)
+		if !ok {
+			httputil.HandleError(w, "Match is not of type Attestation", http.StatusInternalServerError)
+			return
 		}
+		att := structs.AttFromConsensus(attPreElectra)
+		data, err := json.Marshal(att)
+		if err != nil {
+			httputil.HandleError(w, "Could not get marshal attestation data: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp.Data = data
 	}
 	httputil.WriteJson(w, resp)
 }
 
-func (s *Server) aggregateAttestation(w http.ResponseWriter, slot, index uint64, attDataRoot []byte) ethpbalpha.Att {
+func (s *Server) aggregateAttestation(w http.ResponseWriter, slot primitives.Slot, index string, attDataRoot []byte) ethpbalpha.Att {
 	var match ethpbalpha.Att
 	var err error
 
-	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot, primitives.CommitteeIndex(index))
+	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), slot, attDataRoot, index)
 	if err != nil {
 		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
 		return nil
@@ -161,28 +154,44 @@ func (s *Server) aggregateAttestation(w http.ResponseWriter, slot, index uint64,
 			httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		match, err = matchingAtt(atts, primitives.Slot(slot), attDataRoot, primitives.CommitteeIndex(index))
+		match, err = matchingAtt(atts, slot, attDataRoot, index)
 		if err != nil {
 			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-	}
-	if match == nil {
-		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
-		return nil
+		if match == nil {
+			httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
+			return nil
+		}
+		_, err = attestations.Aggregate([]ethpbalpha.Att{match})
+		if err != nil {
+			httputil.HandleError(w, "Could not aggregate the matched unaggregated attestation: "+err.Error(), http.StatusInternalServerError)
+			return nil
+		}
 	}
 	return match
 }
 
-func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte, index primitives.CommitteeIndex) (ethpbalpha.Att, error) {
+func matchingAtt(atts []ethpbalpha.Att, slot primitives.Slot, attDataRoot []byte, index string) (ethpbalpha.Att, error) {
 	for _, att := range atts {
 		if att.GetData().Slot == slot {
 			root, err := att.GetData().HashTreeRoot()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get attestation data root")
 			}
-			if bytes.Equal(root[:], attDataRoot) && att.GetData().CommitteeIndex == index {
-				return att, nil
+			if index == "" {
+				if bytes.Equal(root[:], attDataRoot) {
+					return att, nil
+				}
+			} else {
+				i, err := strconv.ParseUint(index, 10, 64)
+				if err != nil {
+					return att, err
+				}
+				bits := att.CommitteeBitsVal().BitAt(i)
+				if bytes.Equal(root[:], attDataRoot) && bits {
+					return att, nil
+				}
 			}
 		}
 	}
