@@ -94,6 +94,7 @@ type BeaconNode struct {
 	stop                    chan struct{} // Channel to wait for termination notifications.
 	db                      db.Database
 	slasherDB               db.SlasherDatabase
+	attestationCache        *cache.AttestationCache
 	attestationPool         attestations.Pool
 	exitPool                voluntaryexits.PoolManager
 	slashingsPool           slashings.PoolManager
@@ -145,6 +146,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		stateFeed:               new(event.Feed),
 		blockFeed:               new(event.Feed),
 		opFeed:                  new(event.Feed),
+		attestationCache:        cache.NewAttestationCache(),
 		attestationPool:         attestations.NewPool(),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
@@ -719,6 +721,7 @@ func (b *BeaconNode) fetchBuilderService() *builder.Service {
 
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
+		Cache:               b.attestationCache,
 		Pool:                b.attestationPool,
 		InitialSyncComplete: b.initialSyncComplete,
 	})
@@ -747,6 +750,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
 		blockchain.WithExecutionEngineCaller(web3Service),
+		blockchain.WithAttestationCache(b.attestationCache),
 		blockchain.WithAttestationPool(b.attestationPool),
 		blockchain.WithExitPool(b.exitPool),
 		blockchain.WithSlashingPool(b.slashingsPool),
@@ -830,6 +834,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}, bFil
 		regularsync.WithBlockNotifier(b),
 		regularsync.WithAttestationNotifier(b),
 		regularsync.WithOperationNotifier(b),
+		regularsync.WithAttestationCache(b.attestationCache),
 		regularsync.WithAttestationPool(b.attestationPool),
 		regularsync.WithExitPool(b.exitPool),
 		regularsync.WithSlashingPool(b.slashingsPool),
@@ -978,6 +983,7 @@ func (b *BeaconNode) registerRPCService(router *http.ServeMux) error {
 		GenesisTimeFetcher:            chainService,
 		GenesisFetcher:                chainService,
 		OptimisticModeFetcher:         chainService,
+		AttestationCache:              b.attestationCache,
 		AttestationsPool:              b.attestationPool,
 		ExitPool:                      b.exitPool,
 		SlashingsPool:                 b.slashingsPool,

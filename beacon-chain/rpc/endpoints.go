@@ -172,6 +172,7 @@ func (s *Service) validatorEndpoints(
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
 		SyncChecker:            s.cfg.SyncService,
 		OptimisticModeFetcher:  s.cfg.OptimisticModeFetcher,
+		AttestationCache:       s.cfg.AttestationCache,
 		AttestationsPool:       s.cfg.AttestationsPool,
 		PeerManager:            s.cfg.PeerManager,
 		Broadcaster:            s.cfg.Broadcaster,
@@ -456,6 +457,7 @@ func (s *Service) beaconEndpoints(
 	server := &beacon.Server{
 		CanonicalHistory:              ch,
 		BeaconDB:                      s.cfg.BeaconDB,
+		AttestationCache:              s.cfg.AttestationCache,
 		AttestationsPool:              s.cfg.AttestationsPool,
 		SlashingsPool:                 s.cfg.SlashingsPool,
 		ChainInfoFetcher:              s.cfg.ChainInfoFetcher,
