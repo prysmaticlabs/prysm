@@ -111,9 +111,8 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	if features.Get().EnableExperimentalAttestationPool {
-		// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-		// It is also possible that some aggregate in the pool already covers all bits
-		// of this aggregate, in which case we can ignore it too.
+		// It is possible that some aggregate in the pool already covers all bits
+		// of this aggregate, in which case we can ignore it.
 		isRedundant, err := s.cfg.attestationCache.AggregateIsRedundant(aggregate)
 		if err != nil {
 			tracing.AnnotateError(span, err)

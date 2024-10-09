@@ -54,13 +54,7 @@ func (c *AttestationCache) Add(att ethpb.Att) error {
 	}
 
 	if att.IsAggregated() {
-		redundant, err := c.AggregateIsRedundant(att)
-		if err != nil {
-			log.WithError(err).Error("Unable to check if attestation is redundant, skipping insertion")
-		}
-		if !redundant {
-			group.atts = append(group.atts, att.Clone())
-		}
+		group.atts = append(group.atts, att.Clone())
 		return nil
 	}
 
@@ -148,14 +142,14 @@ func (c *AttestationCache) PruneBefore(slot primitives.Slot) uint64 {
 	c.Lock()
 	defer c.Unlock()
 
-	var pruneCount uint64
+	var pruneCount int
 	for id, group := range c.atts {
 		if group.slot < slot {
-			pruneCount += uint64(len(group.atts))
+			pruneCount += len(group.atts)
 			delete(c.atts, id)
 		}
 	}
-	return pruneCount
+	return uint64(pruneCount)
 }
 
 func (c *AttestationCache) AggregateIsRedundant(att ethpb.Att) (bool, error) {
