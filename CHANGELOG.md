@@ -54,6 +54,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated Sepolia bootnodes.
 - Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
+- Updated Execution API to support Electra. [pr](https://github.com/prysmaticlabs/prysm/pull/14492)
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
