@@ -208,12 +208,15 @@ func (s *Service) listenForNewNodes() {
 			if !features.Get().EnableDiscoveryReboot {
 				continue
 			}
-			if s.isBelowThreshold() {
-				thresholdCount++
+			if !s.isBelowOutboundPeerThreshold() {
+				// Reset counter if we are below the threshold count
+				thresholdCount = 0
+				continue
 			}
+			thresholdCount++
 			// Reboot listener if connectivity drops
 			if thresholdCount > 5 {
-				log.Warnf("Rebooting discovery listener, reached threshold. The current outbound connection count is %d", len(s.peers.OutboundConnected()))
+				log.WithField("Outbound Connection Count", len(s.peers.OutboundConnected())).Warn("Rebooting discovery listener, reached threshold.")
 				if err := s.dv5Listener.RebootListener(); err != nil {
 					log.WithError(err).Error("Could not reboot listener")
 					continue
@@ -507,7 +510,10 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
-func (s *Service) isBelowThreshold() bool {
+// isBelowOutboundPeerThreshold checks if the number of outbound peers that
+// we are connected to satisfies the minimum expected outbound peer count
+// according to our peer limit.
+func (s *Service) isBelowOutboundPeerThreshold() bool {
 	maxPeers := int(s.cfg.MaxPeers)
 	inBoundLimit := s.Peers().InboundLimit()
 	// Impossible Condition

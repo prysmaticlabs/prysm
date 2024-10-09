@@ -378,17 +378,42 @@ func TestInboundPeerLimit(t *testing.T) {
 	}
 
 	for i := 0; i < 30; i++ {
-		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED), false)
 	}
 
 	require.Equal(t, true, s.isPeerAtLimit(false), "not at limit for outbound peers")
 	require.Equal(t, false, s.isPeerAtLimit(true), "at limit for inbound peers")
 
 	for i := 0; i < highWatermarkBuffer; i++ {
-		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED), false)
 	}
 
 	require.Equal(t, true, s.isPeerAtLimit(true), "not at limit for inbound peers")
+}
+
+func TestOutboundPeerThreshold(t *testing.T) {
+	fakePeer := testp2p.NewTestP2P(t)
+	s := &Service{
+		cfg:       &Config{MaxPeers: 30},
+		ipLimiter: leakybucket.NewCollector(ipLimit, ipBurst, 1*time.Second, false),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			PeerLimit:    30,
+			ScorerParams: &scorers.Config{},
+		}),
+		host: fakePeer.BHost,
+	}
+
+	for i := 0; i < 2; i++ {
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED), true)
+	}
+
+	require.Equal(t, true, s.isBelowOutboundPeerThreshold(), "not at outbound peer threshold")
+
+	for i := 0; i < 3; i++ {
+		_ = addPeer(t, s.peers, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED), true)
+	}
+
+	require.Equal(t, false, s.isBelowOutboundPeerThreshold(), "still at outbound peer threshold")
 }
 
 func TestUDPMultiAddress(t *testing.T) {
@@ -452,7 +477,7 @@ func TestCorrectUDPVersion(t *testing.T) {
 }
 
 // addPeer is a helper to add a peer with a given connection state)
-func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) peer.ID {
+func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState, outbound bool) peer.ID {
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
@@ -461,7 +486,11 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	mhBytes = append(mhBytes, idBytes...)
 	id, err := peer.IDFromBytes(mhBytes)
 	require.NoError(t, err)
-	p.Add(new(enr.Record), id, nil, network.DirInbound)
+	dir := network.DirInbound
+	if outbound {
+		dir = network.DirOutbound
+	}
+	p.Add(new(enr.Record), id, nil, dir)
 	p.SetConnectionState(id, state)
 	p.SetMetadata(id, wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{
 		SeqNumber: 0,
