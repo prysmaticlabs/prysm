@@ -75,6 +75,33 @@ func TestProcessPendingDeposits(t *testing.T) {
 			},
 		},
 		{
+			name: "withdrawn validators should not consume churn",
+			state: func() state.BeaconState {
+				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
+				depositAmount := uint64(amountAvailForProcessing)
+				// set the pending deposits to the maximum churn limit
+				st := stateWithPendingDeposits(t, 1_000, 2, depositAmount)
+				vals := st.Validators()
+				vals[1].WithdrawableEpoch = 0
+				require.NoError(t, st.SetValidators(vals))
+				return st
+			}(),
+			check: func(t *testing.T, st state.BeaconState) {
+				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
+				// Validators 0..9 should have their balance increased
+				for i := primitives.ValidatorIndex(0); i < 2; i++ {
+					b, err := st.BalanceAtIndex(i)
+					require.NoError(t, err)
+					require.Equal(t, params.BeaconConfig().MinActivationBalance+uint64(amountAvailForProcessing), b)
+				}
+
+				// All pending deposits should have been processed
+				remaining, err := st.PendingDeposits()
+				require.NoError(t, err)
+				require.Equal(t, 0, len(remaining))
+			},
+		},
+		{
 			name: "less deposits than balance to consume processes all deposits",
 			state: func() state.BeaconState {
 				amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
