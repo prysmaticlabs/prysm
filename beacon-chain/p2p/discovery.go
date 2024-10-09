@@ -61,7 +61,7 @@ type listenerWrapper struct {
 func newListener(listenerCreator func() (*discover.UDPv5, error)) (*listenerWrapper, error) {
 	rawListener, err := listenerCreator()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not create new listener")
 	}
 	return &listenerWrapper{
 		listener:        rawListener,
