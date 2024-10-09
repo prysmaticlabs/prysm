@@ -209,14 +209,14 @@ func (s *Service) listenForNewNodes() {
 				continue
 			}
 			if !s.isBelowOutboundPeerThreshold() {
-				// Reset counter if we are below the threshold count
+				// Reset counter if we are beyond the threshold
 				thresholdCount = 0
 				continue
 			}
 			thresholdCount++
 			// Reboot listener if connectivity drops
 			if thresholdCount > 5 {
-				log.WithField("Outbound Connection Count", len(s.peers.OutboundConnected())).Warn("Rebooting discovery listener, reached threshold.")
+				log.WithField("outboundConnectionCount", len(s.peers.OutboundConnected())).Warn("Rebooting discovery listener, reached threshold.")
 				if err := s.dv5Listener.RebootListener(); err != nil {
 					log.WithError(err).Error("Could not reboot listener")
 					continue
