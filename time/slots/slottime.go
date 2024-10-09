@@ -289,8 +289,9 @@ func MaxSafeEpoch() primitives.Epoch {
 }
 
 // SecondsUntilNextEpochStart returns how many seconds until the next Epoch start from the current time and slot
-func SecondsUntilNextEpochStart(slot primitives.Slot, genesisTimeSec uint64) (uint64, error) {
-	firstSlotOfNextEpoch, err := EpochStart(ToEpoch(slot) + 1)
+func SecondsUntilNextEpochStart(genesisTimeSec uint64) (uint64, error) {
+	currentSlot := CurrentSlot(genesisTimeSec)
+	firstSlotOfNextEpoch, err := EpochStart(ToEpoch(currentSlot) + 1)
 	if err != nil {
 		return 0, err
 	}
@@ -302,10 +303,11 @@ func SecondsUntilNextEpochStart(slot primitives.Slot, genesisTimeSec uint64) (ui
 	n := time.Now().Unix()
 	waitTime := uint64(es - n)
 	log.WithFields(logrus.Fields{
-		"slot":                   slot,
+		"current_slot":           currentSlot,
 		"next_epoch_start_slot":  firstSlotOfNextEpoch,
-		"slots_until_next_start": firstSlotOfNextEpoch - slot,
+		"slots_until_next_start": firstSlotOfNextEpoch - currentSlot,
 		"total_wait_time":        waitTime,
-	}).Debug("Waiting until next epoch before re-checking validator statuses...")
+		"is_epoch_start":         IsEpochStart(currentSlot),
+	}).Warn("Waiting until next epoch before re-checking validator statuses...")
 	return waitTime, nil
 }

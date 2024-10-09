@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
@@ -122,12 +121,7 @@ func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Spa
 		// Accounts (keys) changed, restart the process.
 		return v.internalWaitForActivation(ctx, accountsChangedChan)
 	default:
-		log.Warn("No active validator keys provided. Waiting until next epoch to check again...")
-		headSlot, err := v.CanonicalHeadSlot(ctx)
-		if err != nil {
-			return v.retryWaitForActivation(ctx, span, err, "Failed to get head slot. Reconnecting...", accountsChangedChan)
-		}
-		if err := v.waitForNextEpoch(ctx, headSlot, v.genesisTime, accountsChangedChan); err != nil {
+		if err := v.waitForNextEpoch(ctx, v.genesisTime, accountsChangedChan); err != nil {
 			return v.retryWaitForActivation(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
 		}
 		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
@@ -135,12 +129,12 @@ func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Spa
 }
 
 // waitForNextEpoch creates a blocking function to wait until the next epoch start given the current slot
-func (v *validator) waitForNextEpoch(ctx context.Context, slot primitives.Slot, genesisTimeSec uint64, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
-	waitTime, err := slots.SecondsUntilNextEpochStart(slot, genesisTimeSec)
+func (v *validator) waitForNextEpoch(ctx context.Context, genesisTimeSec uint64, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
+	waitTime, err := slots.SecondsUntilNextEpochStart(genesisTimeSec)
 	if err != nil {
 		return err
 	}
-
+	log.WithField("seconds_until_next_epoch", waitTime).Warn("No active validator keys provided. Waiting until next epoch to check again...")
 	select {
 	case <-ctx.Done():
 		log.Debug("Context closed, exiting waitForNextEpoch")

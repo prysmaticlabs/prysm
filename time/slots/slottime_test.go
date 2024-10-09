@@ -612,19 +612,19 @@ func TestSecondsUntilNextEpochStart(t *testing.T) {
 	secondsInEpoch := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
 	// try slot 3
 	genesisTime := uint64(time.Now().Add(-39 * time.Second).Unix())
-	waitTime, err := SecondsUntilNextEpochStart(3, genesisTime)
+	waitTime, err := SecondsUntilNextEpochStart(genesisTime)
 	require.NoError(t, err)
-	require.Equal(t, secondsInEpoch-(params.BeaconConfig().SecondsPerSlot*3), waitTime)
+	require.Equal(t, secondsInEpoch-(params.BeaconConfig().SecondsPerSlot*3)-3, waitTime)
 	// try slot 34
 	genesisTime = uint64(time.Now().Add(time.Duration(-1*int(secondsInEpoch)-int(params.BeaconConfig().SecondsPerSlot*2)-5) * time.Second).Unix())
-	waitTime, err = SecondsUntilNextEpochStart(34, genesisTime)
+	waitTime, err = SecondsUntilNextEpochStart(genesisTime)
 	require.NoError(t, err)
-	require.Equal(t, secondsInEpoch-(params.BeaconConfig().SecondsPerSlot*2), waitTime)
+	require.Equal(t, secondsInEpoch-(params.BeaconConfig().SecondsPerSlot*2)-5, waitTime)
 
 	// check if waitTime is correctly EpochStart
 	n := time.Now().Add(-39 * time.Second)
 	genesisTime = uint64(n.Unix())
-	waitTime, err = SecondsUntilNextEpochStart(3, genesisTime)
+	waitTime, err = SecondsUntilNextEpochStart(genesisTime)
 	require.NoError(t, err)
 	require.Equal(t, secondsInEpoch-39, waitTime)
 	newGenesisTime := uint64(n.Add(time.Duration(-1*int(waitTime)) * time.Second).Unix())
