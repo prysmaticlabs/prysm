@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-type ListenerModifier interface {
+type ListenerRebooter interface {
 	Listener
 	RebootListener() error
 }
@@ -53,74 +53,73 @@ type quicProtocol uint16
 func (quicProtocol) ENRKey() string { return "quic" }
 
 type listenerWrapper struct {
-	*sync.RWMutex
+	mu              sync.RWMutex
 	listener        *discover.UDPv5
 	listenerCreator func() (*discover.UDPv5, error)
 }
 
-func NewListener(listenerCreator func() (*discover.UDPv5, error)) (*listenerWrapper, error) {
+func newListener(listenerCreator func() (*discover.UDPv5, error)) (*listenerWrapper, error) {
 	rawListener, err := listenerCreator()
 	if err != nil {
 		return nil, err
 	}
 	return &listenerWrapper{
-		RWMutex:         new(sync.RWMutex),
 		listener:        rawListener,
 		listenerCreator: listenerCreator,
 	}, nil
 }
 
 func (l *listenerWrapper) Self() *enode.Node {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.Self()
 }
 
 func (l *listenerWrapper) Close() {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	l.listener.Close()
 }
 
 func (l *listenerWrapper) Lookup(id enode.ID) []*enode.Node {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.Lookup(id)
 }
 
 func (l *listenerWrapper) Resolve(node *enode.Node) *enode.Node {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.Resolve(node)
 }
 
 func (l *listenerWrapper) RandomNodes() enode.Iterator {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.RandomNodes()
 }
 
 func (l *listenerWrapper) Ping(node *enode.Node) error {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.Ping(node)
 }
 
 func (l *listenerWrapper) RequestENR(node *enode.Node) (*enode.Node, error) {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.RequestENR(node)
 }
 
 func (l *listenerWrapper) LocalNode() *enode.LocalNode {
-	l.RWMutex.RLock()
-	defer l.RWMutex.RUnlock()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 	return l.listener.LocalNode()
 }
 
 func (l *listenerWrapper) RebootListener() error {
-	l.RWMutex.Lock()
-	defer l.RWMutex.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	// Close current listener
 	l.listener.Close()
@@ -410,7 +409,7 @@ func (s *Service) startDiscoveryV5(
 	createListener := func() (*discover.UDPv5, error) {
 		return s.createListener(addr, privKey)
 	}
-	wrappedListener, err := NewListener(createListener)
+	wrappedListener, err := newListener(createListener)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create listener")
 	}

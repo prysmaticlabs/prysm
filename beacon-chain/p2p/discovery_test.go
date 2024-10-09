@@ -242,7 +242,7 @@ func TestRebootDiscoveryListener(t *testing.T) {
 	createListener := func() (*discover.UDPv5, error) {
 		return s.createListener(ipAddr, pkey)
 	}
-	listener, err := NewListener(createListener)
+	listener, err := newListener(createListener)
 	require.NoError(t, err)
 	currentPubkey := listener.Self().Pubkey()
 	currentID := listener.Self().ID()
@@ -405,7 +405,7 @@ func TestUDPMultiAddress(t *testing.T) {
 	createListener := func() (*discover.UDPv5, error) {
 		return s.createListener(ipAddr, pkey)
 	}
-	listener, err := NewListener(createListener)
+	listener, err := newListener(createListener)
 	require.NoError(t, err)
 	defer listener.Close()
 	s.dv5Listener = listener
@@ -493,7 +493,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				createListener := func() (*discover.UDPv5, error) {
 					return s.createListener(ipAddr, pkey)
 				}
-				listener, err := NewListener(createListener)
+				listener, err := newListener(createListener)
 				assert.NoError(t, err)
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
@@ -525,7 +525,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				createListener := func() (*discover.UDPv5, error) {
 					return s.createListener(ipAddr, pkey)
 				}
-				listener, err := NewListener(createListener)
+				listener, err := newListener(createListener)
 				assert.NoError(t, err)
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
@@ -550,7 +550,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				createListener := func() (*discover.UDPv5, error) {
 					return s.createListener(ipAddr, pkey)
 				}
-				listener, err := NewListener(createListener)
+				listener, err := newListener(createListener)
 				assert.NoError(t, err)
 
 				// Update params
@@ -584,7 +584,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				createListener := func() (*discover.UDPv5, error) {
 					return s.createListener(ipAddr, pkey)
 				}
-				listener, err := NewListener(createListener)
+				listener, err := newListener(createListener)
 				assert.NoError(t, err)
 
 				// Update params
@@ -625,7 +625,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				createListener := func() (*discover.UDPv5, error) {
 					return s.createListener(ipAddr, pkey)
 				}
-				listener, err := NewListener(createListener)
+				listener, err := newListener(createListener)
 				assert.NoError(t, err)
 
 				// Update params
