@@ -695,7 +695,7 @@ func (s *Service) beaconEndpoints(
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.SubmitAttesterSlashings,
+			handler: server.SubmitAttesterSlashing,
 			methods: []string{http.MethodPost},
 		},
 		{
