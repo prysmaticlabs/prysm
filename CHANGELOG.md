@@ -13,7 +13,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
-- Electra EIP6110: Queue deposit
+- Electra EIP6110: Queue deposit [pr](https://github.com/prysmaticlabs/prysm/pull/14430)
 - Light client support: Implement `BlockToLightClientHeader` function.
 - Light client support: Consensus types.
 - GetBeaconStateV2: add Electra case.
