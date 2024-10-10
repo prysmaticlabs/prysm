@@ -95,7 +95,9 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	return ApplyDeposit(beaconState, deposit.Data, verified)
 }
 
-// ApplyDeposit
+// ApplyDeposit adds the incoming deposit as a pending deposit on the state
+//
+// Spec pseudocode definition:
 // def apply_deposit(state: BeaconState,
 //
 //	              pubkey: BLSPubkey,
@@ -113,7 +115,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //	            withdrawal_credentials=withdrawal_credentials,
 //	            amount=amount,
 //	            signature=signature,
-//	            slot=GENESIS_SLOT,
+//	            slot=GENESIS_SLOT,  # Use GENESIS_SLOT to distinguish from a pending deposit request
 //	        ))
 //	else:
 //	    # Increase balance by deposit amount
@@ -123,7 +125,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //	        withdrawal_credentials=withdrawal_credentials,
 //	        amount=amount,
 //	        signature=signature,
-//	        slot=GENESIS_SLOT
+//	        slot=GENESIS_SLOT  # Use GENESIS_SLOT to distinguish from a pending deposit request
 //	    ))
 func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verified bool) (state.BeaconState, error) {
 	pubKey := data.PublicKey
@@ -263,35 +265,36 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 		return errors.New("nil state")
 	}
 
-	depBalToConsume, err := st.DepositBalanceToConsume()
-	if err != nil {
-		return err
-	}
-	availableForProcessing := depBalToConsume + helpers.ActivationExitChurnLimit(activeBalance)
+	// constants & initializations
+	nextEpoch := slots.ToEpoch(st.Slot()) + 1
 	processedAmount := uint64(0)
 	nextDepositIndex := uint64(0)
-	var depositsToPostpone []*eth.PendingDeposit
-
-	deposits, err := st.PendingDeposits()
-	if err != nil {
-		return err
-	}
 	isChurnLimitReached := false
+
+	var pendingDepositsToBatchVerify []*ethpb.PendingDeposit
+	var pendingDepositsToPostpone []*eth.PendingDeposit
+
+	depBalToConsume, err := st.DepositBalanceToConsume()
+	if err != nil {
+		return errors.Wrap(err, "could not get deposit balance to consume")
+	}
+	availableForProcessing := depBalToConsume + helpers.ActivationExitChurnLimit(activeBalance)
+
 	finalizedSlot, err := slots.EpochStart(st.FinalizedCheckpoint().Epoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized slot")
 	}
-	// constants
-	ffe := params.BeaconConfig().FarFutureEpoch
-	nextEpoch := slots.ToEpoch(st.Slot()) + 1
 
-	// Slice to collect deposits needing signature verification
-	var depositsToVerify []*ethpb.PendingDeposit
-	for _, pendingDeposit := range deposits {
-		startIndex, err := st.DepositRequestsStartIndex()
-		if err != nil {
-			return errors.Wrap(err, "could not get starting pendingDeposit index")
-		}
+	startIndex, err := st.DepositRequestsStartIndex()
+	if err != nil {
+		return errors.Wrap(err, "could not get starting pendingDeposit index")
+	}
+
+	pendingDeposits, err := st.PendingDeposits()
+	if err != nil {
+		return err
+	}
+	for _, pendingDeposit := range pendingDeposits {
 
 		// Do not process pendingDeposit requests if Eth1 bridge deposits are not yet applied.
 		if pendingDeposit.Slot > params.BeaconConfig().GenesisSlot && st.Eth1DepositIndex() < startIndex {
@@ -316,25 +319,22 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 			if err != nil {
 				return errors.Wrap(err, "could not get validator")
 			}
-			isValidatorExited = val.ExitEpoch() < ffe
+			isValidatorExited = val.ExitEpoch() < params.BeaconConfig().FarFutureEpoch
 			isValidatorWithdrawn = val.WithdrawableEpoch() < nextEpoch
 		}
 
 		if isValidatorWithdrawn {
-			// Deposited balance will never become active. Increase balance but do not consume churn
-			if err := ApplyPendingDeposit(ctx, st, pendingDeposit); err != nil {
-				return errors.Wrap(err, "could not apply pending deposit")
+			// note: the validator will never be active, just increase the balance
+			if err := helpers.IncreaseBalance(st, index, pendingDeposit.Amount); err != nil {
+				return errors.Wrap(err, "could not increase balance")
 			}
 		} else if isValidatorExited {
-			// Validator is exiting, postpone the pendingDeposit until after withdrawable epoch
-			depositsToPostpone = append(depositsToPostpone, pendingDeposit)
+			pendingDepositsToPostpone = append(pendingDepositsToPostpone, pendingDeposit)
 		} else {
-			// Check if pendingDeposit fits in the churn, otherwise, do no more pendingDeposit processing in this epoch.
 			isChurnLimitReached = primitives.Gwei(processedAmount+pendingDeposit.Amount) > availableForProcessing
-			if isChurnLimitReached { // Is churn limit reached?
+			if isChurnLimitReached {
 				break
 			}
-			// Consume churn and apply pendingDeposit.
 			processedAmount += pendingDeposit.Amount
 
 			// note: the following code deviates from the spec in order to perform batch signature verification
@@ -344,7 +344,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 				}
 			} else {
 				// Collect deposit for batch signature verification
-				depositsToVerify = append(depositsToVerify, pendingDeposit)
+				pendingDepositsToBatchVerify = append(pendingDepositsToBatchVerify, pendingDeposit)
 			}
 		}
 
@@ -353,7 +353,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	}
 
 	// Perform batch signature verification on pending deposits that require validator registration
-	if err = batchProcessNewPendingDeposits(ctx, st, depositsToVerify); err != nil {
+	if err = batchProcessNewPendingDeposits(ctx, st, pendingDepositsToBatchVerify); err != nil {
 		return errors.Wrap(err, "could not process pending deposits with new public keys")
 	}
 
@@ -362,8 +362,8 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	// - state.pending_deposits += deposits_to_postpone
 	// However, the number of remaining deposits must be maintained to properly update the pendingDeposit
 	// balance to consume.
-	deposits = append(deposits[nextDepositIndex:], depositsToPostpone...)
-	if err := st.SetPendingDeposits(deposits); err != nil {
+	pendingDeposits = append(pendingDeposits[nextDepositIndex:], pendingDepositsToPostpone...)
+	if err := st.SetPendingDeposits(pendingDeposits); err != nil {
 		return errors.Wrap(err, "could not set pending deposits")
 	}
 	// Accumulate churn only if the churn limit has been hit.
@@ -374,39 +374,49 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 }
 
 // batchProcessNewPendingDeposits should only be used to process new deposits that require validator registration
-func batchProcessNewPendingDeposits(ctx context.Context, st state.BeaconState, depositsToVerify []*ethpb.PendingDeposit) error {
-	if len(depositsToVerify) > 0 {
-		verified, err := blocks.BatchVerifyPendingDepositsSignatures(ctx, depositsToVerify)
-		if err != nil {
-			return errors.Wrap(err, "could not batch verify deposit signatures")
+func batchProcessNewPendingDeposits(ctx context.Context, state state.BeaconState, pendingDeposits []*ethpb.PendingDeposit) error {
+	// Return early if there are no deposits to process
+	if len(pendingDeposits) == 0 {
+		return nil
+	}
+
+	// Try batch verification of all deposit signatures
+	allSignaturesVerified, err := blocks.BatchVerifyPendingDepositsSignatures(ctx, pendingDeposits)
+	if err != nil {
+		return errors.Wrap(err, "batch signature verification failed")
+	}
+
+	// Process each deposit individually
+	for _, pendingDeposit := range pendingDeposits {
+		validSignature := allSignaturesVerified
+
+		// If batch verification failed, check the individual deposit signature
+		if !allSignaturesVerified {
+			validSignature, err = blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
+				PublicKey:             bytesutil.SafeCopyBytes(pendingDeposit.PublicKey),
+				WithdrawalCredentials: bytesutil.SafeCopyBytes(pendingDeposit.WithdrawalCredentials),
+				Amount:                pendingDeposit.Amount,
+				Signature:             bytesutil.SafeCopyBytes(pendingDeposit.Signature),
+			})
+			if err != nil {
+				return errors.Wrap(err, "individual deposit signature verification failed")
+			}
 		}
-		for _, dep := range depositsToVerify {
-			if verified {
-				if err := AddValidatorToRegistry(st, dep.PublicKey, dep.WithdrawalCredentials, dep.Amount); err != nil {
-					return errors.Wrap(err, "could not add validator to registry")
-				}
-			} else {
-				valid, err := blocks.IsValidDepositSignature(&ethpb.Deposit_Data{
-					PublicKey:             bytesutil.SafeCopyBytes(dep.PublicKey),
-					WithdrawalCredentials: bytesutil.SafeCopyBytes(dep.WithdrawalCredentials),
-					Amount:                dep.Amount,
-					Signature:             bytesutil.SafeCopyBytes(dep.Signature),
-				})
-				if err != nil {
-					return errors.Wrap(err, "could not verify deposit signature")
-				}
-				if valid {
-					if err := AddValidatorToRegistry(st, dep.PublicKey, dep.WithdrawalCredentials, dep.Amount); err != nil {
-						return errors.Wrap(err, "could not add validator to registry")
-					}
-				}
+
+		// Add validator to the registry if the signature is valid
+		if validSignature {
+			err = AddValidatorToRegistry(state, pendingDeposit.PublicKey, pendingDeposit.WithdrawalCredentials, pendingDeposit.Amount)
+			if err != nil {
+				return errors.Wrap(err, "failed to add validator to registry")
 			}
 		}
 	}
+
 	return nil
 }
 
 // ApplyPendingDeposit implements the spec definition below.
+// Note : This function is NOT used by ProcessPendingDeposits due to simplified logic for more readable batch processing
 //
 // Spec Definition:
 //
