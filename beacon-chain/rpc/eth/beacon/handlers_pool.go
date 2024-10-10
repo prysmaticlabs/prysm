@@ -505,7 +505,7 @@ func (s *Server) SubmitAttesterSlashings(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
+	s.submitAttesterSlashing(w, ctx, slashing)
 }
 
 // SubmitAttesterSlashingsV2 submits an attester slashing object to node's pool and
@@ -541,7 +541,7 @@ func (s *Server) SubmitAttesterSlashingsV2(w http.ResponseWriter, r *http.Reques
 			httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
+		s.submitAttesterSlashing(w, ctx, slashing)
 	} else {
 		var req structs.AttesterSlashing
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -559,14 +559,13 @@ func (s *Server) SubmitAttesterSlashingsV2(w http.ResponseWriter, r *http.Reques
 			httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		s.attesterSlashing(w, ctx, slashing.Attestation_1.Data.Slot, slashing)
+		s.submitAttesterSlashing(w, ctx, slashing)
 	}
 }
 
-func (s *Server) attesterSlashing(
+func (s *Server) submitAttesterSlashing(
 	w http.ResponseWriter,
 	ctx context.Context,
-	slot primitives.Slot,
 	slashing eth.AttSlashing,
 ) {
 	headState, err := s.ChainInfoFetcher.HeadState(ctx)
@@ -574,11 +573,12 @@ func (s *Server) attesterSlashing(
 		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slot)
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.FirstAttestation().GetData().Slot)
 	if err != nil {
 		httputil.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	err = blocks.VerifyAttesterSlashing(ctx, headState, slashing)
 	if err != nil {
 		httputil.HandleError(w, "Invalid attester slashing: "+err.Error(), http.StatusBadRequest)
