@@ -1120,3 +1120,34 @@ func RecastHexutilByteSlice(h []hexutil.Bytes) [][]byte {
 	}
 	return r
 }
+
+type ExchangeCapabilitiesJSON struct {
+	SupportedMethods []string `json:"supported_methods"`
+}
+
+func (b *ExchangeCapabilities) MarshalJSON() ([]byte, error) {
+	supportedMethods := make([]string, len(b.SupportedMethods))
+	for i, sm := range b.SupportedMethods {
+		supportedMethods[i] = sm
+	}
+	return json.Marshal(ExchangeCapabilitiesJSON{
+		SupportedMethods: supportedMethods,
+	})
+}
+
+func (b *ExchangeCapabilities) UnmarshalJSON(enc []byte) error {
+	var decoded *ExchangeCapabilitiesJSON
+	err := json.Unmarshal(enc, &decoded)
+	if err != nil {
+		return err
+	}
+	if len(decoded.SupportedMethods) == 0 {
+		b.SupportedMethods = make([]string, 0)
+	}
+	supportedMethods := make([]string, len(decoded.SupportedMethods))
+	for i, sm := range decoded.SupportedMethods {
+		supportedMethods[i] = sm
+	}
+	b.SupportedMethods = supportedMethods
+	return nil
+}
