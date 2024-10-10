@@ -234,46 +234,40 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 	}
 	consensusAtts := blk.Block().Body().Attestations()
 
-	atts := make([]json.RawMessage, len(consensusAtts))
 	v := blk.Block().Version()
-
+	var attStructs []interface{}
 	if v >= version.Electra {
-		for i, att := range consensusAtts {
+		for _, att := range consensusAtts {
 			a, ok := att.(*eth.AttestationElectra)
 			if !ok {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations electra of type %T", att), http.StatusInternalServerError)
 				return
 			}
 			attStruct := structs.AttElectraFromConsensus(a)
-			attBytes, err := json.Marshal(attStruct)
-			if err != nil {
-				httputil.HandleError(w, fmt.Sprintf("failed to marshal attestation: %v", err), http.StatusInternalServerError)
-				return
-			}
-			atts[i] = attBytes
+			attStructs = append(attStructs, attStruct)
 		}
 	} else {
-		for i, att := range consensusAtts {
+		for _, att := range consensusAtts {
 			a, ok := att.(*eth.Attestation)
 			if !ok {
-				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
+				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestation of type %T", att), http.StatusInternalServerError)
 				return
 			}
 			attStruct := structs.AttFromConsensus(a)
-			attBytes, err := json.Marshal(attStruct)
-			if err != nil {
-				httputil.HandleError(w, fmt.Sprintf("failed to marshal attestation: %v", err), http.StatusInternalServerError)
-				return
-			}
-			atts[i] = attBytes
+			attStructs = append(attStructs, attStruct)
 		}
 	}
 
+	attBytes, err := json.Marshal(attStructs)
+	if err != nil {
+		httputil.HandleError(w, fmt.Sprintf("failed to marshal attestations: %v", err), http.StatusInternalServerError)
+		return
+	}
 	resp := &structs.GetBlockAttestationsV2Response{
 		Version:             version.String(v),
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
-		Data:                atts,
+		Data:                attBytes,
 	}
 	httputil.WriteJson(w, resp)
 }

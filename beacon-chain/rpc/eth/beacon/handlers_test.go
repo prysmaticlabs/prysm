@@ -678,13 +678,12 @@ func TestGetBlockAttestations(t *testing.T) {
 			resp := &structs.GetBlockAttestationsV2Response{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 
-			// Now `resp2.Data` is []json.RawMessage, so we can directly iterate over it
-			atts := make([]*eth.Attestation, len(b.Block.Body.Attestations))
-			for i, item := range resp.Data {
-				// Unmarshal the raw JSON message directly into the expected attestation structure
-				var att structs.Attestation
-				require.NoError(t, json.Unmarshal(item, &att))
-				atts[i], err = att.ToConsensus()
+			var attStructs []structs.Attestation
+			require.NoError(t, json.Unmarshal(resp.Data, &attStructs))
+
+			atts := make([]*eth.Attestation, len(attStructs))
+			for i, attStruct := range attStructs {
+				atts[i], err = attStruct.ToConsensus()
 				require.NoError(t, err)
 			}
 
@@ -716,13 +715,12 @@ func TestGetBlockAttestations(t *testing.T) {
 			resp := &structs.GetBlockAttestationsV2Response{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 
-			// Now `resp2.Data` is []json.RawMessage, so we can directly iterate over it
-			atts := make([]*eth.AttestationElectra, len(eb.Block.Body.Attestations))
-			for i, item := range resp.Data {
-				// Unmarshal the raw JSON message directly into the expected attestation structure
-				var att structs.AttestationElectra
-				require.NoError(t, json.Unmarshal(item, &att))
-				atts[i], err = att.ToConsensus()
+			var attStructs []structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &attStructs))
+
+			atts := make([]*eth.AttestationElectra, len(attStructs))
+			for i, attStruct := range attStructs {
+				atts[i], err = attStruct.ToConsensus()
 				require.NoError(t, err)
 			}
 
