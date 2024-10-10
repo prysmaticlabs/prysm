@@ -71,7 +71,19 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 	someAreActive := v.checkAndLogValidatorStatus(valCount)
 	if !someAreActive {
 		// Step 6: If no active validators, wait for accounts change, context cancellation, or next epoch.
-		return v.waitForActivationRetry(ctx, span, accountsChangedChan)
+		select {
+		case <-ctx.Done():
+			log.Debug("Context closed, exiting WaitForActivation")
+			return ctx.Err()
+		case <-accountsChangedChan:
+			// Accounts (keys) changed, restart the process.
+			return v.internalWaitForActivation(ctx, accountsChangedChan)
+		default:
+			if err := v.waitForNextEpoch(ctx, v.genesisTime, accountsChangedChan); err != nil {
+				return v.retryWaitForActivation(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
+			}
+			return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
+		}
 	}
 	return nil
 }
@@ -98,6 +110,7 @@ func (v *validator) retryWaitForActivation(ctx context.Context, span octrace.Spa
 	log.WithError(err).WithField("attempts", attempts).Error(message)
 	// Reconnection attempt backoff, up to 60s.
 	time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
+	// TODO: refactor this to use the health tracker instead for reattempt
 	return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 }
 
@@ -109,22 +122,6 @@ func (v *validator) waitForAccountsChange(ctx context.Context, accountsChangedCh
 	case <-accountsChangedChan:
 		// If the accounts changed, try again.
 		return v.internalWaitForActivation(ctx, accountsChangedChan)
-	}
-}
-
-func (v *validator) waitForActivationRetry(ctx context.Context, span octrace.Span, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
-	select {
-	case <-ctx.Done():
-		log.Debug("Context closed, exiting waitForActivationRetry")
-		return ctx.Err()
-	case <-accountsChangedChan:
-		// Accounts (keys) changed, restart the process.
-		return v.internalWaitForActivation(ctx, accountsChangedChan)
-	default:
-		if err := v.waitForNextEpoch(ctx, v.genesisTime, accountsChangedChan); err != nil {
-			return v.retryWaitForActivation(ctx, span, err, "Failed to wait for next epoch. Reconnecting...", accountsChangedChan)
-		}
-		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 }
 
