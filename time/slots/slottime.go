@@ -303,11 +303,9 @@ func SecondsUntilNextEpochStart(genesisTimeSec uint64) (uint64, error) {
 	n := time.Now().Unix()
 	waitTime := uint64(es - n)
 	log.WithFields(logrus.Fields{
-		"current_slot":           currentSlot,
-		"next_epoch_start_slot":  firstSlotOfNextEpoch,
-		"slots_until_next_start": firstSlotOfNextEpoch - currentSlot,
-		"total_wait_time":        waitTime,
-		"is_epoch_start":         IsEpochStart(currentSlot),
-	}).Warn("Waiting until next epoch before re-checking validator statuses...")
+		"current_slot":          currentSlot,
+		"next_epoch_start_slot": firstSlotOfNextEpoch,
+		"is_epoch_start":        IsEpochStart(currentSlot),
+	}).Debugf("%d seconds until next epoch", waitTime)
 	return waitTime, nil
 }
