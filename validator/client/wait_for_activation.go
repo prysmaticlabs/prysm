@@ -76,7 +76,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 	return nil
 }
 
-// getValidatorCount is an api call to get the current validator count
+// getValidatorCount is an api call to get the current validator count.
 // "-1" indicates that validator count endpoint is not supported by the beacon node.
 func (v *validator) getValidatorCount(ctx context.Context) (int64, error) {
 	// TODO: revisit https://github.com/prysmaticlabs/prysm/pull/12471#issuecomment-1568320970 to review if ValidatorCount api can be removed.
