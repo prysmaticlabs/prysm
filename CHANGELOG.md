@@ -24,6 +24,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
 - Add Bellatrix tests for light client functions
+- Add Discovery Rebooter Feature
+
 
 ### Changed
 
