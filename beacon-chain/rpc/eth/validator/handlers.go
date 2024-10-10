@@ -58,27 +58,16 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	if match == nil {
 		return
 	}
-	att := &structs.Attestation{
-		AggregationBits: hexutil.Encode(match.GetAggregationBits()),
-		Data: &structs.AttestationData{
-			Slot:            strconv.FormatUint(uint64(match.GetData().Slot), 10),
-			CommitteeIndex:  strconv.FormatUint(uint64(match.GetData().CommitteeIndex), 10),
-			BeaconBlockRoot: hexutil.Encode(match.GetData().BeaconBlockRoot),
-			Source: &structs.Checkpoint{
-				Epoch: strconv.FormatUint(uint64(match.GetData().Source.Epoch), 10),
-				Root:  hexutil.Encode(match.GetData().Source.Root),
-			},
-			Target: &structs.Checkpoint{
-				Epoch: strconv.FormatUint(uint64(match.GetData().Target.Epoch), 10),
-				Root:  hexutil.Encode(match.GetData().Target.Root),
-			},
-		},
-		Signature: hexutil.Encode(match.GetSignature()),
-	}
 
+	matchedAtt, ok := match.(*ethpbalpha.Attestation)
+	if !ok {
+		httputil.HandleError(w, "Match is not of type Attestation", http.StatusInternalServerError)
+		return
+	}
+	att := structs.AttFromConsensus(matchedAtt)
 	data, err := json.Marshal(att)
 	if err != nil {
-		httputil.HandleError(w, "Could not get marshal attestation data: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not marshal attestation: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	httputil.WriteJson(w, &structs.AggregateAttestationResponse{Data: data})
@@ -118,7 +107,7 @@ func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Reques
 		att := structs.AttElectraFromConsensus(attPostElectra)
 		data, err := json.Marshal(att)
 		if err != nil {
-			httputil.HandleError(w, "Could not get marshal attestation data: "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not marshal attestation: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		resp.Data = data
@@ -131,7 +120,7 @@ func (s *Server) GetAggregateAttestationV2(w http.ResponseWriter, r *http.Reques
 		att := structs.AttFromConsensus(attPreElectra)
 		data, err := json.Marshal(att)
 		if err != nil {
-			httputil.HandleError(w, "Could not get marshal attestation data: "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not marshal attestation: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		resp.Data = data

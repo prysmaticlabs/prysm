@@ -53,12 +53,12 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(
 		return nil, err
 	}
 
-	var attData *ethpb.Attestation // Replace with your appropriate struct
+	var attData *structs.Attestation
 	if err := json.Unmarshal(aggregateAttestationResponse.Data, &attData); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal aggregate attestation data")
 	}
 
-	aggregatedAttestation, err := convertAttestationToProto(jsonifyAttestation(attData))
+	aggregatedAttestation, err := convertAttestationToProto(attData)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert aggregate attestation json to proto")
 	}
