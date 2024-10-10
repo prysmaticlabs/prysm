@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "feed.go",
+        "interface.go",
         "subscription.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/async/event",

@@ -162,6 +162,10 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	postState state.BeaconState) (int, error) {
 	// Get attested state
 	attestedRoot := signed.Block().ParentRoot()
+	attestedBlock, err := s.cfg.BeaconDB.Block(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested block")
+	}
 	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get attested state")
@@ -183,6 +187,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 		postState,
 		signed,
 		attestedState,
+		attestedBlock,
 		finalizedBlock,
 	)
 
@@ -208,6 +213,10 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 	postState state.BeaconState) (int, error) {
 	// Get attested state
 	attestedRoot := signed.Block().ParentRoot()
+	attestedBlock, err := s.cfg.BeaconDB.Block(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested block")
+	}
 	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get attested state")
@@ -218,6 +227,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 		postState,
 		signed,
 		attestedState,
+		attestedBlock,
 	)
 
 	if err != nil {

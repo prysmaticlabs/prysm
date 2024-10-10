@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "block.go",
         "conversions.go",
+        "conversions_blob.go",
         "conversions_block.go",
         "conversions_lightclient.go",
         "conversions_state.go",

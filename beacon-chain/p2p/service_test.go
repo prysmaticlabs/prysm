@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -68,6 +67,8 @@ func (mockListener) LocalNode() *enode.LocalNode {
 func (mockListener) RandomNodes() enode.Iterator {
 	panic("implement me")
 }
+
+func (mockListener) RebootListener() error { panic("implement me") }
 
 func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 	_, pkey := createAddrAndPrivKey(t)
@@ -210,7 +211,7 @@ func TestListenForNewNodes(t *testing.T) {
 
 	bootNode := bootListener.Self()
 
-	var listeners []*discover.UDPv5
+	var listeners []*listenerWrapper
 	var hosts []host.Host
 	// setup other nodes.
 	cs := startup.NewClockSynchronizer()
