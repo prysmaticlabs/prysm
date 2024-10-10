@@ -120,30 +120,34 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitContributionAndProofs")
 	defer span.End()
 
-	var req structs.SubmitContributionAndProofsRequest
-	err := json.NewDecoder(r.Body).Decode(&req.Data)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+	var reqData []json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		if errors.Is(err, io.EOF) {
+			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		} else {
+			httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		}
 		return
 	}
-	if len(req.Data) == 0 {
+	if len(reqData) == 0 {
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
 
-	for _, item := range req.Data {
-		consensusItem, err := item.ToConsensus()
-		if err != nil {
-			httputil.HandleError(w, "Could not convert request contribution to consensus contribution: "+err.Error(), http.StatusBadRequest)
+	for _, item := range reqData {
+		var contribution structs.SignedContributionAndProof
+		if err := json.Unmarshal(item, &contribution); err != nil {
+			httputil.HandleError(w, "Could not decode item: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		rpcError := s.CoreService.SubmitSignedContributionAndProof(ctx, consensusItem)
-		if rpcError != nil {
+		consensusItem, err := contribution.ToConsensus()
+		if err != nil {
+			httputil.HandleError(w, "Could not convert contribution to consensus format: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if rpcError := s.CoreService.SubmitSignedContributionAndProof(ctx, consensusItem); rpcError != nil {
 			httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+			return
 		}
 	}
 }
@@ -170,7 +174,13 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 
 	broadcastFailed := false
 	for _, item := range req.Data {
-		consensusItem, err := item.ToConsensus()
+		var signedAggregate structs.SignedAggregateAttestationAndProof
+		err := json.Unmarshal(item, &signedAggregate)
+		if err != nil {
+			httputil.HandleError(w, "Could not decode item: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		consensusItem, err := signedAggregate.ToConsensus()
 		if err != nil {
 			httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 			return
@@ -195,20 +205,19 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 
 // SubmitAggregateAndProofsV2 verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
 func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
+	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofsV2")
 	defer span.End()
 
-	var req structs.SubmitAggregateAndProofsRequestV2
-	err := json.NewDecoder(r.Body).Decode(&req.Data)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+	var reqData []json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		if errors.Is(err, io.EOF) {
+			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		} else {
+			httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		}
 		return
 	}
-	if len(req.Data) == 0 {
+	if len(reqData) == 0 {
 		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
@@ -225,16 +234,16 @@ func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Reque
 
 	broadcastFailed := false
 	if v >= version.Electra {
-		for _, raw := range req.Data {
-			var item structs.SignedAggregateAttestationAndProofElectra
-			if err = json.Unmarshal(raw, &item); err != nil {
-				httputil.HandleError(w, "Failed to parse Electra aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
+		for _, raw := range reqData {
+			var signedAggregate structs.SignedAggregateAttestationAndProofElectra
+			if err = json.Unmarshal(raw, &signedAggregate); err != nil {
+				httputil.HandleError(w, "Failed to parse aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 
-			consensusItem, err := item.ToConsensus()
+			consensusItem, err := signedAggregate.ToConsensus()
 			if err != nil {
-				httputil.HandleError(w, "Could not convert Electra request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
+				httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 
@@ -250,14 +259,14 @@ func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Reque
 			}
 		}
 	} else {
-		for _, raw := range req.Data {
-			var item structs.SignedAggregateAttestationAndProof
-			if err := json.Unmarshal(raw, &item); err != nil {
-				httputil.HandleError(w, "Failed to parse older version aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
+		for _, raw := range reqData {
+			var signedAggregate structs.SignedAggregateAttestationAndProof
+			if err := json.Unmarshal(raw, &signedAggregate); err != nil {
+				httputil.HandleError(w, "Failed to parse aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 
-			consensusItem, err := item.ToConsensus()
+			consensusItem, err := signedAggregate.ToConsensus()
 			if err != nil {
 				httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 				return
