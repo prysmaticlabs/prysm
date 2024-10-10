@@ -38,7 +38,7 @@ func ProcessDeposits(
 	defer span.End()
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
+	allSignaturesVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify deposit signatures in batch")
 	}
@@ -47,7 +47,7 @@ func ProcessDeposits(
 		if d == nil || d.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDeposit(beaconState, d, batchVerified)
+		beaconState, err = ProcessDeposit(beaconState, d, allSignaturesVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(d.Data.PublicKey))
 		}
@@ -82,7 +82,7 @@ func ProcessDeposits(
 //	  amount=deposit.data.amount,
 //	  signature=deposit.data.signature,
 //	 )
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verified bool) (state.BeaconState, error) {
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, allSignaturesVerified bool) (state.BeaconState, error) {
 	if err := blocks.VerifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err
@@ -92,7 +92,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
 		return nil, err
 	}
-	return ApplyDeposit(beaconState, deposit.Data, verified)
+	return ApplyDeposit(beaconState, deposit.Data, allSignaturesVerified)
 }
 
 // ApplyDeposit adds the incoming deposit as a pending deposit on the state
@@ -127,14 +127,14 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //	        signature=signature,
 //	        slot=GENESIS_SLOT  # Use GENESIS_SLOT to distinguish from a pending deposit request
 //	    ))
-func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verified bool) (state.BeaconState, error) {
+func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, allSignaturesVerified bool) (state.BeaconState, error) {
 	pubKey := data.PublicKey
 	amount := data.Amount
 	withdrawalCredentials := data.WithdrawalCredentials
 	signature := data.Signature
 	_, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
-		if !verified {
+		if !allSignaturesVerified {
 			valid, err := IsValidDepositSignature(data)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not verify deposit signature")
@@ -295,7 +295,6 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 		return err
 	}
 	for _, pendingDeposit := range pendingDeposits {
-
 		// Do not process pendingDeposit requests if Eth1 bridge deposits are not yet applied.
 		if pendingDeposit.Slot > params.BeaconConfig().GenesisSlot && st.Eth1DepositIndex() < startIndex {
 			break
