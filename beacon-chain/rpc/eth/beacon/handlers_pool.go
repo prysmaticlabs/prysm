@@ -504,19 +504,13 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
 
 	if v >= version.Electra {
-		// Initialize the slice with length equal to len(sourceSlashings) so that we can index into it
-		ss := make([]*eth.AttesterSlashingElectra, len(sourceSlashings))
-		for i, slashing := range sourceSlashings {
+		for _, slashing := range sourceSlashings {
 			a, ok := slashing.(*eth.AttesterSlashingElectra)
-			if ok {
-				ss[i] = a // Safe to index here because the slice has the correct length
-			} else {
+			if !ok {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert electra slashing of type %T", slashing), http.StatusInternalServerError)
 				return
 			}
-		}
-		for _, slashing := range ss {
-			slashingBytes, err := json.Marshal(slashing)
+			slashingBytes, err := json.Marshal(a)
 			if err != nil {
 				httputil.HandleError(w, fmt.Sprintf("failed to marshal electra slashing: %v", err), http.StatusInternalServerError)
 				return
@@ -524,19 +518,13 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 			resp.Data = append(resp.Data, slashingBytes)
 		}
 	} else {
-		// Initialize the slice with length equal to len(sourceSlashings) so that we can index into it
-		ss := make([]*eth.AttesterSlashing, len(sourceSlashings))
-		for i, slashing := range sourceSlashings {
+		for _, slashing := range sourceSlashings {
 			a, ok := slashing.(*eth.AttesterSlashing)
-			if ok {
-				ss[i] = a // Safe to index here because the slice has the correct length
-			} else {
+			if !ok {
 				httputil.HandleError(w, fmt.Sprintf("unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
 				return
 			}
-		}
-		for _, slashing := range ss {
-			slashingBytes, err := json.Marshal(slashing)
+			slashingBytes, err := json.Marshal(a)
 			if err != nil {
 				httputil.HandleError(w, fmt.Sprintf("failed to marshal slashing: %v", err), http.StatusInternalServerError)
 				return
