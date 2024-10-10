@@ -104,7 +104,7 @@ func (v *validator) retryWaitForActivation(ctx context.Context, span octrace.Spa
 func (v *validator) waitForAccountsChange(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	select {
 	case <-ctx.Done():
-		log.Debug("Context closed, exiting fetching validating keys")
+		log.Debug("Context closed, exiting waitForAccountsChange")
 		return ctx.Err()
 	case <-accountsChangedChan:
 		// If the accounts changed, try again.
