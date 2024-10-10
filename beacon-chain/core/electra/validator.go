@@ -64,12 +64,12 @@ func QueueExcessActiveBalance(s state.BeaconState, idx primitives.ValidatorIndex
 	}
 
 	if bal > params.BeaconConfig().MinActivationBalance {
-		val, err := s.ValidatorAtIndex(idx)
-		if err != nil {
+		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
 			return err
 		}
 		excessBalance := bal - params.BeaconConfig().MinActivationBalance
-		if err := s.UpdateBalancesAtIndex(idx, params.BeaconConfig().MinActivationBalance); err != nil {
+		val, err := s.ValidatorAtIndex(idx)
+		if err != nil {
 			return err
 		}
 		return s.AppendPendingDeposit(&ethpb.PendingDeposit{
