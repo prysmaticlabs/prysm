@@ -59,6 +59,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
+- `/eth/v1alpha1/validator/activation/stream` grpc wait for activation stream is deprecated. [pr](https://github.com/prysmaticlabs/prysm/pull/14514)
 
 ### Removed
 
