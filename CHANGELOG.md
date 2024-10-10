@@ -16,15 +16,17 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `BlockToLightClientHeader` function.
 - Light client support: Consensus types.
 - GetBeaconStateV2: add Electra case.
-- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
-- Tests to ensure sepolia config matches the official upstream yaml
-- `engine_newPayloadV4`,`engine_getPayloadV4` used for electra payload communication with execution client
-- HTTP endpoint for PublishBlobs
+- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875).
+- Tests to ensure sepolia config matches the official upstream yaml.
+- `engine_newPayloadV4`,`engine_getPayloadV4` used for electra payload communication with execution client.
+- HTTP endpoint for PublishBlobs.
 - GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
-- Add Electra support and tests for light client functions
+- Add Electra support and tests for light client functions.
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
-- Add Bellatrix tests for light client functions
+- Add Bellatrix tests for light client functions.
+- Add Discovery Rebooter Feature.
+- Added GetBlockAttestationsV2 endpoint.
 
 ### Changed
 
