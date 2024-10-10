@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
+	attlog "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 )
 
 const (
@@ -205,6 +206,8 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
 	}
+	
+	// Fetch the block
 	blk, err := s.Blocker.Block(ctx, []byte(blockId))
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
@@ -212,23 +215,32 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*structs.Attestation, len(consensusAtts))
+	stats := &attlog.AttestationStats{} // Use the imported AttestationStats
+
 	for i, att := range consensusAtts {
 		a, ok := att.(*eth.Attestation)
 		if ok {
 			atts[i] = structs.AttFromConsensus(a)
+			stats.LogSuccess() // Log successful verification of attestation
 		} else {
 			httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations of type %T", att), http.StatusInternalServerError)
+			stats.LogFailure("Type conversion failed") // Log failure with reason
 			return
 		}
 	}
+
+	// Calculate block root and check if it is optimistic
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		stats.LogFailure("HashTreeRoot calculation failed") // Log failure with reason
 		return
 	}
+	
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 	if err != nil {
 		httputil.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		stats.LogFailure("Optimistic mode fetch failed") // Log failure with reason
 		return
 	}
 
@@ -237,7 +249,11 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
 	}
+
 	httputil.WriteJson(w, resp)
+
+	// At the end of the processing, report the metrics for the epoch
+	fmt.Println(stats.Summary()) // Print or log the summary of attestation statistics
 }
 
 // PublishBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
