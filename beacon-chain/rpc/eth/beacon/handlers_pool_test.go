@@ -1151,7 +1151,6 @@ func TestSubmitAttesterSlashings(t *testing.T) {
 	defer transition.SkipSlotCache.Enable()
 
 	attestationData1 := &ethpbv1alpha1.AttestationData{
-		Slot:            1,
 		CommitteeIndex:  1,
 		BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
 		Source: &ethpbv1alpha1.Checkpoint{
@@ -1164,7 +1163,6 @@ func TestSubmitAttesterSlashings(t *testing.T) {
 		},
 	}
 	attestationData2 := &ethpbv1alpha1.AttestationData{
-		Slot:            1,
 		CommitteeIndex:  1,
 		BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
 		Source: &ethpbv1alpha1.Checkpoint{
@@ -1179,6 +1177,8 @@ func TestSubmitAttesterSlashings(t *testing.T) {
 
 	t.Run("V1", func(t *testing.T) {
 		t.Run("ok", func(t *testing.T) {
+			attestationData1.Slot = 1
+			attestationData2.Slot = 1
 			slashing := &ethpbv1alpha1.AttesterSlashing{
 				Attestation_1: &ethpbv1alpha1.IndexedAttestation{
 					AttestingIndices: []uint64{0},
@@ -1332,6 +1332,8 @@ func TestSubmitAttesterSlashings(t *testing.T) {
 	})
 	t.Run("V2", func(t *testing.T) {
 		t.Run("ok", func(t *testing.T) {
+			attestationData1.Slot = 1
+			attestationData2.Slot = 1
 			electraSlashing := &ethpbv1alpha1.AttesterSlashingElectra{
 				Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
 					AttestingIndices: []uint64{0},
