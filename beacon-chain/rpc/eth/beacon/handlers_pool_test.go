@@ -983,199 +983,204 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 }
 
 func TestGetAttesterSlashings(t *testing.T) {
-	bs, err := util.NewBeaconState()
-	require.NoError(t, err)
-	slashing1 := &ethpbv1alpha1.AttesterSlashing{
-		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{1, 10},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            1,
-				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+	t.Run("V1", func(t *testing.T) {
+		bs, err := util.NewBeaconState()
+		require.NoError(t, err)
+
+		slashing1 := &ethpbv1alpha1.AttesterSlashing{
+			Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+				AttestingIndices: []uint64{1, 10},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            1,
+					CommitteeIndex:  1,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 1,
+						Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 10,
+						Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature1"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature1"), 96),
-		},
-		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{2, 20},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            2,
-				CommitteeIndex:  2,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 2,
-					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+				AttestingIndices: []uint64{2, 20},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            2,
+					CommitteeIndex:  2,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 2,
+						Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 20,
+						Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 20,
-					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature2"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature2"), 96),
-		},
-	}
-	slashing2 := &ethpbv1alpha1.AttesterSlashing{
-		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{3, 30},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            3,
-				CommitteeIndex:  3,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 3,
-					Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
+		}
+		slashing2 := &ethpbv1alpha1.AttesterSlashing{
+			Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+				AttestingIndices: []uint64{3, 30},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            3,
+					CommitteeIndex:  3,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 3,
+						Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 30,
+						Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 30,
-					Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature3"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature3"), 96),
-		},
-		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{4, 40},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            4,
-				CommitteeIndex:  4,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 4,
-					Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+			Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+				AttestingIndices: []uint64{4, 40},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            4,
+					CommitteeIndex:  4,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 4,
+						Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 40,
+						Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 40,
-					Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature4"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature4"), 96),
-		},
-	}
+		}
 
-	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []ethpbv1alpha1.AttSlashing{slashing1, slashing2}},
-	}
+		s := &Server{
+			ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+			SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []ethpbv1alpha1.AttSlashing{slashing1, slashing2}},
+		}
 
-	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/pool/attester_slashings", nil)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/pool/attester_slashings", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	s.GetAttesterSlashings(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &structs.GetAttesterSlashingsResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	assert.Equal(t, 2, len(resp.Data))
-}
+		s.GetAttesterSlashings(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetAttesterSlashingsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		assert.Equal(t, 2, len(resp.Data))
+	})
+	t.Run("V2", func(t *testing.T) {
+		bs, err := util.NewBeaconStateElectra()
+		require.NoError(t, err)
 
-func TestGetAttesterSlashingsV2(t *testing.T) {
-	bs, err := util.NewBeaconStateElectra()
-	require.NoError(t, err)
-
-	slashing1 := &ethpbv1alpha1.AttesterSlashingElectra{
-		Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
-			AttestingIndices: []uint64{1, 10},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            1,
-				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		slashing1 := &ethpbv1alpha1.AttesterSlashingElectra{
+			Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
+				AttestingIndices: []uint64{1, 10},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            1,
+					CommitteeIndex:  1,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 1,
+						Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 10,
+						Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature1"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature1"), 96),
-		},
-		Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
-			AttestingIndices: []uint64{2, 20},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            2,
-				CommitteeIndex:  2,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 2,
-					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
+				AttestingIndices: []uint64{2, 20},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            2,
+					CommitteeIndex:  2,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 2,
+						Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 20,
+						Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 20,
-					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature2"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature2"), 96),
-		},
-	}
-	slashing2 := &ethpbv1alpha1.AttesterSlashingElectra{
-		Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
-			AttestingIndices: []uint64{3, 30},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            3,
-				CommitteeIndex:  3,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 3,
-					Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
+		}
+		slashing2 := &ethpbv1alpha1.AttesterSlashingElectra{
+			Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
+				AttestingIndices: []uint64{3, 30},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            3,
+					CommitteeIndex:  3,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 3,
+						Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 30,
+						Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 30,
-					Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature3"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature3"), 96),
-		},
-		Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
-			AttestingIndices: []uint64{4, 40},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            4,
-				CommitteeIndex:  4,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 4,
-					Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+			Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
+				AttestingIndices: []uint64{4, 40},
+				Data: &ethpbv1alpha1.AttestationData{
+					Slot:            4,
+					CommitteeIndex:  4,
+					BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+					Source: &ethpbv1alpha1.Checkpoint{
+						Epoch: 4,
+						Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+					},
+					Target: &ethpbv1alpha1.Checkpoint{
+						Epoch: 40,
+						Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+					},
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 40,
-					Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
-				},
+				Signature: bytesutil.PadTo([]byte("signature4"), 96),
 			},
-			Signature: bytesutil.PadTo([]byte("signature4"), 96),
-		},
-	}
+		}
 
-	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []ethpbv1alpha1.AttSlashing{slashing1, slashing2}},
-	}
+		s := &Server{
+			ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+			SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []ethpbv1alpha1.AttSlashing{slashing1, slashing2}},
+		}
 
-	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/beacon/pool/attester_slashings", nil)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/beacon/pool/attester_slashings", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	s.GetAttesterSlashingsV2(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &structs.GetAttesterSlashingsV2Response{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	assert.Equal(t, "electra", resp.Version)
-	assert.Equal(t, 2, len(resp.Data))
+		s.GetAttesterSlashingsV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetAttesterSlashingsV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		assert.Equal(t, "electra", resp.Version)
 
-	var unmarshaledSlashing1, unmarshaledSlashing2 ethpbv1alpha1.AttesterSlashingElectra
-	require.NoError(t, json.Unmarshal(resp.Data[0], &unmarshaledSlashing1))
-	require.NoError(t, json.Unmarshal(resp.Data[1], &unmarshaledSlashing2))
-	require.DeepEqual(t, slashing1, &unmarshaledSlashing1)
-	require.DeepEqual(t, slashing2, &unmarshaledSlashing2)
+		// Unmarshal resp.Data into a slice of slashings
+		var slashings []*structs.AttesterSlashingElectra
+		require.NoError(t, json.Unmarshal(resp.Data, &slashings))
+
+		ss, err := structs.AttesterSlashingsElectraToConsensus(slashings)
+		require.NoError(t, err)
+
+		require.DeepEqual(t, slashing1, ss[0])
+		require.DeepEqual(t, slashing2, ss[1])
+	})
 }
 
 func TestGetProposerSlashings(t *testing.T) {
