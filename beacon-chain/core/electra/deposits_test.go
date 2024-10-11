@@ -446,7 +446,7 @@ func TestApplyDeposit_TopUps_WithBadSignature(t *testing.T) {
 	vals[0].PublicKey = sk.PublicKey().Marshal()
 	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	require.NoError(t, st.SetValidators(vals))
-	adSt, err := electra.ApplyDeposit(st, depositData, true)
+	adSt, err := electra.ApplyDeposit(st, depositData, false)
 	require.NoError(t, err)
 	pbd, err := adSt.PendingDeposits()
 	require.NoError(t, err)
