@@ -322,7 +322,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := electra.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := electra.ProcessDeposit(beaconState, dep[0], false)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {
@@ -359,7 +359,7 @@ func TestApplyDeposit_TopUps_WithBadSignature(t *testing.T) {
 	vals[0].PublicKey = sk.PublicKey().Marshal()
 	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	require.NoError(t, st.SetValidators(vals))
-	adSt, err := electra.ApplyDeposit(st, depositData, true)
+	adSt, err := electra.ApplyDeposit(st, depositData, false)
 	require.NoError(t, err)
 	pbd, err := adSt.PendingBalanceDeposits()
 	require.NoError(t, err)
@@ -390,7 +390,7 @@ func TestApplyDeposit_Electra_SwitchToCompoundingValidator(t *testing.T) {
 	require.NoError(t, err)
 	sig := sk.Sign(sr[:])
 	depositData.Signature = sig.Marshal()
-	adSt, err := electra.ApplyDeposit(st, depositData, false)
+	adSt, err := electra.ApplyDeposit(st, depositData, true)
 	require.NoError(t, err)
 	pbd, err := adSt.PendingBalanceDeposits()
 	require.NoError(t, err)
