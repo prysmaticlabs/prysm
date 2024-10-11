@@ -272,7 +272,7 @@ func getPayloadMethodAndMessage(slot primitives.Slot) (string, proto.Message) {
 	pe := slots.ToEpoch(slot)
 	switch {
 	case pe >= params.BeaconConfig().ElectraForkEpoch:
-		return GetPayloadMethodV4, &pb.ExecutionEnvelopeElectra{}
+		return GetPayloadMethodV4, &pb.ExecutionBundleElectra{}
 	case pe == params.BeaconConfig().DenebForkEpoch:
 		return GetPayloadMethodV3, &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
 	case pe == params.BeaconConfig().CapellaForkEpoch:
