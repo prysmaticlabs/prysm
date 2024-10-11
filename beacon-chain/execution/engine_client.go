@@ -114,7 +114,7 @@ type PayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash, executionRequestsHash *common.Hash) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash, executionRequests *pb.ExecutionRequests) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
@@ -126,7 +126,7 @@ type EngineCaller interface {
 var ErrEmptyBlockHash = errors.New("Block hash is empty 0x0000...")
 
 // NewPayload request calls the engine_newPayloadVX method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash, executionRequestsHash *common.Hash) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash, executionRequests *pb.ExecutionRequests) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -163,13 +163,17 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if !ok {
 			return nil, errors.New("execution data must be a Deneb execution payload")
 		}
-		if executionRequestsHash == nil {
+		if executionRequests == nil {
 			err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV3, payloadPb, versionedHashes, parentBlockRoot)
 			if err != nil {
 				return nil, handleRPCError(err)
 			}
 		} else {
-			err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV4, payloadPb, versionedHashes, parentBlockRoot, executionRequestsHash)
+			flattenedRequests, err := pb.EncodeExecutionRequests(executionRequests)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to encode execution requests")
+			}
+			err = s.rpcClient.CallContext(ctx, result, NewPayloadMethodV4, payloadPb, versionedHashes, parentBlockRoot, flattenedRequests)
 			if err != nil {
 				return nil, handleRPCError(err)
 			}

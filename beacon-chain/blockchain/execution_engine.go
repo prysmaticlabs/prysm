@@ -224,9 +224,11 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
 		}
 		pr := common.Hash(blk.Block().ParentRoot())
-		// TODO: get encoded hash for execution requests
-		executionRequestsHash := &common.Hash{}
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr, executionRequestsHash)
+		requests, err := blk.Block().Body().ExecutionRequests()
+		if err != nil {
+			return false, errors.Wrap(err, "could not get execution requests")
+		}
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr, requests)
 	case blk.Version() >= version.Deneb:
 		var versionedHashes []common.Hash
 		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
