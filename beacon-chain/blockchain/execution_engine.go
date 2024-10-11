@@ -224,7 +224,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
 		}
 		pr := common.Hash(blk.Block().ParentRoot())
-		requests, err := blk.Block().Body().ExecutionRequests()
+		var requests *enginev1.ExecutionRequests
+		requests, err = blk.Block().Body().ExecutionRequests()
 		if err != nil {
 			return false, errors.Wrap(err, "could not get execution requests")
 		}
