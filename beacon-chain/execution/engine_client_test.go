@@ -163,7 +163,7 @@ func TestClient_HTTP(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
 	cfg.CapellaForkEpoch = 1
 	cfg.DenebForkEpoch = 2
-	cfg.ElectraForkEpoch = 2
+	cfg.ElectraForkEpoch = 3
 	params.OverrideBeaconConfig(cfg)
 
 	t.Run(GetPayloadMethod, func(t *testing.T) {
@@ -320,6 +320,10 @@ func TestClient_HTTP(t *testing.T) {
 		blobs := [][]byte{bytesutil.PadTo([]byte("a"), fieldparams.BlobLength), bytesutil.PadTo([]byte("b"), fieldparams.BlobLength)}
 		require.DeepEqual(t, blobs, resp.BlobsBundle.Blobs)
 	})
+	t.Run(GetPayloadMethodV4, func(t *testing.T) {
+		// TODO: add electra test
+	})
+
 	t.Run(ForkchoiceUpdatedMethod+" VALID status", func(t *testing.T) {
 		forkChoiceState := &pb.ForkchoiceState{
 			HeadBlockHash:      []byte("head"),
@@ -501,6 +505,9 @@ func TestClient_HTTP(t *testing.T) {
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'}, nil)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
+	})
+	t.Run(NewPayloadMethodV4+" VALID status", func(t *testing.T) {
+		// TODO: add electra test
 	})
 	t.Run(NewPayloadMethod+" SYNCING status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
