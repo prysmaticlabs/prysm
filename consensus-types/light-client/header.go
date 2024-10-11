@@ -191,8 +191,6 @@ func (h *headerDeneb) ExecutionBranch() (interfaces.LightClientExecutionBranch, 
 	return h.executionBranch, nil
 }
 
-type headerElectra = headerDeneb
-
 func NewWrappedHeaderElectra(p *pb.LightClientHeaderDeneb) (interfaces.LightClientHeader, error) {
 	if p == nil {
 		return nil, consensustypes.ErrNilObjectWrapped
