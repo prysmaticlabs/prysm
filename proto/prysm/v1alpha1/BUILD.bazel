@@ -159,6 +159,8 @@ ssz_electra_objs = [
     "BlindedBeaconBlockElectra",
     "Consolidation",
     "IndexedAttestationElectra",
+    "LightClientBootstrapElectra",
+    "LightClientUpdateElectra",
     "PendingBalanceDeposit",
     "PendingBalanceDeposits",
     "PendingConsolidation",
