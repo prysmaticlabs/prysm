@@ -18,7 +18,7 @@ var (
 	crSize    = crExample.SizeSSZ()
 )
 
-func (eee *ExecutionEnvelopeElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
+func (eee *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
 	requests := &ExecutionRequests{}
 
 	if len(eee.ExecutionRequests) != 3 /* types of requests */ {

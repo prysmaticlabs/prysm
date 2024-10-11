@@ -66,8 +66,8 @@ message ExecutionRequests {
 	repeated ConsolidationRequest consolidations = 3 [(ethereum.eth.ext.ssz_max) = "max_consolidation_requests_per_payload.size"];
 }
 
-// ExecutionEnvelopeElectra is a container that builds on Payload V4 and includes execution requests sidecar needed post Electra
-message ExecutionEnvelopeElectra {
+// ExecutionBundleElectra is a container that builds on Payload V4 and includes execution requests sidecar needed post Electra
+message ExecutionBundleElectra {
 	ExecutionPayloadDeneb payload = 1;
 	bytes value = 2;
 	BlobsBundle blobs_bundle = 3;
