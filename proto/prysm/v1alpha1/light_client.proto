@@ -61,6 +61,12 @@ message LightClientBootstrapDeneb {
   repeated bytes current_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "5,32"];
 }
 
+message LightClientBootstrapElectra {
+  LightClientHeaderDeneb header = 1;
+  SyncCommittee current_sync_committee = 2;
+  repeated bytes current_sync_committee_branch = 3 [(ethereum.eth.ext.ssz_size) = "6,32"];
+}
+
 message LightClientUpdateAltair {
   LightClientHeaderAltair attested_header = 1;
   SyncCommittee next_sync_committee = 2;

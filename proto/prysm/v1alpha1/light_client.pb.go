@@ -7,14 +7,13 @@
 package eth
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	github_com_prysmaticlabs_prysm_v5_consensus_types_primitives "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	_ "github.com/prysmaticlabs/prysm/v5/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -386,6 +385,69 @@ func (x *LightClientBootstrapDeneb) GetCurrentSyncCommitteeBranch() [][]byte {
 	return nil
 }
 
+type LightClientBootstrapElectra struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Header                     *LightClientHeaderDeneb `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	CurrentSyncCommittee       *SyncCommittee          `protobuf:"bytes,2,opt,name=current_sync_committee,json=currentSyncCommittee,proto3" json:"current_sync_committee,omitempty"`
+	CurrentSyncCommitteeBranch [][]byte                `protobuf:"bytes,3,rep,name=current_sync_committee_branch,json=currentSyncCommitteeBranch,proto3" json:"current_sync_committee_branch,omitempty" ssz-size:"6,32"`
+}
+
+func (x *LightClientBootstrapElectra) Reset() {
+	*x = LightClientBootstrapElectra{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *LightClientBootstrapElectra) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LightClientBootstrapElectra) ProtoMessage() {}
+
+func (x *LightClientBootstrapElectra) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LightClientBootstrapElectra.ProtoReflect.Descriptor instead.
+func (*LightClientBootstrapElectra) Descriptor() ([]byte, []int) {
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *LightClientBootstrapElectra) GetHeader() *LightClientHeaderDeneb {
+	if x != nil {
+		return x.Header
+	}
+	return nil
+}
+
+func (x *LightClientBootstrapElectra) GetCurrentSyncCommittee() *SyncCommittee {
+	if x != nil {
+		return x.CurrentSyncCommittee
+	}
+	return nil
+}
+
+func (x *LightClientBootstrapElectra) GetCurrentSyncCommitteeBranch() [][]byte {
+	if x != nil {
+		return x.CurrentSyncCommitteeBranch
+	}
+	return nil
+}
+
 type LightClientUpdateAltair struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -403,7 +465,7 @@ type LightClientUpdateAltair struct {
 func (x *LightClientUpdateAltair) Reset() {
 	*x = LightClientUpdateAltair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[6]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -416,7 +478,7 @@ func (x *LightClientUpdateAltair) String() string {
 func (*LightClientUpdateAltair) ProtoMessage() {}
 
 func (x *LightClientUpdateAltair) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[6]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +491,7 @@ func (x *LightClientUpdateAltair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientUpdateAltair.ProtoReflect.Descriptor instead.
 func (*LightClientUpdateAltair) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{6}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *LightClientUpdateAltair) GetAttestedHeader() *LightClientHeaderAltair {
@@ -498,7 +560,7 @@ type LightClientUpdateCapella struct {
 func (x *LightClientUpdateCapella) Reset() {
 	*x = LightClientUpdateCapella{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[7]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -511,7 +573,7 @@ func (x *LightClientUpdateCapella) String() string {
 func (*LightClientUpdateCapella) ProtoMessage() {}
 
 func (x *LightClientUpdateCapella) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[7]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +586,7 @@ func (x *LightClientUpdateCapella) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientUpdateCapella.ProtoReflect.Descriptor instead.
 func (*LightClientUpdateCapella) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{7}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *LightClientUpdateCapella) GetAttestedHeader() *LightClientHeaderCapella {
@@ -593,7 +655,7 @@ type LightClientUpdateDeneb struct {
 func (x *LightClientUpdateDeneb) Reset() {
 	*x = LightClientUpdateDeneb{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[8]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -606,7 +668,7 @@ func (x *LightClientUpdateDeneb) String() string {
 func (*LightClientUpdateDeneb) ProtoMessage() {}
 
 func (x *LightClientUpdateDeneb) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[8]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -619,7 +681,7 @@ func (x *LightClientUpdateDeneb) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientUpdateDeneb.ProtoReflect.Descriptor instead.
 func (*LightClientUpdateDeneb) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{8}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *LightClientUpdateDeneb) GetAttestedHeader() *LightClientHeaderDeneb {
@@ -686,7 +748,7 @@ type LightClientFinalityUpdateAltair struct {
 func (x *LightClientFinalityUpdateAltair) Reset() {
 	*x = LightClientFinalityUpdateAltair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[9]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -699,7 +761,7 @@ func (x *LightClientFinalityUpdateAltair) String() string {
 func (*LightClientFinalityUpdateAltair) ProtoMessage() {}
 
 func (x *LightClientFinalityUpdateAltair) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[9]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -712,7 +774,7 @@ func (x *LightClientFinalityUpdateAltair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientFinalityUpdateAltair.ProtoReflect.Descriptor instead.
 func (*LightClientFinalityUpdateAltair) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{9}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LightClientFinalityUpdateAltair) GetAttestedHeader() *LightClientHeaderAltair {
@@ -765,7 +827,7 @@ type LightClientFinalityUpdateCapella struct {
 func (x *LightClientFinalityUpdateCapella) Reset() {
 	*x = LightClientFinalityUpdateCapella{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[10]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -778,7 +840,7 @@ func (x *LightClientFinalityUpdateCapella) String() string {
 func (*LightClientFinalityUpdateCapella) ProtoMessage() {}
 
 func (x *LightClientFinalityUpdateCapella) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[10]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -791,7 +853,7 @@ func (x *LightClientFinalityUpdateCapella) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientFinalityUpdateCapella.ProtoReflect.Descriptor instead.
 func (*LightClientFinalityUpdateCapella) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{10}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *LightClientFinalityUpdateCapella) GetAttestedHeader() *LightClientHeaderCapella {
@@ -844,7 +906,7 @@ type LightClientFinalityUpdateDeneb struct {
 func (x *LightClientFinalityUpdateDeneb) Reset() {
 	*x = LightClientFinalityUpdateDeneb{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[11]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -857,7 +919,7 @@ func (x *LightClientFinalityUpdateDeneb) String() string {
 func (*LightClientFinalityUpdateDeneb) ProtoMessage() {}
 
 func (x *LightClientFinalityUpdateDeneb) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[11]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -870,7 +932,7 @@ func (x *LightClientFinalityUpdateDeneb) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientFinalityUpdateDeneb.ProtoReflect.Descriptor instead.
 func (*LightClientFinalityUpdateDeneb) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{11}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *LightClientFinalityUpdateDeneb) GetAttestedHeader() *LightClientHeaderDeneb {
@@ -921,7 +983,7 @@ type LightClientOptimisticUpdateAltair struct {
 func (x *LightClientOptimisticUpdateAltair) Reset() {
 	*x = LightClientOptimisticUpdateAltair{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[12]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -934,7 +996,7 @@ func (x *LightClientOptimisticUpdateAltair) String() string {
 func (*LightClientOptimisticUpdateAltair) ProtoMessage() {}
 
 func (x *LightClientOptimisticUpdateAltair) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[12]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -947,7 +1009,7 @@ func (x *LightClientOptimisticUpdateAltair) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use LightClientOptimisticUpdateAltair.ProtoReflect.Descriptor instead.
 func (*LightClientOptimisticUpdateAltair) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{12}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *LightClientOptimisticUpdateAltair) GetAttestedHeader() *LightClientHeaderAltair {
@@ -984,7 +1046,7 @@ type LightClientOptimisticUpdateCapella struct {
 func (x *LightClientOptimisticUpdateCapella) Reset() {
 	*x = LightClientOptimisticUpdateCapella{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[13]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -997,7 +1059,7 @@ func (x *LightClientOptimisticUpdateCapella) String() string {
 func (*LightClientOptimisticUpdateCapella) ProtoMessage() {}
 
 func (x *LightClientOptimisticUpdateCapella) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[13]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1010,7 +1072,7 @@ func (x *LightClientOptimisticUpdateCapella) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use LightClientOptimisticUpdateCapella.ProtoReflect.Descriptor instead.
 func (*LightClientOptimisticUpdateCapella) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{13}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *LightClientOptimisticUpdateCapella) GetAttestedHeader() *LightClientHeaderCapella {
@@ -1047,7 +1109,7 @@ type LightClientOptimisticUpdateDeneb struct {
 func (x *LightClientOptimisticUpdateDeneb) Reset() {
 	*x = LightClientOptimisticUpdateDeneb{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[14]
+		mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1060,7 +1122,7 @@ func (x *LightClientOptimisticUpdateDeneb) String() string {
 func (*LightClientOptimisticUpdateDeneb) ProtoMessage() {}
 
 func (x *LightClientOptimisticUpdateDeneb) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[14]
+	mi := &file_proto_prysm_v1alpha1_light_client_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1073,7 +1135,7 @@ func (x *LightClientOptimisticUpdateDeneb) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LightClientOptimisticUpdateDeneb.ProtoReflect.Descriptor instead.
 func (*LightClientOptimisticUpdateDeneb) Descriptor() ([]byte, []int) {
-	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{14}
+	return file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *LightClientOptimisticUpdateDeneb) GetAttestedHeader() *LightClientHeaderDeneb {
@@ -1197,6 +1259,23 @@ var file_proto_prysm_v1alpha1_light_client_proto_rawDesc = []byte{
 	0x1d, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x63, 0x6f,
 	0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x18, 0x03,
 	0x20, 0x03, 0x28, 0x0c, 0x42, 0x08, 0x8a, 0xb5, 0x18, 0x04, 0x35, 0x2c, 0x33, 0x32, 0x52, 0x1a,
+	0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69,
+	0x74, 0x74, 0x65, 0x65, 0x42, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x22, 0x8d, 0x02, 0x0a, 0x1b, 0x4c,
+	0x69, 0x67, 0x68, 0x74, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x6f, 0x6f, 0x74, 0x73, 0x74,
+	0x72, 0x61, 0x70, 0x45, 0x6c, 0x65, 0x63, 0x74, 0x72, 0x61, 0x12, 0x45, 0x0a, 0x06, 0x68, 0x65,
+	0x61, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x65, 0x74, 0x68,
+	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x4c, 0x69, 0x67, 0x68, 0x74, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x48, 0x65,
+	0x61, 0x64, 0x65, 0x72, 0x44, 0x65, 0x6e, 0x65, 0x62, 0x52, 0x06, 0x68, 0x65, 0x61, 0x64, 0x65,
+	0x72, 0x12, 0x5a, 0x0a, 0x16, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x73, 0x79, 0x6e,
+	0x63, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f,
+	0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x52, 0x14, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74,
+	0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x12, 0x4b, 0x0a,
+	0x1d, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x63, 0x6f,
+	0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x18, 0x03,
+	0x20, 0x03, 0x28, 0x0c, 0x42, 0x08, 0x8a, 0xb5, 0x18, 0x04, 0x36, 0x2c, 0x33, 0x32, 0x52, 0x1a,
 	0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69,
 	0x74, 0x74, 0x65, 0x65, 0x42, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x22, 0xd8, 0x04, 0x0a, 0x17, 0x4c,
 	0x69, 0x67, 0x68, 0x74, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
@@ -1480,7 +1559,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_rawDescGZIP() []byte {
 	return file_proto_prysm_v1alpha1_light_client_proto_rawDescData
 }
 
-var file_proto_prysm_v1alpha1_light_client_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_proto_prysm_v1alpha1_light_client_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_prysm_v1alpha1_light_client_proto_goTypes = []interface{}{
 	(*LightClientHeaderAltair)(nil),            // 0: ethereum.eth.v1alpha1.LightClientHeaderAltair
 	(*LightClientHeaderCapella)(nil),           // 1: ethereum.eth.v1alpha1.LightClientHeaderCapella
@@ -1488,65 +1567,68 @@ var file_proto_prysm_v1alpha1_light_client_proto_goTypes = []interface{}{
 	(*LightClientBootstrapAltair)(nil),         // 3: ethereum.eth.v1alpha1.LightClientBootstrapAltair
 	(*LightClientBootstrapCapella)(nil),        // 4: ethereum.eth.v1alpha1.LightClientBootstrapCapella
 	(*LightClientBootstrapDeneb)(nil),          // 5: ethereum.eth.v1alpha1.LightClientBootstrapDeneb
-	(*LightClientUpdateAltair)(nil),            // 6: ethereum.eth.v1alpha1.LightClientUpdateAltair
-	(*LightClientUpdateCapella)(nil),           // 7: ethereum.eth.v1alpha1.LightClientUpdateCapella
-	(*LightClientUpdateDeneb)(nil),             // 8: ethereum.eth.v1alpha1.LightClientUpdateDeneb
-	(*LightClientFinalityUpdateAltair)(nil),    // 9: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair
-	(*LightClientFinalityUpdateCapella)(nil),   // 10: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella
-	(*LightClientFinalityUpdateDeneb)(nil),     // 11: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb
-	(*LightClientOptimisticUpdateAltair)(nil),  // 12: ethereum.eth.v1alpha1.LightClientOptimisticUpdateAltair
-	(*LightClientOptimisticUpdateCapella)(nil), // 13: ethereum.eth.v1alpha1.LightClientOptimisticUpdateCapella
-	(*LightClientOptimisticUpdateDeneb)(nil),   // 14: ethereum.eth.v1alpha1.LightClientOptimisticUpdateDeneb
-	(*BeaconBlockHeader)(nil),                  // 15: ethereum.eth.v1alpha1.BeaconBlockHeader
-	(*v1.ExecutionPayloadHeaderCapella)(nil),   // 16: ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	(*v1.ExecutionPayloadHeaderDeneb)(nil),     // 17: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
-	(*SyncCommittee)(nil),                      // 18: ethereum.eth.v1alpha1.SyncCommittee
-	(*SyncAggregate)(nil),                      // 19: ethereum.eth.v1alpha1.SyncAggregate
+	(*LightClientBootstrapElectra)(nil),        // 6: ethereum.eth.v1alpha1.LightClientBootstrapElectra
+	(*LightClientUpdateAltair)(nil),            // 7: ethereum.eth.v1alpha1.LightClientUpdateAltair
+	(*LightClientUpdateCapella)(nil),           // 8: ethereum.eth.v1alpha1.LightClientUpdateCapella
+	(*LightClientUpdateDeneb)(nil),             // 9: ethereum.eth.v1alpha1.LightClientUpdateDeneb
+	(*LightClientFinalityUpdateAltair)(nil),    // 10: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair
+	(*LightClientFinalityUpdateCapella)(nil),   // 11: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella
+	(*LightClientFinalityUpdateDeneb)(nil),     // 12: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb
+	(*LightClientOptimisticUpdateAltair)(nil),  // 13: ethereum.eth.v1alpha1.LightClientOptimisticUpdateAltair
+	(*LightClientOptimisticUpdateCapella)(nil), // 14: ethereum.eth.v1alpha1.LightClientOptimisticUpdateCapella
+	(*LightClientOptimisticUpdateDeneb)(nil),   // 15: ethereum.eth.v1alpha1.LightClientOptimisticUpdateDeneb
+	(*BeaconBlockHeader)(nil),                  // 16: ethereum.eth.v1alpha1.BeaconBlockHeader
+	(*v1.ExecutionPayloadHeaderCapella)(nil),   // 17: ethereum.engine.v1.ExecutionPayloadHeaderCapella
+	(*v1.ExecutionPayloadHeaderDeneb)(nil),     // 18: ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	(*SyncCommittee)(nil),                      // 19: ethereum.eth.v1alpha1.SyncCommittee
+	(*SyncAggregate)(nil),                      // 20: ethereum.eth.v1alpha1.SyncAggregate
 }
 var file_proto_prysm_v1alpha1_light_client_proto_depIdxs = []int32{
-	15, // 0: ethereum.eth.v1alpha1.LightClientHeaderAltair.beacon:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	15, // 1: ethereum.eth.v1alpha1.LightClientHeaderCapella.beacon:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	16, // 2: ethereum.eth.v1alpha1.LightClientHeaderCapella.execution:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderCapella
-	15, // 3: ethereum.eth.v1alpha1.LightClientHeaderDeneb.beacon:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
-	17, // 4: ethereum.eth.v1alpha1.LightClientHeaderDeneb.execution:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderDeneb
+	16, // 0: ethereum.eth.v1alpha1.LightClientHeaderAltair.beacon:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	16, // 1: ethereum.eth.v1alpha1.LightClientHeaderCapella.beacon:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	17, // 2: ethereum.eth.v1alpha1.LightClientHeaderCapella.execution:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderCapella
+	16, // 3: ethereum.eth.v1alpha1.LightClientHeaderDeneb.beacon:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeader
+	18, // 4: ethereum.eth.v1alpha1.LightClientHeaderDeneb.execution:type_name -> ethereum.engine.v1.ExecutionPayloadHeaderDeneb
 	0,  // 5: ethereum.eth.v1alpha1.LightClientBootstrapAltair.header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
-	18, // 6: ethereum.eth.v1alpha1.LightClientBootstrapAltair.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	19, // 6: ethereum.eth.v1alpha1.LightClientBootstrapAltair.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	1,  // 7: ethereum.eth.v1alpha1.LightClientBootstrapCapella.header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
-	18, // 8: ethereum.eth.v1alpha1.LightClientBootstrapCapella.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	19, // 8: ethereum.eth.v1alpha1.LightClientBootstrapCapella.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
 	2,  // 9: ethereum.eth.v1alpha1.LightClientBootstrapDeneb.header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
-	18, // 10: ethereum.eth.v1alpha1.LightClientBootstrapDeneb.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	0,  // 11: ethereum.eth.v1alpha1.LightClientUpdateAltair.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
-	18, // 12: ethereum.eth.v1alpha1.LightClientUpdateAltair.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	0,  // 13: ethereum.eth.v1alpha1.LightClientUpdateAltair.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
-	19, // 14: ethereum.eth.v1alpha1.LightClientUpdateAltair.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	1,  // 15: ethereum.eth.v1alpha1.LightClientUpdateCapella.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
-	18, // 16: ethereum.eth.v1alpha1.LightClientUpdateCapella.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	1,  // 17: ethereum.eth.v1alpha1.LightClientUpdateCapella.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
-	19, // 18: ethereum.eth.v1alpha1.LightClientUpdateCapella.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	2,  // 19: ethereum.eth.v1alpha1.LightClientUpdateDeneb.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
-	18, // 20: ethereum.eth.v1alpha1.LightClientUpdateDeneb.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
-	2,  // 21: ethereum.eth.v1alpha1.LightClientUpdateDeneb.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
-	19, // 22: ethereum.eth.v1alpha1.LightClientUpdateDeneb.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	0,  // 23: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
-	0,  // 24: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
-	19, // 25: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	1,  // 26: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
-	1,  // 27: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
-	19, // 28: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	2,  // 29: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
-	2,  // 30: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
-	19, // 31: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	0,  // 32: ethereum.eth.v1alpha1.LightClientOptimisticUpdateAltair.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
-	19, // 33: ethereum.eth.v1alpha1.LightClientOptimisticUpdateAltair.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	1,  // 34: ethereum.eth.v1alpha1.LightClientOptimisticUpdateCapella.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
-	19, // 35: ethereum.eth.v1alpha1.LightClientOptimisticUpdateCapella.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	2,  // 36: ethereum.eth.v1alpha1.LightClientOptimisticUpdateDeneb.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
-	19, // 37: ethereum.eth.v1alpha1.LightClientOptimisticUpdateDeneb.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	19, // 10: ethereum.eth.v1alpha1.LightClientBootstrapDeneb.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	2,  // 11: ethereum.eth.v1alpha1.LightClientBootstrapElectra.header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
+	19, // 12: ethereum.eth.v1alpha1.LightClientBootstrapElectra.current_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	0,  // 13: ethereum.eth.v1alpha1.LightClientUpdateAltair.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
+	19, // 14: ethereum.eth.v1alpha1.LightClientUpdateAltair.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	0,  // 15: ethereum.eth.v1alpha1.LightClientUpdateAltair.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
+	20, // 16: ethereum.eth.v1alpha1.LightClientUpdateAltair.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	1,  // 17: ethereum.eth.v1alpha1.LightClientUpdateCapella.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
+	19, // 18: ethereum.eth.v1alpha1.LightClientUpdateCapella.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	1,  // 19: ethereum.eth.v1alpha1.LightClientUpdateCapella.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
+	20, // 20: ethereum.eth.v1alpha1.LightClientUpdateCapella.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	2,  // 21: ethereum.eth.v1alpha1.LightClientUpdateDeneb.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
+	19, // 22: ethereum.eth.v1alpha1.LightClientUpdateDeneb.next_sync_committee:type_name -> ethereum.eth.v1alpha1.SyncCommittee
+	2,  // 23: ethereum.eth.v1alpha1.LightClientUpdateDeneb.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
+	20, // 24: ethereum.eth.v1alpha1.LightClientUpdateDeneb.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	0,  // 25: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
+	0,  // 26: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
+	20, // 27: ethereum.eth.v1alpha1.LightClientFinalityUpdateAltair.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	1,  // 28: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
+	1,  // 29: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
+	20, // 30: ethereum.eth.v1alpha1.LightClientFinalityUpdateCapella.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	2,  // 31: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
+	2,  // 32: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb.finalized_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
+	20, // 33: ethereum.eth.v1alpha1.LightClientFinalityUpdateDeneb.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	0,  // 34: ethereum.eth.v1alpha1.LightClientOptimisticUpdateAltair.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderAltair
+	20, // 35: ethereum.eth.v1alpha1.LightClientOptimisticUpdateAltair.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	1,  // 36: ethereum.eth.v1alpha1.LightClientOptimisticUpdateCapella.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderCapella
+	20, // 37: ethereum.eth.v1alpha1.LightClientOptimisticUpdateCapella.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	2,  // 38: ethereum.eth.v1alpha1.LightClientOptimisticUpdateDeneb.attested_header:type_name -> ethereum.eth.v1alpha1.LightClientHeaderDeneb
+	20, // 39: ethereum.eth.v1alpha1.LightClientOptimisticUpdateDeneb.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	40, // [40:40] is the sub-list for method output_type
+	40, // [40:40] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_proto_prysm_v1alpha1_light_client_proto_init() }
@@ -1630,7 +1712,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientUpdateAltair); i {
+			switch v := v.(*LightClientBootstrapElectra); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1642,7 +1724,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientUpdateCapella); i {
+			switch v := v.(*LightClientUpdateAltair); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1654,7 +1736,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientUpdateDeneb); i {
+			switch v := v.(*LightClientUpdateCapella); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1666,7 +1748,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientFinalityUpdateAltair); i {
+			switch v := v.(*LightClientUpdateDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1678,7 +1760,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientFinalityUpdateCapella); i {
+			switch v := v.(*LightClientFinalityUpdateAltair); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1690,7 +1772,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientFinalityUpdateDeneb); i {
+			switch v := v.(*LightClientFinalityUpdateCapella); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1702,7 +1784,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientOptimisticUpdateAltair); i {
+			switch v := v.(*LightClientFinalityUpdateDeneb); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1714,7 +1796,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LightClientOptimisticUpdateCapella); i {
+			switch v := v.(*LightClientOptimisticUpdateAltair); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1726,6 +1808,18 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			}
 		}
 		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*LightClientOptimisticUpdateCapella); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_prysm_v1alpha1_light_client_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*LightClientOptimisticUpdateDeneb); i {
 			case 0:
 				return &v.state
@@ -1744,7 +1838,7 @@ func file_proto_prysm_v1alpha1_light_client_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_prysm_v1alpha1_light_client_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
