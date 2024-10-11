@@ -38,7 +38,7 @@ func ProcessDeposits(
 	defer span.End()
 	// Attempt to verify all deposit signatures at once, if this fails then fall back to processing
 	// individual deposits with signature verification enabled.
-	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
+	allSignaturesVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify deposit signatures in batch")
 	}
@@ -47,7 +47,7 @@ func ProcessDeposits(
 		if d == nil || d.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, err = ProcessDeposit(beaconState, d, batchVerified)
+		beaconState, err = ProcessDeposit(beaconState, d, allSignaturesVerified)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(d.Data.PublicKey))
 		}
@@ -82,7 +82,7 @@ func ProcessDeposits(
 //	  amount=deposit.data.amount,
 //	  signature=deposit.data.signature,
 //	 )
-func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, error) {
+func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, allSignaturesVerified bool) (state.BeaconState, error) {
 	if err := blocks.VerifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err
@@ -92,7 +92,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
 		return nil, err
 	}
-	return ApplyDeposit(beaconState, deposit.Data, verifySignature)
+	return ApplyDeposit(beaconState, deposit.Data, allSignaturesVerified)
 }
 
 // ApplyDeposit
@@ -116,13 +116,13 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, verif
 //	 and is_valid_deposit_signature(pubkey, withdrawal_credentials, amount, signature)
 //	):
 //	 switch_to_compounding_validator(state, index)
-func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verifySignature bool) (state.BeaconState, error) {
+func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, allSignaturesVerified bool) (state.BeaconState, error) {
 	pubKey := data.PublicKey
 	amount := data.Amount
 	withdrawalCredentials := data.WithdrawalCredentials
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
-		if verifySignature {
+		if !allSignaturesVerified {
 			valid, err := IsValidDepositSignature(data)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not verify deposit signature")
@@ -144,7 +144,7 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, verif
 			return nil, err
 		}
 		if helpers.IsCompoundingWithdrawalCredential(withdrawalCredentials) && helpers.HasETH1WithdrawalCredential(val) {
-			if verifySignature {
+			if !allSignaturesVerified {
 				valid, err := IsValidDepositSignature(data)
 				if err != nil {
 					return nil, errors.Wrap(err, "could not verify deposit signature")
@@ -325,12 +325,12 @@ func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, 
 			},
 		})
 	}
-	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
+	allSignaturesVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not verify deposit signatures in batch")
 	}
 	for _, receipt := range requests {
-		beaconState, err = processDepositRequest(beaconState, receipt, batchVerified)
+		beaconState, err = processDepositRequest(beaconState, receipt, allSignaturesVerified)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not apply deposit request")
 		}
@@ -352,7 +352,7 @@ func ProcessDepositRequests(ctx context.Context, beaconState state.BeaconState, 
 //	    amount=deposit_request.amount,
 //	    signature=deposit_request.signature,
 //	)
-func processDepositRequest(beaconState state.BeaconState, request *enginev1.DepositRequest, verifySignature bool) (state.BeaconState, error) {
+func processDepositRequest(beaconState state.BeaconState, request *enginev1.DepositRequest, allSignaturesVerified bool) (state.BeaconState, error) {
 	requestsStartIndex, err := beaconState.DepositRequestsStartIndex()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get deposit requests start index")
@@ -367,5 +367,5 @@ func processDepositRequest(beaconState state.BeaconState, request *enginev1.Depo
 		Amount:                request.Amount,
 		WithdrawalCredentials: bytesutil.SafeCopyBytes(request.WithdrawalCredentials),
 		Signature:             bytesutil.SafeCopyBytes(request.Signature),
-	}, verifySignature)
+	}, allSignaturesVerified)
 }

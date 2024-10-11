@@ -56,6 +56,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated Sepolia bootnodes.
 - Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
+- reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
 - Updated Execution API to support Electra. [pr](https://github.com/prysmaticlabs/prysm/pull/14492)
 
 ### Deprecated
