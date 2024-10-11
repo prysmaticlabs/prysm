@@ -9,6 +9,7 @@ import (
 
 type LightClientExecutionBranch = [fieldparams.ExecutionBranchDepth][fieldparams.RootLength]byte
 type LightClientSyncCommitteeBranch = [fieldparams.SyncCommitteeBranchDepth][fieldparams.RootLength]byte
+type LightClientSyncCommitteeBranchElectra = [fieldparams.SyncCommitteeBranchDepthElectra][fieldparams.RootLength]byte
 type LightClientFinalityBranch = [fieldparams.FinalityBranchDepth][fieldparams.RootLength]byte
 
 type LightClientHeader interface {
@@ -25,6 +26,7 @@ type LightClientBootstrap interface {
 	Header() LightClientHeader
 	CurrentSyncCommittee() *pb.SyncCommittee
 	CurrentSyncCommitteeBranch() LightClientSyncCommitteeBranch
+	CurrentSyncCommitteeBranchElectra() LightClientSyncCommitteeBranchElectra
 }
 
 type LightClientUpdate interface {

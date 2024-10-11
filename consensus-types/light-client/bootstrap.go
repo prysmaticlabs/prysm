@@ -22,6 +22,8 @@ func NewWrappedBootstrap(m proto.Message) (interfaces.LightClientBootstrap, erro
 		return NewWrappedBootstrapCapella(t)
 	case *pb.LightClientBootstrapDeneb:
 		return NewWrappedBootstrapDeneb(t)
+	case *pb.LightClientBootstrapElectra:
+		return NewWrappedBootstrapElectra(t)
 	default:
 		return nil, fmt.Errorf("cannot construct light client bootstrap from type %T", t)
 	}
@@ -87,6 +89,10 @@ func (h *bootstrapAltair) CurrentSyncCommitteeBranch() interfaces.LightClientSyn
 	return h.currentSyncCommitteeBranch
 }
 
+func (h *bootstrapAltair) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
+	return [6][32]byte{}
+}
+
 type bootstrapCapella struct {
 	p                          *pb.LightClientBootstrapCapella
 	header                     interfaces.LightClientHeader
@@ -147,6 +153,10 @@ func (h *bootstrapCapella) CurrentSyncCommitteeBranch() interfaces.LightClientSy
 	return h.currentSyncCommitteeBranch
 }
 
+func (h *bootstrapCapella) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
+	return [6][32]byte{}
+}
+
 type bootstrapDeneb struct {
 	p                          *pb.LightClientBootstrapDeneb
 	header                     interfaces.LightClientHeader
@@ -204,5 +214,73 @@ func (h *bootstrapDeneb) CurrentSyncCommittee() *pb.SyncCommittee {
 }
 
 func (h *bootstrapDeneb) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
+	return h.currentSyncCommitteeBranch
+}
+
+func (h *bootstrapDeneb) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
+	return [6][32]byte{}
+}
+
+type bootstrapElectra struct {
+	p                          *pb.LightClientBootstrapElectra
+	header                     interfaces.LightClientHeader
+	currentSyncCommitteeBranch interfaces.LightClientSyncCommitteeBranchElectra
+}
+
+var _ interfaces.LightClientBootstrap = &bootstrapElectra{}
+
+func NewWrappedBootstrapElectra(p *pb.LightClientBootstrapElectra) (interfaces.LightClientBootstrap, error) {
+	if p == nil {
+		return nil, consensustypes.ErrNilObjectWrapped
+	}
+	header, err := NewWrappedHeaderElectra(p.Header)
+	if err != nil {
+		return nil, err
+	}
+	branch, err := createBranch[interfaces.LightClientSyncCommitteeBranchElectra](
+		"sync committee",
+		p.CurrentSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepth,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bootstrapElectra{
+		p:                          p,
+		header:                     header,
+		currentSyncCommitteeBranch: branch,
+	}, nil
+}
+
+func (h *bootstrapElectra) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return h.p.MarshalSSZTo(dst)
+}
+
+func (h *bootstrapElectra) MarshalSSZ() ([]byte, error) {
+	return h.p.MarshalSSZ()
+}
+
+func (h *bootstrapElectra) SizeSSZ() int {
+	return h.p.SizeSSZ()
+}
+
+func (h *bootstrapElectra) Version() int {
+	return version.Electra
+}
+
+func (h *bootstrapElectra) Header() interfaces.LightClientHeader {
+	return h.header
+}
+
+func (h *bootstrapElectra) CurrentSyncCommittee() *pb.SyncCommittee {
+	return h.p.CurrentSyncCommittee
+}
+
+func (h *bootstrapElectra) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
+	return [5][32]byte{}
+}
+
+func (h *bootstrapElectra) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
 	return h.currentSyncCommitteeBranch
 }
