@@ -153,6 +153,9 @@ func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signe
 	if err != nil {
 		log.WithError(err).Error("Failed to send light client finality update")
 	} else {
+		log.Debug("attestation metrics summary", s.attestationMetrics.Summary())
+		// Reset metrics for the next epoch
+		s.attestationMetrics.ReInit()
 		s.lastPublishedLightClientEpoch = finalized.Epoch
 	}
 }

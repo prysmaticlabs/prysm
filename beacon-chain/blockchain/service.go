@@ -67,6 +67,7 @@ type Service struct {
 	blockBeingSynced              *currentlySyncingBlock
 	blobStorage                   *filesystem.BlobStorage
 	lastPublishedLightClientEpoch primitives.Epoch
+	attestationMetrics            attestationMetrics
 }
 
 // config options for the service.
@@ -179,6 +180,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		blobNotifiers:        bn,
 		cfg:                  &config{},
 		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
+		attestationMetrics: attestationMetrics{
+			failureReasons: make(map[string]int),
+		},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
