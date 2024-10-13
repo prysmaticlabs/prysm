@@ -89,10 +89,6 @@ func (h *bootstrapAltair) CurrentSyncCommitteeBranch() interfaces.LightClientSyn
 	return h.currentSyncCommitteeBranch
 }
 
-func (h *bootstrapAltair) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
-	return [6][32]byte{}
-}
-
 type bootstrapCapella struct {
 	p                          *pb.LightClientBootstrapCapella
 	header                     interfaces.LightClientHeader
@@ -153,10 +149,6 @@ func (h *bootstrapCapella) CurrentSyncCommitteeBranch() interfaces.LightClientSy
 	return h.currentSyncCommitteeBranch
 }
 
-func (h *bootstrapCapella) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
-	return [6][32]byte{}
-}
-
 type bootstrapDeneb struct {
 	p                          *pb.LightClientBootstrapDeneb
 	header                     interfaces.LightClientHeader
@@ -215,10 +207,6 @@ func (h *bootstrapDeneb) CurrentSyncCommittee() *pb.SyncCommittee {
 
 func (h *bootstrapDeneb) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
 	return h.currentSyncCommitteeBranch
-}
-
-func (h *bootstrapDeneb) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
-	return [6][32]byte{}
 }
 
 type bootstrapElectra struct {
