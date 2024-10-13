@@ -297,13 +297,13 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeCapabilities")
 	defer span.End()
 
-	result := &pb.ExchangeCapabilities{}
+	var result []string
 	err := s.rpcClient.CallContext(ctx, &result, ExchangeCapabilities, supportedEngineEndpoints)
 
 	var unsupported []string
 	for _, s1 := range supportedEngineEndpoints {
 		supported := false
-		for _, s2 := range result.SupportedMethods {
+		for _, s2 := range result {
 			if s1 == s2 {
 				supported = true
 				break
@@ -316,7 +316,7 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 	if len(unsupported) != 0 {
 		log.Warnf("Please update client, detected the following unsupported engine methods: %s", unsupported)
 	}
-	return result.SupportedMethods, handleRPCError(err)
+	return result, handleRPCError(err)
 }
 
 // GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.
