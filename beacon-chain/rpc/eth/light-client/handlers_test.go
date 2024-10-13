@@ -440,12 +440,16 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	db := setupDB(t)
+
+	updatePeriod := uint64(slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch)))
+
 	update := &ethpbv2.LightClientUpdate{
 		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
 			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
 				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
 					Beacon: &ethpbv1.BeaconBlockHeader{
-						Slot:          1,
+						Slot:          slot.Sub(1),
 						ProposerIndex: 1,
 						ParentRoot:    []byte{1, 1, 1},
 						StateRoot:     []byte{1, 1, 1},
@@ -467,21 +471,32 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
 				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
 					Beacon: &ethpbv1.BeaconBlockHeader{
-						Slot:          1,
+						Slot:          12,
 						ProposerIndex: 1,
 						ParentRoot:    []byte{1, 1, 1},
 						StateRoot:     []byte{1, 1, 1},
 						BodyRoot:      []byte{1, 1, 1},
 					},
-					Execution:       nil,
-					ExecutionBranch: nil,
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
 		},
 		FinalityBranch: nil,
-		SyncAggregate:  nil,
-		SignatureSlot:  7,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: 7,
 	}
+
+	err = db.SaveLightClientUpdate(ctx, updatePeriod, &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Capella,
+		Data:    update,
+	})
+	require.NoError(t, err)
 
 	mockBlocker := &testutil.MockBlocker{
 		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
@@ -501,6 +516,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 		}},
 		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
+		BeaconDB:    db,
 	}
 	startPeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 	url := fmt.Sprintf("http://foo.com/?count=1&start_period=%d", startPeriod)
@@ -514,121 +530,178 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	var respHeader structs.LightClientHeaderCapella
-	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
-	require.NoError(t, err)
 	require.Equal(t, 1, len(resp.Updates))
+	require.NoError(t, err)
 	require.Equal(t, "capella", resp.Updates[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
-	require.NotNil(t, resp)
+	updateJson, err := structs.LightClientUpdateFromConsensus(update)
+	require.NoError(t, err)
+	require.DeepEqual(t, updateJson, resp.Updates[0].Data)
 }
 
-//func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
-//	helpers.ClearCache()
-//	ctx := context.Background()
-//	config := params.BeaconConfig()
-//	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
-//
-//	attestedState, err := util.NewBeaconStateDeneb()
-//	require.NoError(t, err)
-//	err = attestedState.SetSlot(slot.Sub(1))
-//	require.NoError(t, err)
-//
-//	parent := util.NewBeaconBlockDeneb()
-//	parent.Block.Slot = slot.Sub(1)
-//
-//	signedParent, err := blocks.NewSignedBeaconBlock(parent)
-//	require.NoError(t, err)
-//
-//	parentHeader, err := signedParent.Header()
-//	require.NoError(t, err)
-//	attestedHeader := parentHeader.Header
-//
-//	err = attestedState.SetLatestBlockHeader(attestedHeader)
-//	require.NoError(t, err)
-//	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
-//	require.NoError(t, err)
-//
-//	// get a new signed block so the root is updated with the new state root
-//	parent.Block.StateRoot = attestedStateRoot[:]
-//	signedParent, err = blocks.NewSignedBeaconBlock(parent)
-//	require.NoError(t, err)
-//
-//	st, err := util.NewBeaconStateDeneb()
-//	require.NoError(t, err)
-//	err = st.SetSlot(slot)
-//	require.NoError(t, err)
-//
-//	parentRoot, err := signedParent.Block().HashTreeRoot()
-//	require.NoError(t, err)
-//
-//	block := util.NewBeaconBlockDeneb()
-//	block.Block.Slot = slot
-//	block.Block.ParentRoot = parentRoot[:]
-//
-//	for i := uint64(0); i < config.SyncCommitteeSize; i++ {
-//		block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
-//	}
-//
-//	signedBlock, err := blocks.NewSignedBeaconBlock(block)
-//	require.NoError(t, err)
-//
-//	h, err := signedBlock.Header()
-//	require.NoError(t, err)
-//
-//	err = st.SetLatestBlockHeader(h.Header)
-//	require.NoError(t, err)
-//	stateRoot, err := st.HashTreeRoot(ctx)
-//	require.NoError(t, err)
-//
-//	// get a new signed block so the root is updated with the new state root
-//	block.Block.StateRoot = stateRoot[:]
-//	signedBlock, err = blocks.NewSignedBeaconBlock(block)
-//	require.NoError(t, err)
-//
-//	root, err := block.Block.HashTreeRoot()
-//	require.NoError(t, err)
-//
-//	mockBlocker := &testutil.MockBlocker{
-//		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
-//			parentRoot: signedParent,
-//			root:       signedBlock,
-//		},
-//		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
-//			slot.Sub(1): signedParent,
-//			slot:        signedBlock,
-//		},
-//	}
-//	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st}
-//	s := &Server{
-//		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
-//			slot.Sub(1): attestedState,
-//			slot:        st,
-//		}},
-//		Blocker:     mockBlocker,
-//		HeadFetcher: mockChainService,
-//	}
-//	startPeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-//	url := fmt.Sprintf("http://foo.com/?count=1&start_period=%d", startPeriod)
-//	request := httptest.NewRequest("GET", url, nil)
-//	writer := httptest.NewRecorder()
-//	writer.Body = &bytes.Buffer{}
-//
-//	s.GetLightClientUpdatesByRange(writer, request)
-//
-//	require.Equal(t, http.StatusOK, writer.Code)
-//	var resp structs.LightClientUpdatesByRangeResponse
-//	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
-//	require.NoError(t, err)
-//	var respHeader structs.LightClientHeaderDeneb
-//	err = json.Unmarshal(resp.Updates[0].Data.AttestedHeader, &respHeader)
-//	require.NoError(t, err)
-//	require.Equal(t, 1, len(resp.Updates))
-//	require.Equal(t, "deneb", resp.Updates[0].Version)
-//	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), respHeader.Beacon.BodyRoot)
-//	require.NotNil(t, resp)
-//}
-//
+func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
+	helpers.ClearCache()
+	ctx := context.Background()
+	config := params.BeaconConfig()
+	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
+
+	attestedState, err := util.NewBeaconStateDeneb()
+	require.NoError(t, err)
+	err = attestedState.SetSlot(slot.Sub(1))
+	require.NoError(t, err)
+
+	parent := util.NewBeaconBlockDeneb()
+	parent.Block.Slot = slot.Sub(1)
+
+	signedParent, err := blocks.NewSignedBeaconBlock(parent)
+	require.NoError(t, err)
+
+	parentHeader, err := signedParent.Header()
+	require.NoError(t, err)
+	attestedHeader := parentHeader.Header
+
+	err = attestedState.SetLatestBlockHeader(attestedHeader)
+	require.NoError(t, err)
+	attestedStateRoot, err := attestedState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+
+	// get a new signed block so the root is updated with the new state root
+	parent.Block.StateRoot = attestedStateRoot[:]
+	signedParent, err = blocks.NewSignedBeaconBlock(parent)
+	require.NoError(t, err)
+
+	st, err := util.NewBeaconStateDeneb()
+	require.NoError(t, err)
+	err = st.SetSlot(slot)
+	require.NoError(t, err)
+
+	parentRoot, err := signedParent.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	block := util.NewBeaconBlockDeneb()
+	block.Block.Slot = slot
+	block.Block.ParentRoot = parentRoot[:]
+
+	for i := uint64(0); i < config.SyncCommitteeSize; i++ {
+		block.Block.Body.SyncAggregate.SyncCommitteeBits.SetBitAt(i, true)
+	}
+
+	signedBlock, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	h, err := signedBlock.Header()
+	require.NoError(t, err)
+
+	err = st.SetLatestBlockHeader(h.Header)
+	require.NoError(t, err)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+
+	// get a new signed block so the root is updated with the new state root
+	block.Block.StateRoot = stateRoot[:]
+	signedBlock, err = blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	root, err := block.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	db := setupDB(t)
+
+	updatePeriod := uint64(slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch)))
+
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          slot.Sub(1),
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+				},
+			},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          12,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
+					},
+					Execution: &enginev1.ExecutionPayloadHeaderDeneb{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+				},
+			},
+		},
+		FinalityBranch: nil,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: 7,
+	}
+
+	err = db.SaveLightClientUpdate(ctx, updatePeriod, &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Deneb,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	mockBlocker := &testutil.MockBlocker{
+		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
+			parentRoot: signedParent,
+			root:       signedBlock,
+		},
+		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+			slot.Sub(1): signedParent,
+			slot:        signedBlock,
+		},
+	}
+	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st}
+	s := &Server{
+		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+			slot.Sub(1): attestedState,
+			slot:        st,
+		}},
+		Blocker:     mockBlocker,
+		HeadFetcher: mockChainService,
+		BeaconDB:    db,
+	}
+	startPeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
+	url := fmt.Sprintf("http://foo.com/?count=1&start_period=%d", startPeriod)
+	request := httptest.NewRequest("GET", url, nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetLightClientUpdatesByRange(writer, request)
+
+	require.Equal(t, http.StatusOK, writer.Code)
+	var resp structs.LightClientUpdatesByRangeResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(resp.Updates))
+	require.NoError(t, err)
+	require.Equal(t, "deneb", resp.Updates[0].Version)
+	updateJson, err := structs.LightClientUpdateFromConsensus(update)
+	require.NoError(t, err)
+	require.DeepEqual(t, updateJson, resp.Updates[0].Data)
+}
+
 //func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCountAltair(t *testing.T) {
 //	helpers.ClearCache()
 //	ctx := context.Background()
