@@ -318,11 +318,11 @@ func NewWrappedUpdateElectra(p *pb.LightClientUpdateElectra) (interfaces.LightCl
 	if p == nil {
 		return nil, consensustypes.ErrNilObjectWrapped
 	}
-	attestedHeader, err := NewWrappedHeaderElectra(p.AttestedHeader)
+	attestedHeader, err := NewWrappedHeaderDeneb(p.AttestedHeader)
 	if err != nil {
 		return nil, err
 	}
-	finalizedHeader, err := NewWrappedHeaderElectra(p.FinalizedHeader)
+	finalizedHeader, err := NewWrappedHeaderDeneb(p.FinalizedHeader)
 	if err != nil {
 		return nil, err
 	}

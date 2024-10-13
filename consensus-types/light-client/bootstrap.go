@@ -221,7 +221,7 @@ func NewWrappedBootstrapElectra(p *pb.LightClientBootstrapElectra) (interfaces.L
 	if p == nil {
 		return nil, consensustypes.ErrNilObjectWrapped
 	}
-	header, err := NewWrappedHeaderElectra(p.Header)
+	header, err := NewWrappedHeaderDeneb(p.Header)
 	if err != nil {
 		return nil, err
 	}

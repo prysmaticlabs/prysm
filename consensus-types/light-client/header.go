@@ -190,28 +190,3 @@ func (h *headerDeneb) Execution() (interfaces.ExecutionData, error) {
 func (h *headerDeneb) ExecutionBranch() (interfaces.LightClientExecutionBranch, error) {
 	return h.executionBranch, nil
 }
-
-func NewWrappedHeaderElectra(p *pb.LightClientHeaderDeneb) (interfaces.LightClientHeader, error) {
-	if p == nil {
-		return nil, consensustypes.ErrNilObjectWrapped
-	}
-	execution, err := blocks.WrappedExecutionPayloadHeaderElectra(p.Execution)
-	if err != nil {
-		return nil, err
-	}
-
-	branch, err := createBranch[interfaces.LightClientExecutionBranch](
-		"execution",
-		p.ExecutionBranch,
-		fieldparams.ExecutionBranchDepth,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &headerDeneb{
-		p:               p,
-		execution:       execution,
-		executionBranch: branch,
-	}, nil
-}
