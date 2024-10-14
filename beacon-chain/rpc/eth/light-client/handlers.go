@@ -122,9 +122,9 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	updates := make([]*structs.LightClientUpdateResponse, len(updatesMap))
-	updatesCount := 0
-	for i, j := startPeriod, 0; i <= endPeriod; i, j = i+1, j+1 {
+	updates := make([]*structs.LightClientUpdateResponse, 0, len(updatesMap))
+
+	for i := startPeriod; i <= endPeriod; i = i + 1 {
 		update, ok := updatesMap[i]
 		if !ok {
 			// Only return the first contiguous range of updates
@@ -137,11 +137,10 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 			return
 		}
 
-		updates[j] = updateResponse
-		updatesCount++
+		updates = append(updates, updateResponse)
 	}
 
-	httputil.WriteJson(w, updates[:updatesCount])
+	httputil.WriteJson(w, updates)
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
