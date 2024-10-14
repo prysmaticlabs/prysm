@@ -85,8 +85,12 @@ func (h *bootstrapAltair) CurrentSyncCommittee() *pb.SyncCommittee {
 	return h.p.CurrentSyncCommittee
 }
 
-func (h *bootstrapAltair) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return h.currentSyncCommitteeBranch
+func (h *bootstrapAltair) CurrentSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return h.currentSyncCommitteeBranch, nil
+}
+
+func (h *bootstrapAltair) CurrentSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return [6][32]byte{}, consensustypes.ErrNotSupported("CurrentSyncCommitteeBranchElectra", version.Altair)
 }
 
 type bootstrapCapella struct {
@@ -145,8 +149,12 @@ func (h *bootstrapCapella) CurrentSyncCommittee() *pb.SyncCommittee {
 	return h.p.CurrentSyncCommittee
 }
 
-func (h *bootstrapCapella) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return h.currentSyncCommitteeBranch
+func (h *bootstrapCapella) CurrentSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return h.currentSyncCommitteeBranch, nil
+}
+
+func (h *bootstrapCapella) CurrentSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return [6][32]byte{}, consensustypes.ErrNotSupported("CurrentSyncCommitteeBranchElectra", version.Capella)
 }
 
 type bootstrapDeneb struct {
@@ -205,8 +213,12 @@ func (h *bootstrapDeneb) CurrentSyncCommittee() *pb.SyncCommittee {
 	return h.p.CurrentSyncCommittee
 }
 
-func (h *bootstrapDeneb) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return h.currentSyncCommitteeBranch
+func (h *bootstrapDeneb) CurrentSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return h.currentSyncCommitteeBranch, nil
+}
+
+func (h *bootstrapDeneb) CurrentSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return [6][32]byte{}, consensustypes.ErrNotSupported("CurrentSyncCommitteeBranchElectra", version.Deneb)
 }
 
 type bootstrapElectra struct {
@@ -265,10 +277,10 @@ func (h *bootstrapElectra) CurrentSyncCommittee() *pb.SyncCommittee {
 	return h.p.CurrentSyncCommittee
 }
 
-func (h *bootstrapElectra) CurrentSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return [5][32]byte{}
+func (h *bootstrapElectra) CurrentSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return [5][32]byte{}, consensustypes.ErrNotSupported("CurrentSyncCommitteeBranch", version.Electra)
 }
 
-func (h *bootstrapElectra) CurrentSyncCommitteeBranchElectra() interfaces.LightClientSyncCommitteeBranchElectra {
-	return h.currentSyncCommitteeBranch
+func (h *bootstrapElectra) CurrentSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return h.currentSyncCommitteeBranch, nil
 }

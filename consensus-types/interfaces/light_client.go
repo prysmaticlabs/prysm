@@ -25,7 +25,8 @@ type LightClientBootstrap interface {
 	Version() int
 	Header() LightClientHeader
 	CurrentSyncCommittee() *pb.SyncCommittee
-	CurrentSyncCommitteeBranch() LightClientSyncCommitteeBranch
+	CurrentSyncCommitteeBranch() (LightClientSyncCommitteeBranch, error)
+	CurrentSyncCommitteeBranchElectra() (LightClientSyncCommitteeBranchElectra, error)
 }
 
 type LightClientUpdate interface {
