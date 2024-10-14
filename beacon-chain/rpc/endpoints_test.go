@@ -36,6 +36,7 @@ func Test_endpoints(t *testing.T) {
 		"/eth/v2/beacon/blocks/{block_id}":                           {http.MethodGet},
 		"/eth/v1/beacon/blocks/{block_id}/root":                      {http.MethodGet},
 		"/eth/v1/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
+		"/eth/v2/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
 		"/eth/v1/beacon/blob_sidecars/{block_id}":                    {http.MethodGet},
 		"/eth/v1/beacon/deposit_snapshot":                            {http.MethodGet},
 		"/eth/v1/beacon/blinded_blocks/{block_id}":                   {http.MethodGet},

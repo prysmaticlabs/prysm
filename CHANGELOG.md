@@ -13,17 +13,20 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
+- Electra EIP6110: Queue deposit [pr](https://github.com/prysmaticlabs/prysm/pull/14430)
 - Light client support: Implement `BlockToLightClientHeader` function.
 - Light client support: Consensus types.
 - GetBeaconStateV2: add Electra case.
-- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
-- Tests to ensure sepolia config matches the official upstream yaml
-- HTTP endpoint for PublishBlobs
+- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875).
+- Tests to ensure sepolia config matches the official upstream yaml.
+- HTTP endpoint for PublishBlobs.
 - GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
-- Add Electra support and tests for light client functions
+- Add Electra support and tests for light client functions.
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
-- Add Bellatrix tests for light client functions
+- Add Bellatrix tests for light client functions.
+- Add Discovery Rebooter Feature.
+- Added GetBlockAttestationsV2 endpoint.
 
 ### Changed
 
@@ -42,6 +45,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
+- Electra EIP6110: Queue deposit requests changes from consensus spec pr #3818
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
 - Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 - Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
@@ -53,11 +57,13 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated Sepolia bootnodes.
 - Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
+- reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
 - Fix `engine_exchangeCapabilities` implementation.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
+- `/eth/v1alpha1/validator/activation/stream` grpc wait for activation stream is deprecated. [pr](https://github.com/prysmaticlabs/prysm/pull/14514)
 
 ### Removed
 

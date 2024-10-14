@@ -201,38 +201,6 @@ func TestProcessPendingConsolidations(t *testing.T) {
 	}
 }
 
-func stateWithActiveBalanceETH(t *testing.T, balETH uint64) state.BeaconState {
-	gwei := balETH * 1_000_000_000
-	balPerVal := params.BeaconConfig().MinActivationBalance
-	numVals := gwei / balPerVal
-
-	vals := make([]*eth.Validator, numVals)
-	bals := make([]uint64, numVals)
-	for i := uint64(0); i < numVals; i++ {
-		wc := make([]byte, 32)
-		wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
-		wc[31] = byte(i)
-		vals[i] = &eth.Validator{
-			ActivationEpoch:       0,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:      balPerVal,
-			WithdrawalCredentials: wc,
-		}
-		bals[i] = balPerVal
-	}
-	st, err := state_native.InitializeFromProtoUnsafeElectra(&eth.BeaconStateElectra{
-		Slot:       10 * params.BeaconConfig().SlotsPerEpoch,
-		Validators: vals,
-		Balances:   bals,
-		Fork: &eth.Fork{
-			CurrentVersion: params.BeaconConfig().ElectraForkVersion,
-		},
-	})
-	require.NoError(t, err)
-
-	return st
-}
-
 func TestProcessConsolidationRequests(t *testing.T) {
 	tests := []struct {
 		name     string
