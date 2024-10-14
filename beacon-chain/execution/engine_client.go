@@ -299,6 +299,9 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 
 	var result []string
 	err := s.rpcClient.CallContext(ctx, &result, ExchangeCapabilities, supportedEngineEndpoints)
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
 
 	var unsupported []string
 	for _, s1 := range supportedEngineEndpoints {
