@@ -625,14 +625,3 @@ func (summary *HistoricalSummary) Copy() *HistoricalSummary {
 		StateSummaryRoot: bytesutil.SafeCopyBytes(summary.StateSummaryRoot),
 	}
 }
-
-// Copy --
-func (pbd *PendingBalanceDeposit) Copy() *PendingBalanceDeposit {
-	if pbd == nil {
-		return nil
-	}
-	return &PendingBalanceDeposit{
-		Index:  pbd.Index,
-		Amount: pbd.Amount,
-	}
-}

@@ -128,3 +128,54 @@ func TestIsValidDepositSignature_Ok(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, valid)
 }
+
+func TestBatchVerifyPendingDepositsSignatures_Ok(t *testing.T) {
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
+	require.NoError(t, err)
+	pendingDeposit := &ethpb.PendingDeposit{
+		PublicKey:             sk.PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+		Amount:                3000,
+	}
+	sr, err := signing.ComputeSigningRoot(&ethpb.DepositMessage{
+		PublicKey:             pendingDeposit.PublicKey,
+		WithdrawalCredentials: pendingDeposit.WithdrawalCredentials,
+		Amount:                3000,
+	}, domain)
+	require.NoError(t, err)
+	sig := sk.Sign(sr[:])
+	pendingDeposit.Signature = sig.Marshal()
+
+	sk2, err := bls.RandKey()
+	require.NoError(t, err)
+	pendingDeposit2 := &ethpb.PendingDeposit{
+		PublicKey:             sk2.PublicKey().Marshal(),
+		WithdrawalCredentials: make([]byte, 32),
+		Amount:                4000,
+	}
+	sr2, err := signing.ComputeSigningRoot(&ethpb.DepositMessage{
+		PublicKey:             pendingDeposit2.PublicKey,
+		WithdrawalCredentials: pendingDeposit2.WithdrawalCredentials,
+		Amount:                4000,
+	}, domain)
+	require.NoError(t, err)
+	sig2 := sk2.Sign(sr2[:])
+	pendingDeposit2.Signature = sig2.Marshal()
+
+	verified, err := blocks.BatchVerifyPendingDepositsSignatures(context.Background(), []*ethpb.PendingDeposit{pendingDeposit, pendingDeposit2})
+	require.NoError(t, err)
+	require.Equal(t, true, verified)
+}
+
+func TestBatchVerifyPendingDepositsSignatures_InvalidSignature(t *testing.T) {
+	pendingDeposit := &ethpb.PendingDeposit{
+		PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, 48),
+		WithdrawalCredentials: make([]byte, 32),
+		Signature:             make([]byte, 96),
+	}
+	verified, err := blocks.BatchVerifyPendingDepositsSignatures(context.Background(), []*ethpb.PendingDeposit{pendingDeposit})
+	require.NoError(t, err)
+	require.Equal(t, false, verified)
+}
