@@ -19,31 +19,42 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, wQuota uint64, wantedIndexes map[uint64]bool, stream libp2pcore.Stream) (uint64, error) {
+func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, wQuota uint64, wantedDataColumnIndices map[uint64]bool, stream libp2pcore.Stream) (uint64, error) {
+	_, span := trace.StartSpan(ctx, "sync.streamDataColumnBatch")
+	defer span.End()
+
 	// Defensive check to guard against underflow.
 	if wQuota == 0 {
 		return 0, nil
 	}
-	_, span := trace.StartSpan(ctx, "sync.streamDataColumnBatch")
-	defer span.End()
-	for _, b := range batch.canonical() {
-		root := b.Root()
-		idxs, err := s.cfg.blobStorage.ColumnIndices(b.Root())
+
+	for _, block := range batch.canonical() {
+		// Get the block blockRoot.
+		blockRoot := block.Root()
+
+		// Retrieve stored data columns indices for this block root.
+		storedDataColumnsIndices, err := s.cfg.blobStorage.ColumnIndices(blockRoot)
+
 		if err != nil {
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
+			return wQuota, errors.Wrapf(err, "could not retrieve data columns indice for block root %#x", blockRoot)
 		}
-		for i, l := uint64(0), uint64(len(idxs)); i < l; i++ {
-			// index not available or unwanted, skip
-			if !idxs[i] || !wantedIndexes[i] {
+
+		for dataColumnIndex := range wantedDataColumnIndices {
+			isDataColumnStored := storedDataColumnsIndices[dataColumnIndex]
+
+			// Skip if the data column is not stored.
+			if !isDataColumnStored {
 				continue
 			}
+
 			// We won't check for file not found since the .Indices method should normally prevent that from happening.
-			sc, err := s.cfg.blobStorage.GetColumn(b.Root(), i)
+			sc, err := s.cfg.blobStorage.GetColumn(blockRoot, dataColumnIndex)
 			if err != nil {
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				return wQuota, errors.Wrapf(err, "could not retrieve data column sidecar: index %d, block root %#x", i, root)
+				return wQuota, errors.Wrapf(err, "could not retrieve data column sidecar: index %d, block root %#x", dataColumnIndex, blockRoot)
 			}
+
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteDataColumnSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")
@@ -51,14 +62,17 @@ func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, w
 				tracing.AnnotateError(span, chunkErr)
 				return wQuota, chunkErr
 			}
+
 			s.rateLimiter.add(stream, 1)
 			wQuota -= 1
+
 			// Stop streaming results once the quota of writes for the request is consumed.
 			if wQuota == 0 {
 				return 0, nil
 			}
 		}
 	}
+
 	return wQuota, nil
 }
 
