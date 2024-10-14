@@ -216,29 +216,23 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	}
 
 	var lastValidHash []byte
-	switch {
-	case blk.Version() >= version.Electra:
+	if blk.Version() >= version.Deneb {
 		var versionedHashes []common.Hash
-		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
-		if err != nil {
-			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
-		}
-		pr := common.Hash(blk.Block().ParentRoot())
 		var requests *enginev1.ExecutionRequests
-		requests, err = blk.Block().Body().ExecutionRequests()
-		if err != nil {
-			return false, errors.Wrap(err, "could not get execution requests")
+
+		if blk.Version() >= version.Electra {
+			requests, err = blk.Block().Body().ExecutionRequests()
+			if err != nil {
+				return false, errors.Wrap(err, "could not get execution requests")
+			}
 		}
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr, requests)
-	case blk.Version() >= version.Deneb:
-		var versionedHashes []common.Hash
 		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
 		if err != nil {
 			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
 		}
 		pr := common.Hash(blk.Block().ParentRoot())
-		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr, nil)
-	default:
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr, requests)
+	} else {
 		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, []common.Hash{}, &common.Hash{} /*empty version hashes and root before Deneb*/, nil)
 	}
 	switch {

@@ -862,7 +862,7 @@ func TestClient_HTTP(t *testing.T) {
 			},
 		}
 		client := newPayloadV4Setup(t, want, execPayload, requests)
-		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'}, nil)
+		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'}, requests)
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
