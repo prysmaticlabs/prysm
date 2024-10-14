@@ -228,7 +228,7 @@ func NewWrappedBootstrapElectra(p *pb.LightClientBootstrapElectra) (interfaces.L
 	branch, err := createBranch[interfaces.LightClientSyncCommitteeBranchElectra](
 		"sync committee",
 		p.CurrentSyncCommitteeBranch,
-		fieldparams.SyncCommitteeBranchDepth,
+		fieldparams.SyncCommitteeBranchDepthElectra,
 	)
 	if err != nil {
 		return nil, err
