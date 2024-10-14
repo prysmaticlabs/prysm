@@ -329,7 +329,7 @@ func NewWrappedUpdateElectra(p *pb.LightClientUpdateElectra) (interfaces.LightCl
 	scBranch, err := createBranch[interfaces.LightClientSyncCommitteeBranchElectra](
 		"sync committee",
 		p.NextSyncCommitteeBranch,
-		fieldparams.SyncCommitteeBranchDepth,
+		fieldparams.SyncCommitteeBranchDepthElectra,
 	)
 	if err != nil {
 		return nil, err
