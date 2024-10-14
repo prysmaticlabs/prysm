@@ -34,7 +34,8 @@ type LightClientUpdate interface {
 	Version() int
 	AttestedHeader() LightClientHeader
 	NextSyncCommittee() *pb.SyncCommittee
-	NextSyncCommitteeBranch() LightClientSyncCommitteeBranch
+	NextSyncCommitteeBranch() (LightClientSyncCommitteeBranch, error)
+	NextSyncCommitteeBranchElectra() (LightClientSyncCommitteeBranchElectra, error)
 	FinalizedHeader() LightClientHeader
 	FinalityBranch() LightClientFinalityBranch
 	SyncAggregate() *pb.SyncAggregate
