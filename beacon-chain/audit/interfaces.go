@@ -7,4 +7,7 @@ type Auditor interface {
 	Reset()
 	Lock()
 	Unlock()
+	RegisterSuccessCallback(callback SuccessCallback)
+	RegisterFailureCallback(callback FailureCallback)
+	RegisterResetCallback(callback ResetCallback)
 }
