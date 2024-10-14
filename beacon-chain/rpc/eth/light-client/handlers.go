@@ -133,7 +133,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 
 		updateResponse, err := structs.LightClientUpdateResponseFromConsensus(update)
 		if err != nil {
-			httputil.HandleError(w, "could not convert light client update: "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not convert light client update: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
