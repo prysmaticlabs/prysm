@@ -12,28 +12,27 @@ go_library(
         "wrapper_linux_amd64.s",
         "wrapper_windows_amd64.s",
     ],
-  deps = select({
-    "@io_bazel_rules_go//go/platform:amd64": ["@com_github_klauspost_cpuid_v2//:cpuid"], 
-   "@io_bazel_rules_go//go/platform:arm64": ["@com_github_klauspost_cpuid_v2//:cpuid"], 
-   "//conditions:default": []
-  }),
+    deps = select({
+        "@io_bazel_rules_go//go/platform:amd64": ["@com_github_klauspost_cpuid_v2//:cpuid"],
+        "@io_bazel_rules_go//go/platform:arm64": ["@com_github_klauspost_cpuid_v2//:cpuid"],
+        "//conditions:default": [],
+    }),
     cgo = True,
-    copts = [
-        "-g -Wall -Werror -fpic",
-        "-O2",
-	"-Isrc",
-    ],
     cdeps = [":hashtree"],
     importpath = "github.com/prysmaticlabs/hashtree",
     visibility = ["//visibility:public"],
 )
 
 go_test(
-	name = "go_default_test",
-	srcs = [
-		"bindings_test.go",
-	],
-	embed = [":go_default_library"],
+    name = "go_default_test",
+    srcs = [
+        "bindings_test.go",
+    ],
+    embed = [":go_default_library"],
+
+    # c-archive creates a statically-linked c-archive file instead of
+    # a go test binary. So, it won't run, but it does compile.
+    linkmode = "c-archive",
 )
 
 cc_library(
