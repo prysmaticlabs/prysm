@@ -529,7 +529,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		require.NoError(t, err)
-		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
+		msgsInPool, unlock, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(msgsInPool))
 		assert.Equal(t, primitives.Slot(1), msgsInPool[0].Slot)
@@ -537,6 +537,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		assert.Equal(t, primitives.ValidatorIndex(1), msgsInPool[0].ValidatorIndex)
 		assert.Equal(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505", hexutil.Encode(msgsInPool[0].Signature))
 		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+		unlock()
 	})
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pMock.MockBroadcaster{}
@@ -561,13 +562,15 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		require.NoError(t, err)
-		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
+		msgsInPool, unlock, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(msgsInPool))
-		msgsInPool, err = s.CoreService.SyncCommitteePool.SyncCommitteeMessages(2)
+		unlock()
+		msgsInPool, unlock, err = s.CoreService.SyncCommitteePool.SyncCommitteeMessages(2)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(msgsInPool))
 		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+		unlock()
 	})
 	t.Run("invalid", func(t *testing.T) {
 		broadcaster := &p2pMock.MockBroadcaster{}
@@ -594,10 +597,11 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
+		msgsInPool, unlock, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(msgsInPool))
 		assert.Equal(t, false, broadcaster.BroadcastCalled.Load())
+		unlock()
 	})
 	t.Run("empty", func(t *testing.T) {
 		s := &Server{}

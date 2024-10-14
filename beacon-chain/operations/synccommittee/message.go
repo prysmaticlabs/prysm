@@ -76,19 +76,22 @@ func (s *Store) SaveSyncCommitteeMessage(msg *ethpb.SyncCommitteeMessage) error 
 // SyncCommitteeMessages returns sync committee messages by slot from the priority queue.
 // When calling this method a copy is avoided as the caller is assumed to be only reading the
 // messages from the store rather than modifying it.
-func (s *Store) SyncCommitteeMessages(slot primitives.Slot) ([]*ethpb.SyncCommitteeMessage, error) {
+// The caller of this function is required to unlock the RLock when done using the SyncCommitteeMessage
+func (s *Store) SyncCommitteeMessages(slot primitives.Slot) ([]*ethpb.SyncCommitteeMessage, func(), error) {
 	s.messageLock.RLock()
-	defer s.messageLock.RUnlock()
 
 	item := s.messageCache.RetrieveByKey(syncCommitteeKey(slot))
 	if item == nil {
-		return nil, nil
+		s.messageLock.RUnlock()
+		return nil, func() {}, nil
 	}
 
 	messages, ok := item.Value.([]*ethpb.SyncCommitteeMessage)
 	if !ok {
-		return nil, errors.New("not typed []ethpb.SyncCommitteeMessage")
+		s.messageLock.RUnlock()
+		return nil, func() {}, errors.New("not typed []ethpb.SyncCommitteeMessage")
 	}
 
-	return messages, nil
+	// we need to pass unlock to prevent race condition reads where existing messages are overwritten while reading.
+	return messages, s.messageLock.RUnlock, nil
 }

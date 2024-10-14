@@ -18,7 +18,7 @@ type Pool interface {
 
 	// Methods for Sync Committee Messages.
 	SaveSyncCommitteeMessage(sig *ethpb.SyncCommitteeMessage) error
-	SyncCommitteeMessages(slot primitives.Slot) ([]*ethpb.SyncCommitteeMessage, error)
+	SyncCommitteeMessages(slot primitives.Slot) ([]*ethpb.SyncCommitteeMessage, func(), error)
 }
 
 // NewPool returns the sync committee store fulfilling the pool interface.
