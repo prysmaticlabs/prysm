@@ -27,6 +27,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Add Bellatrix tests for light client functions.
 - Add Discovery Rebooter Feature.
 - Added GetBlockAttestationsV2 endpoint.
+- Better attestation packing for Electra. [PR](https://github.com/prysmaticlabs/prysm/pull/14534)
 
 ### Changed
 
