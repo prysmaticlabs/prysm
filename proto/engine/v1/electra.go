@@ -3,6 +3,7 @@ package enginev1
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 )
 
@@ -18,10 +19,12 @@ var (
 	crSize    = crExample.SizeSSZ()
 )
 
+const LenExecutionRequestsElectra = 3
+
 func (eee *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
 	requests := &ExecutionRequests{}
 
-	if len(eee.ExecutionRequests) != 3 /* types of requests */ {
+	if len(eee.ExecutionRequests) != LenExecutionRequestsElectra /* types of requests */ {
 		return nil, errors.Errorf("invalid execution request size: %d", len(eee.ExecutionRequests))
 	}
 
@@ -49,7 +52,7 @@ func (eee *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequ
 	return requests, nil
 }
 
-func EncodeExecutionRequests(requests *ExecutionRequests) ([][]byte, error) {
+func EncodeExecutionRequests(requests *ExecutionRequests) ([]hexutil.Bytes, error) {
 	if requests == nil {
 		return nil, errors.New("invalid execution requests")
 	}
@@ -68,7 +71,7 @@ func EncodeExecutionRequests(requests *ExecutionRequests) ([][]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal consolidation requests")
 	}
-	return [][]byte{drBytes, wrBytes, crBytes}, nil
+	return []hexutil.Bytes{drBytes, wrBytes, crBytes}, nil
 }
 
 type sszUnmarshaler interface {
