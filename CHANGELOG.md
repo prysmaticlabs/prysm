@@ -58,6 +58,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
 - reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
+- Fix `engine_exchangeCapabilities` implementation.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
