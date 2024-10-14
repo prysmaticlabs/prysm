@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/audit"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
@@ -20,6 +21,15 @@ import (
 )
 
 type Option func(s *Service) error
+
+// CHANGE IAN: Add WithAudit Option pattern for passing auditor
+// WithAudit for auditing.
+func WithAudit(f audit.Auditor) Option {
+	return func(s *Service) error {
+		s.cfg.Auditor = f
+		return nil
+	}
+}
 
 // WithMaxGoroutines to control resource use of the blockchain service.
 func WithMaxGoroutines(x int) Option {

@@ -219,33 +219,41 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	var isValidPayload bool
 	for i, b := range blks {
 		root := b.Root()
-		isValidPayload, err = s.notifyNewPayload(ctx,
+		isValidPayload, err = s.notifyNewPayload(
+			ctx,
 			postVersionAndHeaders[i].version,
-			postVersionAndHeaders[i].header, b)
+			postVersionAndHeaders[i].header, b,
+		)
 		if err != nil {
 			return s.handleInvalidExecutionError(ctx, err, root, b.Block().ParentRoot())
 		}
 		if isValidPayload {
-			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
-				preVersionAndHeaders[i].header, b); err != nil {
+			if err := s.validateMergeTransitionBlock(
+				ctx, preVersionAndHeaders[i].version,
+				preVersionAndHeaders[i].header, b,
+			); err != nil {
 				return err
 			}
 		}
 		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), b); err != nil {
 			return errors.Wrapf(err, "could not validate blob data availability at slot %d", b.Block().Slot())
 		}
-		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
+		args := &forkchoicetypes.BlockAndCheckpoints{
+			Block:               b.Block(),
 			JustifiedCheckpoint: jCheckpoints[i],
-			FinalizedCheckpoint: fCheckpoints[i]}
+			FinalizedCheckpoint: fCheckpoints[i],
+		}
 		pendingNodes[len(blks)-i-1] = args
 		if err := s.saveInitSyncBlock(ctx, root, b); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
-			Slot: b.Block().Slot(),
-			Root: root[:],
-		}); err != nil {
+		if err := s.cfg.BeaconDB.SaveStateSummary(
+			ctx, &ethpb.StateSummary{
+				Slot: b.Block().Slot(),
+				Root: root[:],
+			},
+		); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
@@ -357,6 +365,20 @@ func (s *Service) handleEpochBoundary(ctx context.Context, slot primitives.Slot,
 	if err != nil {
 		return err
 	}
+
+	// CHANGE Ian: Lock the auditor to prevent any changes during the epoch boundary
+	s.cfg.Auditor.Lock()
+
+	// CHANGE Ian: Epoch has ended, output summary to logger
+	summary := s.cfg.Auditor.Summary()
+	log.WithField("report", summary).Debug("Summary of the auditor")
+
+	// CHANGE Ian: As the Epoch has ended, reset the auditor
+	s.cfg.Auditor.Reset()
+
+	// CHANGE Ian: Unlock the auditor
+	s.cfg.Auditor.Unlock()
+
 	return s.updateEpochBoundaryCaches(ctx, copied)
 }
 
@@ -427,7 +449,9 @@ func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlo
 }
 
 // validateMergeTransitionBlock validates the merge transition block.
-func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock) error {
+func (s *Service) validateMergeTransitionBlock(
+	ctx context.Context, stateVersion int, stateHeader interfaces.ExecutionData, blk interfaces.ReadOnlySignedBeaconBlock,
+) error {
 	// Skip validation if block is older than Bellatrix.
 	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
 		return nil
@@ -563,13 +587,15 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
 	// Avoid logging if DA check is called after next slot start.
 	if nextSlot.After(time.Now()) {
-		nst := time.AfterFunc(time.Until(nextSlot), func() {
-			if len(missing) == 0 {
-				return
-			}
-			log.WithFields(daCheckLogFields(root, signed.Block().Slot(), expected, len(missing))).
-				Error("Still waiting for DA check at slot end.")
-		})
+		nst := time.AfterFunc(
+			time.Until(nextSlot), func() {
+				if len(missing) == 0 {
+					return
+				}
+				log.WithFields(daCheckLogFields(root, signed.Block().Slot(), expected, len(missing))).
+					Error("Still waiting for DA check at slot end.")
+			},
+		)
 		defer nst.Stop()
 	}
 	for {
@@ -614,9 +640,11 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if !s.inRegularSync() {
 		return
 	}
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.MissedSlot,
-	})
+	s.cfg.StateNotifier.StateFeed().Send(
+		&feed.Event{
+			Type: statefeed.MissedSlot,
+		},
+	)
 	s.headLock.RLock()
 	headRoot := s.headRoot()
 	headState := s.headState(ctx)

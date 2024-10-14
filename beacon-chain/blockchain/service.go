@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/audit"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
@@ -93,6 +94,7 @@ type config struct {
 	FinalizedStateAtStartUp state.BeaconState
 	ExecutionEngineCaller   execution.EngineCaller
 	SyncChecker             Checker
+	Auditor                 audit.Auditor
 }
 
 // Checker is an interface used to determine if a node is in initial sync
@@ -241,8 +243,10 @@ func (s *Service) Status() error {
 		return errors.Wrap(err, "failed to check if service is optimistic")
 	}
 	if optimistic {
-		return errors.New("service is optimistic, and only limited service functionality is provided " +
-			"please check if execution layer is fully synced")
+		return errors.New(
+			"service is optimistic, and only limited service functionality is provided " +
+				"please check if execution layer is fully synced",
+		)
 	}
 
 	if s.originBlockRoot == params.BeaconConfig().ZeroHash {
@@ -289,12 +293,20 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(s.ctx, &forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
-		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(
+		s.ctx, &forkchoicetypes.Checkpoint{
+			Epoch: justified.Epoch,
+			Root:  bytesutil.ToBytes32(justified.Root),
+		},
+	); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
 	}
-	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
-		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
+	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(
+		&forkchoicetypes.Checkpoint{
+			Epoch: finalized.Epoch,
+			Root:  bytesutil.ToBytes32(finalized.Root),
+		},
+	); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
@@ -389,13 +401,15 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	if err := s.setHead(&head{
-		finalizedRoot,
-		finalizedBlock,
-		finalizedState,
-		finalizedBlock.Block().Slot(),
-		false,
-	}); err != nil {
+	if err := s.setHead(
+		&head{
+			finalizedRoot,
+			finalizedBlock,
+			finalizedState,
+			finalizedBlock.Block().Slot(),
+			false,
+		},
+	); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
 
@@ -465,7 +479,8 @@ func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
 	preGenesisState state.BeaconState,
-	eth1data *ethpb.Eth1Data) (state.BeaconState, error) {
+	eth1data *ethpb.Eth1Data,
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.genesisTime = genesisTime
@@ -527,13 +542,15 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
-	if err := s.setHead(&head{
-		genesisBlkRoot,
-		genesisBlk,
-		genesisState,
-		genesisBlk.Block().Slot(),
-		false,
-	}); err != nil {
+	if err := s.setHead(
+		&head{
+			genesisBlkRoot,
+			genesisBlk,
+			genesisState,
+			genesisBlk.Block().Slot(),
+			false,
+		},
+	); err != nil {
 		log.WithError(err).Fatal("Could not set head")
 	}
 	return nil

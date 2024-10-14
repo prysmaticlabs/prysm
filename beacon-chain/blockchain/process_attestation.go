@@ -41,9 +41,13 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 	defer span.End()
 
 	if err := helpers.ValidateNilAttestation(a); err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Nil Attestation")
 		return err
 	}
 	if err := helpers.ValidateSlotTargetEpoch(a.GetData()); err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Invalid Attestation Slot Target Epoch")
 		return err
 	}
 	tgt := a.GetData().Target.Copy()
@@ -56,6 +60,8 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 	// save it to the cache.
 	baseState, err := s.getAttPreState(ctx, tgt)
 	if err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Failed to get attestation pre state")
 		return err
 	}
 
@@ -63,11 +69,15 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Add(disparity).Unix()), tgt); err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Invalid Attestation Target Epoch")
 		return err
 	}
 
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.GetData()); err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Invalid Attestation Beacon Block, Either Unknown or From Future")
 		return errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
@@ -76,25 +86,37 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := slots.VerifyTime(genesisTime, a.GetData().Slot+1, disparity); err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Slot Time Verification Failed")
 		return err
 	}
 
 	// Use the target state to verify attesting indices are valid.
 	committees, err := helpers.AttestationCommittees(ctx, baseState, a)
 	if err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Failed to get Attestation Committees")
 		return err
 	}
 	indexedAtt, err := attestation.ConvertToIndexed(ctx, a, committees...)
 	if err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Failed to Convert Attestation to Indexed Verified Form")
 		return err
 	}
 	if err := attestation.IsValidAttestationIndices(ctx, indexedAtt); err != nil {
+		// CHANGE IAN: IncrementFailure
+		s.cfg.Auditor.IncrementFailure("Invalid Attestation Indices")
 		return err
 	}
 
 	// Note that signature verification is ignored here because it was performed in sync's validation pipeline:
 	// validate_aggregate_proof.go and validate_beacon_attestation.go
 	// We assume trusted attestation in this function has verified signature.
+
+	// CHANGE IAN: IncrementSuccess
+	// Increment success count for successful attestation processing.
+	s.cfg.Auditor.IncrementSuccess()
 
 	// Update forkchoice store with the new attestation for updating weight.
 	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.GetAttestingIndices(), bytesutil.ToBytes32(a.GetData().BeaconBlockRoot), a.GetData().Target.Epoch)

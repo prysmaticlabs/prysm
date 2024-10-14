@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/api/server/httprest"
 	"github.com/prysmaticlabs/prysm/v5/api/server/middleware"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/audit"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -121,6 +122,8 @@ type BeaconNode struct {
 	BlobStorageOptions      []filesystem.BlobStorageOption
 	verifyInitWaiter        *verification.InitializerWaiter
 	syncChecker             *initialsync.SyncChecker
+	// CHANGE IAN: Add auditor interface
+	auditor audit.Auditor
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -157,6 +160,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		serviceFlagOpts:         &serviceFlagOpts{},
 		initialSyncComplete:     make(chan struct{}),
 		syncChecker:             &initialsync.SyncChecker{},
+		// CHANGE IAN: Add auditor to beacon node
+		auditor: audit.NewService(),
 	}
 
 	for _, opt := range opts {
@@ -190,7 +195,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
-		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
+		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen,
+	)
 
 	pa := peers.NewAssigner(beacon.fetchP2P().Peers(), beacon.forkChoicer)
 
@@ -305,9 +311,11 @@ func startBaseServices(cliCtx *cli.Context, beacon *BeaconNode, depositAddress s
 	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(ctx, bfs, beacon.forkChoicer); err != nil {
 		if errors.Is(err, stategen.ErrNoGenesisBlock) {
-			log.Errorf("No genesis block/state is found. Prysm only provides a mainnet genesis "+
-				"state bundled in the application. You must provide the --%s or --%s flag to load "+
-				"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url")
+			log.Errorf(
+				"No genesis block/state is found. Prysm only provides a mainnet genesis "+
+					"state bundled in the application. You must provide the --%s or --%s flag to load "+
+					"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url",
+			)
 		}
 		return nil, errors.Wrap(err, "could not start state generation")
 	}
@@ -416,9 +424,11 @@ func (b *BeaconNode) OperationFeed() event.SubscriberSender {
 func (b *BeaconNode) Start() {
 	b.lock.Lock()
 
-	log.WithFields(logrus.Fields{
-		"version": version.Version(),
-	}).Info("Starting beacon node")
+	log.WithFields(
+		logrus.Fields{
+			"version": version.Version(),
+		},
+	).Info("Starting beacon node")
 
 	b.services.StartAll()
 
@@ -512,10 +522,12 @@ func (b *BeaconNode) checkAndSaveDepositContract(depositAddress string) error {
 	}
 
 	if len(knownContract) > 0 && !bytes.Equal(addr.Bytes(), knownContract) {
-		return fmt.Errorf("database contract is %#x but tried to run with %#x. This likely means "+
-			"you are trying to run on a different network than what the database contains. You can run once with "+
-			"--%s to wipe the old database or use an alternative data directory with --%s",
-			knownContract, addr.Bytes(), cmd.ClearDB.Name, cmd.DataDirFlag.Name)
+		return fmt.Errorf(
+			"database contract is %#x but tried to run with %#x. This likely means "+
+				"you are trying to run on a different network than what the database contains. You can run once with "+
+				"--%s to wipe the old database or use an alternative data directory with --%s",
+			knownContract, addr.Bytes(), cmd.ClearDB.Name, cmd.DataDirFlag.Name,
+		)
 	}
 
 	return nil
@@ -559,9 +571,11 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if b.GenesisInitializer != nil {
 		if err := b.GenesisInitializer.Initialize(b.ctx, d); err != nil {
 			if errors.Is(err, db.ErrExistingGenesisState) {
-				return errors.Errorf("Genesis state flag specified but a genesis state "+
-					"exists already. Run again with --%s and/or ensure you are using the "+
-					"appropriate testnet flag to load the given genesis state.", cmd.ClearDB.Name)
+				return errors.Errorf(
+					"Genesis state flag specified but a genesis state "+
+						"exists already. Run again with --%s and/or ensure you are using the "+
+						"appropriate testnet flag to load the given genesis state.", cmd.ClearDB.Name,
+				)
 			}
 
 			return errors.Wrap(err, "could not load genesis from file")
@@ -671,30 +685,32 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "could not register p2p service")
 	}
 
-	svc, err := p2p.NewService(b.ctx, &p2p.Config{
-		NoDiscovery:          cliCtx.Bool(cmd.NoDiscovery.Name),
-		StaticPeers:          slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
-		Discv5BootStrapAddrs: p2p.ParseBootStrapAddrs(bootstrapNodeAddrs),
-		RelayNodeAddr:        cliCtx.String(cmd.RelayNode.Name),
-		DataDir:              dataDir,
-		LocalIP:              cliCtx.String(cmd.P2PIP.Name),
-		HostAddress:          cliCtx.String(cmd.P2PHost.Name),
-		HostDNS:              cliCtx.String(cmd.P2PHostDNS.Name),
-		PrivateKey:           cliCtx.String(cmd.P2PPrivKey.Name),
-		StaticPeerID:         cliCtx.Bool(cmd.P2PStaticID.Name),
-		MetaDataDir:          cliCtx.String(cmd.P2PMetadata.Name),
-		QUICPort:             cliCtx.Uint(cmd.P2PQUICPort.Name),
-		TCPPort:              cliCtx.Uint(cmd.P2PTCPPort.Name),
-		UDPPort:              cliCtx.Uint(cmd.P2PUDPPort.Name),
-		MaxPeers:             cliCtx.Uint(cmd.P2PMaxPeers.Name),
-		QueueSize:            cliCtx.Uint(cmd.PubsubQueueSize.Name),
-		AllowListCIDR:        cliCtx.String(cmd.P2PAllowList.Name),
-		DenyListCIDR:         slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
-		EnableUPnP:           cliCtx.Bool(cmd.EnableUPnPFlag.Name),
-		StateNotifier:        b,
-		DB:                   b.db,
-		ClockWaiter:          b.clockWaiter,
-	})
+	svc, err := p2p.NewService(
+		b.ctx, &p2p.Config{
+			NoDiscovery:          cliCtx.Bool(cmd.NoDiscovery.Name),
+			StaticPeers:          slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
+			Discv5BootStrapAddrs: p2p.ParseBootStrapAddrs(bootstrapNodeAddrs),
+			RelayNodeAddr:        cliCtx.String(cmd.RelayNode.Name),
+			DataDir:              dataDir,
+			LocalIP:              cliCtx.String(cmd.P2PIP.Name),
+			HostAddress:          cliCtx.String(cmd.P2PHost.Name),
+			HostDNS:              cliCtx.String(cmd.P2PHostDNS.Name),
+			PrivateKey:           cliCtx.String(cmd.P2PPrivKey.Name),
+			StaticPeerID:         cliCtx.Bool(cmd.P2PStaticID.Name),
+			MetaDataDir:          cliCtx.String(cmd.P2PMetadata.Name),
+			QUICPort:             cliCtx.Uint(cmd.P2PQUICPort.Name),
+			TCPPort:              cliCtx.Uint(cmd.P2PTCPPort.Name),
+			UDPPort:              cliCtx.Uint(cmd.P2PUDPPort.Name),
+			MaxPeers:             cliCtx.Uint(cmd.P2PMaxPeers.Name),
+			QueueSize:            cliCtx.Uint(cmd.PubsubQueueSize.Name),
+			AllowListCIDR:        cliCtx.String(cmd.P2PAllowList.Name),
+			DenyListCIDR:         slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
+			EnableUPnP:           cliCtx.Bool(cmd.EnableUPnPFlag.Name),
+			StateNotifier:        b,
+			DB:                   b.db,
+			ClockWaiter:          b.clockWaiter,
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -718,10 +734,12 @@ func (b *BeaconNode) fetchBuilderService() *builder.Service {
 }
 
 func (b *BeaconNode) registerAttestationPool() error {
-	s, err := attestations.NewService(b.ctx, &attestations.Config{
-		Pool:                b.attestationPool,
-		InitialSyncComplete: b.initialSyncComplete,
-	})
+	s, err := attestations.NewService(
+		b.ctx, &attestations.Config{
+			Pool:                b.attestationPool,
+			InitialSyncComplete: b.initialSyncComplete,
+		},
+	)
 	if err != nil {
 		return errors.Wrap(err, "could not register atts pool service")
 	}
@@ -738,6 +756,8 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 	if err := b.services.FetchService(&attService); err != nil {
 		return err
 	}
+
+	// TODO: IAN I register the auditor here
 
 	// skipcq: CRT-D0001
 	opts := append(
@@ -763,6 +783,8 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithTrackedValidatorsCache(b.trackedValidatorsCache),
 		blockchain.WithPayloadIDCache(b.payloadIDCache),
 		blockchain.WithSyncChecker(b.syncChecker),
+		// CHANGE IAN: Load new auditor with Option
+		blockchain.WithAudit(b.auditor),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -859,16 +881,18 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		initialsync.WithVerifierWaiter(b.verifyInitWaiter),
 		initialsync.WithSyncChecker(b.syncChecker),
 	}
-	is := initialsync.NewService(b.ctx, &initialsync.Config{
-		DB:                  b.db,
-		Chain:               chainService,
-		P2P:                 b.fetchP2P(),
-		StateNotifier:       b,
-		BlockNotifier:       b,
-		ClockWaiter:         b.clockWaiter,
-		InitialSyncComplete: complete,
-		BlobStorage:         b.BlobStorage,
-	}, opts...)
+	is := initialsync.NewService(
+		b.ctx, &initialsync.Config{
+			DB:                  b.db,
+			Chain:               chainService,
+			P2P:                 b.fetchP2P(),
+			StateNotifier:       b,
+			BlockNotifier:       b,
+			ClockWaiter:         b.clockWaiter,
+			InitialSyncComplete: complete,
+			BlobStorage:         b.BlobStorage,
+		}, opts...,
+	)
 	return b.services.RegisterService(is)
 }
 
@@ -885,18 +909,20 @@ func (b *BeaconNode) registerSlasherService() error {
 		return err
 	}
 
-	slasherSrv, err := slasher.New(b.ctx, &slasher.ServiceConfig{
-		IndexedAttestationsFeed: b.slasherAttestationsFeed,
-		BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
-		Database:                b.slasherDB,
-		StateNotifier:           b,
-		AttestationStateFetcher: chainService,
-		StateGen:                b.stateGen,
-		SlashingPoolInserter:    b.slashingsPool,
-		SyncChecker:             syncService,
-		HeadStateFetcher:        chainService,
-		ClockWaiter:             b.clockWaiter,
-	})
+	slasherSrv, err := slasher.New(
+		b.ctx, &slasher.ServiceConfig{
+			IndexedAttestationsFeed: b.slasherAttestationsFeed,
+			BeaconBlockHeadersFeed:  b.slasherBlockHeadersFeed,
+			Database:                b.slasherDB,
+			StateNotifier:           b,
+			AttestationStateFetcher: chainService,
+			StateGen:                b.stateGen,
+			SlashingPoolInserter:    b.slashingsPool,
+			SyncChecker:             syncService,
+			HeadStateFetcher:        chainService,
+			ClockWaiter:             b.clockWaiter,
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -952,57 +978,59 @@ func (b *BeaconNode) registerRPCService(router *http.ServeMux) error {
 	enableDebugRPCEndpoints := !b.cliCtx.Bool(flags.DisableDebugRPCEndpoints.Name)
 
 	p2pService := b.fetchP2P()
-	rpcService := rpc.NewService(b.ctx, &rpc.Config{
-		ExecutionEngineCaller:         web3Service,
-		ExecutionPayloadReconstructor: web3Service,
-		Host:                          host,
-		Port:                          port,
-		BeaconMonitoringHost:          beaconMonitoringHost,
-		BeaconMonitoringPort:          beaconMonitoringPort,
-		CertFlag:                      cert,
-		KeyFlag:                       key,
-		BeaconDB:                      b.db,
-		Broadcaster:                   p2pService,
-		PeersFetcher:                  p2pService,
-		PeerManager:                   p2pService,
-		MetadataProvider:              p2pService,
-		ChainInfoFetcher:              chainService,
-		HeadFetcher:                   chainService,
-		CanonicalFetcher:              chainService,
-		ForkFetcher:                   chainService,
-		ForkchoiceFetcher:             chainService,
-		FinalizationFetcher:           chainService,
-		BlockReceiver:                 chainService,
-		BlobReceiver:                  chainService,
-		AttestationReceiver:           chainService,
-		GenesisTimeFetcher:            chainService,
-		GenesisFetcher:                chainService,
-		OptimisticModeFetcher:         chainService,
-		AttestationsPool:              b.attestationPool,
-		ExitPool:                      b.exitPool,
-		SlashingsPool:                 b.slashingsPool,
-		BLSChangesPool:                b.blsToExecPool,
-		SyncCommitteeObjectPool:       b.syncCommitteePool,
-		ExecutionChainService:         web3Service,
-		ExecutionChainInfoFetcher:     web3Service,
-		ChainStartFetcher:             chainStartFetcher,
-		MockEth1Votes:                 mockEth1DataVotes,
-		SyncService:                   syncService,
-		DepositFetcher:                depositFetcher,
-		PendingDepositFetcher:         b.depositCache,
-		BlockNotifier:                 b,
-		StateNotifier:                 b,
-		OperationNotifier:             b,
-		StateGen:                      b.stateGen,
-		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
-		MaxMsgSize:                    maxMsgSize,
-		BlockBuilder:                  b.fetchBuilderService(),
-		Router:                        router,
-		ClockWaiter:                   b.clockWaiter,
-		BlobStorage:                   b.BlobStorage,
-		TrackedValidatorsCache:        b.trackedValidatorsCache,
-		PayloadIDCache:                b.payloadIDCache,
-	})
+	rpcService := rpc.NewService(
+		b.ctx, &rpc.Config{
+			ExecutionEngineCaller:         web3Service,
+			ExecutionPayloadReconstructor: web3Service,
+			Host:                          host,
+			Port:                          port,
+			BeaconMonitoringHost:          beaconMonitoringHost,
+			BeaconMonitoringPort:          beaconMonitoringPort,
+			CertFlag:                      cert,
+			KeyFlag:                       key,
+			BeaconDB:                      b.db,
+			Broadcaster:                   p2pService,
+			PeersFetcher:                  p2pService,
+			PeerManager:                   p2pService,
+			MetadataProvider:              p2pService,
+			ChainInfoFetcher:              chainService,
+			HeadFetcher:                   chainService,
+			CanonicalFetcher:              chainService,
+			ForkFetcher:                   chainService,
+			ForkchoiceFetcher:             chainService,
+			FinalizationFetcher:           chainService,
+			BlockReceiver:                 chainService,
+			BlobReceiver:                  chainService,
+			AttestationReceiver:           chainService,
+			GenesisTimeFetcher:            chainService,
+			GenesisFetcher:                chainService,
+			OptimisticModeFetcher:         chainService,
+			AttestationsPool:              b.attestationPool,
+			ExitPool:                      b.exitPool,
+			SlashingsPool:                 b.slashingsPool,
+			BLSChangesPool:                b.blsToExecPool,
+			SyncCommitteeObjectPool:       b.syncCommitteePool,
+			ExecutionChainService:         web3Service,
+			ExecutionChainInfoFetcher:     web3Service,
+			ChainStartFetcher:             chainStartFetcher,
+			MockEth1Votes:                 mockEth1DataVotes,
+			SyncService:                   syncService,
+			DepositFetcher:                depositFetcher,
+			PendingDepositFetcher:         b.depositCache,
+			BlockNotifier:                 b,
+			StateNotifier:                 b,
+			OperationNotifier:             b,
+			StateGen:                      b.stateGen,
+			EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
+			MaxMsgSize:                    maxMsgSize,
+			BlockBuilder:                  b.fetchBuilderService(),
+			Router:                        router,
+			ClockWaiter:                   b.clockWaiter,
+			BlobStorage:                   b.BlobStorage,
+			TrackedValidatorsCache:        b.trackedValidatorsCache,
+			PayloadIDCache:                b.payloadIDCache,
+		},
+	)
 
 	return b.services.RegisterService(rpcService)
 }
@@ -1066,12 +1094,14 @@ func (b *BeaconNode) registerDeterministicGenesisService() error {
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
 
 	if genesisValidators > 0 {
-		svc := interopcoldstart.NewService(b.ctx, &interopcoldstart.Config{
-			GenesisTime:   genesisTime,
-			NumValidators: genesisValidators,
-			BeaconDB:      b.db,
-			DepositCache:  b.depositCache,
-		})
+		svc := interopcoldstart.NewService(
+			b.ctx, &interopcoldstart.Config{
+				GenesisTime:   genesisTime,
+				NumValidators: genesisValidators,
+				BeaconDB:      b.db,
+				DepositCache:  b.depositCache,
+			},
+		)
 		svc.Start()
 
 		// Register genesis state as start-up state when interop mode.
