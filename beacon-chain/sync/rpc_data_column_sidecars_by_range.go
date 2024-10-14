@@ -64,11 +64,12 @@ func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, w
 
 // dataColumnSidecarsByRangeRPCHandler looks up the request data columns from the database from a given start slot index
 func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	var err error
 	ctx, span := trace.StartSpan(ctx, "sync.DataColumnSidecarsByRangeHandler")
 	defer span.End()
+
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
+
 	SetRPCStreamDeadlines(stream)
 
 	r, ok := msg.(*pb.DataColumnSidecarsByRangeRequest)
@@ -93,7 +94,6 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 	requestedColumnsCount := uint64(len(requestedColumns))
 
 	// Format log fields.
-
 	var (
 		custodyColumnsLog   interface{} = "all"
 		requestedColumnsLog interface{} = "all"
@@ -121,10 +121,11 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
 		return err
 	}
+
 	rp, err := validateDataColumnsByRange(r, s.cfg.chain.CurrentSlot())
 	if err != nil {
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, err.Error(), stream)
-		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(remotePeer)
 		tracing.AnnotateError(span, err)
 		return err
 	}
@@ -132,6 +133,7 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 	// Ticker to stagger out large requests.
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
+
 	batcher, err := newBlockRangeBatcher(rp, s.cfg.beaconDB, s.rateLimiter, s.cfg.chain.IsCanonical, ticker)
 	if err != nil {
 		log.WithError(err).Info("Error in DataColumnSidecarsByRange batch")
@@ -139,8 +141,9 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 		tracing.AnnotateError(span, err)
 		return err
 	}
+
 	// Derive the wanted columns for the request.
-	wantedColumns := map[uint64]bool{}
+	wantedColumns := make(map[uint64]bool, len(r.Columns))
 	for _, c := range r.Columns {
 		wantedColumns[c] = true
 	}
