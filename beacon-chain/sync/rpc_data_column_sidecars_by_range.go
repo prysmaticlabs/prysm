@@ -182,18 +182,19 @@ func columnBatchLimit() uint64 {
 
 // TODO: Generalize between data columns and blobs, while the validation parameters used are different they
 // are the same value in the config. Can this be safely abstracted ?
-func validateDataColumnsByRange(r *pb.DataColumnSidecarsByRangeRequest, current primitives.Slot) (rangeParams, error) {
+func validateDataColumnsByRange(r *pb.DataColumnSidecarsByRangeRequest, currentSlot primitives.Slot) (rangeParams, error) {
 	if r.Count == 0 {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "invalid request Count parameter")
 	}
+
 	rp := rangeParams{
 		start: r.StartSlot,
 		size:  r.Count,
 	}
 	// Peers may overshoot the current slot when in initial sync, so we don't want to penalize them by treating the
 	// request as an error. So instead we return a set of params that acts as a noop.
-	if rp.start > current {
-		return rangeParams{start: current, end: current, size: 0}, nil
+	if rp.start > currentSlot {
+		return rangeParams{start: currentSlot, end: currentSlot, size: 0}, nil
 	}
 
 	var err error
@@ -202,10 +203,13 @@ func validateDataColumnsByRange(r *pb.DataColumnSidecarsByRangeRequest, current 
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "overflow start + count -1")
 	}
 
-	maxRequest := params.MaxRequestBlock(slots.ToEpoch(current))
+	// Get current epoch from current slot.
+	currentEpoch := slots.ToEpoch(currentSlot)
+
+	maxRequest := params.MaxRequestBlock(currentEpoch)
 	// Allow some wiggle room, up to double the MaxRequestBlocks past the current slot,
 	// to give nodes syncing close to the head of the chain some margin for error.
-	maxStart, err := current.SafeAdd(maxRequest * 2)
+	maxStart, err := currentSlot.SafeAdd(maxRequest * 2)
 	if err != nil {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "current + maxRequest * 2 > max uint")
 	}
@@ -214,20 +218,23 @@ func validateDataColumnsByRange(r *pb.DataColumnSidecarsByRangeRequest, current 
 	// [max(current_epoch - MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
 	// where current_epoch is defined by the current wall-clock time,
 	// and clients MUST support serving requests of data columns on this range.
-	minStartSlot, err := DataColumnsRPCMinValidSlot(current)
+	minStartSlot, err := DataColumnsRPCMinValidSlot(currentSlot)
 	if err != nil {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "DataColumnsRPCMinValidSlot error")
 	}
+
 	if rp.start > maxStart {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "start > maxStart")
 	}
+
 	if rp.start < minStartSlot {
 		rp.start = minStartSlot
 	}
 
-	if rp.end > current {
-		rp.end = current
+	if rp.end > currentSlot {
+		rp.end = currentSlot
 	}
+
 	if rp.end < rp.start {
 		rp.end = rp.start
 	}
@@ -236,6 +243,7 @@ func validateDataColumnsByRange(r *pb.DataColumnSidecarsByRangeRequest, current 
 	if limit > maxRequest {
 		limit = maxRequest
 	}
+
 	if rp.size > limit {
 		rp.size = limit
 	}
