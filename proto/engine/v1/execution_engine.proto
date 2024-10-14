@@ -224,6 +224,3 @@ message Blob {
 	bytes data = 1 [(ethereum.eth.ext.ssz_size) = "blob.size"];
 }
 
-message ExchangeCapabilities {
-	repeated string supported_methods = 1;
-}

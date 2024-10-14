@@ -59,6 +59,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
 - reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
 - Changed `GetLightClientUpdatesByRange` API to read from the DB instead of computing.
+- Fix `engine_exchangeCapabilities` implementation.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
@@ -89,6 +90,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Testing: added custom matcher for better push settings testing.
 - Registered `GetDepositSnapshot` Beacon API endpoint.
 - Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
+- Fix skipping partial withdrawals count.
 
 ### Security
 
