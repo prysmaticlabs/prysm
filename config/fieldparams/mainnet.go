@@ -37,7 +37,7 @@ const (
 	SyncCommitteeBranchDepth              = 5             // SyncCommitteeBranchDepth defines the number of leaves in a merkle proof of a sync committee.
 	SyncCommitteeBranchDepthElectra       = 6             // SyncCommitteeBranchDepthElectra defines the number of leaves in a merkle proof of a sync committee.
 	FinalityBranchDepth                   = 6             // FinalityBranchDepth defines the number of leaves in a merkle proof of the finalized checkpoint root.
-	PendingBalanceDepositsLimit           = 134217728     // Maximum number of pending balance deposits in the beacon state.
+	PendingDepositsLimit                  = 134217728     // Maximum number of pending balance deposits in the beacon state.
 	PendingPartialWithdrawalsLimit        = 134217728     // Maximum number of pending partial withdrawals in the beacon state.
 	PendingConsolidationsLimit            = 262144        // Maximum number of pending consolidations in the beacon state.
 	MaxDepositRequestsPerPayload          = 8192          // Maximum number of deposit requests in an execution payload.

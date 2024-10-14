@@ -2332,11 +2332,10 @@ func Test_ExchangeCapabilities(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			exchangeCapabilities := &pb.ExchangeCapabilities{}
 			resp := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
-				"result":  exchangeCapabilities,
+				"result":  []string{},
 			}
 			err := json.NewEncoder(w).Encode(resp)
 			require.NoError(t, err)
@@ -2365,14 +2364,11 @@ func Test_ExchangeCapabilities(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			exchangeCapabilities := &pb.ExchangeCapabilities{
-				SupportedMethods: []string{"A", "B", "C"},
-			}
 
 			resp := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
-				"result":  exchangeCapabilities,
+				"result":  []string{"A", "B", "C"},
 			}
 			err := json.NewEncoder(w).Encode(resp)
 			require.NoError(t, err)
