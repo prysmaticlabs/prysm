@@ -9,10 +9,12 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -677,6 +679,133 @@ func Test_packAttestations(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(atts))
 		assert.DeepEqual(t, electraAtt, atts[0])
+	})
+}
+
+func Test_packAttestations_ElectraOnChainAggregates(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ElectraForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	ctx := context.Background()
+	key, err := blst.RandKey()
+	require.NoError(t, err)
+	sig := key.Sign([]byte{'X'})
+
+	cb0 := primitives.NewAttestationCommitteeBits()
+	cb0.SetBitAt(0, true)
+	cb1 := primitives.NewAttestationCommitteeBits()
+	cb1.SetBitAt(1, true)
+
+	data0 := util.HydrateAttestationData(&ethpb.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte{'0'}, 32)})
+	data1 := util.HydrateAttestationData(&ethpb.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte{'1'}, 32)})
+
+	// Glossary:
+	// - Single Aggregate: aggregate with exactly one committee bit set, from which an On-Chain Aggregate is constructed
+	// - On-Chain Aggregate: final aggregate packed into a block
+	//
+	// We construct the following number of single aggregates:
+	// - data_root_0 and committee_index_0: 3 single aggregates
+	// - data_root_0 and committee_index_1: 2 single aggregates
+	// - data_root_1 and committee_index_0: 1 single aggregate
+	// - data_root_1 and committee_index_1: 3 single aggregates
+	//
+	// Because the function tries to aggregate attestations, we have to create attestations which are not aggregatable.
+	// It suffices that they have overlapping aggregation bits.
+	//
+	// The result should be the following six on-chain aggregates:
+	// - for data_root_0 combining single aggregates at index 0 for each committee
+	// - for data_root_0 combining single aggregates at index 1 for each committee
+	// - for data_root_0 constructed from the single aggregate at index 2 for committee_index_0
+	// - for data_root_1 combining single aggregates at index 0 for each committee
+	// - for data_root_1 constructed from the single aggregate at index 1 for committee_index_1
+	// - for data_root_1 constructed from the single aggregate at index 2 for committee_index_1
+	//
+	// This test has no control over the index of a single aggregate because MaxCover may rearrange them.
+	// It means that even if we save d0_c0_a1, d0_c0_a2 and d0_c0_a3 to the pool in this exact order,
+	// at the time of constructing the on-chain aggregate they may be rearranged. This does not
+	// change the total number of on-chain aggregates constructed because the number of single aggregates
+	// remains the same.
+
+	d0_c0_a1 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11110},
+		CommitteeBits:   cb0,
+		Data:            data0,
+		Signature:       sig.Marshal(),
+	}
+	d0_c0_a2 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11001},
+		CommitteeBits:   cb0,
+		Data:            data0,
+		Signature:       sig.Marshal(),
+	}
+	d0_c0_a3 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b10111},
+		CommitteeBits:   cb0,
+		Data:            data0,
+		Signature:       sig.Marshal(),
+	}
+	d0_c1_a1 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11110},
+		CommitteeBits:   cb1,
+		Data:            data0,
+		Signature:       sig.Marshal(),
+	}
+	d0_c1_a2 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b10111},
+		CommitteeBits:   cb1,
+		Data:            data0,
+		Signature:       sig.Marshal(),
+	}
+	d1_c0_a1 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11111},
+		CommitteeBits:   cb0,
+		Data:            data1,
+		Signature:       sig.Marshal(),
+	}
+	d1_c1_a1 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11110},
+		CommitteeBits:   cb1,
+		Data:            data1,
+		Signature:       sig.Marshal(),
+	}
+	d1_c1_a2 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b11001},
+		CommitteeBits:   cb1,
+		Data:            data1,
+		Signature:       sig.Marshal(),
+	}
+	d1_c1_a3 := &ethpb.AttestationElectra{
+		AggregationBits: bitfield.Bitlist{0b10111},
+		CommitteeBits:   cb1,
+		Data:            data1,
+		Signature:       sig.Marshal(),
+	}
+
+	pool := &mock.PoolMock{}
+	require.NoError(t, pool.SaveAggregatedAttestations([]ethpb.Att{d0_c0_a1, d0_c0_a2, d0_c0_a3, d0_c1_a1, d0_c1_a2, d1_c0_a1, d1_c1_a1, d1_c1_a2, d1_c1_a3}))
+	slot := primitives.Slot(1)
+	s := &Server{AttPool: pool, HeadFetcher: &chainMock.ChainService{}, TimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	st, _ := util.DeterministicGenesisStateElectra(t, 128)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
+
+	atts, err := s.packAttestations(ctx, st, params.BeaconConfig().SlotsPerEpoch)
+	require.NoError(t, err)
+	require.Equal(t, 6, len(atts))
+
+	t.Run("slot takes precedence", func(t *testing.T) {
+		moreRecentAtt := &ethpb.AttestationElectra{
+			AggregationBits: bitfield.Bitlist{0b11000}, // we set only one bit for committee_index_0
+			CommitteeBits:   cb1,
+			Data:            util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1, BeaconBlockRoot: bytesutil.PadTo([]byte{'0'}, 32)}),
+			Signature:       sig.Marshal(),
+		}
+		require.NoError(t, pool.SaveUnaggregatedAttestations([]ethpb.Att{moreRecentAtt}))
+		atts, err = s.packAttestations(ctx, st, params.BeaconConfig().SlotsPerEpoch)
+		require.NoError(t, err)
+		require.Equal(t, 7, len(atts))
+		assert.Equal(t, true, atts[0].GetData().Slot == 1)
 	})
 }
 
