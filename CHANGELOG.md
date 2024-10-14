@@ -14,12 +14,18 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
 - Light client support: Implement `BlockToLightClientHeader` function.
+- Light client support: Consensus types.
 - GetBeaconStateV2: add Electra case.
-- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
-- Tests to ensure sepolia config matches the official upstream yaml
-- HTTP endpoint for PublishBlobs
+- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875).
+- Tests to ensure sepolia config matches the official upstream yaml.
+- HTTP endpoint for PublishBlobs.
 - GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
+- Add Electra support and tests for light client functions.
+- fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
+- Add Bellatrix tests for light client functions.
+- Add Discovery Rebooter Feature.
+- Added GetBlockAttestationsV2 endpoint.
 - Better attestation packing for Electra. [PR](https://github.com/prysmaticlabs/prysm/pull/14534)
 
 ### Changed
@@ -54,6 +60,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
+- `/eth/v1alpha1/validator/activation/stream` grpc wait for activation stream is deprecated. [pr](https://github.com/prysmaticlabs/prysm/pull/14514)
 
 ### Removed
 
@@ -78,6 +85,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: fix light client attested header execution fields' wrong version bug.
 - Testing: added custom matcher for better push settings testing.
 - Registered `GetDepositSnapshot` Beacon API endpoint.
+- Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
 
 ### Security
 
