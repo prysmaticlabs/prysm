@@ -123,6 +123,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	}
 
 	updates := make([]*structs.LightClientUpdateResponse, len(updatesMap))
+	updatesCount := 0
 	for i, j := startPeriod, 0; i <= endPeriod; i, j = i+1, j+1 {
 		update, ok := updatesMap[i]
 		if !ok {
@@ -137,9 +138,10 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		}
 
 		updates[j] = updateResponse
+		updatesCount++
 	}
 
-	httputil.WriteJson(w, updates)
+	httputil.WriteJson(w, updates[:updatesCount])
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
