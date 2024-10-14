@@ -88,6 +88,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Testing: added custom matcher for better push settings testing.
 - Registered `GetDepositSnapshot` Beacon API endpoint.
 - Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
+- Fix skipping partial withdrawals count.
 
 ### Security
 
