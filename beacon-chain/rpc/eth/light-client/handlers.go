@@ -118,7 +118,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	// get updates
 	updatesMap, err := s.BeaconDB.LightClientUpdates(ctx, startPeriod, endPeriod)
 	if err != nil {
-		httputil.HandleError(w, "could not get light client updates: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get light client updates from DB: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
