@@ -20,6 +20,9 @@ import (
 var ErrUnsupportedConversion = errors.New("Could not determine api struct type to use for value")
 
 func (h *SignedBeaconBlockHeader) ToConsensus() (*eth.SignedBeaconBlockHeader, error) {
+	if h == nil {
+		return nil, errNilValue
+	}
 	msg, err := h.Message.ToConsensus()
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Message")
@@ -36,6 +39,9 @@ func (h *SignedBeaconBlockHeader) ToConsensus() (*eth.SignedBeaconBlockHeader, e
 }
 
 func (h *BeaconBlockHeader) ToConsensus() (*eth.BeaconBlockHeader, error) {
+	if h == nil {
+		return nil, errNilValue
+	}
 	s, err := strconv.ParseUint(h.Slot, 10, 64)
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Slot")
@@ -2548,6 +2554,8 @@ func SignedBeaconBlockMessageJsoner(block interfaces.ReadOnlySignedBeaconBlock) 
 		return SignedBlindedBeaconBlockDenebFromConsensus(pbStruct)
 	case *eth.SignedBeaconBlockDeneb:
 		return SignedBeaconBlockDenebFromConsensus(pbStruct)
+	case *eth.SignedBlindedBeaconBlockElectra:
+		return SignedBlindedBeaconBlockElectraFromConsensus(pbStruct)
 	case *eth.SignedBeaconBlockElectra:
 		return SignedBeaconBlockElectraFromConsensus(pbStruct)
 	default:

@@ -2781,8 +2781,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_prysmaticlabs_fastssz",
         importpath = "github.com/prysmaticlabs/fastssz",
-        sum = "h1:0LZAwwHnsZFfXm4IK4rzFV4N5IVSKZKLmuBMA4kAlFk=",
-        version = "v0.0.0-20240620202422-a981b8ef89d3",
+        sum = "h1:xuVAdtz5ShYblG2sPyb4gw01DF8InbOI/kBCQjk7NiM=",
+        version = "v0.0.0-20241008181541-518c4ce73516",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
@@ -2832,6 +2832,12 @@ def prysm_deps():
         importpath = "github.com/quic-go/webtransport-go",
         sum = "h1:HxSrwun11U+LlmwpgM1kEqIqH90IT4N8auv/cD7QFJg=",
         version = "v0.8.0",
+    )
+    go_repository(
+        name = "com_github_r3labs_sse_v2",
+        importpath = "github.com/r3labs/sse/v2",
+        sum = "h1:hFEkLLFY4LDifoHdiCN/LlGBAdVJYsANaLqNYa1l/v0=",
+        version = "v2.10.0",
     )
     go_repository(
         name = "com_github_raulk_go_watchdog",
@@ -4303,6 +4309,12 @@ def prysm_deps():
         importpath = "gopkg.in/bsm/ratelimit.v1",
         sum = "h1:stTHdEoWg1pQ8riaP5ROrjS6zy6wewH/Q2iwnLCQUXY=",
         version = "v1.0.0-20160220154919-db14e161995a",
+    )
+    go_repository(
+        name = "in_gopkg_cenkalti_backoff_v1",
+        importpath = "gopkg.in/cenkalti/backoff.v1",
+        sum = "h1:Arh75ttbsvlpVA7WtVpH4u9h6Zl46xuptxqLxPiSo4Y=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "in_gopkg_check_v1",
