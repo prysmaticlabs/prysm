@@ -135,7 +135,6 @@ func (client *ApiClient) GetServerStatus(ctx context.Context) (string, error) {
 
 // doRequest is a utility method for requests.
 func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath string, body io.Reader) (*http.Response, error) {
-	var requestDump []byte
 	ctx, span := trace.StartSpan(ctx, "remote_web3signer.Client.doRequest")
 	defer span.End()
 	span.SetAttributes(
@@ -149,6 +148,10 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	requestDump, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		return nil, err
+	}
 	start := time.Now()
 	resp, err := client.RestClient.Do(req)
 	duration := time.Since(start)
@@ -161,10 +164,6 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 		signRequestDurationSeconds.WithLabelValues(req.Method, strconv.Itoa(resp.StatusCode)).Observe(duration.Seconds())
 	}
 	if resp.StatusCode != http.StatusOK {
-		requestDump, err = httputil.DumpRequestOut(req, true)
-		if err != nil {
-			return nil, err
-		}
 		responseDump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
 			return nil, err
