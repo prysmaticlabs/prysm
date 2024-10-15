@@ -84,10 +84,11 @@ require (
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
 	go.etcd.io/bbolt v1.3.6
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/otel v1.29.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
+	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.17.0
 	go.opentelemetry.io/otel/sdk v1.29.0
-	go.opentelemetry.io/otel/trace v1.29.0
+	go.opentelemetry.io/otel/trace v1.30.0
 	go.uber.org/automaxprocs v1.5.2
 	go.uber.org/mock v0.4.0
 	golang.org/x/crypto v0.26.0
@@ -137,6 +138,7 @@ require (
 	github.com/dop251/goja v0.0.0-20230806174421-c933cf95e127 // indirect
 	github.com/elastic/gosigar v0.14.3 // indirect
 	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
@@ -249,7 +251,7 @@ require (
 	github.com/wlynxg/anet v0.0.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	go.opentelemetry.io/otel/metric v1.29.0 // indirect
+	go.opentelemetry.io/otel/metric v1.30.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/fx v1.22.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
