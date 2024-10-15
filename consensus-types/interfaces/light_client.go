@@ -9,6 +9,7 @@ import (
 
 type LightClientExecutionBranch = [fieldparams.ExecutionBranchDepth][fieldparams.RootLength]byte
 type LightClientSyncCommitteeBranch = [fieldparams.SyncCommitteeBranchDepth][fieldparams.RootLength]byte
+type LightClientSyncCommitteeBranchElectra = [fieldparams.SyncCommitteeBranchDepthElectra][fieldparams.RootLength]byte
 type LightClientFinalityBranch = [fieldparams.FinalityBranchDepth][fieldparams.RootLength]byte
 
 type LightClientHeader interface {
@@ -24,7 +25,8 @@ type LightClientBootstrap interface {
 	Version() int
 	Header() LightClientHeader
 	CurrentSyncCommittee() *pb.SyncCommittee
-	CurrentSyncCommitteeBranch() LightClientSyncCommitteeBranch
+	CurrentSyncCommitteeBranch() (LightClientSyncCommitteeBranch, error)
+	CurrentSyncCommitteeBranchElectra() (LightClientSyncCommitteeBranchElectra, error)
 }
 
 type LightClientUpdate interface {
@@ -32,7 +34,8 @@ type LightClientUpdate interface {
 	Version() int
 	AttestedHeader() LightClientHeader
 	NextSyncCommittee() *pb.SyncCommittee
-	NextSyncCommitteeBranch() LightClientSyncCommitteeBranch
+	NextSyncCommitteeBranch() (LightClientSyncCommitteeBranch, error)
+	NextSyncCommitteeBranchElectra() (LightClientSyncCommitteeBranchElectra, error)
 	FinalizedHeader() LightClientHeader
 	FinalityBranch() LightClientFinalityBranch
 	SyncAggregate() *pb.SyncAggregate
