@@ -108,6 +108,7 @@ Updating to this release is recommended at your convenience.
 - Removed gRPC Gateway.
 - Removed unused blobs bundle cache.
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
+- Remove engine_getPayloadBodiesBy{Hash|Range}V2
 
 ### Fixed
 
