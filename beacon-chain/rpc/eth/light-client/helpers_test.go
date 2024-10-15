@@ -13,7 +13,7 @@ import (
 
 // When the update has relevant sync committee
 func createNonEmptySyncCommitteeBranch() [][]byte {
-	res := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
+	res := make([][]byte, fieldparams.SyncCommitteeBranchDepth)
 	res[0] = []byte("xyz")
 	return res
 }
@@ -101,7 +101,7 @@ func TestIsBetterUpdate(t *testing.T) {
 						}},
 					},
 				},
-				NextSyncCommitteeBranch: make([][]byte, fieldparams.NextSyncCommitteeBranchDepth),
+				NextSyncCommitteeBranch: make([][]byte, fieldparams.SyncCommitteeBranchDepth),
 				SignatureSlot:           9999,
 			},
 			newUpdate: &ethpbv2.LightClientUpdate{
@@ -147,7 +147,7 @@ func TestIsBetterUpdate(t *testing.T) {
 						}},
 					},
 				},
-				NextSyncCommitteeBranch: make([][]byte, fieldparams.NextSyncCommitteeBranchDepth),
+				NextSyncCommitteeBranch: make([][]byte, fieldparams.SyncCommitteeBranchDepth),
 				SignatureSlot:           9999,
 			},
 			expectedResult: false,
