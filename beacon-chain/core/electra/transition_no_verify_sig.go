@@ -66,7 +66,7 @@ func ProcessOperations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process altair attestation")
 	}
-	if _, err := ProcessDeposits(ctx, st, bb.Deposits()); err != nil { // new in electra
+	if _, err := blocks.ProcessDeposits(ctx, st, bb.Deposits()); err != nil { // new in electra
 		return nil, errors.Wrap(err, "could not process altair deposit")
 	}
 	st, err = ProcessVoluntaryExits(ctx, st, bb.VoluntaryExits())

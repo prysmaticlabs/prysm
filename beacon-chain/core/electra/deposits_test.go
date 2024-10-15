@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -371,7 +372,7 @@ func TestProcessDeposit_Electra_Simple(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	pdSt, err := electra.ProcessDeposits(context.Background(), st, deps)
+	pdSt, err := blocks.ProcessDeposits(context.Background(), st, deps)
 	require.NoError(t, err)
 	pbd, err := pdSt.PendingDeposits()
 	require.NoError(t, err)
@@ -409,7 +410,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := electra.ProcessDeposit(beaconState, dep[0], false)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], false)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {
@@ -446,7 +447,7 @@ func TestApplyDeposit_TopUps_WithBadSignature(t *testing.T) {
 	vals[0].PublicKey = sk.PublicKey().Marshal()
 	vals[0].WithdrawalCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	require.NoError(t, st.SetValidators(vals))
-	adSt, err := electra.ApplyDeposit(st, depositData, false)
+	adSt, err := blocks.ApplyDeposit(st, depositData, false)
 	require.NoError(t, err)
 	pbd, err := adSt.PendingDeposits()
 	require.NoError(t, err)

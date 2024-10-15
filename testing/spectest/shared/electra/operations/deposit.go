@@ -3,7 +3,7 @@ package operations
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/electra"
+	coreBlocks "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -23,5 +23,5 @@ func blockWithDeposit(ssz []byte) (interfaces.SignedBeaconBlock, error) {
 }
 
 func RunDepositTest(t *testing.T, config string) {
-	common.RunDepositTest(t, config, version.String(version.Electra), blockWithDeposit, electra.ProcessDeposits, sszToState)
+	common.RunDepositTest(t, config, version.String(version.Electra), blockWithDeposit, coreBlocks.ProcessDeposits, sszToState)
 }
