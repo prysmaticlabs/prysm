@@ -52,7 +52,7 @@ func setKeysToActive(beaconState state.BeaconState) error {
 
 // genesisBeaconStateElectra returns the genesis beacon state.
 func genesisBeaconStateElectra(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
-	st, err := emptyGenesisStateElectra()
+	st, err := emptyGenesisStateDeneb()
 	if err != nil {
 		return nil, err
 	}
@@ -69,40 +69,6 @@ func genesisBeaconStateElectra(ctx context.Context, deposits []*ethpb.Deposit, g
 	}
 
 	return buildGenesisBeaconStateElectra(genesisTime, st, st.Eth1Data())
-}
-
-// emptyGenesisStateDeneb returns an empty genesis state in Electra format.
-func emptyGenesisStateElectra() (state.BeaconState, error) {
-	st := &ethpb.BeaconStateElectra{
-		// Misc fields.
-		Slot: 0,
-		Fork: &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().BellatrixForkVersion,
-			CurrentVersion:  params.BeaconConfig().DenebForkVersion,
-			Epoch:           0,
-		},
-		// Validator registry fields.
-		Validators:       []*ethpb.Validator{},
-		Balances:         []uint64{},
-		InactivityScores: []uint64{},
-
-		JustificationBits:          []byte{0},
-		HistoricalRoots:            [][]byte{},
-		CurrentEpochParticipation:  []byte{},
-		PreviousEpochParticipation: []byte{},
-
-		// Eth1 data.
-		Eth1Data:         &ethpb.Eth1Data{},
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: 0,
-
-		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{},
-
-		DepositBalanceToConsume:       primitives.Gwei(0),
-		ExitBalanceToConsume:          primitives.Gwei(0),
-		ConsolidationBalanceToConsume: primitives.Gwei(0),
-	}
-	return state_native.InitializeFromProtoElectra(st)
 }
 
 func buildGenesisBeaconStateElectra(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {

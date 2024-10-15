@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -42,7 +43,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposits(context.Background(), beaconState, []*ethpb.Deposit{dep[0], dep[1], dep[2]})
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, []*ethpb.Deposit{dep[0], dep[1], dep[2]})
 	require.NoError(t, err, "Expected block deposits to process correctly")
 	require.Equal(t, 2, len(newState.Validators()), "Incorrect validator count")
 }
@@ -70,7 +71,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposits(context.Background(), beaconState, []*ethpb.Deposit{dep[0]})
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, []*ethpb.Deposit{dep[0]})
 	require.NoError(t, err, "Expected block deposits to process correctly")
 	if newState.Balances()[1] != dep[0].Data.Amount {
 		t.Errorf(
@@ -127,7 +128,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposits(context.Background(), beaconState, []*ethpb.Deposit{deposit})
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, []*ethpb.Deposit{deposit})
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }
@@ -156,7 +157,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	require.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
@@ -199,7 +200,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(beaconState, dep[0], false)
+	newState, err := blocks.ProcessDeposit(beaconState, dep[0], false)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {
@@ -333,7 +334,7 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
+	newState, err := blocks.ProcessDeposit(beaconState, deposit, true /*verifySignature*/)
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, uint64(1000+50), newState.Balances()[1], "Expected balance at index 1 to be 1050")
 }
@@ -370,6 +371,6 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	})
 	require.NoError(t, err)
 	want := "deposit root did not verify"
-	_, err = altair.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
+	_, err = blocks.ProcessDeposits(context.Background(), beaconState, b.Block.Body.Deposits)
 	assert.ErrorContains(t, want, err)
 }
