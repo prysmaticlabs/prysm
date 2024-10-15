@@ -169,7 +169,7 @@ type BLSToExecutionChangesPoolResponse struct {
 }
 
 type GetAttesterSlashingsResponse struct {
-	Version string          `json:"version"`
+	Version string          `json:"version,omitempty"`
 	Data    json.RawMessage `json:"data"` // Accepts both `[]*AttesterSlashing` and `[]*AttesterSlashingElectra` types
 }
 
