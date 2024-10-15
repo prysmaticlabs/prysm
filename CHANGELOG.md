@@ -27,7 +27,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Add Bellatrix tests for light client functions.
 - Add Discovery Rebooter Feature.
 - Added GetBlockAttestationsV2 endpoint.
-- Light client support: Consensus types for Electra
+- Light client support: Consensus types for Electra.
+- Add OpenTelemetry HTTP tracing middleware.
 
 ### Changed
 
