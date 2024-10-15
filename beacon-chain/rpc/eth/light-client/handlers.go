@@ -124,7 +124,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 
 	updates := make([]*structs.LightClientUpdateResponse, 0, len(updatesMap))
 
-	for i := startPeriod; i <= endPeriod; i = i + 1 {
+	for i := startPeriod; i <= endPeriod; i++ {
 		update, ok := updatesMap[i]
 		if !ok {
 			// Only return the first contiguous range of updates
