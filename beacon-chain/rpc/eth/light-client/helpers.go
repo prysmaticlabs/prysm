@@ -7,10 +7,9 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
-	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
-	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -18,18 +17,17 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
-func createLightClientBootstrap(ctx context.Context, state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
+func createLightClientBootstrap(ctx context.Context, state state.BeaconState, blk interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientBootstrap, error) {
 	switch blk.Version() {
 	case version.Phase0:
 		return nil, fmt.Errorf("light client bootstrap is not supported for phase0")
 	case version.Altair, version.Bellatrix:
-		return createLightClientBootstrapAltair(ctx, state)
+		return createLightClientBootstrapAltair(ctx, state, blk)
 	case version.Capella:
 		return createLightClientBootstrapCapella(ctx, state, blk)
 	case version.Deneb, version.Electra:
@@ -38,24 +36,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState, bl
 	return nil, fmt.Errorf("unsupported block version %s", version.String(blk.Version()))
 }
 
-// createLightClientBootstrapAltair - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
-// def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
-//
-//	assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
-//	assert state.slot == state.latest_block_header.slot
-//
-//	return LightClientBootstrap(
-//	    header=BeaconBlockHeader(
-//	        slot=state.latest_block_header.slot,
-//	        proposer_index=state.latest_block_header.proposer_index,
-//	        parent_root=state.latest_block_header.parent_root,
-//	        state_root=hash_tree_root(state),
-//	        body_root=state.latest_block_header.body_root,
-//	    ),
-//	    current_sync_committee=state.current_sync_committee,
-//	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
-//	)
-func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrap, error) {
+func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
@@ -67,55 +48,63 @@ func createLightClientBootstrapAltair(ctx context.Context, state state.BeaconSta
 		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
 	}
 
-	// Prepare data
+	// header.state_root = hash_tree_root(state)
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get state root")
+	}
+	latestBlockHeader.StateRoot = stateRoot[:]
+
+	// assert hash_tree_root(header) == hash_tree_root(block.message)
+	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get latest block header root")
+	}
+	beaconBlockRoot, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	if latestBlockHeaderRoot != beaconBlockRoot {
+		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
+	}
+
+	lightClientHeaderContainer, err := lightclient.BlockToLightClientHeader(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert block to light client header")
+	}
+	lightClientHeader := lightClientHeaderContainer.GetHeaderAltair()
+
+	apiLightClientHeader := &structs.LightClientHeader{
+		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
+	}
+
+	headerJSON, err := json.Marshal(apiLightClientHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert header to raw message")
+	}
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current sync committee")
 	}
-
-	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
-
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
-	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	branch := make([]string, fieldparams.SyncCommitteeBranchDepth)
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
-
-	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-	if beacon == nil {
-		return nil, fmt.Errorf("could not get beacon block header")
-	}
-	header := &structs.LightClientHeader{
-		Beacon: beacon,
-	}
-
-	// Above shared util function won't calculate state root, so we need to do it manually
-	stateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get state root")
-	}
-	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
-
-	headerJson, err := json.Marshal(header)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert header to raw message")
-	}
-
-	// Return result
 	result := &structs.LightClientBootstrap{
-		Header:                     headerJson,
-		CurrentSyncCommittee:       committee,
+		Header:                     headerJSON,
+		CurrentSyncCommittee:       structs.SyncCommitteeFromConsensus(currentSyncCommittee),
 		CurrentSyncCommitteeBranch: branch,
 	}
 
 	return result, nil
 }
 
-func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
+func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= CAPELLA_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().CapellaForkEpoch {
 		return nil, fmt.Errorf("creating Capella light client bootstrap is not supported before Capella, invalid slot %d", state.Slot())
@@ -127,111 +116,63 @@ func createLightClientBootstrapCapella(ctx context.Context, state state.BeaconSt
 		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
 	}
 
-	// Prepare data
+	// header.state_root = hash_tree_root(state)
+	stateRoot, err := state.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get state root")
+	}
+	latestBlockHeader.StateRoot = stateRoot[:]
+
+	// assert hash_tree_root(header) == hash_tree_root(block.message)
+	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get latest block header root")
+	}
+	beaconBlockRoot, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	if latestBlockHeaderRoot != beaconBlockRoot {
+		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
+	}
+
+	lightClientHeaderContainer, err := lightclient.BlockToLightClientHeader(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert block to light client header")
+	}
+	lightClientHeader := lightClientHeaderContainer.GetHeaderCapella()
+
+	apiLightClientHeader := &structs.LightClientHeader{
+		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
+	}
+
+	headerJSON, err := json.Marshal(apiLightClientHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert header to raw message")
+	}
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current sync committee")
 	}
-
-	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
-
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get current sync committee proof")
 	}
 
-	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
+	branch := make([]string, fieldparams.SyncCommitteeBranchDepth)
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
-
-	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-
-	payloadInterface, err := block.Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-	transactionsRoot, err := payloadInterface.TransactionsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		transactions, err := payloadInterface.Transactions()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions")
-		}
-		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions root")
-		}
-		transactionsRoot = transactionsRootArray[:]
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions root")
-	}
-	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		withdrawals, err := payloadInterface.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		withdrawalsRoot = withdrawalsRootArray[:]
-	}
-	executionPayloadHeader := &structs.ExecutionPayloadHeaderCapella{
-		ParentHash:       hexutil.Encode(payloadInterface.ParentHash()),
-		FeeRecipient:     hexutil.Encode(payloadInterface.FeeRecipient()),
-		StateRoot:        hexutil.Encode(payloadInterface.StateRoot()),
-		ReceiptsRoot:     hexutil.Encode(payloadInterface.ReceiptsRoot()),
-		LogsBloom:        hexutil.Encode(payloadInterface.LogsBloom()),
-		PrevRandao:       hexutil.Encode(payloadInterface.PrevRandao()),
-		BlockNumber:      hexutil.EncodeUint64(payloadInterface.BlockNumber()),
-		GasLimit:         hexutil.EncodeUint64(payloadInterface.GasLimit()),
-		GasUsed:          hexutil.EncodeUint64(payloadInterface.GasUsed()),
-		Timestamp:        hexutil.EncodeUint64(payloadInterface.Timestamp()),
-		ExtraData:        hexutil.Encode(payloadInterface.ExtraData()),
-		BaseFeePerGas:    hexutil.Encode(payloadInterface.BaseFeePerGas()),
-		BlockHash:        hexutil.Encode(payloadInterface.BlockHash()),
-		TransactionsRoot: hexutil.Encode(transactionsRoot),
-		WithdrawalsRoot:  hexutil.Encode(withdrawalsRoot),
-	}
-
-	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload proof")
-	}
-	executionPayloadProofStr := make([]string, len(executionPayloadProof))
-	for i, proof := range executionPayloadProof {
-		executionPayloadProofStr[i] = hexutil.Encode(proof)
-	}
-	header := &structs.LightClientHeaderCapella{
-		Beacon:          beacon,
-		Execution:       executionPayloadHeader,
-		ExecutionBranch: executionPayloadProofStr,
-	}
-
-	// Above shared util function won't calculate state root, so we need to do it manually
-	stateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get state root")
-	}
-	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
-
-	headerJson, err := json.Marshal(header)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert header to raw message")
-	}
-
-	// Return result
 	result := &structs.LightClientBootstrap{
-		Header:                     headerJson,
-		CurrentSyncCommittee:       committee,
+		Header:                     headerJSON,
+		CurrentSyncCommittee:       structs.SyncCommitteeFromConsensus(currentSyncCommittee),
 		CurrentSyncCommitteeBranch: branch,
 	}
 
 	return result, nil
 }
 
-func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlyBeaconBlock) (*structs.LightClientBootstrap, error) {
+func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconState, block interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= DENEB_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().DenebForkEpoch {
 		return nil, fmt.Errorf("creating Deneb light client bootstrap is not supported before Deneb, invalid slot %d", state.Slot())
@@ -243,103 +184,61 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
 	}
 
-	// Prepare data
-	currentSyncCommittee, err := state.CurrentSyncCommittee()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current sync committee")
-	}
-
-	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
-
-	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get current sync committee proof")
-	}
-
-	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
-	for i, proof := range currentSyncCommitteeProof {
-		branch[i] = hexutil.Encode(proof)
-	}
-
-	beacon := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
-
-	payloadInterface, err := block.Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-	transactionsRoot, err := payloadInterface.TransactionsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		transactions, err := payloadInterface.Transactions()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions")
-		}
-		transactionsRootArray, err := ssz.TransactionsRoot(transactions)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get transactions root")
-		}
-		transactionsRoot = transactionsRootArray[:]
-	} else if err != nil {
-		return nil, errors.Wrap(err, "could not get transactions root")
-	}
-	withdrawalsRoot, err := payloadInterface.WithdrawalsRoot()
-	if errors.Is(err, consensus_types.ErrUnsupportedField) {
-		withdrawals, err := payloadInterface.Withdrawals()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals")
-		}
-		withdrawalsRootArray, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get withdrawals root")
-		}
-		withdrawalsRoot = withdrawalsRootArray[:]
-	}
-	executionPayloadHeader := &structs.ExecutionPayloadHeaderDeneb{
-		ParentHash:       hexutil.Encode(payloadInterface.ParentHash()),
-		FeeRecipient:     hexutil.Encode(payloadInterface.FeeRecipient()),
-		StateRoot:        hexutil.Encode(payloadInterface.StateRoot()),
-		ReceiptsRoot:     hexutil.Encode(payloadInterface.ReceiptsRoot()),
-		LogsBloom:        hexutil.Encode(payloadInterface.LogsBloom()),
-		PrevRandao:       hexutil.Encode(payloadInterface.PrevRandao()),
-		BlockNumber:      hexutil.EncodeUint64(payloadInterface.BlockNumber()),
-		GasLimit:         hexutil.EncodeUint64(payloadInterface.GasLimit()),
-		GasUsed:          hexutil.EncodeUint64(payloadInterface.GasUsed()),
-		Timestamp:        hexutil.EncodeUint64(payloadInterface.Timestamp()),
-		ExtraData:        hexutil.Encode(payloadInterface.ExtraData()),
-		BaseFeePerGas:    hexutil.Encode(payloadInterface.BaseFeePerGas()),
-		BlockHash:        hexutil.Encode(payloadInterface.BlockHash()),
-		TransactionsRoot: hexutil.Encode(transactionsRoot),
-		WithdrawalsRoot:  hexutil.Encode(withdrawalsRoot),
-	}
-
-	executionPayloadProof, err := blocks.PayloadProof(ctx, block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload proof")
-	}
-	executionPayloadProofStr := make([]string, len(executionPayloadProof))
-	for i, proof := range executionPayloadProof {
-		executionPayloadProofStr[i] = hexutil.Encode(proof)
-	}
-	header := &structs.LightClientHeaderDeneb{
-		Beacon:          beacon,
-		Execution:       executionPayloadHeader,
-		ExecutionBranch: executionPayloadProofStr,
-	}
-
-	// Above shared util function won't calculate state root, so we need to do it manually
+	// header.state_root = hash_tree_root(state)
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state root")
 	}
-	header.Beacon.StateRoot = hexutil.Encode(stateRoot[:])
+	latestBlockHeader.StateRoot = stateRoot[:]
 
-	headerJson, err := json.Marshal(header)
+	// assert hash_tree_root(header) == hash_tree_root(block.message)
+	latestBlockHeaderRoot, err := latestBlockHeader.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get latest block header root")
+	}
+	beaconBlockRoot, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	if latestBlockHeaderRoot != beaconBlockRoot {
+		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
+	}
+
+	lightClientHeaderContainer, err := lightclient.BlockToLightClientHeader(block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert block to light client header")
+	}
+	lightClientHeader := lightClientHeaderContainer.GetHeaderDeneb()
+
+	apiLightClientHeader := &structs.LightClientHeader{
+		Beacon: structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(lightClientHeader.Beacon)),
+	}
+
+	headerJSON, err := json.Marshal(apiLightClientHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert header to raw message")
 	}
-	// Return result
+	currentSyncCommittee, err := state.CurrentSyncCommittee()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current sync committee")
+	}
+	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current sync committee proof")
+	}
+	var branch []string
+	switch block.Version() {
+	case version.Deneb:
+		branch = make([]string, fieldparams.SyncCommitteeBranchDepth)
+	case version.Electra:
+		branch = make([]string, fieldparams.SyncCommitteeBranchDepthElectra)
+	}
+	for i, proof := range currentSyncCommitteeProof {
+		branch[i] = hexutil.Encode(proof)
+	}
 	result := &structs.LightClientBootstrap{
-		Header:                     headerJson,
-		CurrentSyncCommittee:       committee,
+		Header:                     headerJSON,
+		CurrentSyncCommittee:       structs.SyncCommitteeFromConsensus(currentSyncCommittee),
 		CurrentSyncCommitteeBranch: branch,
 	}
 
@@ -351,9 +250,10 @@ func newLightClientUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*structs.LightClientUpdate, error) {
-	result, err := lightclient.NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -366,9 +266,10 @@ func newLightClientFinalityUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*structs.LightClientFinalityUpdate, error) {
-	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	result, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -381,8 +282,9 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
+	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (*structs.LightClientOptimisticUpdate, error) {
-	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
+	result, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +293,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 }
 
 func IsSyncCommitteeUpdate(update *v2.LightClientUpdate) bool {
-	nextSyncCommitteeBranch := make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
+	nextSyncCommitteeBranch := make([][]byte, fieldparams.SyncCommitteeBranchDepth)
 	return !reflect.DeepEqual(update.NextSyncCommitteeBranch, nextSyncCommitteeBranch)
 }
 

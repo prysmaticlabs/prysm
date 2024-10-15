@@ -87,6 +87,7 @@ service BeaconNodeValidator {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/activation/stream"
         };
+        option deprecated = true;
     }
 
     // ValidatorIndex retrieves a validator's index location in the beacon state's

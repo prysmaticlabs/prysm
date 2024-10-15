@@ -13,12 +13,26 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
-- Light client support: Implement `BlockToLightClientHeaderXXX` functions upto Deneb
+- Electra EIP6110: Queue deposit [pr](https://github.com/prysmaticlabs/prysm/pull/14430)
+- Light client support: Implement `BlockToLightClientHeader` function.
+- Light client support: Consensus types.
 - GetBeaconStateV2: add Electra case.
-- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875)
+- Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875).
+- Tests to ensure sepolia config matches the official upstream yaml.
+- HTTP endpoint for PublishBlobs.
+- GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
+- Add Electra support and tests for light client functions.
+- fastssz version bump (better error messages).
+- SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
+- Add Bellatrix tests for light client functions.
+- Add Discovery Rebooter Feature.
+- Added GetBlockAttestationsV2 endpoint.
+- Light client support: Consensus types for Electra
+- Added SubmitPoolAttesterSlashingV2 endpoint.
 
 ### Changed
 
+- Electra: Updated interop genesis generator to support Electra.
 - `getLocalPayload` has been refactored to enable work in ePBS branch.
 - `TestNodeServer_GetPeer` and `TestNodeServer_ListPeers` test flakes resolved by iterating the whole peer list to find
   a match rather than taking the first peer in the map.
@@ -33,23 +47,34 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
+- Electra EIP6110: Queue deposit requests changes from consensus spec pr #3818
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
 - Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 - Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
 - Updated k8s-io/client-go to v0.30.4 and k8s-io/apimachinery to v0.30.4
 - Migrated tracing library from opencensus to opentelemetry for both the beacon node and validator.
 - Refactored light client code to make it more readable and make future PRs easier.
+- Update light client helper functions to reference `dev` branch of CL specs
 - Updated Libp2p Dependencies to allow prysm to use gossipsub v1.2 .
+- Updated Sepolia bootnodes.
+- Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
+- Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
+- reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
+- Fix `engine_exchangeCapabilities` implementation.
+- Updated the default `scrape-interval` in `Client-stats` to 2 minutes to accommodate Beaconcha.in API rate limits.
+- Switch to compounding when consolidating with source==target.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
+- `/eth/v1alpha1/validator/activation/stream` grpc wait for activation stream is deprecated. [pr](https://github.com/prysmaticlabs/prysm/pull/14514)
 
 ### Removed
 
-- removed gRPC Gateway
-- Removed unused blobs bundle cache
+- Removed gRPC Gateway.
+- Removed unused blobs bundle cache.
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
+- Removed finalized validator index cache, no longer needed.
 
 ### Fixed
 
@@ -64,7 +89,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Core: Fixed slash processing causing extra hashing.
 - Core: Fixed extra allocations when processing slashings.
 - remove unneeded container in blob sidecar ssz response
+- Light client support: create finalized header based on finalizedBlock's version, not attestedBlock.
+- Light client support: fix light client attested header execution fields' wrong version bug.
 - Testing: added custom matcher for better push settings testing.
+- Registered `GetDepositSnapshot` Beacon API endpoint.
+- Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
+- Fix skipping partial withdrawals count.
 
 ### Security
 

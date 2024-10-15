@@ -3980,7 +3980,10 @@ func (v *Validator) UnmarshalSSZ(buf []byte) error {
 	v.EffectiveBalance = ssz.UnmarshallUint64(buf[80:88])
 
 	// Field (3) 'Slashed'
-	v.Slashed = ssz.UnmarshalBool(buf[88:89])
+	v.Slashed, err = ssz.DecodeBool(buf[88:89])
+	if err != nil {
+		return err
+	}
 
 	// Field (4) 'ActivationEligibilityEpoch'
 	v.ActivationEligibilityEpoch = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[89:97]))

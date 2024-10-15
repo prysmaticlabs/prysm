@@ -33,8 +33,11 @@ const (
 	BlobSize                              = 131072        // defined to match blob.size in bazel ssz codegen
 	BlobSidecarSize                       = 131928        // defined to match blob sidecar size in bazel ssz codegen
 	KzgCommitmentInclusionProofDepth      = 17            // Merkle proof depth for blob_kzg_commitments list item
-	NextSyncCommitteeBranchDepth          = 5             // NextSyncCommitteeBranchDepth defines the depth of the next sync committee branch.
-	PendingBalanceDepositsLimit           = 134217728     // Maximum number of pending balance deposits in the beacon state.
+	ExecutionBranchDepth                  = 4             // ExecutionBranchDepth defines the number of leaves in a merkle proof of the execution payload header.
+	SyncCommitteeBranchDepth              = 5             // SyncCommitteeBranchDepth defines the number of leaves in a merkle proof of a sync committee.
+	SyncCommitteeBranchDepthElectra       = 6             // SyncCommitteeBranchDepthElectra defines the number of leaves in a merkle proof of a sync committee.
+	FinalityBranchDepth                   = 6             // FinalityBranchDepth defines the number of leaves in a merkle proof of the finalized checkpoint root.
+	PendingDepositsLimit                  = 134217728     // Maximum number of pending balance deposits in the beacon state.
 	PendingPartialWithdrawalsLimit        = 134217728     // Maximum number of pending partial withdrawals in the beacon state.
 	PendingConsolidationsLimit            = 262144        // Maximum number of pending consolidations in the beacon state.
 	MaxDepositRequestsPerPayload          = 8192          // Maximum number of deposit requests in an execution payload.

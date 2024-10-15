@@ -607,3 +607,28 @@ func TestWithinVotingWindow(t *testing.T) {
 	genesisTime = uint64(time.Now().Add(-40 * time.Second).Unix())
 	require.Equal(t, false, WithinVotingWindow(genesisTime, 3))
 }
+
+func TestSecondsUntilNextEpochStart(t *testing.T) {
+	secondsInEpoch := uint64(params.BeaconConfig().SlotsPerEpoch) * params.BeaconConfig().SecondsPerSlot
+	// try slot 3
+	genesisTime := uint64(time.Now().Add(-39 * time.Second).Unix())
+	waitTime, err := SecondsUntilNextEpochStart(genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, secondsInEpoch-(params.BeaconConfig().SecondsPerSlot*3)-3, waitTime)
+	// try slot 34
+	genesisTime = uint64(time.Now().Add(time.Duration(-1*int(secondsInEpoch)-int(params.BeaconConfig().SecondsPerSlot*2)-5) * time.Second).Unix())
+	waitTime, err = SecondsUntilNextEpochStart(genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, secondsInEpoch-(params.BeaconConfig().SecondsPerSlot*2)-5, waitTime)
+
+	// check if waitTime is correctly EpochStart
+	n := time.Now().Add(-39 * time.Second)
+	genesisTime = uint64(n.Unix())
+	waitTime, err = SecondsUntilNextEpochStart(genesisTime)
+	require.NoError(t, err)
+	require.Equal(t, secondsInEpoch-39, waitTime)
+	newGenesisTime := uint64(n.Add(time.Duration(-1*int(waitTime)) * time.Second).Unix())
+	currentSlot := CurrentSlot(newGenesisTime)
+	require.Equal(t, true, IsEpochStart(currentSlot))
+
+}
