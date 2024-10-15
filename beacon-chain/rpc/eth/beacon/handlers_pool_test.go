@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	blockchainmock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
@@ -37,6 +38,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
@@ -1142,383 +1144,350 @@ func TestGetProposerSlashings(t *testing.T) {
 	assert.Equal(t, 2, len(resp.Data))
 }
 
-func TestSubmitAttesterSlashing_Ok(t *testing.T) {
+func TestSubmitAttesterSlashings(t *testing.T) {
 	ctx := context.Background()
 
 	transition.SkipSlotCache.Disable()
 	defer transition.SkipSlotCache.Enable()
 
-	_, keys, err := util.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err)
-	validator := &ethpbv1alpha1.Validator{
-		PublicKey: keys[0].PublicKey().Marshal(),
+	attestationData1 := &ethpbv1alpha1.AttestationData{
+		CommitteeIndex:  1,
+		BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+		Source: &ethpbv1alpha1.Checkpoint{
+			Epoch: 1,
+			Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+		},
+		Target: &ethpbv1alpha1.Checkpoint{
+			Epoch: 10,
+			Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+		},
 	}
-	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
-		state.Validators = []*ethpbv1alpha1.Validator{validator}
-		return nil
+	attestationData2 := &ethpbv1alpha1.AttestationData{
+		CommitteeIndex:  1,
+		BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+		Source: &ethpbv1alpha1.Checkpoint{
+			Epoch: 1,
+			Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+		},
+		Target: &ethpbv1alpha1.Checkpoint{
+			Epoch: 10,
+			Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+		},
+	}
+
+	t.Run("V1", func(t *testing.T) {
+		t.Run("ok", func(t *testing.T) {
+			attestationData1.Slot = 1
+			attestationData2.Slot = 1
+			slashing := &ethpbv1alpha1.AttesterSlashing{
+				Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData1,
+					Signature:        make([]byte, 96),
+				},
+				Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData2,
+					Signature:        make([]byte, 96),
+				},
+			}
+
+			_, keys, err := util.DeterministicDepositsAndKeys(1)
+			require.NoError(t, err)
+			validator := &ethpbv1alpha1.Validator{
+				PublicKey: keys[0].PublicKey().Marshal(),
+			}
+
+			bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+				state.Validators = []*ethpbv1alpha1.Validator{validator}
+				return nil
+			})
+			require.NoError(t, err)
+
+			for _, att := range []*ethpbv1alpha1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+				sb, err := signing.ComputeDomainAndSign(bs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				att.Signature = sig.Marshal()
+			}
+
+			chainmock := &blockchainmock.ChainService{State: bs}
+			broadcaster := &p2pMock.MockBroadcaster{}
+			s := &Server{
+				ChainInfoFetcher:  chainmock,
+				SlashingsPool:     &slashingsmock.PoolMock{},
+				Broadcaster:       broadcaster,
+				OperationNotifier: chainmock.OperationNotifier(),
+			}
+
+			toSubmit := structs.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
+			b, err := json.Marshal(toSubmit[0])
+			require.NoError(t, err)
+			var body bytes.Buffer
+			_, err = body.Write(b)
+			require.NoError(t, err)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.SubmitAttesterSlashings(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+			require.Equal(t, 1, len(pendingSlashings))
+			assert.DeepEqual(t, slashing, pendingSlashings[0])
+			require.Equal(t, 1, broadcaster.NumMessages())
+			assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+			_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+			assert.Equal(t, true, ok)
+		})
+		t.Run("accross-fork", func(t *testing.T) {
+			attestationData1.Slot = params.BeaconConfig().SlotsPerEpoch
+			attestationData2.Slot = params.BeaconConfig().SlotsPerEpoch
+			slashing := &ethpbv1alpha1.AttesterSlashing{
+				Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData1,
+					Signature:        make([]byte, 96),
+				},
+				Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData2,
+					Signature:        make([]byte, 96),
+				},
+			}
+
+			params.SetupTestConfigCleanup(t)
+			config := params.BeaconConfig()
+			config.AltairForkEpoch = 1
+			params.OverrideBeaconConfig(config)
+
+			bs, keys := util.DeterministicGenesisState(t, 1)
+			newBs := bs.Copy()
+			newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+			require.NoError(t, err)
+
+			for _, att := range []*ethpbv1alpha1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+				sb, err := signing.ComputeDomainAndSign(newBs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				att.Signature = sig.Marshal()
+			}
+
+			broadcaster := &p2pMock.MockBroadcaster{}
+			chainmock := &blockchainmock.ChainService{State: bs}
+			s := &Server{
+				ChainInfoFetcher:  chainmock,
+				SlashingsPool:     &slashingsmock.PoolMock{},
+				Broadcaster:       broadcaster,
+				OperationNotifier: chainmock.OperationNotifier(),
+			}
+
+			toSubmit := structs.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
+			b, err := json.Marshal(toSubmit[0])
+			require.NoError(t, err)
+			var body bytes.Buffer
+			_, err = body.Write(b)
+			require.NoError(t, err)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.SubmitAttesterSlashings(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+			require.Equal(t, 1, len(pendingSlashings))
+			assert.DeepEqual(t, slashing, pendingSlashings[0])
+			require.Equal(t, 1, broadcaster.NumMessages())
+			assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+			_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+			assert.Equal(t, true, ok)
+		})
+		t.Run("invalid-slashing", func(t *testing.T) {
+			bs, err := util.NewBeaconState()
+			require.NoError(t, err)
+
+			broadcaster := &p2pMock.MockBroadcaster{}
+			s := &Server{
+				ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+				SlashingsPool:    &slashingsmock.PoolMock{},
+				Broadcaster:      broadcaster,
+			}
+
+			var body bytes.Buffer
+			_, err = body.WriteString(invalidAttesterSlashing)
+			require.NoError(t, err)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.SubmitAttesterSlashings(writer, request)
+			require.Equal(t, http.StatusBadRequest, writer.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusBadRequest, e.Code)
+			assert.StringContains(t, "Invalid attester slashing", e.Message)
+		})
 	})
-	require.NoError(t, err)
-
-	slashing := &ethpbv1alpha1.AttesterSlashing{
-		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{0},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            1,
-				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+	t.Run("V2", func(t *testing.T) {
+		t.Run("ok", func(t *testing.T) {
+			attestationData1.Slot = 1
+			attestationData2.Slot = 1
+			electraSlashing := &ethpbv1alpha1.AttesterSlashingElectra{
+				Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData1,
+					Signature:        make([]byte, 96),
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData2,
+					Signature:        make([]byte, 96),
 				},
-			},
-			Signature: make([]byte, 96),
-		},
-		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{0},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            1,
-				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+			}
+
+			_, keys, err := util.DeterministicDepositsAndKeys(1)
+			require.NoError(t, err)
+			validator := &ethpbv1alpha1.Validator{
+				PublicKey: keys[0].PublicKey().Marshal(),
+			}
+
+			ebs, err := util.NewBeaconStateElectra(func(state *ethpbv1alpha1.BeaconStateElectra) error {
+				state.Validators = []*ethpbv1alpha1.Validator{validator}
+				return nil
+			})
+			require.NoError(t, err)
+
+			for _, att := range []*ethpbv1alpha1.IndexedAttestationElectra{electraSlashing.Attestation_1, electraSlashing.Attestation_2} {
+				sb, err := signing.ComputeDomainAndSign(ebs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				att.Signature = sig.Marshal()
+			}
+
+			chainmock := &blockchainmock.ChainService{State: ebs}
+			broadcaster := &p2pMock.MockBroadcaster{}
+			s := &Server{
+				ChainInfoFetcher:  chainmock,
+				SlashingsPool:     &slashingsmock.PoolMock{},
+				Broadcaster:       broadcaster,
+				OperationNotifier: chainmock.OperationNotifier(),
+			}
+
+			toSubmit := structs.AttesterSlashingsElectraFromConsensus([]*ethpbv1alpha1.AttesterSlashingElectra{electraSlashing})
+			b, err := json.Marshal(toSubmit[0])
+			require.NoError(t, err)
+			var body bytes.Buffer
+			_, err = body.Write(b)
+			require.NoError(t, err)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_electras", &body)
+			request.Header.Set(api.VersionHeader, version.String(version.Electra))
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.SubmitAttesterSlashingsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, ebs, true)
+			require.Equal(t, 1, len(pendingSlashings))
+			require.Equal(t, 1, broadcaster.NumMessages())
+			assert.DeepEqual(t, electraSlashing, pendingSlashings[0])
+			assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+			_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashingElectra)
+			assert.Equal(t, true, ok)
+		})
+		t.Run("accross-fork", func(t *testing.T) {
+			attestationData1.Slot = params.BeaconConfig().SlotsPerEpoch
+			attestationData2.Slot = params.BeaconConfig().SlotsPerEpoch
+			slashing := &ethpbv1alpha1.AttesterSlashingElectra{
+				Attestation_1: &ethpbv1alpha1.IndexedAttestationElectra{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData1,
+					Signature:        make([]byte, 96),
 				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				Attestation_2: &ethpbv1alpha1.IndexedAttestationElectra{
+					AttestingIndices: []uint64{0},
+					Data:             attestationData2,
+					Signature:        make([]byte, 96),
 				},
-			},
-			Signature: make([]byte, 96),
-		},
-	}
+			}
 
-	for _, att := range []*ethpbv1alpha1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
-		sb, err := signing.ComputeDomainAndSign(bs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
-		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
-		require.NoError(t, err)
-		att.Signature = sig.Marshal()
-	}
+			params.SetupTestConfigCleanup(t)
+			config := params.BeaconConfig()
+			config.AltairForkEpoch = 1
+			params.OverrideBeaconConfig(config)
 
-	broadcaster := &p2pMock.MockBroadcaster{}
-	chainmock := &blockchainmock.ChainService{State: bs}
-	s := &Server{
-		ChainInfoFetcher:  chainmock,
-		SlashingsPool:     &slashingsmock.PoolMock{},
-		Broadcaster:       broadcaster,
-		OperationNotifier: chainmock.OperationNotifier(),
-	}
+			bs, keys := util.DeterministicGenesisState(t, 1)
+			newBs := bs.Copy()
+			newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+			require.NoError(t, err)
 
-	toSubmit := structs.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
-	b, err := json.Marshal(toSubmit[0])
-	require.NoError(t, err)
-	var body bytes.Buffer
-	_, err = body.Write(b)
-	require.NoError(t, err)
-	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
+			for _, att := range []*ethpbv1alpha1.IndexedAttestationElectra{slashing.Attestation_1, slashing.Attestation_2} {
+				sb, err := signing.ComputeDomainAndSign(newBs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+				require.NoError(t, err)
+				sig, err := bls.SignatureFromBytes(sb)
+				require.NoError(t, err)
+				att.Signature = sig.Marshal()
+			}
 
-	s.SubmitAttesterSlashing(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
-	require.Equal(t, 1, len(pendingSlashings))
-	assert.DeepEqual(t, slashing, pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
-	require.Equal(t, 1, broadcaster.NumMessages())
-	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
-	assert.Equal(t, true, ok)
-}
+			broadcaster := &p2pMock.MockBroadcaster{}
+			chainmock := &blockchainmock.ChainService{State: bs}
+			s := &Server{
+				ChainInfoFetcher:  chainmock,
+				SlashingsPool:     &slashingsmock.PoolMock{},
+				Broadcaster:       broadcaster,
+				OperationNotifier: chainmock.OperationNotifier(),
+			}
 
-func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
-	ctx := context.Background()
+			toSubmit := structs.AttesterSlashingsElectraFromConsensus([]*ethpbv1alpha1.AttesterSlashingElectra{slashing})
+			b, err := json.Marshal(toSubmit[0])
+			require.NoError(t, err)
+			var body bytes.Buffer
+			_, err = body.Write(b)
+			require.NoError(t, err)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+			request.Header.Set(api.VersionHeader, version.String(version.Electra))
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
 
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
-
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
-	config.AltairForkEpoch = 1
-	params.OverrideBeaconConfig(config)
-
-	bs, keys := util.DeterministicGenesisState(t, 1)
-
-	slashing := &ethpbv1alpha1.AttesterSlashing{
-		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{0},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            params.BeaconConfig().SlotsPerEpoch,
-				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
-				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
-				},
-			},
-			Signature: make([]byte, 96),
-		},
-		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
-			AttestingIndices: []uint64{0},
-			Data: &ethpbv1alpha1.AttestationData{
-				Slot:            params.BeaconConfig().SlotsPerEpoch,
-				CommitteeIndex:  1,
-				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
-				Source: &ethpbv1alpha1.Checkpoint{
-					Epoch: 1,
-					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
-				},
-				Target: &ethpbv1alpha1.Checkpoint{
-					Epoch: 10,
-					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
-				},
-			},
-			Signature: make([]byte, 96),
-		},
-	}
-
-	newBs := bs.Copy()
-	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
-	require.NoError(t, err)
-
-	for _, att := range []*ethpbv1alpha1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
-		sb, err := signing.ComputeDomainAndSign(newBs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
-		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
-		require.NoError(t, err)
-		att.Signature = sig.Marshal()
-	}
-
-	broadcaster := &p2pMock.MockBroadcaster{}
-	chainmock := &blockchainmock.ChainService{State: bs}
-	s := &Server{
-		ChainInfoFetcher:  chainmock,
-		SlashingsPool:     &slashingsmock.PoolMock{},
-		Broadcaster:       broadcaster,
-		OperationNotifier: chainmock.OperationNotifier(),
-	}
-
-	toSubmit := structs.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
-	b, err := json.Marshal(toSubmit[0])
-	require.NoError(t, err)
-	var body bytes.Buffer
-	_, err = body.Write(b)
-	require.NoError(t, err)
-	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s.SubmitAttesterSlashing(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
-	require.Equal(t, 1, len(pendingSlashings))
-	assert.DeepEqual(t, slashing, pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
-	require.Equal(t, 1, broadcaster.NumMessages())
-	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
-	assert.Equal(t, true, ok)
-}
-
-func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
-	bs, err := util.NewBeaconState()
-	require.NoError(t, err)
-
-	broadcaster := &p2pMock.MockBroadcaster{}
-	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
-	}
-
-	var body bytes.Buffer
-	_, err = body.WriteString(invalidAttesterSlashing)
-	require.NoError(t, err)
-	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s.SubmitAttesterSlashing(writer, request)
-	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &httputil.DefaultJsonError{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-	assert.Equal(t, http.StatusBadRequest, e.Code)
-	assert.StringContains(t, "Invalid attester slashing", e.Message)
-}
-
-func TestSubmitProposerSlashing_Ok(t *testing.T) {
-	ctx := context.Background()
-
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
-
-	_, keys, err := util.DeterministicDepositsAndKeys(1)
-	require.NoError(t, err)
-	validator := &ethpbv1alpha1.Validator{
-		PublicKey:         keys[0].PublicKey().Marshal(),
-		WithdrawableEpoch: primitives.Epoch(1),
-	}
-	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
-		state.Validators = []*ethpbv1alpha1.Validator{validator}
-		return nil
+			s.SubmitAttesterSlashingsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+			require.Equal(t, 1, len(pendingSlashings))
+			assert.DeepEqual(t, slashing, pendingSlashings[0])
+			require.Equal(t, 1, broadcaster.NumMessages())
+			assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+			_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashingElectra)
+			assert.Equal(t, true, ok)
+		})
 	})
-	require.NoError(t, err)
-
-	slashing := &ethpbv1alpha1.ProposerSlashing{
-		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpbv1alpha1.BeaconBlockHeader{
-				Slot:          1,
-				ProposerIndex: 0,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
-			},
-			Signature: make([]byte, 96),
-		},
-		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpbv1alpha1.BeaconBlockHeader{
-				Slot:          1,
-				ProposerIndex: 0,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
-			},
-			Signature: make([]byte, 96),
-		},
-	}
-
-	for _, h := range []*ethpbv1alpha1.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2} {
-		sb, err := signing.ComputeDomainAndSign(
-			bs,
-			slots.ToEpoch(h.Header.Slot),
-			h.Header,
-			params.BeaconConfig().DomainBeaconProposer,
-			keys[0],
-		)
+	t.Run("invalid-slashing", func(t *testing.T) {
+		bs, err := util.NewBeaconStateElectra()
 		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
+
+		broadcaster := &p2pMock.MockBroadcaster{}
+		s := &Server{
+			ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+			SlashingsPool:    &slashingsmock.PoolMock{},
+			Broadcaster:      broadcaster,
+		}
+
+		var body bytes.Buffer
+		_, err = body.WriteString(invalidAttesterSlashing)
 		require.NoError(t, err)
-		h.Signature = sig.Marshal()
-	}
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	broadcaster := &p2pMock.MockBroadcaster{}
-	chainmock := &blockchainmock.ChainService{State: bs}
-	s := &Server{
-		ChainInfoFetcher:  chainmock,
-		SlashingsPool:     &slashingsmock.PoolMock{},
-		Broadcaster:       broadcaster,
-		OperationNotifier: chainmock.OperationNotifier(),
-	}
-
-	toSubmit := structs.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
-	b, err := json.Marshal(toSubmit[0])
-	require.NoError(t, err)
-	var body bytes.Buffer
-	_, err = body.Write(b)
-	require.NoError(t, err)
-	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/proposer_slashings", &body)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s.SubmitProposerSlashing(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
-	require.Equal(t, 1, len(pendingSlashings))
-	assert.DeepEqual(t, slashing, pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
-	require.Equal(t, 1, broadcaster.NumMessages())
-	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
-	assert.Equal(t, true, ok)
-}
-
-func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
-	ctx := context.Background()
-
-	transition.SkipSlotCache.Disable()
-	defer transition.SkipSlotCache.Enable()
-
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
-	config.AltairForkEpoch = 1
-	params.OverrideBeaconConfig(config)
-
-	bs, keys := util.DeterministicGenesisState(t, 1)
-
-	slashing := &ethpbv1alpha1.ProposerSlashing{
-		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpbv1alpha1.BeaconBlockHeader{
-				Slot:          params.BeaconConfig().SlotsPerEpoch,
-				ProposerIndex: 0,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
-			},
-			Signature: make([]byte, 96),
-		},
-		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
-			Header: &ethpbv1alpha1.BeaconBlockHeader{
-				Slot:          params.BeaconConfig().SlotsPerEpoch,
-				ProposerIndex: 0,
-				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
-				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
-				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
-			},
-			Signature: make([]byte, 96),
-		},
-	}
-
-	newBs := bs.Copy()
-	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
-	require.NoError(t, err)
-
-	for _, h := range []*ethpbv1alpha1.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2} {
-		sb, err := signing.ComputeDomainAndSign(
-			newBs,
-			slots.ToEpoch(h.Header.Slot),
-			h.Header,
-			params.BeaconConfig().DomainBeaconProposer,
-			keys[0],
-		)
-		require.NoError(t, err)
-		sig, err := bls.SignatureFromBytes(sb)
-		require.NoError(t, err)
-		h.Signature = sig.Marshal()
-	}
-
-	broadcaster := &p2pMock.MockBroadcaster{}
-	chainmock := &blockchainmock.ChainService{State: bs}
-	s := &Server{
-		ChainInfoFetcher:  chainmock,
-		SlashingsPool:     &slashingsmock.PoolMock{},
-		Broadcaster:       broadcaster,
-		OperationNotifier: chainmock.OperationNotifier(),
-	}
-
-	toSubmit := structs.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
-	b, err := json.Marshal(toSubmit[0])
-	require.NoError(t, err)
-	var body bytes.Buffer
-	_, err = body.Write(b)
-	require.NoError(t, err)
-	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/proposer_slashings", &body)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s.SubmitProposerSlashing(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code)
-	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
-	require.Equal(t, 1, len(pendingSlashings))
-	assert.DeepEqual(t, slashing, pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
-	require.Equal(t, 1, broadcaster.NumMessages())
-	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
-	assert.Equal(t, true, ok)
+		s.SubmitAttesterSlashingsV2(writer, request)
+		require.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "Invalid attester slashing", e.Message)
+	})
 }
 
 func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
