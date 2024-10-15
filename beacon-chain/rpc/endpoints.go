@@ -586,6 +586,15 @@ func (s *Service) beaconEndpoints(
 			methods: []string{http.MethodGet},
 		},
 		{
+			template: "/eth/v2/beacon/blocks/{block_id}/attestations",
+			name:     namespace + ".GetBlockAttestationsV2",
+			middleware: []middleware.Middleware{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetBlockAttestations,
+			methods: []string{http.MethodGet},
+		},
+		{
 			template: "/eth/v1/beacon/blinded_blocks/{block_id}",
 			name:     namespace + ".GetBlindedBlock",
 			middleware: []middleware.Middleware{
@@ -681,12 +690,22 @@ func (s *Service) beaconEndpoints(
 		},
 		{
 			template: "/eth/v1/beacon/pool/attester_slashings",
-			name:     namespace + ".SubmitAttesterSlashing",
+			name:     namespace + ".SubmitAttesterSlashings",
 			middleware: []middleware.Middleware{
 				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
 				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
 			},
-			handler: server.SubmitAttesterSlashing,
+			handler: server.SubmitAttesterSlashings,
+			methods: []string{http.MethodPost},
+		},
+		{
+			template: "/eth/v2/beacon/pool/attester_slashings",
+			name:     namespace + ".SubmitAttesterSlashingsV2",
+			middleware: []middleware.Middleware{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.SubmitAttesterSlashingsV2,
 			methods: []string{http.MethodPost},
 		},
 		{
