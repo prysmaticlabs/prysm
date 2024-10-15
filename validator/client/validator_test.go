@@ -33,7 +33,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/v5/testing/mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	validatormock "github.com/prysmaticlabs/prysm/v5/testing/validator-mock"
@@ -156,19 +155,6 @@ func (*mockKeymanager) ListKeymanagerAccounts(
 func (*mockKeymanager) DeleteKeystores(context.Context, [][]byte,
 ) ([]*keymanager.KeyStatus, error) {
 	return nil, nil
-}
-
-func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
-	multipleStatus := make([]*ethpb.ValidatorActivationResponse_Status, len(pubkeys))
-	for i, key := range pubkeys {
-		multipleStatus[i] = &ethpb.ValidatorActivationResponse_Status{
-			PublicKey: key,
-			Status: &ethpb.ValidatorStatusResponse{
-				Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
-			},
-		}
-	}
-	return &ethpb.ValidatorActivationResponse{Statuses: multipleStatus}
 }
 
 func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
@@ -339,46 +325,6 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, primitives.Slot(0), headSlot, "Mismatch slots")
-}
-
-func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
-	ctx := context.Background()
-	hook := logTest.NewGlobal()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := validatormock.NewMockValidatorClient(ctrl)
-	chainClient := validatormock.NewMockChainClient(ctrl)
-	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
-
-	kp := randKeypair(t)
-	v := validator{
-		validatorClient:  client,
-		km:               newMockKeymanager(t, kp),
-		chainClient:      chainClient,
-		prysmChainClient: prysmChainClient,
-		pubkeyToStatus:   make(map[[48]byte]*validatorStatus),
-	}
-
-	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
-	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
-	client.EXPECT().WaitForActivation(
-		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
-			PublicKeys: [][]byte{kp.pub[:]},
-		},
-	).Return(clientStream, nil)
-	clientStream.EXPECT().Recv().Return(
-		resp,
-		nil,
-	)
-	prysmChainClient.EXPECT().ValidatorCount(
-		gomock.Any(),
-		"head",
-		[]validatorType.Status{validatorType.Active},
-	).Return([]iface.ValidatorCount{}, nil)
-	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
-	require.LogsContain(t, hook, "Validator activated")
 }
 
 func TestWaitSync_ContextCanceled(t *testing.T) {
@@ -2907,4 +2853,64 @@ func TestValidator_ChangeHost(t *testing.T) {
 	assert.Equal(t, uint64(1), v.currentHostIndex)
 	v.ChangeHost()
 	assert.Equal(t, uint64(0), v.currentHostIndex)
+}
+
+func TestUpdateValidatorStatusCache(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{
+		{0x01},
+		{0x02},
+	}
+	statusRequestKeys := [][]byte{
+		pubkeys[0][:],
+		pubkeys[1][:],
+	}
+
+	client := validatormock.NewMockValidatorClient(ctrl)
+	mockResponse := &ethpb.MultipleValidatorStatusResponse{
+		PublicKeys: statusRequestKeys,
+		Statuses: []*ethpb.ValidatorStatusResponse{
+			{
+				Status: ethpb.ValidatorStatus_ACTIVE,
+			}, {
+				Status: ethpb.ValidatorStatus_EXITING,
+			}},
+		Indices: []primitives.ValidatorIndex{1, 2},
+	}
+	client.EXPECT().MultipleValidatorStatus(
+		gomock.Any(),
+		gomock.Any()).Return(mockResponse, nil)
+
+	v := &validator{
+		validatorClient:  client,
+		beaconNodeHosts:  []string{"http://localhost:8080", "http://localhost:8081"},
+		currentHostIndex: 0,
+		pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+			[fieldparams.BLSPubkeyLength]byte{0x03}: &validatorStatus{ // add non existant key and status to cache, should be fully removed on update
+				publicKey: []byte{0x03},
+				status: &ethpb.ValidatorStatusResponse{
+					Status: ethpb.ValidatorStatus_ACTIVE,
+				},
+				index: 3,
+			},
+		},
+	}
+
+	err := v.updateValidatorStatusCache(ctx, pubkeys)
+	assert.NoError(t, err)
+
+	// make sure the nonexistant key is fully removed
+	_, ok := v.pubkeyToStatus[[fieldparams.BLSPubkeyLength]byte{0x03}]
+	require.Equal(t, false, ok)
+	// make sure we only have the added values
+	assert.Equal(t, 2, len(v.pubkeyToStatus))
+	for i, pk := range pubkeys {
+		status, exists := v.pubkeyToStatus[pk]
+		require.Equal(t, true, exists)
+		require.DeepEqual(t, pk[:], status.publicKey)
+		require.Equal(t, mockResponse.Statuses[i], status.status)
+		require.Equal(t, mockResponse.Indices[i], status.index)
+	}
 }

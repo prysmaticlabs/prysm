@@ -586,6 +586,15 @@ func (s *Service) beaconEndpoints(
 			methods: []string{http.MethodGet},
 		},
 		{
+			template: "/eth/v2/beacon/blocks/{block_id}/attestations",
+			name:     namespace + ".GetBlockAttestationsV2",
+			middleware: []middleware.Middleware{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetBlockAttestations,
+			methods: []string{http.MethodGet},
+		},
+		{
 			template: "/eth/v1/beacon/blinded_blocks/{block_id}",
 			name:     namespace + ".GetBlindedBlock",
 			middleware: []middleware.Middleware{
@@ -772,6 +781,15 @@ func (s *Service) beaconEndpoints(
 			},
 			handler: server.GetValidatorBalances,
 			methods: []string{http.MethodGet, http.MethodPost},
+		},
+		{
+			template: "/eth/v1/beacon/deposit_snapshot",
+			name:     namespace + ".GetDepositSnapshot",
+			middleware: []middleware.Middleware{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.GetDepositSnapshot,
+			methods: []string{http.MethodGet},
 		},
 	}
 }
