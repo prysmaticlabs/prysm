@@ -23,8 +23,6 @@ import (
 //
 // Spec definition:
 //
-//	continue
-//
 // def process_pending_consolidations(state: BeaconState) -> None:
 //
 //	next_epoch = Epoch(get_current_epoch(state) + 1)
@@ -75,19 +73,16 @@ func ProcessPendingConsolidations(ctx context.Context, st state.BeaconState) err
 			break
 		}
 
-		sourceEffectiveBalance := helpers.ValidatorMaxEffectiveBalance(sourceValidator)
 		validatorBalance, err := st.BalanceAtIndex(pc.SourceIndex)
 		if err != nil {
 			return err
 		}
-		if sourceEffectiveBalance > validatorBalance {
-			sourceEffectiveBalance = validatorBalance
-		}
+		b := min(validatorBalance, helpers.ValidatorMaxEffectiveBalance(sourceValidator))
 
-		if err := helpers.DecreaseBalance(st, pc.SourceIndex, sourceEffectiveBalance); err != nil {
+		if err := helpers.DecreaseBalance(st, pc.SourceIndex, b); err != nil {
 			return err
 		}
-		if err := helpers.IncreaseBalance(st, pc.TargetIndex, sourceEffectiveBalance); err != nil {
+		if err := helpers.IncreaseBalance(st, pc.TargetIndex, b); err != nil {
 			return err
 		}
 		nextPendingConsolidation++
@@ -326,7 +321,7 @@ func ProcessConsolidationRequests(ctx context.Context, st state.BeaconState, req
 //	if not is_active_validator(source_validator, current_epoch):
 //	    return False
 //
-//	# Verify exit for source have not been initiated
+//	# Verify exit for source has not been initiated
 //	if source_validator.exit_epoch != FAR_FUTURE_EPOCH:
 //	    return False
 //
@@ -336,24 +331,22 @@ func IsValidSwitchToCompoundingRequest(st state.BeaconState, req *enginev1.Conso
 		return false
 	}
 
-	sourcePubKey := bytesutil.ToBytes48(req.SourcePubkey)
-	targetPubKey := bytesutil.ToBytes48(req.TargetPubkey)
-	if sourcePubKey != targetPubKey {
+	if !bytes.Equal(req.SourcePubkey, req.TargetPubkey) {
 		return false
 	}
 
-	srcIdx, ok := st.ValidatorIndexByPubkey(sourcePubKey)
+	srcIdx, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.SourcePubkey))
 	if !ok {
 		return false
 	}
 	// As per the consensus specification, this error is not considered an assertion.
 	// Therefore, if the source_pubkey is not found in validator_pubkeys, we simply return false.
-	srcV, err := st.ValidatorAtIndex(srcIdx)
+	srcV, err := st.ValidatorAtIndexReadOnly(srcIdx)
 	if err != nil {
 		return false
 	}
 	sourceAddress := req.SourceAddress
-	withdrawalCreds := srcV.WithdrawalCredentials
+	withdrawalCreds := srcV.GetWithdrawalCredentials()
 	if len(withdrawalCreds) != 32 || len(sourceAddress) != 20 || !bytes.HasSuffix(withdrawalCreds, sourceAddress) {
 		return false
 	}
@@ -363,11 +356,11 @@ func IsValidSwitchToCompoundingRequest(st state.BeaconState, req *enginev1.Conso
 	}
 
 	curEpoch := slots.ToEpoch(st.Slot())
-	if !helpers.IsActiveValidator(srcV, curEpoch) {
+	if !helpers.IsActiveValidatorUsingTrie(srcV, curEpoch) {
 		return false
 	}
 
-	if srcV.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+	if srcV.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 		return false
 	}
 	return true
