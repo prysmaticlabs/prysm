@@ -233,8 +233,8 @@ func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Reque
 	}
 
 	broadcastFailed := false
-	if v >= version.Electra {
-		for _, raw := range reqData {
+	for _, raw := range reqData {
+		if v >= version.Electra {
 			var signedAggregate structs.SignedAggregateAttestationAndProofElectra
 			if err = json.Unmarshal(raw, &signedAggregate); err != nil {
 				httputil.HandleError(w, "Failed to parse aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
@@ -257,9 +257,7 @@ func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Reque
 					return
 				}
 			}
-		}
-	} else {
-		for _, raw := range reqData {
+		} else {
 			var signedAggregate structs.SignedAggregateAttestationAndProof
 			if err := json.Unmarshal(raw, &signedAggregate); err != nil {
 				httputil.HandleError(w, "Failed to parse aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
