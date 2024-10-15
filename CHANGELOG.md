@@ -71,9 +71,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Removed
 
-- removed gRPC Gateway
-- Removed unused blobs bundle cache
+- Removed gRPC Gateway.
+- Removed unused blobs bundle cache.
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
+- Removed finalized validator index cache, no longer needed.
 
 ### Fixed
 
