@@ -79,27 +79,24 @@ type sszUnmarshaler interface {
 }
 
 type sszMarshaler interface {
-	MarshalSSZ() ([]byte, error)
+	MarshalSSZTo(buf []byte) ([]byte, error)
+	SizeSSZ() int
 }
 
 func marshalItems[T sszMarshaler](items []T) ([]byte, error) {
-	var totalSize int
-	marshaledItems := make([][]byte, len(items))
+	if len(items) == 0 {
+		return []byte{}, nil
+	}
+	size := items[0].SizeSSZ()
+	buf := make([]byte, 0, size*len(items))
+	var err error
 	for i, item := range items {
-		bytes, err := item.MarshalSSZ()
+		buf, err = item.MarshalSSZTo(buf)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal item at index %d: %w", i, err)
 		}
-		marshaledItems[i] = bytes
-		totalSize += len(bytes)
 	}
-
-	result := make([]byte, totalSize)
-
-	for i, bytes := range marshaledItems {
-		copy(result[i*len(bytes):(i+1)*len(bytes)], bytes)
-	}
-	return result, nil
+	return buf, nil
 }
 
 // Generic function to unmarshal items
