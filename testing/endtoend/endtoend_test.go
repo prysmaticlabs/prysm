@@ -116,13 +116,38 @@ func (r *testRunner) runBase(runEvents []runEvent) {
 	}
 }
 
+// validate ensures that all evaluators are able to run.
+func (r *testRunner) validate() {
+	var errs []error
+	for _, e := range r.config.Evaluators {
+		var ok bool
+		for i := primitives.Epoch(0); i < primitives.Epoch(r.config.EpochsToRun); i++ {
+			if e.Policy(i) {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			errs = append(errs, errors.Errorf("Evaluator %s is not able to run in any epoch.", e.Name))
+		}
+	}
+	if len(errs) > 0 {
+		for _, err := range errs {
+			r.t.Error(err)
+		}
+		r.t.Fatal("This may give you a false sense of security as the evaluator can never fail.")
+	}
+}
+
 // run is the stock test runner
 func (r *testRunner) run() {
+	r.validate()
 	r.runBase([]runEvent{r.defaultEndToEndRun})
 }
 
 // scenarioRunner runs more complex scenarios to exercise error handling for unhappy paths
 func (r *testRunner) scenarioRunner() {
+	r.validate()
 	r.runBase([]runEvent{r.scenarioRun})
 }
 
