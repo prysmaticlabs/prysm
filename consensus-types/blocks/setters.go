@@ -175,10 +175,10 @@ func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
 }
 
 // SetExecutionRequests sets the execution requests in the block.
-func (b *SignedBeaconBlock) SetExecutionRequests(er *enginev1.ExecutionRequests) error {
+func (b *SignedBeaconBlock) SetExecutionRequests(req *enginev1.ExecutionRequests) error {
 	if b.version < version.Electra {
 		return consensus_types.ErrNotSupported("SetExecutionRequests", b.version)
 	}
-	b.block.body.executionRequests = er
+	b.block.body.executionRequests = req
 	return nil
 }

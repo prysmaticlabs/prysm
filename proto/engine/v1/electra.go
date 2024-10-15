@@ -21,29 +21,29 @@ var (
 
 const LenExecutionRequestsElectra = 3
 
-func (eee *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
+func (ebe *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
 	requests := &ExecutionRequests{}
 
-	if len(eee.ExecutionRequests) != LenExecutionRequestsElectra /* types of requests */ {
-		return nil, errors.Errorf("invalid execution request size: %d", len(eee.ExecutionRequests))
+	if len(ebe.ExecutionRequests) != LenExecutionRequestsElectra /* types of requests */ {
+		return nil, errors.Errorf("invalid execution request size: %d", len(ebe.ExecutionRequests))
 	}
 
 	// deposit requests
-	drs, err := unmarshalItems(eee.ExecutionRequests[0], drSize, func() *DepositRequest { return &DepositRequest{} })
+	drs, err := unmarshalItems(ebe.ExecutionRequests[0], drSize, func() *DepositRequest { return &DepositRequest{} })
 	if err != nil {
 		return nil, err
 	}
 	requests.Deposits = drs
 
 	// withdrawal requests
-	wrs, err := unmarshalItems(eee.ExecutionRequests[1], wrSize, func() *WithdrawalRequest { return &WithdrawalRequest{} })
+	wrs, err := unmarshalItems(ebe.ExecutionRequests[1], wrSize, func() *WithdrawalRequest { return &WithdrawalRequest{} })
 	if err != nil {
 		return nil, err
 	}
 	requests.Withdrawals = wrs
 
 	// consolidation requests
-	crs, err := unmarshalItems(eee.ExecutionRequests[2], crSize, func() *ConsolidationRequest { return &ConsolidationRequest{} })
+	crs, err := unmarshalItems(ebe.ExecutionRequests[2], crSize, func() *ConsolidationRequest { return &ConsolidationRequest{} })
 	if err != nil {
 		return nil, err
 	}
