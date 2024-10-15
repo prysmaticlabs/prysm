@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "activation.go",
         "attestation_data.go",
         "beacon_api_beacon_chain_client.go",
         "beacon_api_helpers.go",
@@ -75,7 +74,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "activation_test.go",
         "attestation_data_test.go",
         "beacon_api_beacon_chain_client_test.go",
         "beacon_api_helpers_test.go",

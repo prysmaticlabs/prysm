@@ -113,6 +113,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	epoch := slots.ToEpoch(b.slot)
 
 	// Electra partial withdrawals functionality.
+	var partialWithdrawalsCount uint64
 	if b.version >= version.Electra {
 		for _, w := range b.pendingPartialWithdrawals {
 			if w.WithdrawableEpoch > epoch || len(withdrawals) >= int(params.BeaconConfig().MaxPendingPartialsPerWithdrawalsSweep) {
@@ -139,9 +140,9 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 				})
 				withdrawalIndex++
 			}
+			partialWithdrawalsCount++
 		}
 	}
-	partialWithdrawalsCount := uint64(len(withdrawals))
 
 	validatorsLen := b.validatorsLen()
 	bound := mathutil.Min(uint64(validatorsLen), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)

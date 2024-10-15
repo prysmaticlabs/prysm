@@ -97,32 +97,23 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 		receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 		parentHash := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 		g.payload = &enginev1.ExecutionPayloadElectra{
-			ParentHash:         parentHash,
-			FeeRecipient:       make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:          stateRoot,
-			ReceiptsRoot:       receiptsRoot,
-			LogsBloom:          logsBloom,
-			PrevRandao:         blockHash[:],
-			BlockNumber:        0,
-			GasLimit:           0,
-			GasUsed:            0,
-			Timestamp:          0,
-			ExtraData:          make([]byte, 0),
-			BaseFeePerGas:      bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-			BlockHash:          blockHash[:],
-			Transactions:       encodedBinaryTxs,
-			Withdrawals:        make([]*enginev1.Withdrawal, 0),
-			BlobGasUsed:        0,
-			ExcessBlobGas:      0,
-			DepositRequests:    generateTestDepositRequests(uint64(g.slot), 4),
-			WithdrawalRequests: generateTestWithdrawalRequests(uint64(g.slot), 4),
-			ConsolidationRequests: []*enginev1.ConsolidationRequest{
-				{
-					SourceAddress: make([]byte, 20),
-					SourcePubkey:  make([]byte, 48),
-					TargetPubkey:  make([]byte, 48),
-				},
-			},
+			ParentHash:    parentHash,
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     stateRoot,
+			ReceiptsRoot:  receiptsRoot,
+			LogsBloom:     logsBloom,
+			PrevRandao:    blockHash[:],
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     make([]byte, 0),
+			BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
+			BlockHash:     blockHash[:],
+			Transactions:  encodedBinaryTxs,
+			Withdrawals:   make([]*enginev1.Withdrawal, 0),
+			BlobGasUsed:   0,
+			ExcessBlobGas: 0,
 		}
 	}
 
@@ -176,32 +167,4 @@ func GenerateTestElectraBlockWithSidecar(t *testing.T, parent [32]byte, slot pri
 	rob, err := blocks.NewROBlock(sbb)
 	require.NoError(t, err)
 	return rob, sidecars
-}
-
-func generateTestDepositRequests(offset, n uint64) []*enginev1.DepositRequest {
-	r := make([]*enginev1.DepositRequest, n)
-	var i uint64
-	for i = 0; i < n; i++ {
-		r[i] = &enginev1.DepositRequest{
-			Pubkey:                make([]byte, 48),
-			WithdrawalCredentials: make([]byte, 32),
-			Amount:                offset + i,
-			Signature:             make([]byte, 96),
-			Index:                 offset + i + 100,
-		}
-	}
-	return r
-}
-
-func generateTestWithdrawalRequests(offset, n uint64) []*enginev1.WithdrawalRequest {
-	r := make([]*enginev1.WithdrawalRequest, n)
-	var i uint64
-	for i = 0; i < n; i++ {
-		r[i] = &enginev1.WithdrawalRequest{
-			SourceAddress:   make([]byte, 20),
-			ValidatorPubkey: make([]byte, 48),
-			Amount:          offset + i,
-		}
-	}
-	return r
 }

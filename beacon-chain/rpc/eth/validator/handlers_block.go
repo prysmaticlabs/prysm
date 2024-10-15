@@ -17,10 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -285,6 +285,18 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
 		handleProduceDenebV3(w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
+		return
+	}
+	blindedElectraBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedElectra)
+	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Electra))
+		handleProduceBlindedElectraV3(w, isSSZ, blindedElectraBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
+		return
+	}
+	electraBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Electra)
+	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Electra))
+		handleProduceElectraV3(w, isSSZ, electraBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 }
@@ -581,6 +593,77 @@ func handleProduceDenebV3(
 	}
 	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
+		ExecutionPayloadBlinded: false,
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
+		ConsensusBlockValue:     consensusBlockValue,
+		Data:                    jsonBytes,
+	})
+}
+
+func handleProduceBlindedElectraV3(
+	w http.ResponseWriter,
+	isSSZ bool,
+	blk *eth.GenericBeaconBlock_BlindedElectra,
+	executionPayloadValue string,
+	consensusPayloadValue string,
+) {
+	if isSSZ {
+		sszResp, err := blk.BlindedElectra.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.WriteSsz(w, sszResp, "blindedElectraBlockContents.ssz")
+		return
+	}
+	blindedBlock, err := structs.BlindedBeaconBlockElectraFromConsensus(blk.BlindedElectra)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	jsonBytes, err := json.Marshal(blindedBlock)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
+		Version:                 version.String(version.Electra),
+		ExecutionPayloadBlinded: true,
+		ExecutionPayloadValue:   executionPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
+		Data:                    jsonBytes,
+	})
+}
+
+func handleProduceElectraV3(
+	w http.ResponseWriter,
+	isSSZ bool,
+	blk *eth.GenericBeaconBlock_Electra,
+	executionPayloadValue string,
+	consensusBlockValue string,
+) {
+	if isSSZ {
+		sszResp, err := blk.Electra.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.WriteSsz(w, sszResp, "electraBlockContents.ssz")
+		return
+	}
+
+	blockContents, err := structs.BeaconBlockContentsElectraFromConsensus(blk.Electra)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	jsonBytes, err := json.Marshal(blockContents)
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
+		Version:                 version.String(version.Electra),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusBlockValue,

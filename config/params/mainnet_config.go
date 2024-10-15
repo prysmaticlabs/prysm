@@ -171,7 +171,6 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
-	DomainConsolidation:               bytesutil.Uint32ToBytes4(0x0B000000),
 
 	// Prysm constants.
 	GenesisValidatorsRoot:          [32]byte{75, 54, 61, 185, 78, 40, 97, 32, 215, 110, 185, 5, 52, 15, 221, 78, 84, 191, 233, 240, 107, 243, 63, 246, 207, 90, 210, 127, 81, 27, 254, 149},
@@ -283,12 +282,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxEffectiveBalanceElectra:            2048_000_000_000,
 	MinSlashingPenaltyQuotientElectra:     4096,
 	WhistleBlowerRewardQuotientElectra:    4096,
-	PendingBalanceDepositLimit:            134_217_728,
+	PendingDepositLimit:                   134_217_728,
 	PendingPartialWithdrawalsLimit:        134_217_728,
 	PendingConsolidationsLimit:            262_144,
 	MinActivationBalance:                  32_000_000_000,
 	MaxConsolidationsRequestsPerPayload:   1,
 	MaxPendingPartialsPerWithdrawalsSweep: 8,
+	MaxPendingDepositsPerEpoch:            16,
 	FullExitRequestAmount:                 0,
 	MaxWithdrawalRequestsPerPayload:       16,
 	MaxDepositRequestsPerPayload:          8192, // 2**13 (= 8192)

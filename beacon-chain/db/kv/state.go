@@ -16,11 +16,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	bolt "go.etcd.io/bbolt"
-	"go.opencensus.io/trace"
 )
 
 // State returns the saved state using block's signing root,
@@ -74,7 +74,7 @@ func (s *Store) GenesisState(ctx context.Context) (state.BeaconState, error) {
 		tracing.AnnotateError(span, err)
 		return nil, err
 	}
-	span.AddAttributes(trace.BoolAttribute("cache_hit", cached != nil))
+	span.SetAttributes(trace.BoolAttribute("cache_hit", cached != nil))
 	if cached != nil {
 		return cached, nil
 	}

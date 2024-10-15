@@ -138,7 +138,7 @@ func TestGetSpec(t *testing.T) {
 	config.WhistleBlowerRewardQuotientElectra = 79
 	config.PendingPartialWithdrawalsLimit = 80
 	config.MinActivationBalance = 81
-	config.PendingBalanceDepositLimit = 82
+	config.PendingDepositLimit = 82
 	config.MaxPendingPartialsPerWithdrawalsSweep = 83
 	config.PendingConsolidationsLimit = 84
 	config.MaxPartialWithdrawalsPerPayload = 85
@@ -150,6 +150,7 @@ func TestGetSpec(t *testing.T) {
 	config.MaxCellsInExtendedMatrix = 91
 	config.UnsetDepositRequestsStartIndex = 92
 	config.MaxDepositRequestsPerPayload = 93
+	config.MaxPendingDepositsPerEpoch = 94
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -175,10 +176,6 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
-	var dc [4]byte
-	copy(dc[:], []byte{'1', '1', '0', '0'})
-	config.DomainConsolidation = dc
-
 	params.OverrideBeaconConfig(config)
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/spec", nil)
@@ -503,7 +500,7 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "80", v)
 			case "MIN_ACTIVATION_BALANCE":
 				assert.Equal(t, "81", v)
-			case "PENDING_BALANCE_DEPOSITS_LIMIT":
+			case "PENDING_DEPOSITS_LIMIT":
 				assert.Equal(t, "82", v)
 			case "MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP":
 				assert.Equal(t, "83", v)
@@ -515,8 +512,6 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "86", v)
 			case "MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "87", v)
-			case "DOMAIN_CONSOLIDATION":
-				assert.Equal(t, "0x31313030", v)
 			case "MAX_ATTESTER_SLASHINGS_ELECTRA":
 				assert.Equal(t, "88", v)
 			case "MAX_ATTESTATIONS_ELECTRA":
@@ -529,6 +524,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "92", v)
 			case "MAX_DEPOSIT_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "93", v)
+			case "MAX_PENDING_DEPOSITS_PER_EPOCH":
+				assert.Equal(t, "94", v)
 			default:
 				t.Errorf("Incorrect key: %s", k)
 			}

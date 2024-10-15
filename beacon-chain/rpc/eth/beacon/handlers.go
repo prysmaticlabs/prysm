@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -29,12 +28,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -54,7 +53,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
+	blockId := r.PathValue("block_id")
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -85,7 +84,7 @@ func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlindedBlock")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
+	blockId := r.PathValue("block_id")
 	if blockId == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -201,16 +200,10 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestations")
 	defer span.End()
 
-	blockId := mux.Vars(r)["block_id"]
-	if blockId == "" {
-		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+	blk, isOptimistic, root := s.blockData(ctx, w, r)
+	if blk == nil {
 		return
 	}
-	blk, err := s.Blocker.Block(ctx, []byte(blockId))
-	if !shared.WriteBlockFetchError(w, blk, err) {
-		return
-	}
-
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*structs.Attestation, len(consensusAtts))
 	for i, att := range consensusAtts {
@@ -222,23 +215,85 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	root, err := blk.Block().HashTreeRoot()
-	if err != nil {
-		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
-	if err != nil {
-		httputil.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	resp := &structs.GetBlockAttestationsResponse{
 		Data:                atts,
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
 	}
 	httputil.WriteJson(w, resp)
+}
+
+// GetBlockAttestationsV2 retrieves attestation included in requested block.
+func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockAttestationsV2")
+	defer span.End()
+
+	blk, isOptimistic, root := s.blockData(ctx, w, r)
+	if blk == nil {
+		return
+	}
+	consensusAtts := blk.Block().Body().Attestations()
+
+	v := blk.Block().Version()
+	var attStructs []interface{}
+	if v >= version.Electra {
+		for _, att := range consensusAtts {
+			a, ok := att.(*eth.AttestationElectra)
+			if !ok {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestations electra of type %T", att), http.StatusInternalServerError)
+				return
+			}
+			attStruct := structs.AttElectraFromConsensus(a)
+			attStructs = append(attStructs, attStruct)
+		}
+	} else {
+		for _, att := range consensusAtts {
+			a, ok := att.(*eth.Attestation)
+			if !ok {
+				httputil.HandleError(w, fmt.Sprintf("unable to convert consensus attestation of type %T", att), http.StatusInternalServerError)
+				return
+			}
+			attStruct := structs.AttFromConsensus(a)
+			attStructs = append(attStructs, attStruct)
+		}
+	}
+
+	attBytes, err := json.Marshal(attStructs)
+	if err != nil {
+		httputil.HandleError(w, fmt.Sprintf("failed to marshal attestations: %v", err), http.StatusInternalServerError)
+		return
+	}
+	resp := &structs.GetBlockAttestationsV2Response{
+		Version:             version.String(v),
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
+		Data:                attBytes,
+	}
+	httputil.WriteJson(w, resp)
+}
+
+func (s *Server) blockData(ctx context.Context, w http.ResponseWriter, r *http.Request) (interfaces.ReadOnlySignedBeaconBlock, bool, [32]byte) {
+	blockId := r.PathValue("block_id")
+	if blockId == "" {
+		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return nil, false, [32]byte{}
+	}
+	blk, err := s.Blocker.Block(ctx, []byte(blockId))
+	if !shared.WriteBlockFetchError(w, blk, err) {
+		return nil, false, [32]byte{}
+	}
+
+	root, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return nil, false, [32]byte{}
+	}
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+	if err != nil {
+		httputil.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return nil, false, [32]byte{}
+	}
+	return blk, isOptimistic, root
 }
 
 // PublishBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
@@ -1037,7 +1092,7 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	var root []byte
-	blockID := mux.Vars(r)["block_id"]
+	blockID := r.PathValue("block_id")
 	if blockID == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1149,7 +1204,8 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateFork")
 	defer span.End()
-	stateId := mux.Vars(r)["state_id"]
+
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1189,7 +1245,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1374,7 +1430,7 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeader")
 	defer span.End()
 
-	blockID := mux.Vars(r)["block_id"]
+	blockID := r.PathValue("block_id")
 	if blockID == "" {
 		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1432,7 +1488,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
 	defer span.End()
 
-	stateId := mux.Vars(r)["state_id"]
+	stateId := r.PathValue("state_id")
 	if stateId == "" {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
@@ -1512,10 +1568,6 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetDepositSnapshot")
 	defer span.End()
 
-	if s.BeaconDB == nil {
-		httputil.HandleError(w, "Could not retrieve beaconDB", http.StatusInternalServerError)
-		return
-	}
 	eth1data, err := s.BeaconDB.ExecutionChainData(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not retrieve execution chain data: "+err.Error(), http.StatusInternalServerError)
@@ -1527,7 +1579,7 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 	snapshot := eth1data.DepositSnapshot
 	if snapshot == nil || len(snapshot.Finalized) == 0 {
-		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
+		httputil.HandleError(w, "No finalized snapshot available", http.StatusNotFound)
 		return
 	}
 	if len(snapshot.Finalized) > depositsnapshot.DepositContractDepth {

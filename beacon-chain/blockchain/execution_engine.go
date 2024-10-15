@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -28,8 +27,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const blobCommitmentVersionKZG uint8 = 0x01
-
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
@@ -39,7 +36,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
-	if arg.headBlock.IsNil() {
+	if arg.headBlock == nil || arg.headBlock.IsNil() {
 		log.Error("Head block is nil")
 		return nil, nil
 	}
@@ -402,13 +399,7 @@ func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([
 
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
-		versionedHashes[i] = ConvertKzgCommitmentToVersionedHash(commitment)
+		versionedHashes[i] = primitives.ConvertKzgCommitmentToVersionedHash(commitment)
 	}
 	return versionedHashes, nil
-}
-
-func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
-	versionedHash := sha256.Sum256(commitment)
-	versionedHash[0] = blobCommitmentVersionKZG
-	return versionedHash
 }

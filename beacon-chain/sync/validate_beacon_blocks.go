@@ -201,7 +201,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Record attribute of valid block.
-	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
+	span.SetAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
 	blkPb, err := blk.Proto()
 	if err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not convert beacon block to protobuf type")
@@ -345,7 +345,7 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if err != nil {
 		return err
 	}
-	if payload.IsNil() {
+	if payload == nil || payload.IsNil() {
 		return errors.New("execution payload is nil")
 	}
 	if payload.Timestamp() != uint64(t.Unix()) {

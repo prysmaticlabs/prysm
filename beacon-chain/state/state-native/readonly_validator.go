@@ -70,11 +70,6 @@ func (v readOnlyValidator) PublicKey() [fieldparams.BLSPubkeyLength]byte {
 	return pubkey
 }
 
-// publicKeySlice returns the public key in the slice form for the read only validator.
-func (v readOnlyValidator) publicKeySlice() []byte {
-	return v.validator.PublicKey
-}
-
 // WithdrawalCredentials returns the withdrawal credentials of the
 // read only validator.
 func (v readOnlyValidator) GetWithdrawalCredentials() []byte {
@@ -91,4 +86,20 @@ func (v readOnlyValidator) Slashed() bool {
 // IsNil returns true if the validator is nil.
 func (v readOnlyValidator) IsNil() bool {
 	return v.validator == nil
+}
+
+// Copy returns a new validator from the read only validator
+func (v readOnlyValidator) Copy() *ethpb.Validator {
+	pubKey := v.PublicKey()
+	withdrawalCreds := v.GetWithdrawalCredentials()
+	return &ethpb.Validator{
+		PublicKey:                  pubKey[:],
+		WithdrawalCredentials:      withdrawalCreds,
+		EffectiveBalance:           v.EffectiveBalance(),
+		Slashed:                    v.Slashed(),
+		ActivationEligibilityEpoch: v.ActivationEligibilityEpoch(),
+		ActivationEpoch:            v.ActivationEpoch(),
+		ExitEpoch:                  v.ExitEpoch(),
+		WithdrawableEpoch:          v.WithdrawableEpoch(),
+	}
 }

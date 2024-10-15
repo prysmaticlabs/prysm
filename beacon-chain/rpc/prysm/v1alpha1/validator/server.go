@@ -32,7 +32,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -84,6 +83,7 @@ type Server struct {
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
+// Deprecated: do not use, just poll validator status every epoch.
 func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, stream ethpb.BeaconNodeValidator_WaitForActivationServer) error {
 	activeValidatorExists, validatorStatuses, err := vs.activationStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
@@ -206,26 +206,4 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		GenesisValidatorsRoot: gvr[:],
 	}
 	return stream.Send(res)
-}
-
-// PruneBlobsBundleCacheRoutine prunes the blobs bundle cache at 6s mark of the slot.
-func (vs *Server) PruneBlobsBundleCacheRoutine() {
-	go func() {
-		clock, err := vs.ClockWaiter.WaitForClock(vs.Ctx)
-		if err != nil {
-			log.WithError(err).Error("PruneBlobsBundleCacheRoutine failed to receive genesis data")
-			return
-		}
-
-		pruneInterval := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot/2)
-		ticker := slots.NewSlotTickerWithIntervals(clock.GenesisTime(), []time.Duration{pruneInterval})
-		for {
-			select {
-			case <-vs.Ctx.Done():
-				return
-			case slotInterval := <-ticker.C():
-				bundleCache.prune(slotInterval.Slot)
-			}
-		}
-	}()
 }

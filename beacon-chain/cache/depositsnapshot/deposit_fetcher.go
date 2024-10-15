@@ -10,10 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/wealdtech/go-bytesutil"
-	"go.opencensus.io/trace"
 )
 
 var (
@@ -241,7 +241,7 @@ func (c *Cache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, bloc
 	c.pendingDeposits = append(c.pendingDeposits,
 		&ethpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
 	pendingDepositsCount.Set(float64(len(c.pendingDeposits)))
-	span.AddAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
+	span.SetAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
 }
 
 // Deposits returns the cached internal deposit tree.
@@ -304,7 +304,7 @@ func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*eth
 		return depositCntrs[i].Index < depositCntrs[j].Index
 	})
 
-	span.AddAttributes(trace.Int64Attribute("count", int64(len(depositCntrs))))
+	span.SetAttributes(trace.Int64Attribute("count", int64(len(depositCntrs))))
 
 	return depositCntrs
 }

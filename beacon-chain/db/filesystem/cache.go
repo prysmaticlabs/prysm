@@ -114,5 +114,5 @@ func (s *blobStorageCache) evict(key [32]byte) {
 func (s *blobStorageCache) updateMetrics(delta float64) {
 	s.nBlobs += delta
 	blobDiskCount.Set(s.nBlobs)
-	blobDiskSize.Set(s.nBlobs * bytesPerSidecar)
+	blobDiskSize.Set(s.nBlobs * fieldparams.BlobSidecarSize)
 }

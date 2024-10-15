@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/api"
@@ -96,7 +95,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "123552314"})
+		request.SetPathValue("block_id", "123552314")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -118,7 +117,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -151,7 +150,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -185,7 +184,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -219,7 +218,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -253,7 +252,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -263,6 +262,38 @@ func TestGetBlockV2(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Deneb), resp.Version)
 		sbb := &structs.SignedBeaconBlockDeneb{Message: &structs.BeaconBlockDeneb{}}
+		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
+		sbb.Signature = resp.Data.Signature
+		blk, err := sbb.ToConsensus()
+		require.NoError(t, err)
+		assert.DeepEqual(t, blk, b)
+	})
+	t.Run("electra", func(t *testing.T) {
+		b := util.NewBeaconBlockElectra()
+		b.Block.Slot = 123
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
+		mockChainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		s := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               mockBlockFetcher,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetBlockV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, version.String(version.Electra), resp.Version)
+		sbb := &structs.SignedBeaconBlockElectra{Message: &structs.BeaconBlockElectra{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		blk, err := sbb.ToConsensus()
@@ -287,7 +318,7 @@ func TestGetBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -314,7 +345,7 @@ func TestGetBlockV2(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(r[:])})
+			request.SetPathValue("block_id", hexutil.Encode(r[:]))
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -333,7 +364,7 @@ func TestGetBlockV2(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(r[:])})
+			request.SetPathValue("block_id", hexutil.Encode(r[:]))
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -358,7 +389,7 @@ func TestGetBlockSSZV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -381,7 +412,7 @@ func TestGetBlockSSZV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -404,7 +435,7 @@ func TestGetBlockSSZV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -427,7 +458,7 @@ func TestGetBlockSSZV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -450,7 +481,7 @@ func TestGetBlockSSZV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -462,142 +493,168 @@ func TestGetBlockSSZV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, sszExpected, writer.Body.Bytes())
 	})
+	t.Run("electra", func(t *testing.T) {
+		b := util.NewBeaconBlockElectra()
+		b.Block.Slot = 123
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
 
+		s := &Server{
+			Blocker: &testutil.MockBlocker{BlockToReturn: sb},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}", nil)
+		request.SetPathValue("block_id", "head")
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, version.String(version.Electra), writer.Header().Get(api.VersionHeader))
+		sszExpected, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		assert.DeepEqual(t, sszExpected, writer.Body.Bytes())
+	})
 }
 
 func TestGetBlockAttestations(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		b := util.NewBeaconBlock()
-		b.Block.Body.Attestations = []*eth.Attestation{
-			{
-				AggregationBits: bitfield.Bitlist{0x00},
-				Data: &eth.AttestationData{
-					Slot:            123,
-					CommitteeIndex:  123,
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32),
-					Source: &eth.Checkpoint{
-						Epoch: 123,
-						Root:  bytesutil.PadTo([]byte("root1"), 32),
-					},
-					Target: &eth.Checkpoint{
-						Epoch: 123,
-						Root:  bytesutil.PadTo([]byte("root1"), 32),
-					},
+	preElectraAtts := []*eth.Attestation{
+		{
+			AggregationBits: bitfield.Bitlist{0x00},
+			Data: &eth.AttestationData{
+				Slot:            123,
+				CommitteeIndex:  123,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32),
+				Source: &eth.Checkpoint{
+					Epoch: 123,
+					Root:  bytesutil.PadTo([]byte("root1"), 32),
 				},
-				Signature: bytesutil.PadTo([]byte("sig1"), 96),
-			},
-			{
-				AggregationBits: bitfield.Bitlist{0x01},
-				Data: &eth.AttestationData{
-					Slot:            456,
-					CommitteeIndex:  456,
-					BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32),
-					Source: &eth.Checkpoint{
-						Epoch: 456,
-						Root:  bytesutil.PadTo([]byte("root2"), 32),
-					},
-					Target: &eth.Checkpoint{
-						Epoch: 456,
-						Root:  bytesutil.PadTo([]byte("root2"), 32),
-					},
+				Target: &eth.Checkpoint{
+					Epoch: 123,
+					Root:  bytesutil.PadTo([]byte("root1"), 32),
 				},
-				Signature: bytesutil.PadTo([]byte("sig2"), 96),
 			},
-		}
-		sb, err := blocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
-		mockChainService := &chainMock.ChainService{
-			FinalizedRoots: map[[32]byte]bool{},
-		}
-		s := &Server{
-			OptimisticModeFetcher: mockChainService,
-			FinalizationFetcher:   mockChainService,
-			Blocker:               mockBlockFetcher,
-		}
+			Signature: bytesutil.PadTo([]byte("sig1"), 96),
+		},
+		{
+			AggregationBits: bitfield.Bitlist{0x01},
+			Data: &eth.AttestationData{
+				Slot:            456,
+				CommitteeIndex:  456,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32),
+				Source: &eth.Checkpoint{
+					Epoch: 456,
+					Root:  bytesutil.PadTo([]byte("root2"), 32),
+				},
+				Target: &eth.Checkpoint{
+					Epoch: 456,
+					Root:  bytesutil.PadTo([]byte("root2"), 32),
+				},
+			},
+			Signature: bytesutil.PadTo([]byte("sig2"), 96),
+		},
+	}
+	electraAtts := []*eth.AttestationElectra{
+		{
+			AggregationBits: bitfield.Bitlist{0x00},
+			Data: &eth.AttestationData{
+				Slot:            123,
+				CommitteeIndex:  123,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32),
+				Source: &eth.Checkpoint{
+					Epoch: 123,
+					Root:  bytesutil.PadTo([]byte("root1"), 32),
+				},
+				Target: &eth.Checkpoint{
+					Epoch: 123,
+					Root:  bytesutil.PadTo([]byte("root1"), 32),
+				},
+			},
+			Signature:     bytesutil.PadTo([]byte("sig1"), 96),
+			CommitteeBits: primitives.NewAttestationCommitteeBits(),
+		},
+		{
+			AggregationBits: bitfield.Bitlist{0x01},
+			Data: &eth.AttestationData{
+				Slot:            456,
+				CommitteeIndex:  456,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32),
+				Source: &eth.Checkpoint{
+					Epoch: 456,
+					Root:  bytesutil.PadTo([]byte("root2"), 32),
+				},
+				Target: &eth.Checkpoint{
+					Epoch: 456,
+					Root:  bytesutil.PadTo([]byte("root2"), 32),
+				},
+			},
+			Signature:     bytesutil.PadTo([]byte("sig2"), 96),
+			CommitteeBits: primitives.NewAttestationCommitteeBits(),
+		},
+	}
 
-		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+	b := util.NewBeaconBlock()
+	b.Block.Body.Attestations = preElectraAtts
+	sb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
 
-		s.GetBlockAttestations(writer, request)
-		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.GetBlockAttestationsResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.Equal(t, len(b.Block.Body.Attestations), len(resp.Data))
-		atts := make([]*eth.Attestation, len(b.Block.Body.Attestations))
-		for i, a := range resp.Data {
-			atts[i], err = a.ToConsensus()
-			require.NoError(t, err)
-		}
-		assert.DeepEqual(t, b.Block.Body.Attestations, atts)
-	})
-	t.Run("execution optimistic", func(t *testing.T) {
-		b := util.NewBeaconBlockBellatrix()
-		sb, err := blocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
-		r, err := sb.Block().HashTreeRoot()
-		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
-		mockChainService := &chainMock.ChainService{
-			OptimisticRoots: map[[32]byte]bool{r: true},
-			FinalizedRoots:  map[[32]byte]bool{},
-		}
-		s := &Server{
-			OptimisticModeFetcher: mockChainService,
-			FinalizationFetcher:   mockChainService,
-			Blocker:               mockBlockFetcher,
-		}
+	bb := util.NewBeaconBlockBellatrix()
+	bb.Block.Body.Attestations = preElectraAtts
+	bsb, err := blocks.NewSignedBeaconBlock(bb)
+	require.NoError(t, err)
 
-		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
+	eb := util.NewBeaconBlockElectra()
+	eb.Block.Body.Attestations = electraAtts
+	esb, err := blocks.NewSignedBeaconBlock(eb)
+	require.NoError(t, err)
 
-		s.GetBlockAttestations(writer, request)
-		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.GetBlockAttestationsResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		assert.Equal(t, true, resp.ExecutionOptimistic)
-	})
-	t.Run("finalized", func(t *testing.T) {
-		b := util.NewBeaconBlock()
-		sb, err := blocks.NewSignedBeaconBlock(b)
-		require.NoError(t, err)
-		r, err := sb.Block().HashTreeRoot()
-		require.NoError(t, err)
-		mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
+	t.Run("v1", func(t *testing.T) {
+		t.Run("ok", func(t *testing.T) {
+			mockChainService := &chainMock.ChainService{
+				FinalizedRoots: map[[32]byte]bool{},
+			}
 
-		t.Run("true", func(t *testing.T) {
-			mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
 			s := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				Blocker:               mockBlockFetcher,
+				Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
 			}
 
-			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
 			s.GetBlockAttestations(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
+
 			resp := &structs.GetBlockAttestationsResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-			assert.Equal(t, true, resp.Finalized)
+			require.Equal(t, len(b.Block.Body.Attestations), len(resp.Data))
+
+			atts := make([]*eth.Attestation, len(b.Block.Body.Attestations))
+			for i, a := range resp.Data {
+				atts[i], err = a.ToConsensus()
+				require.NoError(t, err)
+			}
+			assert.DeepEqual(t, b.Block.Body.Attestations, atts)
 		})
-		t.Run("false", func(t *testing.T) {
-			mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: false}}
+		t.Run("execution-optimistic", func(t *testing.T) {
+			r, err := bsb.Block().HashTreeRoot()
+			require.NoError(t, err)
+			mockChainService := &chainMock.ChainService{
+				OptimisticRoots: map[[32]byte]bool{r: true},
+				FinalizedRoots:  map[[32]byte]bool{},
+			}
 			s := &Server{
 				OptimisticModeFetcher: mockChainService,
 				FinalizationFetcher:   mockChainService,
-				Blocker:               mockBlockFetcher,
+				Blocker:               &testutil.MockBlocker{BlockToReturn: bsb},
 			}
 
-			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -605,7 +662,194 @@ func TestGetBlockAttestations(t *testing.T) {
 			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &structs.GetBlockAttestationsResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-			assert.Equal(t, false, resp.ExecutionOptimistic)
+			assert.Equal(t, true, resp.ExecutionOptimistic)
+		})
+		t.Run("finalized", func(t *testing.T) {
+			r, err := sb.Block().HashTreeRoot()
+			require.NoError(t, err)
+
+			t.Run("true", func(t *testing.T) {
+				mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
+				s := &Server{
+					OptimisticModeFetcher: mockChainService,
+					FinalizationFetcher:   mockChainService,
+					Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+				}
+
+				request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
+				request.SetPathValue("block_id", "head")
+				writer := httptest.NewRecorder()
+				writer.Body = &bytes.Buffer{}
+
+				s.GetBlockAttestations(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
+				resp := &structs.GetBlockAttestationsResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				assert.Equal(t, true, resp.Finalized)
+			})
+			t.Run("false", func(t *testing.T) {
+				mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: false}}
+				s := &Server{
+					OptimisticModeFetcher: mockChainService,
+					FinalizationFetcher:   mockChainService,
+					Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+				}
+
+				request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blocks/{block_id}/attestations", nil)
+				request.SetPathValue("block_id", "head")
+				writer := httptest.NewRecorder()
+				writer.Body = &bytes.Buffer{}
+
+				s.GetBlockAttestations(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
+				resp := &structs.GetBlockAttestationsResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				assert.Equal(t, false, resp.ExecutionOptimistic)
+			})
+		})
+	})
+
+	t.Run("V2", func(t *testing.T) {
+		t.Run("ok-pre-electra", func(t *testing.T) {
+			mockChainService := &chainMock.ChainService{
+				FinalizedRoots: map[[32]byte]bool{},
+			}
+
+			s := &Server{
+				OptimisticModeFetcher: mockChainService,
+				FinalizationFetcher:   mockChainService,
+				Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockAttestationsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+
+			resp := &structs.GetBlockAttestationsV2Response{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+			var attStructs []structs.Attestation
+			require.NoError(t, json.Unmarshal(resp.Data, &attStructs))
+
+			atts := make([]*eth.Attestation, len(attStructs))
+			for i, attStruct := range attStructs {
+				atts[i], err = attStruct.ToConsensus()
+				require.NoError(t, err)
+			}
+
+			assert.DeepEqual(t, b.Block.Body.Attestations, atts)
+			assert.Equal(t, "phase0", resp.Version)
+		})
+		t.Run("ok-post-electra", func(t *testing.T) {
+			mockChainService := &chainMock.ChainService{
+				FinalizedRoots: map[[32]byte]bool{},
+			}
+
+			s := &Server{
+				OptimisticModeFetcher: mockChainService,
+				FinalizationFetcher:   mockChainService,
+				Blocker:               &testutil.MockBlocker{BlockToReturn: esb},
+			}
+
+			mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: esb}
+			s.Blocker = mockBlockFetcher
+
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockAttestationsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+
+			resp := &structs.GetBlockAttestationsV2Response{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+			var attStructs []structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &attStructs))
+
+			atts := make([]*eth.AttestationElectra, len(attStructs))
+			for i, attStruct := range attStructs {
+				atts[i], err = attStruct.ToConsensus()
+				require.NoError(t, err)
+			}
+
+			assert.DeepEqual(t, eb.Block.Body.Attestations, atts)
+			assert.Equal(t, "electra", resp.Version)
+		})
+		t.Run("execution-optimistic", func(t *testing.T) {
+			r, err := bsb.Block().HashTreeRoot()
+			require.NoError(t, err)
+			mockChainService := &chainMock.ChainService{
+				OptimisticRoots: map[[32]byte]bool{r: true},
+				FinalizedRoots:  map[[32]byte]bool{},
+			}
+			s := &Server{
+				OptimisticModeFetcher: mockChainService,
+				FinalizationFetcher:   mockChainService,
+				Blocker:               &testutil.MockBlocker{BlockToReturn: bsb},
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+			request.SetPathValue("block_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockAttestationsV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			resp := &structs.GetBlockAttestationsV2Response{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, true, resp.ExecutionOptimistic)
+			assert.Equal(t, "bellatrix", resp.Version)
+		})
+		t.Run("finalized", func(t *testing.T) {
+			r, err := sb.Block().HashTreeRoot()
+			require.NoError(t, err)
+
+			t.Run("true", func(t *testing.T) {
+				mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
+				s := &Server{
+					OptimisticModeFetcher: mockChainService,
+					FinalizationFetcher:   mockChainService,
+					Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+				}
+
+				request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+				request.SetPathValue("block_id", "head")
+				writer := httptest.NewRecorder()
+				writer.Body = &bytes.Buffer{}
+
+				s.GetBlockAttestationsV2(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
+				resp := &structs.GetBlockAttestationsV2Response{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				assert.Equal(t, true, resp.Finalized)
+				assert.Equal(t, "phase0", resp.Version)
+			})
+			t.Run("false", func(t *testing.T) {
+				mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: false}}
+				s := &Server{
+					OptimisticModeFetcher: mockChainService,
+					FinalizationFetcher:   mockChainService,
+					Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+				}
+
+				request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+				request.SetPathValue("block_id", "head")
+				writer := httptest.NewRecorder()
+				writer.Body = &bytes.Buffer{}
+
+				s.GetBlockAttestationsV2(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
+				resp := &structs.GetBlockAttestationsV2Response{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				assert.Equal(t, false, resp.ExecutionOptimistic)
+				assert.Equal(t, "phase0", resp.Version)
+			})
 		})
 	})
 }
@@ -622,7 +866,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -651,7 +895,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -682,7 +926,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -713,7 +957,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -744,7 +988,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -754,6 +998,35 @@ func TestGetBlindedBlock(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Deneb), resp.Version)
 		sbb := &structs.SignedBlindedBeaconBlockDeneb{Message: &structs.BlindedBeaconBlockDeneb{}}
+		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
+		sbb.Signature = resp.Data.Signature
+		blk, err := sbb.ToConsensus()
+		require.NoError(t, err)
+		assert.DeepEqual(t, blk, b)
+	})
+	t.Run("electra", func(t *testing.T) {
+		b := util.NewBlindedBeaconBlockElectra()
+		sb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+
+		mockChainService := &chainMock.ChainService{}
+		s := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: sb},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlindedBlock(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetBlockV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, version.String(version.Electra), resp.Version)
+		sbb := &structs.SignedBlindedBeaconBlockElectra{Message: &structs.BlindedBeaconBlockElectra{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		blk, err := sbb.ToConsensus()
@@ -777,7 +1050,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -803,7 +1076,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(root[:])})
+		request.SetPathValue("block_id", hexutil.Encode(root[:]))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -829,7 +1102,7 @@ func TestGetBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(root[:])})
+		request.SetPathValue("block_id", hexutil.Encode(root[:]))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -852,7 +1125,7 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -874,7 +1147,7 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -896,7 +1169,7 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -918,7 +1191,7 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -940,7 +1213,7 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2803,8 +3076,9 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
+				blockID := tt.blockID
 				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request = mux.SetURLVars(request, tt.blockID)
+				request.SetPathValue("block_id", blockID["block_id"])
 				writer := httptest.NewRecorder()
 
 				writer.Body = &bytes.Buffer{}
@@ -2847,7 +3121,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, url, nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2882,7 +3156,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		}
 		t.Run("true", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, url, nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": "32"})
+			request.SetPathValue("block_id", "32")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -2894,7 +3168,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		})
 		t.Run("false", func(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, url, nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": "64"})
+			request.SetPathValue("block_id", "64")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -2910,7 +3184,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 func TestGetStateFork(t *testing.T) {
 	ctx := context.Background()
 	request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
-	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+	request.SetPathValue("state_id", "head")
 	request.Header.Set("Accept", "application/octet-stream")
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -2949,7 +3223,7 @@ func TestGetStateFork(t *testing.T) {
 	assert.DeepEqual(t, hexutil.Encode(expectedFork.PreviousVersion), stateForkReponse.Data.PreviousVersion)
 	t.Run("execution optimistic", func(t *testing.T) {
 		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		request.Header.Set("Accept", "application/octet-stream")
 		writer = httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2980,7 +3254,7 @@ func TestGetStateFork(t *testing.T) {
 
 	t.Run("finalized", func(t *testing.T) {
 		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		request.Header.Set("Accept", "application/octet-stream")
 		writer = httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -3038,7 +3312,7 @@ func TestGetCommittees(t *testing.T) {
 
 	t.Run("Head all committees", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, url, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3059,7 +3333,7 @@ func TestGetCommittees(t *testing.T) {
 	t.Run("Head all committees of epoch 10", func(t *testing.T) {
 		query := url + "?epoch=10"
 		request := httptest.NewRequest(http.MethodGet, query, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3076,7 +3350,7 @@ func TestGetCommittees(t *testing.T) {
 	t.Run("Head all committees of slot 4", func(t *testing.T) {
 		query := url + "?slot=4"
 		request := httptest.NewRequest(http.MethodGet, query, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3102,7 +3376,7 @@ func TestGetCommittees(t *testing.T) {
 	t.Run("Head all committees of index 1", func(t *testing.T) {
 		query := url + "?index=1"
 		request := httptest.NewRequest(http.MethodGet, query, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3128,7 +3402,7 @@ func TestGetCommittees(t *testing.T) {
 	t.Run("Head all committees of slot 2, index 1", func(t *testing.T) {
 		query := url + "?slot=2&index=1"
 		request := httptest.NewRequest(http.MethodGet, query, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3171,7 +3445,7 @@ func TestGetCommittees(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, url, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3208,7 +3482,7 @@ func TestGetCommittees(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, url, nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
@@ -3481,7 +3755,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -3525,7 +3799,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
-		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -3549,7 +3823,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(r[:])})
+			request.SetPathValue("block_id", hexutil.Encode(r[:]))
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -3569,7 +3843,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
-			request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(r[:])})
+			request.SetPathValue("block_id", hexutil.Encode(r[:]))
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
@@ -3621,7 +3895,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -3651,7 +3925,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	})
 	t.Run("state not found", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "foobar"})
+		request.SetPathValue("state_id", "foobar")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -3674,7 +3948,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -3702,7 +3976,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
-		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.SetPathValue("state_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
