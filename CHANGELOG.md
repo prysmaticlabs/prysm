@@ -61,6 +61,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
 - reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
 - Fix `engine_exchangeCapabilities` implementation.
+- Updated the default `scrape-interval` in `Client-stats` to 2 minutes to accommodate Beaconcha.in API rate limits.
 - Switch to compounding when consolidating with source==target.
 
 ### Deprecated
