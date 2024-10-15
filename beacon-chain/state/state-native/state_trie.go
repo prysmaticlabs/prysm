@@ -189,12 +189,11 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 		id: types.Enumerator.Inc(),
 
-		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -296,12 +295,11 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 
 		id: types.Enumerator.Inc(),
 
-		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -407,12 +405,11 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 
 		id: types.Enumerator.Inc(),
 
-		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -522,12 +519,11 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 
 		id: types.Enumerator.Inc(),
 
-		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -636,12 +632,11 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 		nextWithdrawalValidatorIndex:      st.NextWithdrawalValidatorIndex,
 		historicalSummaries:               st.HistoricalSummaries,
 
-		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(),
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -759,12 +754,11 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		pendingPartialWithdrawals:         st.PendingPartialWithdrawals,
 		pendingConsolidations:             st.PendingConsolidations,
 
-		dirtyFields:         make(map[types.FieldIndex]bool, fieldCount),
-		dirtyIndices:        make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves:    make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
-		rebuildTrie:         make(map[types.FieldIndex]bool, fieldCount),
-		valMapHandler:       stateutil.NewValMapHandler(st.Validators),
-		validatorIndexCache: newFinalizedValidatorIndexCache(), //only used in post-electra and only populates when finalizing, otherwise it falls back to processing the full validator set
+		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
+		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
 
 	if features.Get().EnableExperimentalState {
@@ -925,8 +919,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
 		// Share the reference to validator index map.
-		valMapHandler:       b.valMapHandler,
-		validatorIndexCache: b.validatorIndexCache,
+		valMapHandler: b.valMapHandler,
 	}
 
 	if features.Get().EnableExperimentalState {

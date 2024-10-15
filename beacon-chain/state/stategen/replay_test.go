@@ -230,7 +230,6 @@ func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 			EffectiveBalance:      params.BeaconConfig().MinActivationBalance,
 		},
 	}))
-	beaconState.SaveValidatorIndices()
 
 	require.NoError(t, beaconState.SetPendingDeposits([]*ethpb.PendingDeposit{
 		stateTesting.GeneratePendingDeposit(t, sk, uint64(amountAvailForProcessing)/10, bytesutil.ToBytes32(withdrawalCredentials), genesisBlock.Block.Slot),

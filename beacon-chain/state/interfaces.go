@@ -105,7 +105,6 @@ type WriteOnlyBeaconState interface {
 	AppendHistoricalRoots(root [32]byte) error
 	AppendHistoricalSummaries(*ethpb.HistoricalSummary) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
-	SaveValidatorIndices()
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
