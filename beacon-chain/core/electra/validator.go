@@ -3,7 +3,6 @@ package electra
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -18,9 +17,8 @@ import (
 // def switch_to_compounding_validator(state: BeaconState, index: ValidatorIndex) -> None:
 //
 //	validator = state.validators[index]
-//	if has_eth1_withdrawal_credential(validator):
-//		validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
-//		queue_excess_active_balance(state, index)
+//	validator.withdrawal_credentials = COMPOUNDING_WITHDRAWAL_PREFIX + validator.withdrawal_credentials[1:]
+//	queue_excess_active_balance(state, index)
 func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorIndex) error {
 	v, err := s.ValidatorAtIndex(idx)
 	if err != nil {
@@ -29,14 +27,12 @@ func SwitchToCompoundingValidator(s state.BeaconState, idx primitives.ValidatorI
 	if len(v.WithdrawalCredentials) == 0 {
 		return errors.New("validator has no withdrawal credentials")
 	}
-	if helpers.HasETH1WithdrawalCredential(v) {
-		v.WithdrawalCredentials[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
-		if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
-			return err
-		}
-		return QueueExcessActiveBalance(s, idx)
+
+	v.WithdrawalCredentials[0] = params.BeaconConfig().CompoundingWithdrawalPrefixByte
+	if err := s.UpdateValidatorAtIndex(idx, v); err != nil {
+		return err
 	}
-	return nil
+	return QueueExcessActiveBalance(s, idx)
 }
 
 // QueueExcessActiveBalance queues validators with balances above the min activation balance and adds to pending deposit.
