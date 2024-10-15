@@ -1,0 +1,22 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = [
+        "initialization.go",
+        "validity.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/phase0/genesis",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/core/transition:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
+        "//testing/spectest/utils:go_default_library",
+        "//testing/util:go_default_library",
+        "@com_github_golang_snappy//:go_default_library",
+        "@com_github_wealdtech_go_bytesutil//:go_default_library",
+    ],
+)
