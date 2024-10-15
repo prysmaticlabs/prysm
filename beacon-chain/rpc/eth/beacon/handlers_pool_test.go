@@ -1075,7 +1075,15 @@ func TestGetAttesterSlashings(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
-		assert.Equal(t, 2, len(resp.Data))
+
+		var slashings []*structs.AttesterSlashing
+		require.NoError(t, json.Unmarshal(resp.Data, &slashings))
+
+		ss, err := structs.AttesterSlashingsToConsensus(slashings)
+		require.NoError(t, err)
+
+		require.DeepEqual(t, slashing1, ss[0])
+		require.DeepEqual(t, slashing2, ss[1])
 	})
 	t.Run("V2", func(t *testing.T) {
 		bs, err := util.NewBeaconStateElectra()
@@ -1165,7 +1173,7 @@ func TestGetAttesterSlashings(t *testing.T) {
 
 		s.GetAttesterSlashingsV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.GetAttesterSlashingsV2Response{}
+		resp := &structs.GetAttesterSlashingsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)

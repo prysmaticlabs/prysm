@@ -476,7 +476,12 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 		}
 		slashings[i] = structs.AttesterSlashingFromConsensus(as)
 	}
-	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: slashings})
+	attBytes, err := json.Marshal(slashings)
+	if err != nil {
+		httputil.HandleError(w, fmt.Sprintf("failed to marshal slashing: %v", err), http.StatusInternalServerError)
+		return
+	}
+	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: attBytes})
 }
 
 // GetAttesterSlashingsV2 retrieves attester slashings known by the node but
@@ -491,7 +496,7 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var attStructs []interface{}
-	resp := &structs.GetAttesterSlashingsV2Response{}
+	resp := &structs.GetAttesterSlashingsResponse{}
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
 	for _, slashing := range sourceSlashings {
 		if slashing.Version() >= version.Electra {
