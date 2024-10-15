@@ -100,8 +100,12 @@ func (u *updateAltair) NextSyncCommittee() *pb.SyncCommittee {
 	return u.p.NextSyncCommittee
 }
 
-func (u *updateAltair) NextSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return u.nextSyncCommitteeBranch
+func (u *updateAltair) NextSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return u.nextSyncCommitteeBranch, nil
+}
+
+func (u *updateAltair) NextSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return [6][32]byte{}, consensustypes.ErrNotSupported("NextSyncCommitteeBranchElectra", version.Altair)
 }
 
 func (u *updateAltair) FinalizedHeader() interfaces.LightClientHeader {
@@ -192,8 +196,12 @@ func (u *updateCapella) NextSyncCommittee() *pb.SyncCommittee {
 	return u.p.NextSyncCommittee
 }
 
-func (u *updateCapella) NextSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return u.nextSyncCommitteeBranch
+func (u *updateCapella) NextSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return u.nextSyncCommitteeBranch, nil
+}
+
+func (u *updateCapella) NextSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return [6][32]byte{}, consensustypes.ErrNotSupported("NextSyncCommitteeBranchElectra", version.Capella)
 }
 
 func (u *updateCapella) FinalizedHeader() interfaces.LightClientHeader {
@@ -284,8 +292,12 @@ func (u *updateDeneb) NextSyncCommittee() *pb.SyncCommittee {
 	return u.p.NextSyncCommittee
 }
 
-func (u *updateDeneb) NextSyncCommitteeBranch() interfaces.LightClientSyncCommitteeBranch {
-	return u.nextSyncCommitteeBranch
+func (u *updateDeneb) NextSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return u.nextSyncCommitteeBranch, nil
+}
+
+func (u *updateDeneb) NextSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return [6][32]byte{}, consensustypes.ErrNotSupported("NextSyncCommitteeBranchElectra", version.Deneb)
 }
 
 func (u *updateDeneb) FinalizedHeader() interfaces.LightClientHeader {
@@ -301,5 +313,101 @@ func (u *updateDeneb) SyncAggregate() *pb.SyncAggregate {
 }
 
 func (u *updateDeneb) SignatureSlot() primitives.Slot {
+	return u.p.SignatureSlot
+}
+
+type updateElectra struct {
+	p                       *pb.LightClientUpdateElectra
+	attestedHeader          interfaces.LightClientHeader
+	nextSyncCommitteeBranch interfaces.LightClientSyncCommitteeBranchElectra
+	finalizedHeader         interfaces.LightClientHeader
+	finalityBranch          interfaces.LightClientFinalityBranch
+}
+
+var _ interfaces.LightClientUpdate = &updateElectra{}
+
+func NewWrappedUpdateElectra(p *pb.LightClientUpdateElectra) (interfaces.LightClientUpdate, error) {
+	if p == nil {
+		return nil, consensustypes.ErrNilObjectWrapped
+	}
+	attestedHeader, err := NewWrappedHeaderDeneb(p.AttestedHeader)
+	if err != nil {
+		return nil, err
+	}
+	finalizedHeader, err := NewWrappedHeaderDeneb(p.FinalizedHeader)
+	if err != nil {
+		return nil, err
+	}
+	scBranch, err := createBranch[interfaces.LightClientSyncCommitteeBranchElectra](
+		"sync committee",
+		p.NextSyncCommitteeBranch,
+		fieldparams.SyncCommitteeBranchDepthElectra,
+	)
+	if err != nil {
+		return nil, err
+	}
+	finalityBranch, err := createBranch[interfaces.LightClientFinalityBranch](
+		"finality",
+		p.FinalityBranch,
+		fieldparams.FinalityBranchDepth,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &updateElectra{
+		p:                       p,
+		attestedHeader:          attestedHeader,
+		nextSyncCommitteeBranch: scBranch,
+		finalizedHeader:         finalizedHeader,
+		finalityBranch:          finalityBranch,
+	}, nil
+}
+
+func (u *updateElectra) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return u.p.MarshalSSZTo(dst)
+}
+
+func (u *updateElectra) MarshalSSZ() ([]byte, error) {
+	return u.p.MarshalSSZ()
+}
+
+func (u *updateElectra) SizeSSZ() int {
+	return u.p.SizeSSZ()
+}
+
+func (u *updateElectra) Version() int {
+	return version.Electra
+}
+
+func (u *updateElectra) AttestedHeader() interfaces.LightClientHeader {
+	return u.attestedHeader
+}
+
+func (u *updateElectra) NextSyncCommittee() *pb.SyncCommittee {
+	return u.p.NextSyncCommittee
+}
+
+func (u *updateElectra) NextSyncCommitteeBranch() (interfaces.LightClientSyncCommitteeBranch, error) {
+	return [5][32]byte{}, consensustypes.ErrNotSupported("NextSyncCommitteeBranch", version.Electra)
+}
+
+func (u *updateElectra) NextSyncCommitteeBranchElectra() (interfaces.LightClientSyncCommitteeBranchElectra, error) {
+	return u.nextSyncCommitteeBranch, nil
+}
+
+func (u *updateElectra) FinalizedHeader() interfaces.LightClientHeader {
+	return u.finalizedHeader
+}
+
+func (u *updateElectra) FinalityBranch() interfaces.LightClientFinalityBranch {
+	return u.finalityBranch
+}
+
+func (u *updateElectra) SyncAggregate() *pb.SyncAggregate {
+	return u.p.SyncAggregate
+}
+
+func (u *updateElectra) SignatureSlot() primitives.Slot {
 	return u.p.SignatureSlot
 }
