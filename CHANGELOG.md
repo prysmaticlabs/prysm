@@ -4,7 +4,53 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
-## [Unreleased](https://github.com/prysmaticlabs/prysm/compare/v5.1.0...HEAD)
+## [Unreleased](https://github.com/prysmaticlabs/prysm/compare/v5.1.1...HEAD)
+
+### Added
+
+- Electra EIP6110: Queue deposit [pr](https://github.com/prysmaticlabs/prysm/pull/14430)
+- Add Bellatrix tests for light client functions.
+- Add Discovery Rebooter Feature.
+- Added GetBlockAttestationsV2 endpoint.
+- Light client support: Consensus types for Electra
+- Added SubmitPoolAttesterSlashingV2 endpoint.
+
+### Changed
+
+- Electra EIP6110: Queue deposit requests changes from consensus spec pr #3818
+- reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
+- Fix `engine_exchangeCapabilities` implementation.
+- Updated the default `scrape-interval` in `Client-stats` to 2 minutes to accommodate Beaconcha.in API rate limits.
+- Switch to compounding when consolidating with source==target.
+
+### Deprecated
+
+- `/eth/v1alpha1/validator/activation/stream` grpc wait for activation stream is deprecated. [pr](https://github.com/prysmaticlabs/prysm/pull/14514)
+
+### Removed
+
+- Removed finalized validator index cache, no longer needed.
+
+### Fixed
+
+- Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
+- Fix skipping partial withdrawals count.
+
+### Security
+
+
+## [v5.1.1](https://github.com/prysmaticlabs/prysm/compare/v5.1.0...v5.1.1) - 2024-10-15
+
+This release has a number of features and improvements. Most notably, the feature flag 
+`--enable-experimental-state` has been flipped to "opt out" via `--disable-experimental-state`. 
+The experimental state management design has shown significant improvements in memory usage at
+runtime. Updates to libp2p's gossipsub have some bandwidith stability improvements with support for
+IDONTWANT control messages. 
+
+The gRPC gateway has been deprecated from Prysm in this release. If you need JSON data, consider the
+standardized beacon-APIs. 
+
+Updating to this release is recommended at your convenience.
 
 ### Added
 
@@ -13,7 +59,6 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Implement `ComputeFieldRootsForBlockBody`.
 - Light client support: Add light client database changes.
 - Light client support: Implement capella and deneb changes.
-- Electra EIP6110: Queue deposit [pr](https://github.com/prysmaticlabs/prysm/pull/14430)
 - Light client support: Implement `BlockToLightClientHeader` function.
 - Light client support: Consensus types.
 - GetBeaconStateV2: add Electra case.
@@ -30,6 +75,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Consensus types for Electra
 - Added SubmitPoolAttesterSlashingV2 endpoint.
 - Added SubmitAggregateAndProofsRequestV2 endpoint.
+- Added GetPoolAttesterSlashingsV2 endpoint.
 
 ### Changed
 
@@ -48,7 +94,6 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - `grpc-gateway-corsdomain` is renamed to http-cors-domain. The old name can still be used as an alias.
 - `api-timeout` is changed from int flag to duration flag, default value updated.
 - Light client support: abstracted out the light client headers with different versions.
-- Electra EIP6110: Queue deposit requests changes from consensus spec pr #3818
 - `ApplyToEveryValidator` has been changed to prevent misuse bugs, it takes a closure that takes a `ReadOnlyValidator` and returns a raw pointer to a `Validator`. 
 - Removed gorilla mux library and replaced it with net/http updates in go 1.22.
 - Clean up `ProposeBlock` for validator client to reduce cognitive scoring and enable further changes.
@@ -60,19 +105,17 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated Sepolia bootnodes.
 - Make committee aware packing the default by deprecating `--enable-committee-aware-packing`.
 - Moved `ConvertKzgCommitmentToVersionedHash` to the `primitives` package.
-- reversed the boolean return on `BatchVerifyDepositsSignatures`, from need verification, to all keys successfully verified
-- Fix `engine_exchangeCapabilities` implementation.
 
 ### Deprecated
 - `--disable-grpc-gateway` flag is deprecated due to grpc gateway removal.
 - `--enable-experimental-state` flag is deprecated. This feature is now on by default. Opt-out with `--disable-experimental-state`.
-- `/eth/v1alpha1/validator/activation/stream` grpc wait for activation stream is deprecated. [pr](https://github.com/prysmaticlabs/prysm/pull/14514)
 
 ### Removed
 
-- removed gRPC Gateway
-- Removed unused blobs bundle cache
+- Removed gRPC Gateway.
+- Removed unused blobs bundle cache.
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
+- Remove engine_getPayloadBodiesBy{Hash|Range}V2
 
 ### Fixed
 
@@ -91,10 +134,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: fix light client attested header execution fields' wrong version bug.
 - Testing: added custom matcher for better push settings testing.
 - Registered `GetDepositSnapshot` Beacon API endpoint.
-- Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
-- Fix skipping partial withdrawals count.
 
 ### Security
+
+No notable security updates.
 
 ## [v5.1.0](https://github.com/prysmaticlabs/prysm/compare/v5.0.4...v5.1.0) - 2024-08-20
 

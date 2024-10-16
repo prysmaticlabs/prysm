@@ -273,7 +273,6 @@ func (s *Service) reportPostBlockProcessing(
 func (s *Service) executePostFinalizationTasks(ctx context.Context, finalizedState state.BeaconState) {
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	go func() {
-		finalizedState.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
 		s.sendNewFinalizedEvent(ctx, finalizedState)
 	}()
 	depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
