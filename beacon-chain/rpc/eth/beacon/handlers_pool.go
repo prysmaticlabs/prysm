@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
@@ -528,10 +529,10 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 	httputil.WriteJson(w, resp)
 }
 
-// SubmitAttesterSlashing submits an attester slashing object to node's pool and
+// SubmitAttesterSlashings submits an attester slashing object to node's pool and
 // if passes validation node MUST broadcast it to network.
-func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
+func (s *Server) SubmitAttesterSlashings(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashings")
 	defer span.End()
 
 	var req structs.AttesterSlashing
@@ -550,16 +551,80 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.submitAttesterSlashing(w, ctx, slashing)
+}
+
+// SubmitAttesterSlashingsV2 submits an attester slashing object to node's pool and
+// if passes validation node MUST broadcast it to network.
+func (s *Server) SubmitAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashingsV2")
+	defer span.End()
+
+	versionHeader := r.Header.Get(api.VersionHeader)
+	if versionHeader == "" {
+		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+	}
+	v, err := version.FromString(versionHeader)
+	if err != nil {
+		httputil.HandleError(w, "Invalid version: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if v >= version.Electra {
+		var req structs.AttesterSlashingElectra
+		err := json.NewDecoder(r.Body).Decode(&req)
+		switch {
+		case errors.Is(err, io.EOF):
+			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+			return
+		case err != nil:
+			httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		slashing, err := req.ToConsensus()
+		if err != nil {
+			httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.submitAttesterSlashing(w, ctx, slashing)
+	} else {
+		var req structs.AttesterSlashing
+		err := json.NewDecoder(r.Body).Decode(&req)
+		switch {
+		case errors.Is(err, io.EOF):
+			httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+			return
+		case err != nil:
+			httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		slashing, err := req.ToConsensus()
+		if err != nil {
+			httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		s.submitAttesterSlashing(w, ctx, slashing)
+	}
+}
+
+func (s *Server) submitAttesterSlashing(
+	w http.ResponseWriter,
+	ctx context.Context,
+	slashing eth.AttSlashing,
+) {
 	headState, err := s.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.Attestation_1.Data.Slot)
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.FirstAttestation().GetData().Slot)
 	if err != nil {
 		httputil.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	err = blocks.VerifyAttesterSlashing(ctx, headState, slashing)
 	if err != nil {
 		httputil.HandleError(w, "Invalid attester slashing: "+err.Error(), http.StatusBadRequest)

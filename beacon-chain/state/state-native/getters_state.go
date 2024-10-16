@@ -208,7 +208,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			EarliestExitEpoch:             b.earliestExitEpoch,
 			ConsolidationBalanceToConsume: b.consolidationBalanceToConsume,
 			EarliestConsolidationEpoch:    b.earliestConsolidationEpoch,
-			PendingBalanceDeposits:        b.pendingBalanceDeposits,
+			PendingDeposits:               b.pendingDeposits,
 			PendingPartialWithdrawals:     b.pendingPartialWithdrawals,
 			PendingConsolidations:         b.pendingConsolidations,
 		}
@@ -414,7 +414,7 @@ func (b *BeaconState) ToProto() interface{} {
 			EarliestExitEpoch:             b.earliestExitEpoch,
 			ConsolidationBalanceToConsume: b.consolidationBalanceToConsume,
 			EarliestConsolidationEpoch:    b.earliestConsolidationEpoch,
-			PendingBalanceDeposits:        b.pendingBalanceDepositsVal(),
+			PendingDeposits:               b.pendingDepositsVal(),
 			PendingPartialWithdrawals:     b.pendingPartialWithdrawalsVal(),
 			PendingConsolidations:         b.pendingConsolidationsVal(),
 		}

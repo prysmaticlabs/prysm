@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
+	"golang.org/x/exp/maps"
 )
 
 func Test_endpoints(t *testing.T) {
@@ -31,16 +33,16 @@ func Test_endpoints(t *testing.T) {
 		"/eth/v2/beacon/blinded_blocks":                              {http.MethodPost},
 		"/eth/v1/beacon/blocks":                                      {http.MethodPost},
 		"/eth/v2/beacon/blocks":                                      {http.MethodPost},
-		"/eth/v1/beacon/blocks/{block_id}":                           {http.MethodGet},
 		"/eth/v2/beacon/blocks/{block_id}":                           {http.MethodGet},
 		"/eth/v1/beacon/blocks/{block_id}/root":                      {http.MethodGet},
 		"/eth/v1/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
+		"/eth/v2/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
 		"/eth/v1/beacon/blob_sidecars/{block_id}":                    {http.MethodGet},
 		"/eth/v1/beacon/deposit_snapshot":                            {http.MethodGet},
 		"/eth/v1/beacon/blinded_blocks/{block_id}":                   {http.MethodGet},
 		"/eth/v1/beacon/pool/attestations":                           {http.MethodGet, http.MethodPost},
 		"/eth/v1/beacon/pool/attester_slashings":                     {http.MethodGet, http.MethodPost},
-		"/eth/v2/beacon/pool/attester_slashings":                     {http.MethodGet},
+		"/eth/v2/beacon/pool/attester_slashings":                     {http.MethodGet, http.MethodPost},
 		"/eth/v1/beacon/pool/proposer_slashings":                     {http.MethodGet, http.MethodPost},
 		"/eth/v1/beacon/pool/sync_committees":                        {http.MethodPost},
 		"/eth/v1/beacon/pool/voluntary_exits":                        {http.MethodGet, http.MethodPost},
@@ -70,7 +72,6 @@ func Test_endpoints(t *testing.T) {
 	}
 
 	debugRoutes := map[string][]string{
-		"/eth/v1/debug/beacon/states/{state_id}": {http.MethodGet},
 		"/eth/v2/debug/beacon/states/{state_id}": {http.MethodGet},
 		"/eth/v2/debug/beacon/heads":             {http.MethodGet},
 		"/eth/v1/debug/fork_choice":              {http.MethodGet},
@@ -116,6 +117,7 @@ func Test_endpoints(t *testing.T) {
 		"/eth/v1/beacon/states/{state_id}/validator_count":   {http.MethodGet},
 		"/prysm/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
 		"/prysm/v1/beacon/chain_head":                        {http.MethodGet},
+		"/prysm/v1/beacon/blobs":                             {http.MethodPost},
 	}
 
 	prysmNodeRoutes := map[string][]string{
@@ -134,22 +136,18 @@ func Test_endpoints(t *testing.T) {
 
 	s := &Service{cfg: &Config{}}
 
-	routesMap := combineMaps(beaconRoutes, builderRoutes, configRoutes, debugRoutes, eventsRoutes, nodeRoutes, validatorRoutes, rewardsRoutes, lightClientRoutes, blobRoutes, prysmValidatorRoutes, prysmNodeRoutes, prysmBeaconRoutes)
-	actual := s.endpoints(true, nil, nil, nil, nil, nil, nil)
-	for _, e := range actual {
-		methods, ok := routesMap[e.template]
-		assert.Equal(t, true, ok, "endpoint "+e.template+" not found")
-		if ok {
-			for _, em := range e.methods {
-				methodFound := false
-				for _, m := range methods {
-					if m == em {
-						methodFound = true
-						break
-					}
-				}
-				assert.Equal(t, true, methodFound, "method "+em+" for endpoint "+e.template+" not found")
-			}
+	endpoints := s.endpoints(true, nil, nil, nil, nil, nil, nil)
+	actualRoutes := make(map[string][]string, len(endpoints))
+	for _, e := range endpoints {
+		if _, ok := actualRoutes[e.template]; ok {
+			actualRoutes[e.template] = append(actualRoutes[e.template], e.methods...)
+		} else {
+			actualRoutes[e.template] = e.methods
 		}
 	}
+	expectedRoutes := combineMaps(beaconRoutes, builderRoutes, configRoutes, debugRoutes, eventsRoutes, nodeRoutes, validatorRoutes, rewardsRoutes, lightClientRoutes, blobRoutes, prysmValidatorRoutes, prysmNodeRoutes, prysmBeaconRoutes)
+
+	assert.Equal(t, true, maps.EqualFunc(expectedRoutes, actualRoutes, func(actualMethods []string, expectedMethods []string) bool {
+		return slices.Equal(expectedMethods, actualMethods)
+	}))
 }

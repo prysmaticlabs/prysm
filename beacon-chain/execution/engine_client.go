@@ -44,8 +44,6 @@ var (
 		GetPayloadMethodV4,
 		GetPayloadBodiesByHashV1,
 		GetPayloadBodiesByRangeV1,
-		GetPayloadBodiesByHashV2,
-		GetPayloadBodiesByRangeV2,
 	}
 )
 
@@ -77,12 +75,8 @@ const (
 	BlockByNumberMethod = "eth_getBlockByNumber"
 	// GetPayloadBodiesByHashV1 is the engine_getPayloadBodiesByHashX JSON-RPC method for pre-Electra payloads.
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
-	// GetPayloadBodiesByHashV2 is the engine_getPayloadBodiesByHashX JSON-RPC method introduced by Electra.
-	GetPayloadBodiesByHashV2 = "engine_getPayloadBodiesByHashV2"
 	// GetPayloadBodiesByRangeV1 is the engine_getPayloadBodiesByRangeX JSON-RPC method for pre-Electra payloads.
 	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
-	// GetPayloadBodiesByRangeV2 is the engine_getPayloadBodiesByRangeX JSON-RPC method introduced by Electra.
-	GetPayloadBodiesByRangeV2 = "engine_getPayloadBodiesByRangeV2"
 	// ExchangeCapabilities request string for JSON-RPC.
 	ExchangeCapabilities = "engine_exchangeCapabilities"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
@@ -297,13 +291,16 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeCapabilities")
 	defer span.End()
 
-	result := &pb.ExchangeCapabilities{}
+	var result []string
 	err := s.rpcClient.CallContext(ctx, &result, ExchangeCapabilities, supportedEngineEndpoints)
+	if err != nil {
+		return nil, handleRPCError(err)
+	}
 
 	var unsupported []string
 	for _, s1 := range supportedEngineEndpoints {
 		supported := false
-		for _, s2 := range result.SupportedMethods {
+		for _, s2 := range result {
 			if s1 == s2 {
 				supported = true
 				break
@@ -316,7 +313,7 @@ func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
 	if len(unsupported) != 0 {
 		log.Warnf("Please update client, detected the following unsupported engine methods: %s", unsupported)
 	}
-	return result.SupportedMethods, handleRPCError(err)
+	return result, handleRPCError(err)
 }
 
 // GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.

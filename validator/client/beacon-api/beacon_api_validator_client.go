@@ -258,13 +258,6 @@ func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethp
 	return c.validatorStatus(ctx, in)
 }
 
-func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-api.WaitForActivation")
-	defer span.End()
-
-	return c.waitForActivation(ctx, in)
-}
-
 // Deprecated: Do not use.
 func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *empty.Empty) (*ethpb.ChainStartResponse, error) {
 	return c.waitForChainStart(ctx)
