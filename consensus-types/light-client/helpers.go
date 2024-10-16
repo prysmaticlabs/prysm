@@ -9,7 +9,10 @@ import (
 )
 
 type branchConstraint interface {
-	~interfaces.LightClientExecutionBranch | ~interfaces.LightClientSyncCommitteeBranch | ~interfaces.LightClientFinalityBranch
+	~interfaces.LightClientExecutionBranch |
+		~interfaces.LightClientSyncCommitteeBranch |
+		~interfaces.LightClientSyncCommitteeBranchElectra |
+		~interfaces.LightClientFinalityBranch
 }
 
 func createBranch[T branchConstraint](name string, input [][]byte, depth int) (T, error) {

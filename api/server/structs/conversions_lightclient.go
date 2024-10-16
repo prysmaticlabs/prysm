@@ -7,9 +7,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
 func LightClientUpdateFromConsensus(update *v2.LightClientUpdate) (*LightClientUpdate, error) {
@@ -65,13 +68,13 @@ func LightClientOptimisticUpdateFromConsensus(update *v2.LightClientOptimisticUp
 	}, nil
 }
 
-func branchToJSON(branchBytes [][]byte) []string {
+func branchToJSON[S [][32]byte](branchBytes S) []string {
 	if branchBytes == nil {
 		return nil
 	}
 	branch := make([]string, len(branchBytes))
 	for i, root := range branchBytes {
-		branch[i] = hexutil.Encode(root)
+		branch[i] = hexutil.Encode(root[:])
 	}
 	return branch
 }
@@ -83,45 +86,64 @@ func syncAggregateToJSON(input *v1.SyncAggregate) *SyncAggregate {
 	}
 }
 
-func lightClientHeaderContainerToJSON(container *v2.LightClientHeaderContainer) (json.RawMessage, error) {
+func lightClientHeaderContainerToJSON(header interfaces.LightClientHeader) (json.RawMessage, error) {
 	// In the case that a finalizedHeader is nil.
-	if container == nil {
+	if header == nil {
 		return nil, nil
 	}
 
-	beacon, err := container.GetBeacon()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get beacon block header")
-	}
+	var result any
 
-	var header any
-
-	switch t := (container.Header).(type) {
-	case *v2.LightClientHeaderContainer_HeaderAltair:
-		header = &LightClientHeader{Beacon: BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(beacon))}
-	case *v2.LightClientHeaderContainer_HeaderCapella:
-		execution, err := ExecutionPayloadHeaderCapellaFromConsensus(t.HeaderCapella.Execution)
+	switch v := header.Version(); v {
+	case version.Altair:
+		result = &LightClientHeader{Beacon: BeaconBlockHeaderFromConsensus(header.Beacon())}
+	case version.Capella:
+		exInterface, err := header.Execution()
 		if err != nil {
 			return nil, err
 		}
-		header = &LightClientHeaderCapella{
-			Beacon:          BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(beacon)),
-			Execution:       execution,
-			ExecutionBranch: branchToJSON(t.HeaderCapella.ExecutionBranch),
+		ex, ok := exInterface.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+		if !ok {
+			return nil, fmt.Errorf("execution data is not %T", &enginev1.ExecutionPayloadHeaderCapella{})
 		}
-	case *v2.LightClientHeaderContainer_HeaderDeneb:
-		execution, err := ExecutionPayloadHeaderDenebFromConsensus(t.HeaderDeneb.Execution)
+		execution, err := ExecutionPayloadHeaderCapellaFromConsensus(ex)
 		if err != nil {
 			return nil, err
 		}
-		header = &LightClientHeaderDeneb{
-			Beacon:          BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(beacon)),
+		executionBranch, err := header.ExecutionBranch()
+		if err != nil {
+			return nil, err
+		}
+		result = &LightClientHeaderCapella{
+			Beacon:          BeaconBlockHeaderFromConsensus(header.Beacon()),
 			Execution:       execution,
-			ExecutionBranch: branchToJSON(t.HeaderDeneb.ExecutionBranch),
+			ExecutionBranch: branchToJSON(executionBranch[:]),
+		}
+	case version.Deneb:
+		exInterface, err := header.Execution()
+		if err != nil {
+			return nil, err
+		}
+		ex, ok := exInterface.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
+		if !ok {
+			return nil, fmt.Errorf("execution data is not %T", &enginev1.ExecutionPayloadHeaderDeneb{})
+		}
+		execution, err := ExecutionPayloadHeaderDenebFromConsensus(ex)
+		if err != nil {
+			return nil, err
+		}
+		executionBranch, err := header.ExecutionBranch()
+		if err != nil {
+			return nil, err
+		}
+		result = &LightClientHeaderDeneb{
+			Beacon:          BeaconBlockHeaderFromConsensus(header.Beacon()),
+			Execution:       execution,
+			ExecutionBranch: branchToJSON(executionBranch[:]),
 		}
 	default:
-		return nil, fmt.Errorf("unsupported header type %T", t)
+		return nil, fmt.Errorf("unsupported header version %s", version.String(v))
 	}
 
-	return json.Marshal(header)
+	return json.Marshal(result)
 }

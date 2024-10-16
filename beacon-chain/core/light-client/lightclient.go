@@ -12,40 +12,20 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v5/consensus-types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	light_client "github.com/prysmaticlabs/prysm/v5/consensus-types/light-client"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
 	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
-	FinalityBranchNumOfLeaves  = 6
-	executionBranchNumOfLeaves = 4
+	FinalityBranchNumOfLeaves = 6
 )
-
-func createLightClientFinalityUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientFinalityUpdate {
-	finalityUpdate := &ethpbv2.LightClientFinalityUpdate{
-		AttestedHeader:  update.AttestedHeader,
-		FinalizedHeader: update.FinalizedHeader,
-		FinalityBranch:  update.FinalityBranch,
-		SyncAggregate:   update.SyncAggregate,
-		SignatureSlot:   update.SignatureSlot,
-	}
-
-	return finalityUpdate
-}
-
-func createLightClientOptimisticUpdate(update *ethpbv2.LightClientUpdate) *ethpbv2.LightClientOptimisticUpdate {
-	optimisticUpdate := &ethpbv2.LightClientOptimisticUpdate{
-		AttestedHeader: update.AttestedHeader,
-		SyncAggregate:  update.SyncAggregate,
-		SignatureSlot:  update.SignatureSlot,
-	}
-
-	return optimisticUpdate
-}
 
 func NewLightClientFinalityUpdateFromBeaconState(
 	ctx context.Context,
@@ -54,13 +34,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
-) (*ethpbv2.LightClientFinalityUpdate, error) {
+) (interfaces.LightClientFinalityUpdate, error) {
 	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
 
-	return createLightClientFinalityUpdate(update), nil
+	return light_client.NewFinalityUpdateFromUpdate(update)
 }
 
 func NewLightClientOptimisticUpdateFromBeaconState(
@@ -69,13 +49,13 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
-) (*ethpbv2.LightClientOptimisticUpdate, error) {
+) (interfaces.LightClientOptimisticUpdate, error) {
 	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return createLightClientOptimisticUpdate(update), nil
+	return light_client.NewOptimisticUpdateFromUpdate(update)
 }
 
 func NewLightClientUpdateFromBeaconState(
@@ -84,7 +64,7 @@ func NewLightClientUpdateFromBeaconState(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
-	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientUpdate, error) {
+	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (interfaces.LightClientUpdate, error) {
 	// assert compute_epoch_at_slot(attested_state.slot) >= ALTAIR_FORK_EPOCH
 	attestedEpoch := slots.ToEpoch(attestedState.Slot())
 	if attestedEpoch < params.BeaconConfig().AltairForkEpoch {
@@ -129,7 +109,11 @@ func NewLightClientUpdateFromBeaconState(
 
 	// assert attested_state.slot == attested_state.latest_block_header.slot
 	if attestedState.Slot() != attestedState.LatestBlockHeader().Slot {
-		return nil, fmt.Errorf("attested state slot %d not equal to attested latest block header slot %d", attestedState.Slot(), attestedState.LatestBlockHeader().Slot)
+		return nil, fmt.Errorf(
+			"attested state slot %d not equal to attested latest block header slot %d",
+			attestedState.Slot(),
+			attestedState.LatestBlockHeader().Slot,
+		)
 	}
 
 	// attested_header = attested_state.latest_block_header.copy()
@@ -153,14 +137,19 @@ func NewLightClientUpdateFromBeaconState(
 	}
 	// assert hash_tree_root(attested_header) == hash_tree_root(attested_block.message) == block.message.parent_root
 	if attestedHeaderRoot != block.Block().ParentRoot() || attestedHeaderRoot != attestedBlockRoot {
-		return nil, fmt.Errorf("attested header root %#x not equal to block parent root %#x or attested block root %#x", attestedHeaderRoot, block.Block().ParentRoot(), attestedBlockRoot)
+		return nil, fmt.Errorf(
+			"attested header root %#x not equal to block parent root %#x or attested block root %#x",
+			attestedHeaderRoot,
+			block.Block().ParentRoot(),
+			attestedBlockRoot,
+		)
 	}
 
 	// update_attested_period = compute_sync_committee_period_at_slot(attested_block.message.slot)
 	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate()
+	result, err := createDefaultLightClientUpdate(attestedBlock.Version())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
@@ -170,29 +159,34 @@ func NewLightClientUpdateFromBeaconState(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested light client header")
 	}
-	result.AttestedHeader = attestedLightClientHeader
+	result.SetAttestedHeader(attestedLightClientHeader)
 
 	// if update_attested_period == update_signature_period
 	if updateAttestedPeriod == updateSignaturePeriod {
+		// update.next_sync_committee = attested_state.next_sync_committee
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next sync committee")
 		}
-		nextSyncCommittee := &ethpbv2.SyncCommittee{
+		nextSyncCommittee := &pb.SyncCommittee{
 			Pubkeys:         tempNextSyncCommittee.Pubkeys,
 			AggregatePubkey: tempNextSyncCommittee.AggregatePubkey,
 		}
+		result.SetNextSyncCommittee(nextSyncCommittee)
+
+		// update.next_sync_committee_branch = NextSyncCommitteeBranch(
+		//     compute_merkle_proof(attested_state, next_sync_committee_gindex_at_slot(attested_state.slot)))
 		nextSyncCommitteeBranch, err := attestedState.NextSyncCommitteeProof(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get next sync committee proof")
 		}
-
-		// update.next_sync_committee = attested_state.next_sync_committee
-		result.NextSyncCommittee = nextSyncCommittee
-
-		// update.next_sync_committee_branch = NextSyncCommitteeBranch(
-		//     compute_merkle_proof(attested_state, next_sync_committee_gindex_at_slot(attested_state.slot)))
-		result.NextSyncCommitteeBranch = nextSyncCommitteeBranch
+		if attestedBlock.Version() >= version.Electra {
+			if err = result.SetNextSyncCommitteeBranchElectra(nextSyncCommitteeBranch); err != nil {
+				return nil, errors.Wrap(err, "could not set next sync committee branch")
+			}
+		} else if err = result.SetNextSyncCommitteeBranch(nextSyncCommitteeBranch); err != nil {
+			return nil, errors.Wrap(err, "could not set next sync committee branch")
+		}
 	}
 
 	// if finalized_block is not None
@@ -218,49 +212,85 @@ func NewLightClientUpdateFromBeaconState(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized root proof")
 		}
-		result.FinalityBranch = finalityBranch
+		if err = result.SetFinalityBranch(finalityBranch); err != nil {
+			return nil, errors.Wrap(err, "could not set finality branch")
+		}
 	}
 
 	// update.sync_aggregate = block.message.body.sync_aggregate
-	result.SyncAggregate = &ethpbv1.SyncAggregate{
+	result.SetSyncAggregate(&pb.SyncAggregate{
 		SyncCommitteeBits:      syncAggregate.SyncCommitteeBits,
 		SyncCommitteeSignature: syncAggregate.SyncCommitteeSignature,
-	}
+	})
 
 	// update.signature_slot = block.message.slot
-	result.SignatureSlot = block.Block().Slot()
+	result.SetSignatureSlot(block.Block().Slot())
 
 	return result, nil
 }
 
-func createDefaultLightClientUpdate() (*ethpbv2.LightClientUpdate, error) {
+func createDefaultLightClientUpdate(ver int) (interfaces.LightClientUpdate, error) {
 	syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
 	pubKeys := make([][]byte, syncCommitteeSize)
 	for i := uint64(0); i < syncCommitteeSize; i++ {
 		pubKeys[i] = make([]byte, fieldparams.BLSPubkeyLength)
 	}
-	nextSyncCommittee := &ethpbv2.SyncCommittee{
+	nextSyncCommittee := &pb.SyncCommittee{
 		Pubkeys:         pubKeys,
 		AggregatePubkey: make([]byte, fieldparams.BLSPubkeyLength),
 	}
-	nextSyncCommitteeBranch := make([][]byte, fieldparams.SyncCommitteeBranchDepth)
-	for i := 0; i < fieldparams.SyncCommitteeBranchDepth; i++ {
+
+	var scDepth int
+	if ver >= version.Electra {
+		scDepth = fieldparams.SyncCommitteeBranchDepthElectra
+	} else {
+		scDepth = fieldparams.SyncCommitteeBranchDepth
+	}
+	nextSyncCommitteeBranch := make([][]byte, scDepth)
+	for i := 0; i < scDepth; i++ {
 		nextSyncCommitteeBranch[i] = make([]byte, fieldparams.RootLength)
 	}
-	executionBranch := make([][]byte, executionBranchNumOfLeaves)
-	for i := 0; i < executionBranchNumOfLeaves; i++ {
+
+	executionBranch := make([][]byte, fieldparams.ExecutionBranchDepth)
+	for i := 0; i < fieldparams.ExecutionBranchDepth; i++ {
 		executionBranch[i] = make([]byte, 32)
 	}
-	finalityBranch := make([][]byte, FinalityBranchNumOfLeaves)
-	for i := 0; i < FinalityBranchNumOfLeaves; i++ {
+	finalityBranch := make([][]byte, fieldparams.FinalityBranchDepth)
+	for i := 0; i < fieldparams.FinalityBranchDepth; i++ {
 		finalityBranch[i] = make([]byte, 32)
 	}
 
-	return &ethpbv2.LightClientUpdate{
-		NextSyncCommittee:       nextSyncCommittee,
-		NextSyncCommitteeBranch: nextSyncCommitteeBranch,
-		FinalityBranch:          finalityBranch,
-	}, nil
+	var update proto.Message
+	switch ver {
+	case version.Altair, version.Bellatrix:
+		update = &pb.LightClientUpdateAltair{
+			NextSyncCommittee:       nextSyncCommittee,
+			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
+			FinalityBranch:          finalityBranch,
+		}
+	case version.Capella:
+		update = &pb.LightClientUpdateCapella{
+			NextSyncCommittee:       nextSyncCommittee,
+			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
+			FinalityBranch:          finalityBranch,
+		}
+	case version.Deneb:
+		update = &pb.LightClientUpdateDeneb{
+			NextSyncCommittee:       nextSyncCommittee,
+			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
+			FinalityBranch:          finalityBranch,
+		}
+	case version.Electra:
+		update = &pb.LightClientUpdateElectra{
+			NextSyncCommittee:       nextSyncCommittee,
+			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
+			FinalityBranch:          finalityBranch,
+		}
+	default:
+		return nil, fmt.Errorf("unsupported version %s", version.String(ver))
+	}
+
+	return light_client.NewWrappedUpdate(update)
 }
 
 func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
@@ -299,41 +329,31 @@ func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 	return withdrawalsRoot, nil
 }
 
-func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderContainer, error) {
-	switch block.Version() {
+func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (interfaces.LightClientHeader, error) {
+	var header proto.Message
+	var err error
+
+	switch v := block.Version(); v {
 	case version.Altair, version.Bellatrix:
-		altairHeader, err := blockToLightClientHeaderAltair(block)
+		header, err = blockToLightClientHeaderAltair(block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get header")
 		}
-		return &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-				HeaderAltair: altairHeader,
-			},
-		}, nil
 	case version.Capella:
-		capellaHeader, err := blockToLightClientHeaderCapella(context.Background(), block)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get capella header")
-		}
-		return &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-				HeaderCapella: capellaHeader,
-			},
-		}, nil
-	case version.Deneb, version.Electra:
-		denebHeader, err := blockToLightClientHeaderDeneb(context.Background(), block)
+		header, err = blockToLightClientHeaderCapella(context.Background(), block)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get header")
 		}
-		return &ethpbv2.LightClientHeaderContainer{
-			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-				HeaderDeneb: denebHeader,
-			},
-		}, nil
+	case version.Deneb, version.Electra:
+		header, err = blockToLightClientHeaderDeneb(context.Background(), block)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get header")
+		}
 	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(block.Version()))
+		return nil, fmt.Errorf("unsupported block version %s", version.String(v))
 	}
+
+	return light_client.NewWrappedHeader(header)
 }
 
 func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
