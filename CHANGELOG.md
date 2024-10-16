@@ -36,6 +36,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 - Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
 - Fix skipping partial withdrawals count.
+- recover from panics when writing the event stream [pr](https://github.com/prysmaticlabs/prysm/pull/14545)
 
 ### Security
 
@@ -65,6 +66,7 @@ Updating to this release is recommended at your convenience.
 - GetBeaconStateV2: add Electra case.
 - Implement [consensus-specs/3875](https://github.com/ethereum/consensus-specs/pull/3875).
 - Tests to ensure sepolia config matches the official upstream yaml.
+- `engine_newPayloadV4`,`engine_getPayloadV4` used for electra payload communication with execution client.  [pr](https://github.com/prysmaticlabs/prysm/pull/14492)
 - HTTP endpoint for PublishBlobs.
 - GetBlockV2, GetBlindedBlock, ProduceBlockV2, ProduceBlockV3: add Electra case.
 - Add Electra support and tests for light client functions.
