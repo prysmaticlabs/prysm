@@ -70,6 +70,7 @@ Updating to this release is recommended at your convenience.
 - Add Electra support and tests for light client functions.
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
+- Added GetPoolAttesterSlashingsV2 endpoint.
 
 ### Changed
 
@@ -109,6 +110,7 @@ Updating to this release is recommended at your convenience.
 - Removed gRPC Gateway.
 - Removed unused blobs bundle cache.
 - Removed consolidation signing domain from params. The Electra design changed such that EL handles consolidation signature verification.
+- Remove engine_getPayloadBodiesBy{Hash|Range}V2
 
 ### Fixed
 

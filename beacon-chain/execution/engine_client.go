@@ -44,8 +44,6 @@ var (
 		GetPayloadMethodV4,
 		GetPayloadBodiesByHashV1,
 		GetPayloadBodiesByRangeV1,
-		GetPayloadBodiesByHashV2,
-		GetPayloadBodiesByRangeV2,
 	}
 )
 
@@ -77,12 +75,8 @@ const (
 	BlockByNumberMethod = "eth_getBlockByNumber"
 	// GetPayloadBodiesByHashV1 is the engine_getPayloadBodiesByHashX JSON-RPC method for pre-Electra payloads.
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
-	// GetPayloadBodiesByHashV2 is the engine_getPayloadBodiesByHashX JSON-RPC method introduced by Electra.
-	GetPayloadBodiesByHashV2 = "engine_getPayloadBodiesByHashV2"
 	// GetPayloadBodiesByRangeV1 is the engine_getPayloadBodiesByRangeX JSON-RPC method for pre-Electra payloads.
 	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
-	// GetPayloadBodiesByRangeV2 is the engine_getPayloadBodiesByRangeX JSON-RPC method introduced by Electra.
-	GetPayloadBodiesByRangeV2 = "engine_getPayloadBodiesByRangeV2"
 	// ExchangeCapabilities request string for JSON-RPC.
 	ExchangeCapabilities = "engine_exchangeCapabilities"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
