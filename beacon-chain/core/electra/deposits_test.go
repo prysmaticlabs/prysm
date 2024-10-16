@@ -177,7 +177,6 @@ func TestProcessPendingDeposits(t *testing.T) {
 				dep := stateTesting.GeneratePendingDeposit(t, sk, excessBalance, bytesutil.ToBytes32(wc), 0)
 				dep.Signature = common.InfiniteSignature[:]
 				require.NoError(t, st.SetValidators(validators))
-				st.SaveValidatorIndices()
 				require.NoError(t, st.SetPendingDeposits([]*eth.PendingDeposit{dep}))
 				return st
 			}(),
@@ -508,7 +507,6 @@ func stateWithPendingDeposits(t *testing.T, balETH uint64, numDeposits, amount u
 		deps[i] = stateTesting.GeneratePendingDeposit(t, sk, amount, bytesutil.ToBytes32(wc), 0)
 	}
 	require.NoError(t, st.SetValidators(validators))
-	st.SaveValidatorIndices()
 	require.NoError(t, st.SetPendingDeposits(deps))
 	return st
 }
@@ -527,7 +525,6 @@ func TestApplyPendingDeposit_TopUp(t *testing.T) {
 	dep := stateTesting.GeneratePendingDeposit(t, sk, excessBalance, bytesutil.ToBytes32(wc), 0)
 	dep.Signature = common.InfiniteSignature[:]
 	require.NoError(t, st.SetValidators(validators))
-	st.SaveValidatorIndices()
 
 	require.NoError(t, electra.ApplyPendingDeposit(context.Background(), st, dep))
 
