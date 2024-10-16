@@ -274,7 +274,6 @@ func getPayloadMethodAndMessage(slot primitives.Slot) (string, proto.Message) {
 		return GetPayloadMethodV2, &pb.ExecutionPayloadCapellaWithValue{}
 	}
 	return GetPayloadMethod, &pb.ExecutionPayload{}
-
 }
 
 // GetPayload calls the engine_getPayloadVX method via JSON-RPC.
