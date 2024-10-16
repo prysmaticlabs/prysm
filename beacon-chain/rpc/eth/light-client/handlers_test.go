@@ -691,7 +691,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleCapella(t *testi
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, 100, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		require.Equal(t, "capella", resp.Updates[i].Version)
 		updateJson, err := structs.LightClientUpdateFromConsensus(update)
@@ -802,7 +801,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleDeneb(t *testing
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, 100, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		require.Equal(t, "deneb", resp.Updates[i].Version)
 		updateJson, err := structs.LightClientUpdateFromConsensus(update)
@@ -970,7 +968,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksAltairCapel
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, 100, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		if i < 50 {
 			require.Equal(t, "altair", resp.Updates[i].Version)
@@ -1150,7 +1147,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksCapellaDene
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, 100, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		if i < 50 {
 			require.Equal(t, "capella", resp.Updates[i].Version)
@@ -1244,7 +1240,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanLimit(t *
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, 128, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		if i < 128 {
 			require.Equal(t, "altair", resp.Updates[i].Version)
@@ -1340,7 +1335,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanMax(t *te
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, int(diffSlots), len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		if i < int(diffSlots) {
 			require.Equal(t, "altair", resp.Updates[i].Version)
@@ -1432,7 +1426,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeStartPeriodBeforeAltair(
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, 100, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		require.Equal(t, "altair", resp.Updates[i].Version)
 		updateJson, err := structs.LightClientUpdateFromConsensus(update)
@@ -1528,7 +1521,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates(t *testin
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, validUpdatesLen, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		if i < validUpdatesLen {
 			require.Equal(t, "altair", resp.Updates[i].Version)
@@ -1626,7 +1618,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates2(t *testi
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
 	require.Equal(t, validUpdatesLen, len(resp.Updates))
-	require.NoError(t, err)
 	for i, update := range updates {
 		if i < validUpdatesLen {
 			require.Equal(t, "altair", resp.Updates[i].Version)
