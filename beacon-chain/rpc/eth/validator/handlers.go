@@ -152,7 +152,7 @@ func (s *Server) aggregatedAttestation(w http.ResponseWriter, slot primitives.Sl
 		httputil.HandleError(w, "Could not get matching attestations: "+err.Error(), http.StatusInternalServerError)
 		return nil
 	}
-	if match == nil {
+	if len(match) == 0 {
 		httputil.HandleError(w, "No matching attestations found", http.StatusNotFound)
 		return nil
 	}

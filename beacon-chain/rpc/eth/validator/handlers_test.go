@@ -237,7 +237,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 			e := &httputil.DefaultJsonError{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 			assert.Equal(t, http.StatusNotFound, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
+			assert.Equal(t, true, strings.Contains(e.Message, "No matching attestations found"))
 		})
 		t.Run("no attestation_data_root provided", func(t *testing.T) {
 			url := "http://example.com?slot=2"
@@ -411,7 +411,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 			reqRoot, err := attslot22.Data.HashTreeRoot()
 			require.NoError(t, err)
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=1"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
@@ -448,7 +448,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 			reqRoot, err := attslot32.Data.HashTreeRoot()
 			require.NoError(t, err)
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=1"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
@@ -486,7 +486,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 			reqRoot, err := attslot32.Data.HashTreeRoot()
 			require.NoError(t, err)
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=2"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
@@ -496,7 +496,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 			e := &httputil.DefaultJsonError{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 			assert.Equal(t, http.StatusNotFound, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No matching attestation found"))
+			assert.Equal(t, true, strings.Contains(e.Message, "No matching attestations found"))
 		})
 		t.Run("no attestation_data_root provided", func(t *testing.T) {
 			url := "http://example.com?slot=2"
@@ -513,7 +513,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		})
 
 		t.Run("invalid attestation_data_root provided", func(t *testing.T) {
-			url := "http://example.com?attestation_data_root=foo&slot=2&committee_index=1"
+			url := "http://example.com?attestation_data_root=foo&slot=2&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
