@@ -312,7 +312,12 @@ func (es *eventStreamer) outboxWriteLoop(ctx context.Context, cancel context.Can
 func (es *eventStreamer) writeOutbox(ctx context.Context, w StreamingResponseWriter, first lazyReader) error {
 	needKeepAlive := true
 	if first != nil {
-		if _, err := io.Copy(w, first()); err != nil {
+		b, err := io.ReadAll(first())
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(b)
+		if err != nil {
 			return err
 		}
 		needKeepAlive = false
