@@ -855,8 +855,6 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 	missingColumnsByRoot map[[fieldparams.RootLength]byte]map[uint64]bool,
 	batchSize uint64,
 	bwbSlice bwbSlice) error {
-	lastSlot := bwbs[bwbSlice.end].Block.Block().Slot()
-
 	// Filter out slices that are already complete.
 	if len(bwbSlice.dataColumns) == 0 {
 		return nil
@@ -868,7 +866,7 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 	blockCount := uint64(endSlot - startSlot + 1)
 
 	// Get all admissible peers with the data columns they custody.
-	dataColumnsByAdmissiblePeer, err := f.waitForPeersForDataColumns(identifier, peers, lastSlot, bwbSlice.dataColumns, blockCount)
+	dataColumnsByAdmissiblePeer, err := f.waitForPeersForDataColumns(identifier, peers, endSlot, bwbSlice.dataColumns, blockCount)
 	if err != nil {
 		return errors.Wrap(err, "wait for peers for data columns")
 	}
