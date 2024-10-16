@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -23,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
@@ -79,6 +82,8 @@ const (
 	GetPayloadBodiesByRangeV1 = "engine_getPayloadBodiesByRangeV1"
 	// ExchangeCapabilities request string for JSON-RPC.
 	ExchangeCapabilities = "engine_exchangeCapabilities"
+	// GetBlobsV1 request string for JSON-RPC.
+	GetBlobsV1 = "engine_getBlobsV1"
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
 	defaultEngineTimeout = time.Second
 )
@@ -93,16 +98,15 @@ type ForkchoiceUpdatedResponse struct {
 	ValidationError string             `json:"validationError"`
 }
 
-// PayloadReconstructor defines a service that can reconstruct a full beacon
-// block with an execution payload from a signed beacon block and a connection
-// to an execution client's engine API.
-type PayloadReconstructor interface {
+// Reconstructor defines a service responsible for reconstructing full beacon chain objects by utilizing the execution API and making requests through the execution client.
+type Reconstructor interface {
 	ReconstructFullBlock(
 		ctx context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
 	ReconstructFullBellatrixBlockBatch(
 		ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 	) ([]interfaces.SignedBeaconBlock, error)
+	ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, indices [6]bool) ([]blocks.VerifiedROBlob, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -494,6 +498,23 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return hdr, err
 }
 
+// GetBlobs returns the blob and proof from the execution engine for the given versioned hashes.
+func (s *Service) GetBlobs(ctx context.Context, versionedHashes []common.Hash) ([]*pb.BlobAndProof, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobs")
+	defer span.End()
+	// If the execution engine does not support `GetBlobsV1`, return early to prevent encountering an error later.
+	s.capabilitiesLock.RLock()
+	if !slices.Contains(s.capabilities, GetBlobsV1) {
+		s.capabilitiesLock.RUnlock()
+		return nil, nil
+	}
+	s.capabilitiesLock.RUnlock()
+
+	result := make([]*pb.BlobAndProof, len(versionedHashes))
+	err := s.rpcClient.CallContext(ctx, &result, GetBlobsV1, versionedHashes)
+	return result, handleRPCError(err)
+}
+
 // ReconstructFullBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBlock(
@@ -520,6 +541,104 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	}
 	reconstructedExecutionPayloadCount.Add(float64(len(unb)))
 	return unb, nil
+}
+
+// ReconstructBlobSidecars reconstructs the verified blob sidecars for a given beacon block.
+// It retrieves the KZG commitments from the block body, fetches the associated blobs and proofs,
+// and constructs the corresponding verified read-only blob sidecars.
+//
+// The 'exists' argument is a boolean array of length 6, where each element corresponds to whether a
+// particular blob sidecar already exists. If exists[i] is true, the blob for the i-th KZG commitment
+// has already been retrieved and does not need to be fetched again from the execution layer (EL).
+//
+// For example:
+//   - If exists = [true, false, true, false, true, false], the function will fetch the blobs
+//     associated with indices 1, 3, and 5 (since those are marked as non-existent).
+//   - If exists = [false ... x 6], the function will attempt to fetch all blobs.
+//
+// Only the blobs that do not already exist (where exists[i] is false) are fetched using the KZG commitments from block body.
+func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, exists [6]bool) ([]blocks.VerifiedROBlob, error) {
+	blockBody := block.Block().Body()
+	kzgCommitments, err := blockBody.BlobKzgCommitments()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get blob KZG commitments")
+	}
+
+	// Collect KZG hashes for non-existing blobs
+	var kzgHashes []common.Hash
+	for i, commitment := range kzgCommitments {
+		if !exists[i] {
+			kzgHashes = append(kzgHashes, primitives.ConvertKzgCommitmentToVersionedHash(commitment))
+		}
+	}
+	if len(kzgHashes) == 0 {
+		return nil, nil
+	}
+
+	// Fetch blobs from EL
+	blobs, err := s.GetBlobs(ctx, kzgHashes)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get blobs")
+	}
+	if blobs == nil {
+		return nil, nil
+	}
+
+	header, err := block.Header()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get header")
+	}
+
+	// Reconstruct verify blob sidecars
+	var verifiedBlobs []blocks.VerifiedROBlob
+	for i, blobIndex := 0, 0; i < len(kzgCommitments); i++ {
+		if exists[i] {
+			continue
+		}
+
+		blob := blobs[blobIndex]
+		blobIndex++
+		if blob == nil {
+			continue
+		}
+
+		proof, err := blocks.MerkleProofKZGCommitment(blockBody, i)
+		if err != nil {
+			log.WithError(err).WithField("index", i).Error("failed to get Merkle proof for KZG commitment")
+			continue
+		}
+		sidecar := &ethpb.BlobSidecar{
+			Index:                    uint64(i),
+			Blob:                     blob.Blob,
+			KzgCommitment:            kzgCommitments[i],
+			KzgProof:                 blob.KzgProof,
+			SignedBlockHeader:        header,
+			CommitmentInclusionProof: proof,
+		}
+
+		roBlob, err := blocks.NewROBlobWithRoot(sidecar, blockRoot)
+		if err != nil {
+			log.WithError(err).WithField("index", i).Error("failed to create RO blob with root")
+			continue
+		}
+
+		// Verify the sidecar KZG proof
+		v := s.blobVerifier(roBlob, verification.ELMemPoolRequirements)
+		if err := v.SidecarKzgProofVerified(); err != nil {
+			log.WithError(err).WithField("index", i).Error("failed to verify KZG proof for sidecar")
+			continue
+		}
+
+		verifiedBlob, err := v.VerifiedROBlob()
+		if err != nil {
+			log.WithError(err).WithField("index", i).Error("failed to verify RO blob")
+			continue
+		}
+
+		verifiedBlobs = append(verifiedBlobs, verifiedBlob)
+	}
+
+	return verifiedBlobs, nil
 }
 
 func fullPayloadFromPayloadBody(
