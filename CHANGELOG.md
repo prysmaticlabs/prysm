@@ -14,6 +14,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Added GetBlockAttestationsV2 endpoint.
 - Light client support: Consensus types for Electra
 - Added SubmitPoolAttesterSlashingV2 endpoint.
+- Added SubmitAggregateAndProofsRequestV2 endpoint.
 
 ### Changed
 
@@ -69,12 +70,6 @@ Updating to this release is recommended at your convenience.
 - Add Electra support and tests for light client functions.
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
-- Add Bellatrix tests for light client functions.
-- Add Discovery Rebooter Feature.
-- Added GetBlockAttestationsV2 endpoint.
-- Light client support: Consensus types for Electra
-- Added SubmitPoolAttesterSlashingV2 endpoint.
-- Added SubmitAggregateAndProofsRequestV2 endpoint.
 - Added GetPoolAttesterSlashingsV2 endpoint.
 
 ### Changed
