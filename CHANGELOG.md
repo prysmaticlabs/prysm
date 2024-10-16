@@ -69,6 +69,7 @@ Updating to this release is recommended at your convenience.
 - Add Electra support and tests for light client functions.
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
+- Added GetPoolAttesterSlashingsV2 endpoint.
 
 ### Changed
 
