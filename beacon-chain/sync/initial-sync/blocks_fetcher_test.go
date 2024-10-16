@@ -1683,7 +1683,13 @@ func TestBuildBwbSlices(t *testing.T) {
 				blockRoot := bwb.Block.Root()
 				missingColumnsByRoot[blockRoot] = missingColumns
 			}
-			bwbSlices, err := buildBwbSlices(&sync.RWMutex{}, bwbs, missingColumnsByRoot)
+
+			wrappedBwbsMissingColumns := &bwbsMissingColumns{
+				bwbs:                 bwbs,
+				missingColumnsByRoot: missingColumnsByRoot,
+			}
+
+			bwbSlices, err := buildBwbSlices(wrappedBwbsMissingColumns)
 			require.NoError(t, err)
 			require.Equal(t, true, areBwbSlicesEqual(tt.bwbSlices, bwbSlices))
 		})

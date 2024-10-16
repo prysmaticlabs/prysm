@@ -625,13 +625,12 @@ type bwbSlice struct {
 
 // buildBwbSlices builds slices of `bwb` that aims to optimize the count of
 // by range requests needed to fetch missing data columns.
-func buildBwbSlices(
-	mu *sync.RWMutex,
-	bwbs []blocks.BlockWithROBlobs,
-	missingColumnsByRoot map[[fieldparams.RootLength]byte]map[uint64]bool,
-) ([]bwbSlice, error) {
-	mu.Lock()
-	defer mu.Unlock()
+func buildBwbSlices(wrappedBwbsMissingColumns *bwbsMissingColumns) ([]bwbSlice, error) {
+	wrappedBwbsMissingColumns.mu.Lock()
+	defer wrappedBwbsMissingColumns.mu.Unlock()
+
+	bwbs := wrappedBwbsMissingColumns.bwbs
+	missingColumnsByRoot := wrappedBwbsMissingColumns.missingColumnsByRoot
 
 	// Return early if there are no blocks to process.
 	if len(bwbs) == 0 {
@@ -848,11 +847,9 @@ func computeMissingDataColumnsCount(missingColumnsByRoot map[[fieldparams.RootLe
 
 func (f *blocksFetcher) fetchBwbSliceFromPeers(
 	ctx context.Context,
-	mu *sync.RWMutex,
 	identifier int,
+	wrappedBwbsMissingColumns *bwbsMissingColumns,
 	peers []peer.ID,
-	bwbs []blocks.BlockWithROBlobs,
-	missingColumnsByRoot map[[fieldparams.RootLength]byte]map[uint64]bool,
 	batchSize uint64,
 	bwbSlice bwbSlice) error {
 	// Filter out slices that are already complete.
@@ -860,9 +857,22 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 		return nil
 	}
 
+	// Compute the start and end slot of the request.
+	startSlot, endSlot := func() (primitives.Slot, primitives.Slot) {
+		mu := &wrappedBwbsMissingColumns.mu
+
+		mu.RLock()
+		defer mu.RUnlock()
+
+		bwbs := wrappedBwbsMissingColumns.bwbs
+
+		startSlot := bwbs[bwbSlice.start].Block.Block().Slot()
+		endSlot := bwbs[bwbSlice.end].Block.Block().Slot()
+
+		return startSlot, endSlot
+	}()
+
 	// Compute the block count of the request.
-	startSlot := bwbs[bwbSlice.start].Block.Block().Slot()
-	endSlot := bwbs[bwbSlice.end].Block.Block().Slot()
 	blockCount := uint64(endSlot - startSlot + 1)
 
 	// Get all admissible peers with the data columns they custody.
@@ -885,11 +895,15 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 		peerCustodyColumns := dataColumnsByAdmissiblePeer[peer]
 
 		indicesByRoot, blocksByRoot := func() (map[[fieldparams.RootLength]byte][]int, map[[fieldparams.RootLength]byte]blocks.ROBlock) {
+			mu := &wrappedBwbsMissingColumns.mu
+
 			mu.RLock()
 			defer mu.RUnlock()
 
 			// Get `bwbs` indices indexed by root.
 			// Get blocks indexed by root.
+
+			bwbs := wrappedBwbsMissingColumns.bwbs
 			return indicesFromRoot(bwbs), blockFromRoot(bwbs)
 		}()
 
@@ -902,7 +916,7 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 		for _, request := range requests {
 			// Fetch the missing data columns from the peers.
 			wg.Add(1)
-			go f.fetchDataColumnFromPeer(ctx, mu, &wg, identifier, bwbs, missingColumnsByRoot, blocksByRoot, indicesByRoot, peer, peerCustodyColumns, request)
+			go f.fetchDataColumnFromPeer(ctx, &wg, identifier, wrappedBwbsMissingColumns, blocksByRoot, indicesByRoot, peer, peerCustodyColumns, request)
 		}
 	}
 
@@ -910,6 +924,13 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 	wg.Wait()
 
 	return nil
+}
+
+type bwbsMissingColumns struct {
+	mu sync.RWMutex
+
+	bwbs                 []blocks.BlockWithROBlobs
+	missingColumnsByRoot map[[fieldparams.RootLength]byte]map[uint64]bool
 }
 
 // fetchDataColumnsFromPeers looks at the blocks in `bwb` and retrieves all
@@ -929,9 +950,6 @@ func (f *blocksFetcher) fetchDataColumnsFromPeers(
 		maxIdentifier   = 1_000 // Max identifier for the request.
 		maxAllowedStall = 5     // Number of trials before giving up.
 	)
-
-	// Define the RW mutex protecting `missingColumnsByRoot` and `bwbs`.
-	var mu sync.RWMutex
 
 	// Generate random identifier.
 	identifier := f.rand.Intn(maxIdentifier)
@@ -978,15 +996,20 @@ func (f *blocksFetcher) fetchDataColumnsFromPeers(
 	start := time.Now()
 	log.Debug("Fetch data columns from peers - start")
 
+	wrappedBwbsMissingColumns := &bwbsMissingColumns{
+		bwbs:                 bwbs,
+		missingColumnsByRoot: missingColumnsByRoot,
+	}
+
 	for len(missingColumnsByRoot) > 0 {
 		// Compute the optimal slices of `bwb` to minimize the number of by range returned columns.
-		bwbSlices, err := buildBwbSlices(&mu, bwbs, missingColumnsByRoot)
+		bwbSlices, err := buildBwbSlices(wrappedBwbsMissingColumns)
 		if err != nil {
 			return errors.Wrap(err, "build bwb slices")
 		}
 
 		for _, bwbSlice := range bwbSlices {
-			if err := f.fetchBwbSliceFromPeers(ctx, &mu, identifier, peers, bwbs, missingColumnsByRoot, batchSize, bwbSlice); err != nil {
+			if err := f.fetchBwbSliceFromPeers(ctx, identifier, wrappedBwbsMissingColumns, peers, batchSize, bwbSlice); err != nil {
 				return errors.Wrap(err, "fetch BWB slice from peers")
 			}
 		}
@@ -1136,9 +1159,7 @@ func (f *blocksFetcher) waitForPeersForDataColumns(
 // and mutates `missingColumnsByRoot` by removing the data column if the
 // data column passes all the check.
 func processDataColumn(
-	mu *sync.RWMutex,
-	bwbs []blocks.BlockWithROBlobs,
-	missingColumnsByRoot map[[fieldparams.RootLength]byte]map[uint64]bool,
+	wrappedBwbsMissingColumns *bwbsMissingColumns,
 	columnVerifier verification.NewColumnVerifier,
 	blocksByRoot map[[fieldparams.RootLength]byte]blocks.ROBlock,
 	indicesByRoot map[[fieldparams.RootLength]byte][]int,
@@ -1177,8 +1198,13 @@ func processDataColumn(
 
 	// Populate the corresponding items in `bwbs`.
 	func() {
+		mu := &wrappedBwbsMissingColumns.mu
+
 		mu.Lock()
 		defer mu.Unlock()
+
+		bwbs := wrappedBwbsMissingColumns.bwbs
+		missingColumnsByRoot := wrappedBwbsMissingColumns.missingColumnsByRoot
 
 		for _, index := range indices {
 			bwbs[index].Columns = append(bwbs[index].Columns, dataColumn)
@@ -1199,11 +1225,9 @@ func processDataColumn(
 // - `missingColumnsByRoot` by removing the fetched data columns.
 func (f *blocksFetcher) fetchDataColumnFromPeer(
 	ctx context.Context,
-	mu *sync.RWMutex,
 	wg *sync.WaitGroup,
 	identifier int,
-	bwbs []blocks.BlockWithROBlobs,
-	missingColumnsByRoot map[[fieldparams.RootLength]byte]map[uint64]bool,
+	wrappedBwbsMissingColumns *bwbsMissingColumns,
 	blocksByRoot map[[fieldparams.RootLength]byte]blocks.ROBlock,
 	indicesByRoot map[[fieldparams.RootLength]byte][]int,
 	peer peer.ID,
@@ -1278,7 +1302,7 @@ func (f *blocksFetcher) fetchDataColumnFromPeer(
 	globalSuccess := false
 
 	for _, dataColumn := range roDataColumns {
-		success := processDataColumn(mu, bwbs, missingColumnsByRoot, f.cv, blocksByRoot, indicesByRoot, dataColumn)
+		success := processDataColumn(wrappedBwbsMissingColumns, f.cv, blocksByRoot, indicesByRoot, dataColumn)
 		if success {
 			globalSuccess = true
 		}
