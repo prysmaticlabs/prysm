@@ -130,7 +130,7 @@ func (s *Server) aggregatedAttestation(w http.ResponseWriter, slot primitives.Sl
 
 	match, err := matchingAtts(s.AttestationsPool.AggregatedAttestations(), slot, attDataRoot, index)
 	if err != nil {
-		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get matching attestations: "+err.Error(), http.StatusInternalServerError)
 		return nil
 	}
 	if len(match) > 0 {
@@ -149,16 +149,16 @@ func (s *Server) aggregatedAttestation(w http.ResponseWriter, slot primitives.Sl
 	}
 	match, err = matchingAtts(atts, slot, attDataRoot, index)
 	if err != nil {
-		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get matching attestations: "+err.Error(), http.StatusInternalServerError)
 		return nil
 	}
 	if match == nil {
-		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
+		httputil.HandleError(w, "No matching attestations found", http.StatusNotFound)
 		return nil
 	}
 	agg, err := attestations.Aggregate(match)
 	if err != nil {
-		httputil.HandleError(w, "Could not aggregate unaggregated attestation: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not aggregate unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
 		return nil
 	}
 
