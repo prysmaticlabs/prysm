@@ -233,56 +233,46 @@ func (s *Server) SubmitAggregateAndProofsV2(w http.ResponseWriter, r *http.Reque
 	}
 
 	broadcastFailed := false
+	var rpcError *core.RpcError
 	for _, raw := range reqData {
 		if v >= version.Electra {
 			var signedAggregate structs.SignedAggregateAttestationAndProofElectra
-			if err = json.Unmarshal(raw, &signedAggregate); err != nil {
+			err = json.Unmarshal(raw, &signedAggregate)
+			if err != nil {
 				httputil.HandleError(w, "Failed to parse aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-
 			consensusItem, err := signedAggregate.ToConsensus()
 			if err != nil {
 				httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-
-			rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
-			if rpcError != nil {
-				var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
-				if errors.As(rpcError.Err, &aggregateBroadcastFailedError) {
-					broadcastFailed = true
-				} else {
-					httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
-					return
-				}
-			}
+			rpcError = s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
 		} else {
 			var signedAggregate structs.SignedAggregateAttestationAndProof
-			if err := json.Unmarshal(raw, &signedAggregate); err != nil {
+			err = json.Unmarshal(raw, &signedAggregate)
+			if err != nil {
 				httputil.HandleError(w, "Failed to parse aggregate attestation and proof: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-
 			consensusItem, err := signedAggregate.ToConsensus()
 			if err != nil {
 				httputil.HandleError(w, "Could not convert request aggregate to consensus aggregate: "+err.Error(), http.StatusBadRequest)
 				return
 			}
+			rpcError = s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
+		}
 
-			rpcError := s.CoreService.SubmitSignedAggregateSelectionProof(ctx, consensusItem)
-			if rpcError != nil {
-				var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
-				if errors.As(rpcError.Err, &aggregateBroadcastFailedError) {
-					broadcastFailed = true
-				} else {
-					httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
-					return
-				}
+		if rpcError != nil {
+			var aggregateBroadcastFailedError *core.AggregateBroadcastFailedError
+			if errors.As(rpcError.Err, &aggregateBroadcastFailedError) {
+				broadcastFailed = true
+			} else {
+				httputil.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+				return
 			}
 		}
 	}
-
 	if broadcastFailed {
 		httputil.HandleError(w, "Could not broadcast one or more signed aggregated attestations", http.StatusInternalServerError)
 	}
