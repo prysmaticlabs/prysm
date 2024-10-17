@@ -595,7 +595,7 @@ func (s *Server) currentPayloadAttributes(ctx context.Context) (lazyReader, erro
 			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 		}
-	case version.Deneb, version.Electra:
+	case version.Deneb:
 		withdrawals, _, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get head state expected withdrawals")
@@ -610,6 +610,23 @@ func (s *Server) currentPayloadAttributes(ctx context.Context) (lazyReader, erro
 			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
 			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
 			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
+		}
+	case version.Electra:
+		withdrawals, _, err := headState.ExpectedWithdrawals()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get head state expected withdrawals")
+		}
+		parentRoot, err := headBlock.Block().HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get head block root")
+		}
+		attributes = &structs.PayloadAttributesV4{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(feeRecipient),
+			Withdrawals:           structs.WithdrawalsFromConsensus(withdrawals),
+			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
+			// TODO: derive target and max from the payload
 		}
 	default:
 		return nil, errors.Wrapf(err, "Payload version %s is not supported", version.String(headState.Version()))
