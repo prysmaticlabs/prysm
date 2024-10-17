@@ -260,28 +260,28 @@ func createDefaultLightClientUpdate(ver int) (interfaces.LightClientUpdate, erro
 		finalityBranch[i] = make([]byte, 32)
 	}
 
-	var update proto.Message
+	var m proto.Message
 	switch ver {
 	case version.Altair, version.Bellatrix:
-		update = &pb.LightClientUpdateAltair{
+		m = &pb.LightClientUpdateAltair{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	case version.Capella:
-		update = &pb.LightClientUpdateCapella{
+		m = &pb.LightClientUpdateCapella{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	case version.Deneb:
-		update = &pb.LightClientUpdateDeneb{
+		m = &pb.LightClientUpdateDeneb{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	case version.Electra:
-		update = &pb.LightClientUpdateElectra{
+		m = &pb.LightClientUpdateElectra{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
@@ -290,7 +290,7 @@ func createDefaultLightClientUpdate(ver int) (interfaces.LightClientUpdate, erro
 		return nil, fmt.Errorf("unsupported version %s", version.String(ver))
 	}
 
-	return light_client.NewWrappedUpdate(update)
+	return light_client.NewWrappedUpdate(m)
 }
 
 func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
