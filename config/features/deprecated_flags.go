@@ -77,6 +77,12 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedEnableCommitteeAwarePacking = &cli.BoolFlag{
+		Name:   "enable-committee-aware-packing",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedInteropGenesisTimeFlag = &cli.Uint64Flag{
 		Name:   "interop-genesis-time",
 		Usage:  deprecatedUsage,
@@ -104,6 +110,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedBeaconRPCGatewayProviderFlag,
 	deprecatedDisableGRPCGateway,
 	deprecatedEnableExperimentalState,
+        deprecatedEnableCommitteeAwarePacking,
 	deprecatedInteropGenesisTimeFlag,
 }
 

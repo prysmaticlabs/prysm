@@ -110,7 +110,9 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxWithdrawalRequestsPerPayload = 2
 	minimalConfig.MaxDepositRequestsPerPayload = 4
 	minimalConfig.PendingPartialWithdrawalsLimit = 64
-	minimalConfig.MaxPendingPartialsPerWithdrawalsSweep = 1
+	minimalConfig.MaxPendingPartialsPerWithdrawalsSweep = 2
+	minimalConfig.PendingDepositLimit = 134217728
+	minimalConfig.MaxPendingDepositsPerEpoch = 16
 
 	// Ethereum PoW parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.

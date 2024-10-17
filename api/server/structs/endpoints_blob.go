@@ -12,3 +12,12 @@ type Sidecar struct {
 	KzgProof                 string                   `json:"kzg_proof"`
 	CommitmentInclusionProof []string                 `json:"kzg_commitment_inclusion_proof"`
 }
+
+type BlobSidecars struct {
+	Sidecars []*Sidecar `json:"sidecars"`
+}
+
+type PublishBlobsRequest struct {
+	BlobSidecars *BlobSidecars `json:"blob_sidecars"`
+	BlockRoot    string        `json:"block_root"`
+}

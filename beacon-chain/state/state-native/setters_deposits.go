@@ -8,43 +8,43 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-// AppendPendingBalanceDeposit is a mutating call to the beacon state to create and append a pending
+// AppendPendingDeposit is a mutating call to the beacon state to create and append a pending
 // balance deposit object on to the state. This method requires access to the Lock on the state and
 // only applies in electra or later.
-func (b *BeaconState) AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error {
+func (b *BeaconState) AppendPendingDeposit(pd *ethpb.PendingDeposit) error {
 	if b.version < version.Electra {
-		return errNotSupported("AppendPendingBalanceDeposit", b.version)
+		return errNotSupported("AppendPendingDeposit", b.version)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[types.PendingBalanceDeposits].MinusRef()
-	b.sharedFieldReferences[types.PendingBalanceDeposits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PendingDeposits].MinusRef()
+	b.sharedFieldReferences[types.PendingDeposits] = stateutil.NewRef(1)
 
-	b.pendingBalanceDeposits = append(b.pendingBalanceDeposits, &ethpb.PendingBalanceDeposit{Index: index, Amount: amount})
+	b.pendingDeposits = append(b.pendingDeposits, pd)
 
-	b.markFieldAsDirty(types.PendingBalanceDeposits)
-	b.rebuildTrie[types.PendingBalanceDeposits] = true
+	b.markFieldAsDirty(types.PendingDeposits)
+	b.rebuildTrie[types.PendingDeposits] = true
 	return nil
 }
 
-// SetPendingBalanceDeposits is a mutating call to the beacon state which replaces the pending
+// SetPendingDeposits is a mutating call to the beacon state which replaces the pending
 // balance deposit slice with the provided value. This method requires access to the Lock on the
 // state and only applies in electra or later.
-func (b *BeaconState) SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error {
+func (b *BeaconState) SetPendingDeposits(val []*ethpb.PendingDeposit) error {
 	if b.version < version.Electra {
-		return errNotSupported("SetPendingBalanceDeposits", b.version)
+		return errNotSupported("SetPendingDeposits", b.version)
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.sharedFieldReferences[types.PendingBalanceDeposits].MinusRef()
-	b.sharedFieldReferences[types.PendingBalanceDeposits] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PendingDeposits].MinusRef()
+	b.sharedFieldReferences[types.PendingDeposits] = stateutil.NewRef(1)
 
-	b.pendingBalanceDeposits = val
+	b.pendingDeposits = val
 
-	b.markFieldAsDirty(types.PendingBalanceDeposits)
-	b.rebuildTrie[types.PendingBalanceDeposits] = true
+	b.markFieldAsDirty(types.PendingDeposits)
+	b.rebuildTrie[types.PendingDeposits] = true
 	return nil
 }
 
