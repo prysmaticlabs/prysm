@@ -235,7 +235,12 @@ func TestLightClientHandler_GetLightClientBootstrap_Electra(t *testing.T) {
 func TestLightClientHandler_GetLightClientUpdatesByRangeAltair(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	params.OverrideBeaconConfig(config)
+
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
@@ -281,11 +286,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeAltair(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
@@ -311,7 +313,11 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeAltair(t *testing.T) {
 func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.CapellaForkEpoch = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateCapella()
@@ -377,11 +383,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
@@ -407,7 +410,11 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCapella(t *testing.T) {
 func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.DenebForkEpoch = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateDeneb()
@@ -473,11 +480,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
@@ -503,22 +507,26 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeDeneb(t *testing.T) {
 func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleAltair(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slot.Add(33) // 2 periods
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 2)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 2; i++ {
 		newSlot := slot.Add(uint64(i))
 
 		update := &ethpbv2.LightClientUpdate{
@@ -560,11 +568,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleAltair(t *testin
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
@@ -580,7 +585,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleAltair(t *testin
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 100, len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
 		require.Equal(t, "altair", resp.Updates[i].Version)
 		updateJson, err := structs.LightClientUpdateFromConsensus(update)
@@ -592,22 +597,27 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleAltair(t *testin
 func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleCapella(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.CapellaForkEpoch = 1
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slot.Add(33) // 2 periods
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 2)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 2; i++ {
 
 		newSlot := slot.Add(uint64(i))
 
@@ -670,11 +680,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleCapella(t *testi
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
@@ -690,7 +697,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleCapella(t *testi
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 100, len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
 		require.Equal(t, "capella", resp.Updates[i].Version)
 		updateJson, err := structs.LightClientUpdateFromConsensus(update)
@@ -702,22 +709,27 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleCapella(t *testi
 func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleDeneb(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.DenebForkEpoch = 1
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slot.Add(33)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 2)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 2; i++ {
 
 		newSlot := slot.Add(uint64(i))
 
@@ -780,11 +792,8 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleDeneb(t *testing
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
@@ -800,7 +809,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleDeneb(t *testing
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 100, len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
 		require.Equal(t, "deneb", resp.Updates[i].Version)
 		updateJson, err := structs.LightClientUpdateFromConsensus(update)
@@ -812,151 +821,140 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleDeneb(t *testing
 func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksAltairCapella(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
-	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
+	config.AltairForkEpoch = 0
+	config.CapellaForkEpoch = 1
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
+	slotCapella := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
+	slotAltair := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slotCapella.Add(1)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 2)
 
-	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	updatePeriod--
-	for i := 1; i < 51; i++ {
+	updatePeriod := slotAltair.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-		newSlot := slot.Sub(uint64(i))
-
-		update := &ethpbv2.LightClientUpdate{
-			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-					HeaderAltair: &ethpbv2.LightClientHeader{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          newSlot,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          slotAltair,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
 				},
 			},
-			NextSyncCommittee: &ethpbv2.SyncCommittee{
-				Pubkeys:         nil,
-				AggregatePubkey: nil,
-			},
-			NextSyncCommitteeBranch: nil,
-			FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-					HeaderAltair: &ethpbv2.LightClientHeader{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          12,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          12,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
 				},
 			},
-			FinalityBranch: nil,
-			SyncAggregate: &ethpbv1.SyncAggregate{
-				SyncCommitteeBits:      []byte{1, 1, 1},
-				SyncCommitteeSignature: []byte{1, 1, 1},
-			},
-			SignatureSlot: newSlot,
-		}
-
-		updates[50-i] = update
-
-		err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
-			Version: version.Altair,
-			Data:    update,
-		})
-		require.NoError(t, err)
-
-		updatePeriod--
+		},
+		FinalityBranch: nil,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: slotAltair,
 	}
 
-	updatePeriod = slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
+	updates[0] = update
 
-	for i := 50; i < 100; i++ {
+	err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Altair,
+		Data:    update,
+	})
+	require.NoError(t, err)
 
-		newSlot := slot.Add(uint64(i))
+	updatePeriod = slotCapella.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-		update := &ethpbv2.LightClientUpdate{
-			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-					HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          newSlot,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
-						Execution: &enginev1.ExecutionPayloadHeaderCapella{
-							FeeRecipient: []byte{1, 2, 3},
-						},
-						ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+	update = &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          slotCapella,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
-			NextSyncCommittee: &ethpbv2.SyncCommittee{
-				Pubkeys:         nil,
-				AggregatePubkey: nil,
-			},
-			NextSyncCommitteeBranch: nil,
-			FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-					HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          12,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
-						Execution: &enginev1.ExecutionPayloadHeaderCapella{
-							FeeRecipient: []byte{1, 2, 3},
-						},
-						ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          12,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
-			FinalityBranch: nil,
-			SyncAggregate: &ethpbv1.SyncAggregate{
-				SyncCommitteeBits:      []byte{1, 1, 1},
-				SyncCommitteeSignature: []byte{1, 1, 1},
-			},
-			SignatureSlot: newSlot,
-		}
-
-		updates[i] = update
-
-		err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
-			Version: version.Capella,
-			Data:    update,
-		})
-		require.NoError(t, err)
-
-		updatePeriod++
+		},
+		FinalityBranch: nil,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: slotCapella,
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	updates[1] = update
+
+	err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Capella,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod.Sub(50))
+	startPeriod := 0
+	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -967,9 +965,9 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksAltairCapel
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 100, len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
-		if i < 50 {
+		if i < 1 {
 			require.Equal(t, "altair", resp.Updates[i].Version)
 		} else {
 			require.Equal(t, "capella", resp.Updates[i].Version)
@@ -983,159 +981,149 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksAltairCapel
 func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksCapellaDeneb(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
-	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
+	config.AltairForkEpoch = 0
+	config.CapellaForkEpoch = 1
+	config.DenebForkEpoch = 2
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
+	slotDeneb := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
+	slotCapella := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slotDeneb.Add(1)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 2)
 
-	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	updatePeriod--
-	for i := 1; i < 51; i++ {
+	updatePeriod := slotCapella.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-		newSlot := slot.Sub(uint64(i))
-
-		update := &ethpbv2.LightClientUpdate{
-			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-					HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          newSlot,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
-						Execution: &enginev1.ExecutionPayloadHeaderCapella{
-							FeeRecipient: []byte{1, 2, 3},
-						},
-						ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          slotCapella,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
-			NextSyncCommittee: &ethpbv2.SyncCommittee{
-				Pubkeys:         nil,
-				AggregatePubkey: nil,
-			},
-			NextSyncCommitteeBranch: nil,
-			FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
-					HeaderCapella: &ethpbv2.LightClientHeaderCapella{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          12,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
-						Execution: &enginev1.ExecutionPayloadHeaderCapella{
-							FeeRecipient: []byte{1, 2, 3},
-						},
-						ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderCapella{
+				HeaderCapella: &ethpbv2.LightClientHeaderCapella{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          12,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
+					Execution: &enginev1.ExecutionPayloadHeaderCapella{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
-			FinalityBranch: nil,
-			SyncAggregate: &ethpbv1.SyncAggregate{
-				SyncCommitteeBits:      []byte{1, 1, 1},
-				SyncCommitteeSignature: []byte{1, 1, 1},
-			},
-			SignatureSlot: newSlot,
-		}
-
-		updates[50-i] = update
-
-		err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
-			Version: version.Capella,
-			Data:    update,
-		})
-		require.NoError(t, err)
-
-		updatePeriod--
+		},
+		FinalityBranch: nil,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: slotCapella,
 	}
 
-	updatePeriod = slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
+	updates[0] = update
 
-	for i := 50; i < 100; i++ {
+	err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Capella,
+		Data:    update,
+	})
+	require.NoError(t, err)
 
-		newSlot := slot.Add(uint64(i))
+	updatePeriod = slotDeneb.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-		update := &ethpbv2.LightClientUpdate{
-			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-					HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          newSlot,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
-						Execution: &enginev1.ExecutionPayloadHeaderDeneb{
-							FeeRecipient: []byte{1, 2, 3},
-						},
-						ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+	update = &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          slotDeneb,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
+					Execution: &enginev1.ExecutionPayloadHeaderDeneb{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
-			NextSyncCommittee: &ethpbv2.SyncCommittee{
-				Pubkeys:         nil,
-				AggregatePubkey: nil,
-			},
-			NextSyncCommitteeBranch: nil,
-			FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
-					HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          12,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
-						Execution: &enginev1.ExecutionPayloadHeaderDeneb{
-							FeeRecipient: []byte{1, 2, 3},
-						},
-						ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderDeneb{
+				HeaderDeneb: &ethpbv2.LightClientHeaderDeneb{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          12,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
+					Execution: &enginev1.ExecutionPayloadHeaderDeneb{
+						FeeRecipient: []byte{1, 2, 3},
+					},
+					ExecutionBranch: [][]byte{{1, 2, 3}, {4, 5, 6}},
 				},
 			},
-			FinalityBranch: nil,
-			SyncAggregate: &ethpbv1.SyncAggregate{
-				SyncCommitteeBits:      []byte{1, 1, 1},
-				SyncCommitteeSignature: []byte{1, 1, 1},
-			},
-			SignatureSlot: newSlot,
-		}
-
-		updates[i] = update
-
-		err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
-			Version: version.Deneb,
-			Data:    update,
-		})
-		require.NoError(t, err)
-
-		updatePeriod++
+		},
+		FinalityBranch: nil,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: slotDeneb,
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	updates[1] = update
+
+	err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Deneb,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod.Sub(50))
+	startPeriod := 1
+	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -1146,9 +1134,9 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksCapellaDene
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 100, len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
-		if i < 50 {
+		if i < 1 {
 			require.Equal(t, "capella", resp.Updates[i].Version)
 		} else {
 			require.Equal(t, "deneb", resp.Updates[i].Version)
@@ -1162,23 +1150,28 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMultipleForksCapellaDene
 func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanLimit(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.EpochsPerSyncCommitteePeriod = 1
+	config.MaxRequestLightClientUpdates = 2
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(5000000)
+	headSlot := slot.Add(65)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 150)
+	updates := make([]*ethpbv2.LightClientUpdate, 3)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	for i := 0; i < 150; i++ {
-		newSlot := slot.Add(uint64(i))
+	for i := 0; i < 3; i++ {
+		newSlot := slot.Add(uint64(i * 32))
 
 		update := &ethpbv2.LightClientUpdate{
 			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
@@ -1219,16 +1212,13 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanLimit(t *
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=150&start_period=%d", startPeriod)
+	startPeriod := 0
+	url := fmt.Sprintf("http://foo.com/?count=4&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -1239,9 +1229,9 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanLimit(t *
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 128, len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
-		if i < 128 {
+		if i < 2 {
 			require.Equal(t, "altair", resp.Updates[i].Version)
 			updateJson, err := structs.LightClientUpdateFromConsensus(update)
 			require.NoError(t, err)
@@ -1253,23 +1243,28 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanLimit(t *
 func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanMax(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.EpochsPerSyncCommitteePeriod = 1
+	config.MaxRequestLightClientUpdates = 2
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(900000)
+	headSlot := slot.Add(65)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 150)
+	updates := make([]*ethpbv2.LightClientUpdate, 3)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	for i := 0; i < 150; i++ {
-		newSlot := slot.Add(uint64(i))
+	for i := 0; i < 3; i++ {
+		newSlot := slot.Add(uint64(i * 32))
 
 		update := &ethpbv2.LightClientUpdate{
 			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
@@ -1300,7 +1295,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanMax(t *te
 		}
 
 		updates[i] = update
-
 		err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
 			Version: version.Altair,
 			Data:    update,
@@ -1310,33 +1304,26 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanMax(t *te
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=150&start_period=%d", startPeriod)
+	startPeriod := 0
+	url := fmt.Sprintf("http://foo.com/?count=10&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
 	s.GetLightClientUpdatesByRange(writer, request)
 
-	maxSlot := slot.Add(900000).Div(uint64(config.SlotsPerEpoch)).Div(uint64(config.EpochsPerSyncCommitteePeriod))
-	updatePeriod = slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	diffSlots := maxSlot - updatePeriod + 1
-
 	require.Equal(t, http.StatusOK, writer.Code)
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, int(diffSlots), len(resp.Updates))
+	require.Equal(t, 2, len(resp.Updates))
 	for i, update := range updates {
-		if i < int(diffSlots) {
+		if i < 2 {
 			require.Equal(t, "altair", resp.Updates[i].Version)
 			updateJson, err := structs.LightClientUpdateFromConsensus(update)
 			require.NoError(t, err)
@@ -1349,72 +1336,62 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeStartPeriodBeforeAltair(
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 1
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slot.Add(1)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
-
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	for i := 0; i < 100; i++ {
-		newSlot := slot.Add(uint64(i))
-
-		update := &ethpbv2.LightClientUpdate{
-			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
-				Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
-					HeaderAltair: &ethpbv2.LightClientHeader{
-						Beacon: &ethpbv1.BeaconBlockHeader{
-							Slot:          newSlot,
-							ProposerIndex: 1,
-							ParentRoot:    []byte{1, 1, 1},
-							StateRoot:     []byte{1, 1, 1},
-							BodyRoot:      []byte{1, 1, 1},
-						},
+	update := &ethpbv2.LightClientUpdate{
+		AttestedHeader: &ethpbv2.LightClientHeaderContainer{
+			Header: &ethpbv2.LightClientHeaderContainer_HeaderAltair{
+				HeaderAltair: &ethpbv2.LightClientHeader{
+					Beacon: &ethpbv1.BeaconBlockHeader{
+						Slot:          slot,
+						ProposerIndex: 1,
+						ParentRoot:    []byte{1, 1, 1},
+						StateRoot:     []byte{1, 1, 1},
+						BodyRoot:      []byte{1, 1, 1},
 					},
 				},
 			},
-			NextSyncCommittee: &ethpbv2.SyncCommittee{
-				Pubkeys:         nil,
-				AggregatePubkey: nil,
-			},
-			NextSyncCommitteeBranch: nil,
-			FinalizedHeader:         nil,
-			FinalityBranch:          nil,
-			SyncAggregate: &ethpbv1.SyncAggregate{
-				SyncCommitteeBits:      []byte{1, 1, 1},
-				SyncCommitteeSignature: []byte{1, 1, 1},
-			},
-			SignatureSlot: 7,
-		}
-
-		updates[i] = update
-
-		err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
-			Version: version.Altair,
-			Data:    update,
-		})
-		require.NoError(t, err)
-
-		updatePeriod++
+		},
+		NextSyncCommittee: &ethpbv2.SyncCommittee{
+			Pubkeys:         nil,
+			AggregatePubkey: nil,
+		},
+		NextSyncCommitteeBranch: nil,
+		FinalizedHeader:         nil,
+		FinalityBranch:          nil,
+		SyncAggregate: &ethpbv1.SyncAggregate{
+			SyncCommitteeBits:      []byte{1, 1, 1},
+			SyncCommitteeSignature: []byte{1, 1, 1},
+		},
+		SignatureSlot: 7,
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	err = db.SaveLightClientUpdate(ctx, uint64(updatePeriod), &ethpbv2.LightClientUpdateWithVersion{
+		Version: version.Altair,
+		Data:    update,
+	})
+	require.NoError(t, err)
+
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod-20)
+	startPeriod := 0
+	url := fmt.Sprintf("http://foo.com/?count=2&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -1425,41 +1402,42 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeStartPeriodBeforeAltair(
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, 100, len(resp.Updates))
-	for i, update := range updates {
-		require.Equal(t, "altair", resp.Updates[i].Version)
-		updateJson, err := structs.LightClientUpdateFromConsensus(update)
-		require.NoError(t, err)
-		require.DeepEqual(t, updateJson, resp.Updates[i].Data)
-	}
+	require.Equal(t, 1, len(resp.Updates))
+
+	require.Equal(t, "altair", resp.Updates[0].Version)
+	updateJson, err := structs.LightClientUpdateFromConsensus(update)
+	require.NoError(t, err)
+	require.DeepEqual(t, updateJson, resp.Updates[0].Data)
+
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slot.Add(65)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 3)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	validUpdatesLen := 70
-
-	for i := 0; i < 100; i++ {
-		if i == validUpdatesLen { // skip this update
+	for i := 0; i < 3; i++ {
+		if i == 1 { // skip this update
 			updatePeriod++
 			continue
 		}
-		newSlot := slot.Add(uint64(i))
+		newSlot := slot.Add(uint64(i * 32))
 
 		update := &ethpbv2.LightClientUpdate{
 			AttestedHeader: &ethpbv2.LightClientHeaderContainer{
@@ -1500,16 +1478,13 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates(t *testin
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod)
+	startPeriod := 0
+	url := fmt.Sprintf("http://foo.com/?count=10&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -1520,9 +1495,9 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates(t *testin
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, validUpdatesLen, len(resp.Updates))
+	require.Equal(t, 1, len(resp.Updates))
 	for i, update := range updates {
-		if i < validUpdatesLen {
+		if i < 1 {
 			require.Equal(t, "altair", resp.Updates[i].Version)
 			updateJson, err := structs.LightClientUpdateFromConsensus(update)
 			require.NoError(t, err)
@@ -1535,24 +1510,25 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates2(t *testi
 	helpers.ClearCache()
 	ctx := context.Background()
 	config := params.BeaconConfig()
+	config.AltairForkEpoch = 0
+	config.EpochsPerSyncCommitteePeriod = 1
+	params.OverrideBeaconConfig(config)
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
 	st, err := util.NewBeaconStateAltair()
 	require.NoError(t, err)
-	headSlot := slot.Add(820000)
+	headSlot := slot.Add(65)
 	err = st.SetSlot(headSlot)
 	require.NoError(t, err)
 
 	db := setupDB(t)
 
-	updates := make([]*ethpbv2.LightClientUpdate, 100)
+	updates := make([]*ethpbv2.LightClientUpdate, 3)
 
 	updatePeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
 
-	validUpdatesLen := 0
-
-	for i := 0; i < 100; i++ {
-		if i == validUpdatesLen { // skip this update
+	for i := 0; i < 3; i++ {
+		if i == 0 { // skip this update
 			updatePeriod++
 			continue
 		}
@@ -1597,16 +1573,13 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates2(t *testi
 		updatePeriod++
 	}
 
-	mockBlocker := &testutil.MockBlocker{}
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &headSlot, State: st}
+	mockChainService := &mock.ChainService{State: st}
 	s := &Server{
-		Stater:      &testutil.MockStater{},
-		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 		BeaconDB:    db,
 	}
-	startPeriod := slot.Sub(1).Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
-	url := fmt.Sprintf("http://foo.com/?count=100&start_period=%d", startPeriod)
+	startPeriod := 0
+	url := fmt.Sprintf("http://foo.com/?count=10&start_period=%d", startPeriod)
 	request := httptest.NewRequest("GET", url, nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
@@ -1617,15 +1590,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates2(t *testi
 	var resp structs.LightClientUpdatesByRangeResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &resp.Updates)
 	require.NoError(t, err)
-	require.Equal(t, validUpdatesLen, len(resp.Updates))
-	for i, update := range updates {
-		if i < validUpdatesLen {
-			require.Equal(t, "altair", resp.Updates[i].Version)
-			updateJson, err := structs.LightClientUpdateFromConsensus(update)
-			require.NoError(t, err)
-			require.DeepEqual(t, updateJson, resp.Updates[i].Data)
-		}
-	}
+	require.Equal(t, 0, len(resp.Updates))
 }
 
 // TestLightClientHandler_GetLightClientFinalityUpdate tests
