@@ -65,7 +65,7 @@ type BeaconState struct {
 	earliestExitEpoch             primitives.Epoch
 	consolidationBalanceToConsume primitives.Gwei
 	earliestConsolidationEpoch    primitives.Epoch
-	pendingBalanceDeposits        []*ethpb.PendingBalanceDeposit    // pending_balance_deposits: List[PendingBalanceDeposit, PENDING_BALANCE_DEPOSITS_LIMIT]
+	pendingDeposits               []*ethpb.PendingDeposit           // pending_deposits: List[PendingDeposit, PENDING_DEPOSITS_LIMIT]
 	pendingPartialWithdrawals     []*ethpb.PendingPartialWithdrawal // pending_partial_withdrawals: List[PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
 	pendingConsolidations         []*ethpb.PendingConsolidation     // pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
 
@@ -76,7 +76,6 @@ type BeaconState struct {
 	stateFieldLeaves      map[types.FieldIndex]*fieldtrie.FieldTrie
 	rebuildTrie           map[types.FieldIndex]bool
 	valMapHandler         *stateutil.ValidatorMapHandler
-	validatorIndexCache   *finalizedValidatorIndexCache
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[types.FieldIndex]*stateutil.Reference
 }
@@ -121,7 +120,7 @@ type beaconStateMarshalable struct {
 	EarliestExitEpoch                   primitives.Epoch                        `json:"earliest_exit_epoch" yaml:"earliest_exit_epoch"`
 	ConsolidationBalanceToConsume       primitives.Gwei                         `json:"consolidation_balance_to_consume" yaml:"consolidation_balance_to_consume"`
 	EarliestConsolidationEpoch          primitives.Epoch                        `json:"earliest_consolidation_epoch" yaml:"earliest_consolidation_epoch"`
-	PendingBalanceDeposits              []*ethpb.PendingBalanceDeposit          `json:"pending_balance_deposits" yaml:"pending_balance_deposits"`
+	PendingDeposits                     []*ethpb.PendingDeposit                 `json:"pending_deposits" yaml:"pending_deposits"`
 	PendingPartialWithdrawals           []*ethpb.PendingPartialWithdrawal       `json:"pending_partial_withdrawals" yaml:"pending_partial_withdrawals"`
 	PendingConsolidations               []*ethpb.PendingConsolidation           `json:"pending_consolidations" yaml:"pending_consolidations"`
 }
@@ -190,7 +189,7 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		EarliestExitEpoch:                   b.earliestExitEpoch,
 		ConsolidationBalanceToConsume:       b.consolidationBalanceToConsume,
 		EarliestConsolidationEpoch:          b.earliestConsolidationEpoch,
-		PendingBalanceDeposits:              b.pendingBalanceDeposits,
+		PendingDeposits:                     b.pendingDeposits,
 		PendingPartialWithdrawals:           b.pendingPartialWithdrawals,
 		PendingConsolidations:               b.pendingConsolidations,
 	}
