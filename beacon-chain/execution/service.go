@@ -34,11 +34,17 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/clientstats"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/network"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	// EthSyncing request string for JSON-RPC.
+	EthSyncing = "eth_syncing"
 )
 
 var (
@@ -79,6 +85,7 @@ type ChainInfoFetcher interface {
 	ExecutionClientConnected() bool
 	ExecutionClientEndpoint() string
 	ExecutionClientConnectionErr() error
+	IsExecutionClientSyncing(ctx context.Context) (bool, error)
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -301,6 +308,19 @@ func (s *Service) updateBeaconNodeStats() {
 func (s *Service) updateConnectedETH1(state bool) {
 	s.connectedETH1 = state
 	s.updateBeaconNodeStats()
+}
+
+// IsExecutionClientSyncing returns a bool whether the exectuion client is syncing or not.
+func (s *Service) IsExecutionClientSyncing(ctx context.Context) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.IsExecutionClientSyncing")
+	defer span.End()
+
+	var result bool
+	err := s.rpcClient.CallContext(ctx, &result, EthSyncing)
+	if err != nil {
+		return result, handleRPCError(err)
+	}
+	return result, nil
 }
 
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +

@@ -56,7 +56,6 @@ func TestSyncStatus(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
 	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
 
 	s.GetSyncStatus(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
@@ -67,6 +66,26 @@ func TestSyncStatus(t *testing.T) {
 	assert.Equal(t, "10", resp.Data.SyncDistance)
 	assert.Equal(t, true, resp.Data.IsSyncing)
 	assert.Equal(t, true, resp.Data.IsOptimistic)
+	assert.Equal(t, true, resp.Data.ElOffline)
+
+	// if execution client is syncing return offline false
+	s.ExecutionChainInfoFetcher = &testutil.MockExecutionChainInfoFetcher{Syncing: true}
+	writer = httptest.NewRecorder()
+	s.GetSyncStatus(writer, request)
+	assert.Equal(t, http.StatusOK, writer.Code)
+	resp = &structs.SyncStatusResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.NotNil(t, resp)
+	assert.Equal(t, false, resp.Data.ElOffline)
+
+	// if execution client is connected offline should be false
+	s.ExecutionChainInfoFetcher = &testutil.MockExecutionChainInfoFetcher{Connected: true}
+	writer = httptest.NewRecorder()
+	s.GetSyncStatus(writer, request)
+	assert.Equal(t, http.StatusOK, writer.Code)
+	resp = &structs.SyncStatusResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.NotNil(t, resp)
 	assert.Equal(t, false, resp.Data.ElOffline)
 }
 

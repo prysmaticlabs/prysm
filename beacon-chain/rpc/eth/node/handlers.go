@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -37,6 +38,21 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isElOnline := s.ExecutionChainInfoFetcher.ExecutionClientConnected()
+	if !isElOnline {
+		isSyncing, err := s.ExecutionChainInfoFetcher.IsExecutionClientSyncing(ctx)
+		if !isSyncing {
+			if err != nil {
+				log.WithField("error", err.Error()).Debug("failed to get execution client sync status")
+			} else {
+				log.Debug("execution client is not syncing and not connected")
+			}
+		}
+		if isSyncing && err == nil {
+			isElOnline = true
+		}
+	}
+
 	headSlot := s.HeadFetcher.HeadSlot()
 	response := &structs.SyncStatusResponse{
 		Data: &structs.SyncStatusResponseData{
@@ -44,7 +60,7 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 			SyncDistance: strconv.FormatUint(uint64(s.GenesisTimeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    s.SyncChecker.Syncing(),
 			IsOptimistic: isOptimistic,
-			ElOffline:    !s.ExecutionChainInfoFetcher.ExecutionClientConnected(),
+			ElOffline:    !isElOnline,
 		},
 	}
 	httputil.WriteJson(w, response)
