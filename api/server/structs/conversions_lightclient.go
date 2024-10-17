@@ -3,68 +3,81 @@ package structs
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
-	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/v5/proto/migration"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
 
-func LightClientUpdateFromConsensus(update *v2.LightClientUpdate) (*LightClientUpdate, error) {
-	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)
+func LightClientUpdateFromConsensus(update interfaces.LightClientUpdate) (*LightClientUpdate, error) {
+	attestedHeader, err := lightClientHeaderToJSON(update.AttestedHeader())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal attested light client header")
 	}
-	finalizedHeader, err := lightClientHeaderContainerToJSON(update.FinalizedHeader)
+	finalizedHeader, err := lightClientHeaderToJSON(update.FinalizedHeader())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal finalized light client header")
+	}
+	finalityBranch := update.FinalityBranch()
+
+	var scBranch [][32]byte
+	if update.Version() >= version.Electra {
+		b, err := update.NextSyncCommitteeBranchElectra()
+		if err != nil {
+			return nil, err
+		}
+		scBranch = b[:]
+	} else {
+		b, err := update.NextSyncCommitteeBranch()
+		if err != nil {
+			return nil, err
+		}
+		scBranch = b[:]
 	}
 
 	return &LightClientUpdate{
 		AttestedHeader:          attestedHeader,
-		NextSyncCommittee:       SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(update.NextSyncCommittee)),
-		NextSyncCommitteeBranch: branchToJSON(update.NextSyncCommitteeBranch),
+		NextSyncCommittee:       SyncCommitteeFromConsensus(update.NextSyncCommittee()),
+		NextSyncCommitteeBranch: branchToJSON(scBranch),
 		FinalizedHeader:         finalizedHeader,
-		FinalityBranch:          branchToJSON(update.FinalityBranch),
-		SyncAggregate:           syncAggregateToJSON(update.SyncAggregate),
-		SignatureSlot:           strconv.FormatUint(uint64(update.SignatureSlot), 10),
+		FinalityBranch:          branchToJSON(finalityBranch[:]),
+		SyncAggregate:           SyncAggregateFromConsensus(update.SyncAggregate()),
+		SignatureSlot:           fmt.Sprintf("%d", update.SignatureSlot()),
 	}, nil
 }
 
-func LightClientFinalityUpdateFromConsensus(update *v2.LightClientFinalityUpdate) (*LightClientFinalityUpdate, error) {
-	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)
+func LightClientFinalityUpdateFromConsensus(update interfaces.LightClientFinalityUpdate) (*LightClientFinalityUpdate, error) {
+	attestedHeader, err := lightClientHeaderToJSON(update.AttestedHeader())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal attested light client header")
 	}
-	finalizedHeader, err := lightClientHeaderContainerToJSON(update.FinalizedHeader)
+	finalizedHeader, err := lightClientHeaderToJSON(update.FinalizedHeader())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal finalized light client header")
 	}
+	finalityBranch := update.FinalityBranch()
 
 	return &LightClientFinalityUpdate{
 		AttestedHeader:  attestedHeader,
 		FinalizedHeader: finalizedHeader,
-		FinalityBranch:  branchToJSON(update.FinalityBranch),
-		SyncAggregate:   syncAggregateToJSON(update.SyncAggregate),
-		SignatureSlot:   strconv.FormatUint(uint64(update.SignatureSlot), 10),
+		FinalityBranch:  branchToJSON(finalityBranch[:]),
+		SyncAggregate:   SyncAggregateFromConsensus(update.SyncAggregate()),
+		SignatureSlot:   fmt.Sprintf("%d", update.SignatureSlot()),
 	}, nil
 }
 
-func LightClientOptimisticUpdateFromConsensus(update *v2.LightClientOptimisticUpdate) (*LightClientOptimisticUpdate, error) {
-	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)
+func LightClientOptimisticUpdateFromConsensus(update interfaces.LightClientOptimisticUpdate) (*LightClientOptimisticUpdate, error) {
+	attestedHeader, err := lightClientHeaderToJSON(update.AttestedHeader())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal attested light client header")
 	}
 
 	return &LightClientOptimisticUpdate{
 		AttestedHeader: attestedHeader,
-		SyncAggregate:  syncAggregateToJSON(update.SyncAggregate),
-		SignatureSlot:  strconv.FormatUint(uint64(update.SignatureSlot), 10),
+		SyncAggregate:  SyncAggregateFromConsensus(update.SyncAggregate()),
+		SignatureSlot:  fmt.Sprintf("%d", update.SignatureSlot()),
 	}, nil
 }
 
@@ -79,14 +92,7 @@ func branchToJSON[S [][32]byte](branchBytes S) []string {
 	return branch
 }
 
-func syncAggregateToJSON(input *v1.SyncAggregate) *SyncAggregate {
-	return &SyncAggregate{
-		SyncCommitteeBits:      hexutil.Encode(input.SyncCommitteeBits),
-		SyncCommitteeSignature: hexutil.Encode(input.SyncCommitteeSignature),
-	}
-}
-
-func lightClientHeaderContainerToJSON(header interfaces.LightClientHeader) (json.RawMessage, error) {
+func lightClientHeaderToJSON(header interfaces.LightClientHeader) (json.RawMessage, error) {
 	// In the case that a finalizedHeader is nil.
 	if header == nil {
 		return nil, nil

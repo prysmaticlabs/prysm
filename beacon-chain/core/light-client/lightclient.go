@@ -155,7 +155,7 @@ func NewLightClientUpdateFromBeaconState(
 	}
 
 	// update.attested_header = block_to_light_client_header(attested_block)
-	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock)
+	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock.Version(), attestedBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested light client header")
 	}
@@ -194,11 +194,11 @@ func NewLightClientUpdateFromBeaconState(
 		// if finalized_block.message.slot != GENESIS_SLOT
 		if finalizedBlock.Block().Slot() != 0 {
 			// update.finalized_header = block_to_light_client_header(finalized_block)
-			finalizedLightClientHeader, err := BlockToLightClientHeader(finalizedBlock)
+			finalizedLightClientHeader, err := BlockToLightClientHeader(attestedBlock.Version(), finalizedBlock)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get finalized light client header")
 			}
-			result.FinalizedHeader = finalizedLightClientHeader
+			result.SetFinalizedHeader(finalizedLightClientHeader)
 		} else {
 			// assert attested_state.finalized_checkpoint.root == Bytes32()
 			if !bytes.Equal(attestedState.FinalizedCheckpoint().Root, make([]byte, 32)) {
@@ -329,11 +329,11 @@ func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 	return withdrawalsRoot, nil
 }
 
-func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (interfaces.LightClientHeader, error) {
+func BlockToLightClientHeader(ver int, block interfaces.ReadOnlySignedBeaconBlock) (interfaces.LightClientHeader, error) {
 	var header proto.Message
 	var err error
 
-	switch v := block.Version(); v {
+	switch ver {
 	case version.Altair, version.Bellatrix:
 		header, err = blockToLightClientHeaderAltair(block)
 		if err != nil {
@@ -350,7 +350,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (inter
 			return nil, errors.Wrap(err, "could not get header")
 		}
 	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(v))
+		return nil, fmt.Errorf("unsupported block version %s", version.String(ver))
 	}
 
 	return light_client.NewWrappedHeader(header)
@@ -358,7 +358,7 @@ func BlockToLightClientHeader(block interfaces.ReadOnlySignedBeaconBlock) (inter
 
 func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
 	if block.Version() < version.Altair {
-		return nil, fmt.Errorf("block version is %s instead of Altair", version.String(block.Version()))
+		return nil, fmt.Errorf("block version %s is before Altair", version.String(block.Version()))
 	}
 
 	parentRoot := block.Block().ParentRoot()
@@ -381,7 +381,7 @@ func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) 
 
 func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderCapella, error) {
 	if block.Version() < version.Capella {
-		return nil, fmt.Errorf("block version is %s instead of Capella", version.String(block.Version()))
+		return nil, fmt.Errorf("block version %s is before Capella", version.String(block.Version()))
 	}
 
 	payload, err := block.Block().Body().Execution()
@@ -443,7 +443,7 @@ func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadO
 
 func blockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderDeneb, error) {
 	if block.Version() < version.Deneb {
-		return nil, fmt.Errorf("block version is %s instead of Deneb/Electra", version.String(block.Version()))
+		return nil, fmt.Errorf("block version %s is before Deneb", version.String(block.Version()))
 	}
 
 	payload, err := block.Block().Body().Execution()

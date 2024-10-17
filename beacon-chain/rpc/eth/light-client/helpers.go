@@ -71,7 +71,7 @@ func createLightClientBootstrapAltair(
 		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
-	lightClientHeader, err := lightclient.BlockToLightClientHeader(block)
+	lightClientHeader, err := lightclient.BlockToLightClientHeader(block.Version(), block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
@@ -141,7 +141,7 @@ func createLightClientBootstrapCapella(
 		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
-	lightClientHeader, err := lightclient.BlockToLightClientHeader(block)
+	lightClientHeader, err := lightclient.BlockToLightClientHeader(block.Version(), block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
@@ -211,7 +211,7 @@ func createLightClientBootstrapDeneb(
 		return nil, fmt.Errorf("latest block header root %#x not equal to block root %#x", latestBlockHeaderRoot, beaconBlockRoot)
 	}
 
-	lightClientHeader, err := lightclient.BlockToLightClientHeader(block)
+	lightClientHeader, err := lightclient.BlockToLightClientHeader(block.Version(), block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block to light client header")
 	}
@@ -267,9 +267,8 @@ func newLightClientUpdateFromBeaconState(
 	if err != nil {
 		return nil, err
 	}
-	proto, err := result.Proto().(*pb.lcu)
 
-	return structs.LightClientUpdateFromConsensus(result.Proto())
+	return structs.LightClientUpdateFromConsensus(result)
 }
 
 func newLightClientFinalityUpdateFromBeaconState(
