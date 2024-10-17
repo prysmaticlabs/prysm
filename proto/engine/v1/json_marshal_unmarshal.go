@@ -672,6 +672,16 @@ type payloadAttributesV3JSON struct {
 	ParentBeaconBlockRoot hexutil.Bytes  `json:"parentBeaconBlockRoot"`
 }
 
+type payloadAttributesV4JSON struct {
+	Timestamp             hexutil.Uint64 `json:"timestamp"`
+	PrevRandao            hexutil.Bytes  `json:"prevRandao"`
+	SuggestedFeeRecipient hexutil.Bytes  `json:"suggestedFeeRecipient"`
+	Withdrawals           []*Withdrawal  `json:"withdrawals"`
+	ParentBeaconBlockRoot hexutil.Bytes  `json:"parentBeaconBlockRoot"`
+	TargetBlobCount       hexutil.Uint64 `json:"TargetBlobCount"`
+	MaximumBlobCount      hexutil.Uint64 `json:"MaximumBlobCount"`
+}
+
 // MarshalJSON --
 func (p *PayloadAttributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(payloadAttributesJSON{
@@ -708,6 +718,23 @@ func (p *PayloadAttributesV3) MarshalJSON() ([]byte, error) {
 		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
 		Withdrawals:           withdrawals,
 		ParentBeaconBlockRoot: p.ParentBeaconBlockRoot,
+	})
+}
+
+func (p *PayloadAttributesV4) MarshalJSON() ([]byte, error) {
+	withdrawals := p.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+
+	return json.Marshal(payloadAttributesV4JSON{
+		Timestamp:             hexutil.Uint64(p.Timestamp),
+		PrevRandao:            p.PrevRandao,
+		SuggestedFeeRecipient: p.SuggestedFeeRecipient,
+		Withdrawals:           withdrawals,
+		ParentBeaconBlockRoot: p.ParentBeaconBlockRoot,
+		TargetBlobCount:       hexutil.Uint64(p.TargetBlobCount),
+		MaximumBlobCount:      hexutil.Uint64(p.MaxBlobCount),
 	})
 }
 
@@ -756,6 +783,26 @@ func (p *PayloadAttributesV3) UnmarshalJSON(enc []byte) error {
 	}
 	p.Withdrawals = withdrawals
 	p.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
+	return nil
+}
+
+func (p *PayloadAttributesV4) UnmarshalJSON(enc []byte) error {
+	dec := payloadAttributesV4JSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*p = PayloadAttributesV4{}
+	p.Timestamp = uint64(dec.Timestamp)
+	p.PrevRandao = dec.PrevRandao
+	p.SuggestedFeeRecipient = dec.SuggestedFeeRecipient
+	withdrawals := dec.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
+	}
+	p.Withdrawals = withdrawals
+	p.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
+	p.TargetBlobCount = uint64(dec.TargetBlobCount)
+	p.MaxBlobCount = uint64(dec.MaximumBlobCount)
 	return nil
 }
 

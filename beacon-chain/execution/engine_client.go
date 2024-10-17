@@ -61,6 +61,8 @@ const (
 	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
 	// ForkchoiceUpdatedMethodV3 v3 request string for JSON-RPC.
 	ForkchoiceUpdatedMethodV3 = "engine_forkchoiceUpdatedV3"
+	// ForkchoiceUpdatedMethodV4 v4 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV4 = "engine_forkchoiceUpdatedV3"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
@@ -167,7 +169,7 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to encode execution requests")
 			}
-			err = s.rpcClient.CallContext(ctx, result, NewPayloadMethodV4, payloadPb, versionedHashes, parentBlockRoot, flattenedRequests)
+			err = s.rpcClient.CallContext(ctx, result, NewPayloadMethodV4, payloadPb, versionedHashes, parentBlockRoot, flattenedRequests, fieldparams.MaxBlobsPerBlock/2)
 			if err != nil {
 				return nil, handleRPCError(err)
 			}
@@ -230,12 +232,21 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-	case version.Deneb, version.Electra:
+	case version.Deneb:
 		a, err := attrs.PbV3()
 		if err != nil {
 			return nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV3, state, a)
+		if err != nil {
+			return nil, nil, handleRPCError(err)
+		}
+	case version.Electra:
+		a, err := attrs.PbV4()
+		if err != nil {
+			return nil, nil, err
+		}
+		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV4, state, a)
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}

@@ -95,6 +95,28 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 	}, nil
 }
 
+// PbV4 returns the payload attribute for Electra.
+func (a *data) PbV4() (*enginev1.PayloadAttributesV4, error) {
+	if a == nil {
+		return nil, errNilPayloadAttribute
+	}
+	if a.version < version.Electra {
+		return nil, consensus_types.ErrNotSupported("PbV4", a.version)
+	}
+	if a.timeStamp == 0 && len(a.prevRandao) == 0 && len(a.parentBeaconBlockRoot) == 0 {
+		return nil, nil
+	}
+	return &enginev1.PayloadAttributesV4{
+		Timestamp:             a.timeStamp,
+		PrevRandao:            a.prevRandao,
+		SuggestedFeeRecipient: a.suggestedFeeRecipient,
+		Withdrawals:           a.withdrawals,
+		ParentBeaconBlockRoot: a.parentBeaconBlockRoot,
+		TargetBlobCount:       a.targetBlobCount,
+		MaxBlobCount:          a.maxBlobCount,
+	}, nil
+}
+
 // IsEmpty returns whether the given payload attribute is empty
 func (a *data) IsEmpty() bool {
 	if len(a.PrevRandao()) != 0 {

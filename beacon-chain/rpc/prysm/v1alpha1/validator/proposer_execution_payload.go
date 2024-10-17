@@ -137,7 +137,24 @@ func (vs *Server) getLocalPayloadFromEngine(
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Deneb, version.Electra:
+	case version.Electra:
+		withdrawals, _, err := st.ExpectedWithdrawals()
+		if err != nil {
+			return nil, err
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV4{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            random,
+			SuggestedFeeRecipient: val.FeeRecipient[:],
+			Withdrawals:           withdrawals,
+			ParentBeaconBlockRoot: parentRoot[:],
+			TargetBlobCount:       fieldparams.MaxBlobsPerBlock / 2,
+			MaxBlobCount:          fieldparams.MaxBlobsPerBlock,
+		})
+		if err != nil {
+			return nil, err
+		}
+	case version.Deneb:
 		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, err
