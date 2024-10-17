@@ -14,6 +14,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Added GetBlockAttestationsV2 endpoint.
 - Light client support: Consensus types for Electra
 - Added SubmitPoolAttesterSlashingV2 endpoint.
+- Added GetAggregatedAttestationV2 endpoint.
 
 ### Changed
 
