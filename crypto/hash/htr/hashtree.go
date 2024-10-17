@@ -5,13 +5,20 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/gohashtree"
+	"github.com/prysmaticlabs/hashtree"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 )
 
 const minSliceSizeToParallelize = 5000
 
 func hashParallel(inputList [][32]byte, outputList [][32]byte, wg *sync.WaitGroup) {
 	defer wg.Done()
-	err := gohashtree.Hash(outputList, inputList)
+	var err error
+	if features.Get().EnableHashtree {
+		err = hashtree.Hash(outputList, inputList)
+	} else {
+		err = gohashtree.Hash(outputList, inputList)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +45,12 @@ func VectorizedSha256(inputList [][32]byte) [][32]byte {
 	for j := 0; j < n; j++ {
 		go hashParallel(inputList[j*2*groupSize:(j+1)*2*groupSize], outputList[j*groupSize:], &wg)
 	}
-	err := gohashtree.Hash(outputList[n*groupSize:], inputList[n*2*groupSize:])
+	var err error
+	if features.Get().EnableHashtree {
+		err = hashtree.Hash(outputList[n*groupSize:], inputList[n*2*groupSize:])
+	} else {
+		err = gohashtree.Hash(outputList[n*groupSize:], inputList[n*2*groupSize:])
+	}
 	if err != nil {
 		panic(err)
 	}
