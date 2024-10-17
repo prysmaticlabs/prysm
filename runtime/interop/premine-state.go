@@ -712,39 +712,6 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 		if err != nil {
 			return err
 		}
-	case version.Electra:
-		payload := &enginev1.ExecutionPayloadElectra{
-			ParentHash:    gb.ParentHash().Bytes(),
-			FeeRecipient:  gb.Coinbase().Bytes(),
-			StateRoot:     gb.Root().Bytes(),
-			ReceiptsRoot:  gb.ReceiptHash().Bytes(),
-			LogsBloom:     gb.Bloom().Bytes(),
-			PrevRandao:    params.BeaconConfig().ZeroHash[:],
-			BlockNumber:   gb.NumberU64(),
-			GasLimit:      gb.GasLimit(),
-			GasUsed:       gb.GasUsed(),
-			Timestamp:     gb.Time(),
-			ExtraData:     gb.Extra()[:32],
-			BaseFeePerGas: bytesutil.PadTo(bytesutil.ReverseByteOrder(gb.BaseFee().Bytes()), fieldparams.RootLength),
-			BlockHash:     gb.Hash().Bytes(),
-			Transactions:  make([][]byte, 0),
-			Withdrawals:   make([]*enginev1.Withdrawal, 0),
-			ExcessBlobGas: unwrapUint64Ptr(gb.ExcessBlobGas()),
-			BlobGasUsed:   unwrapUint64Ptr(gb.BlobGasUsed()),
-		}
-		wep, err := blocks.WrappedExecutionPayloadElectra(payload)
-		if err != nil {
-			return err
-		}
-		eph, err := blocks.PayloadToHeaderElectra(wep)
-		if err != nil {
-			return err
-		}
-		ed, err = blocks.WrappedExecutionPayloadHeaderElectra(eph)
-		if err != nil {
-			return err
-		}
-
 	default:
 		return errUnsupportedVersion
 	}
