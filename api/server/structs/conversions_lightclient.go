@@ -10,7 +10,20 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/proto/migration"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
+
+func LightClientUpdateResponseFromConsensus(update *v2.LightClientUpdateWithVersion) (*LightClientUpdateResponse, error) {
+	data, err := LightClientUpdateFromConsensus(update.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LightClientUpdateResponse{
+		Version: version.String(int(update.Version)),
+		Data:    data,
+	}, nil
+}
 
 func LightClientUpdateFromConsensus(update *v2.LightClientUpdate) (*LightClientUpdate, error) {
 	attestedHeader, err := lightClientHeaderContainerToJSON(update.AttestedHeader)

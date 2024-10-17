@@ -245,22 +245,6 @@ func createLightClientBootstrapDeneb(ctx context.Context, state state.BeaconStat
 	return result, nil
 }
 
-func newLightClientUpdateFromBeaconState(
-	ctx context.Context,
-	state state.BeaconState,
-	block interfaces.ReadOnlySignedBeaconBlock,
-	attestedState state.BeaconState,
-	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
-	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
-) (*structs.LightClientUpdate, error) {
-	result, err := lightclient.NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	return structs.LightClientUpdateFromConsensus(result)
-}
-
 func newLightClientFinalityUpdateFromBeaconState(
 	ctx context.Context,
 	state state.BeaconState,

@@ -22,6 +22,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Fix `engine_exchangeCapabilities` implementation.
 - Updated the default `scrape-interval` in `Client-stats` to 2 minutes to accommodate Beaconcha.in API rate limits.
 - Switch to compounding when consolidating with source==target.
+- Changed `GetLightClientUpdatesByRange` API to read from the DB instead of computing.
 
 ### Deprecated
 
