@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"math/big"
 )
 
@@ -8,14 +9,16 @@ import (
 type MockExecutionChainInfoFetcher struct {
 	CurrEndpoint string
 	CurrError    error
+	Syncing      bool
+	Connected    bool
 }
 
 func (*MockExecutionChainInfoFetcher) GenesisExecutionChainInfo() (uint64, *big.Int) {
 	return uint64(0), &big.Int{}
 }
 
-func (*MockExecutionChainInfoFetcher) ExecutionClientConnected() bool {
-	return true
+func (m *MockExecutionChainInfoFetcher) ExecutionClientConnected() bool {
+	return m.Connected
 }
 
 func (m *MockExecutionChainInfoFetcher) ExecutionClientEndpoint() string {
@@ -24,4 +27,8 @@ func (m *MockExecutionChainInfoFetcher) ExecutionClientEndpoint() string {
 
 func (m *MockExecutionChainInfoFetcher) ExecutionClientConnectionErr() error {
 	return m.CurrError
+}
+
+func (m *MockExecutionChainInfoFetcher) IsExecutionClientSyncing(_ context.Context) (bool, error) {
+	return m.Syncing, nil
 }
