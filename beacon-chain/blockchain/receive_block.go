@@ -39,16 +39,28 @@ var epochsSinceFinalityExpandCache = primitives.Epoch(4)
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, avs das.AvailabilityStore) error
+	ReceiveExecutionPayloadEnvelope(ctx context.Context, env interfaces.ROExecutionPayloadEnvelope, avs das.AvailabilityStore) error
 	ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock, avs das.AvailabilityStore) error
 	HasBlock(ctx context.Context, root [32]byte) bool
 	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 	BlockBeingSynced([32]byte) bool
 }
 
+// PayloadAttestationReceiver defines methods of the chain service for receiving
+// and processing new payload attestations and payload attestation messages
+type PayloadAttestationReceiver interface {
+	ReceivePayloadAttestationMessage(ctx context.Context, a *ethpb.PayloadAttestationMessage) error
+}
+
 // BlobReceiver interface defines the methods of chain service for receiving new
 // blobs
 type BlobReceiver interface {
 	ReceiveBlob(context.Context, blocks.VerifiedROBlob) error
+}
+
+// ExecutionPayloadReceiver interface defines the methods of chain service for receiving `ROExecutionPayloadEnvelope`.
+type ExecutionPayloadReceiver interface {
+	ReceiveExecutionPayloadEnvelope(ctx context.Context, envelope interfaces.ROExecutionPayloadEnvelope, _ das.AvailabilityStore) error
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.

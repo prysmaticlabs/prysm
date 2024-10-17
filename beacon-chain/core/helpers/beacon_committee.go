@@ -213,6 +213,7 @@ type CommitteeAssignment struct {
 	Committee      []primitives.ValidatorIndex
 	AttesterSlot   primitives.Slot
 	CommitteeIndex primitives.CommitteeIndex
+	PtcSlot        primitives.Slot
 }
 
 // verifyAssignmentEpoch verifies if the given epoch is valid for assignment based on the provided state.
@@ -294,7 +295,7 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 	if err := verifyAssignmentEpoch(epoch, state); err != nil {
 		return nil, err
 	}
-	startSlot, err := slots.EpochStart(epoch)
+	slot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -303,14 +304,17 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 		vals[v] = struct{}{}
 	}
 	assignments := make(map[primitives.ValidatorIndex]*CommitteeAssignment)
+
+	committees, err := BeaconCommittees(ctx, state, slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute beacon committees")
+	}
+	ptcPerSlot, ptcMembersPerCommittee := PtcAllocation(len(committees))
 	// Compute committee assignments for each slot in the epoch.
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		committees, err := BeaconCommittees(ctx, state, slot)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute beacon committees")
-		}
+	endSlot := slot + params.BeaconConfig().SlotsPerEpoch
+	for {
 		for j, committee := range committees {
-			for _, vIndex := range committee {
+			for i, vIndex := range committee {
 				if _, ok := vals[vIndex]; !ok { // Skip if the validator is not in the provided validators slice.
 					continue
 				}
@@ -320,7 +324,18 @@ func CommitteeAssignments(ctx context.Context, state state.BeaconState, epoch pr
 				assignments[vIndex].Committee = committee
 				assignments[vIndex].AttesterSlot = slot
 				assignments[vIndex].CommitteeIndex = primitives.CommitteeIndex(j)
+				if uint64(j) < ptcPerSlot && uint64(i) < ptcMembersPerCommittee {
+					assignments[vIndex].PtcSlot = slot
+				}
 			}
+		}
+		slot++
+		if slot == endSlot {
+			break
+		}
+		committees, err = BeaconCommittees(ctx, state, slot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute beacon committees")
 		}
 	}
 	return assignments, nil

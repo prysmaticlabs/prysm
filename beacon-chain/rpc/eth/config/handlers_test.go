@@ -20,6 +20,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
+// Variables defined in the placeholderFields will not be tested in `TestGetSpec`.
+// These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
+var placeholderFields = []string{"DOMAIN_BEACON_BUILDER", "DOMAIN_PTC_ATTESTER"}
+
 func TestGetDepositContract(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
@@ -79,6 +83,8 @@ func TestGetSpec(t *testing.T) {
 	config.DenebForkEpoch = 105
 	config.ElectraForkVersion = []byte("ElectraForkVersion")
 	config.ElectraForkEpoch = 107
+	config.EPBSForkVersion = []byte("EPBSForkVersion")
+	config.EPBSForkEpoch = 109
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.ETH1AddressWithdrawalPrefixByte = byte('c')
 	config.GenesisDelay = 24
@@ -189,7 +195,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 155, len(data))
+	assert.Equal(t, 165, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -267,6 +273,10 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "0x"+hex.EncodeToString([]byte("ElectraForkVersion")), v)
 			case "ELECTRA_FORK_EPOCH":
 				assert.Equal(t, "107", v)
+			case "EPBS_FORK_VERSION":
+				assert.Equal(t, "0x"+hex.EncodeToString([]byte("EPBSForkVersion")), v)
+			case "EPBS_FORK_EPOCH":
+				assert.Equal(t, "109", v)
 			case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
 				assert.Equal(t, "1000", v)
 			case "BLS_WITHDRAWAL_PREFIX":
@@ -526,7 +536,25 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "93", v)
 			case "MAX_PENDING_DEPOSITS_PER_EPOCH":
 				assert.Equal(t, "94", v)
+			case "PROPOSER_SCORE_BOOST_EPBS":
+				assert.Equal(t, "20", v)
+			case "PAYLOAD_REVEAL_BOOST":
+				assert.Equal(t, "40", v)
+			case "PAYLOAD_WITHHOLD_BOOST":
+				assert.Equal(t, "40", v)
+			case "PAYLOAD_TIMELY_THRESHOLD":
+				assert.Equal(t, "256", v)
+			case "INTERVALS_PER_SLOT_EPBS":
+				assert.Equal(t, "4", v)
+			case "MIN_BUILDER_BALANCE":
+				assert.Equal(t, "0", v)
 			default:
+				for _, pf := range placeholderFields {
+					if k == pf {
+						t.Logf("Skipping placeholder field: %s", k)
+						return
+					}
+				}
 				t.Errorf("Incorrect key: %s", k)
 			}
 		})
