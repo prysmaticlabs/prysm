@@ -235,51 +235,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 			assert.Equal(t, true, strings.Contains(e.Message, "slot is invalid"))
 		})
 	})
-
-	//we should have test cases for:
-	//0 matching atts (to test the no-panic scenario)
-	//1 matching aggregated att
-	//>1 matching aggregated att takes the one with most bit count
-	//1 matching unaggregated att
-	//>1 matching unaggregated att results in these atts being aggregated (so eg you have one att with bits 0001 and one with bits 1000  -> you get an att with bits 1001)
 	t.Run("V2", func(t *testing.T) {
-		//committeeBits := bitfield.NewBitvector64()
-		//committeeBits.SetBitAt(1, true)
-		//attSlot1 := &ethpbalpha.AttestationElectra{
-		//	AggregationBits: []byte{0, 1, 1},
-		//	Data:            createAttestationData(1, 0, 1, root1),
-		//	CommitteeBits:   committeeBits,
-		//	Signature:       sig1,
-		//}
-		////committeeBits.SetBitAt(1, true)
-		//attSlot21 := &ethpbalpha.AttestationElectra{
-		//	AggregationBits: []byte{0, 1, 1},
-		//	Data:            createAttestationData(2, 0, 1, root21),
-		//	CommitteeBits:   committeeBits,
-		//	Signature:       sig21,
-		//}
-		////committeeBits.SetBitAt(2, true)
-		//attSlot22 := &ethpbalpha.AttestationElectra{
-		//	AggregationBits: []byte{0, 1, 1, 1},
-		//	Data:            createAttestationData(2, 0, 1, root22),
-		//	CommitteeBits:   committeeBits,
-		//	Signature:       sig22,
-		//}
-		////committeeBits.SetBitAt(2, true)
-		//attSlot31 := &ethpbalpha.AttestationElectra{
-		//	AggregationBits: []byte{1, 0},
-		//	Data:            createAttestationData(3, 0, 1, root31),
-		//	CommitteeBits:   committeeBits,
-		//	Signature:       sig31,
-		//}
-		////committeeBits.SetBitAt(3, true)
-		//attSlot32 := &ethpbalpha.AttestationElectra{
-		//	AggregationBits: []byte{0, 1},
-		//	Data:            createAttestationData(3, 0, 1, root32),
-		//	CommitteeBits:   committeeBits,
-		//	Signature:       sig32,
-		//}
-
 		t.Run("no matching attestation", func(t *testing.T) {
 			s := &Server{
 				AttestationsPool: attestations.NewPool(),
