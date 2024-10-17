@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
-
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -26,6 +26,11 @@ func createNonEmptyFinalityBranch() [][]byte {
 }
 
 func TestIsBetterUpdate(t *testing.T) {
+
+	params.SetupTestConfigCleanup(t)
+	config := params.MainnetConfig()
+	params.OverrideBeaconConfig(config)
+
 	testCases := []struct {
 		name           string
 		oldUpdate      *ethpbv2.LightClientUpdate
