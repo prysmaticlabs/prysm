@@ -70,7 +70,14 @@ func ColumnAlignsWithBlock(col blocks.RODataColumn, block blocks.ROBlock, colVer
 	}
 
 	if !reflect.DeepEqual(commitments, col.KzgCommitments) {
-		return errors.Wrapf(ErrMismatchedColumnCommitments, "commitment %#v != block commitment %#v for block root %#x at slot %d ", col.KzgCommitments, commitments, block.Root(), col.Slot())
+		return errors.Wrapf(
+			ErrMismatchedColumnCommitments,
+			"commitment %#v != block commitment %#v for block root %#x at slot %d ",
+			col.KzgCommitments,
+			commitments,
+			block.Root(),
+			col.Slot(),
+		)
 	}
 
 	vf := colVerifier(col, verification.InitsyncColumnSidecarRequirements)
