@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api/server"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -1304,6 +1305,9 @@ func (bb *BuilderBidElectra) ToProto() (*eth.BuilderBidElectra, error) {
 		}
 		kzgCommitments[i] = bytesutil.SafeCopyBytes(commit)
 	}
+	if bb.ExecutionRequests == nil {
+		return nil, fmt.Errorf("execution requests is empty")
+	}
 	ExecutionRequests, err := bb.ExecutionRequests.ToProto()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert ExecutionRequests")
@@ -1327,6 +1331,9 @@ type ExecutionRequestsV1 struct {
 }
 
 func (er *ExecutionRequestsV1) ToProto() (*v1.ExecutionRequests, error) {
+	if uint64(len(er.Deposits)) > params.BeaconConfig().MaxDepositRequestsPerPayload {
+		return nil, fmt.Errorf("too many deposit requests: %d", len(er.Deposits))
+	}
 	deposits := make([]*v1.DepositRequest, len(er.Deposits))
 	for i, dep := range er.Deposits {
 		d, err := dep.ToProto()
@@ -1335,6 +1342,9 @@ func (er *ExecutionRequestsV1) ToProto() (*v1.ExecutionRequests, error) {
 		}
 		deposits[i] = d
 	}
+	if uint64(len(er.Withdrawals)) > params.BeaconConfig().MaxWithdrawalRequestsPerPayload {
+		return nil, fmt.Errorf("too many withdrawal requests: %d", len(er.Withdrawals))
+	}
 	withdrawals := make([]*v1.WithdrawalRequest, len(er.Withdrawals))
 	for i, wr := range er.Withdrawals {
 		w, err := wr.ToProto()
@@ -1342,6 +1352,9 @@ func (er *ExecutionRequestsV1) ToProto() (*v1.ExecutionRequests, error) {
 			return nil, err
 		}
 		withdrawals[i] = w
+	}
+	if uint64(len(er.Consolidations)) > params.BeaconConfig().MaxConsolidationsRequestsPerPayload {
+		return nil, fmt.Errorf("too many consolidation requests: %d", len(er.Consolidations))
 	}
 	consolidations := make([]*v1.ConsolidationRequest, len(er.Consolidations))
 	for i, con := range er.Consolidations {

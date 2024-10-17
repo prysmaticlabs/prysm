@@ -281,14 +281,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get blob kzg commitments")
 		}
-		if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
-			return nil, fmt.Errorf("builder returned too many kzg commitments: %d", len(kzgCommitments))
-		}
-		for _, c := range kzgCommitments {
-			if len(c) != fieldparams.BLSPubkeyLength {
-				return nil, fmt.Errorf("builder returned invalid kzg commitment length: %d", len(c))
-			}
-		}
 	}
 
 	var executionRequests *enginev1.ExecutionRequests
@@ -300,9 +292,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		executionRequests, err = eBid.ExecutionRequests()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get execution requests")
-		}
-		if err = validateExecutionRequests(executionRequests); err != nil {
-			return nil, err
 		}
 	}
 
@@ -331,22 +320,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	)
 
 	return bid, nil
-}
-
-func validateExecutionRequests(requests *enginev1.ExecutionRequests) error {
-	if requests == nil {
-		return errors.New("builder returned nil execution requests")
-	}
-	if uint64(len(requests.Deposits)) > params.BeaconConfig().MaxDepositRequestsPerPayload {
-		return errors.New("builder returned too many deposit requests")
-	}
-	if uint64(len(requests.Withdrawals)) > params.BeaconConfig().MaxWithdrawalRequestsPerPayload {
-		return errors.New("builder returned too many withdrawal requests")
-	}
-	if uint64(len(requests.Consolidations)) > params.BeaconConfig().MaxConsolidationsRequestsPerPayload {
-		return errors.New("builder returned too many consolidation requests")
-	}
-	return nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
