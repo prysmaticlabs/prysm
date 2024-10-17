@@ -66,7 +66,7 @@ func TestMarshalToEnvelope(t *testing.T) {
 func TestFallbackVersionCheck(t *testing.T) {
 	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
-		switch req.URL.Path {
+		switch req.URL.Path[1:] {
 		case getNodeVersionPath:
 			res.StatusCode = http.StatusOK
 			b := bytes.NewBuffer(nil)
@@ -168,7 +168,7 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 
 	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
-		switch req.URL.Path {
+		switch req.URL.Path[1:] {
 		case getWeakSubjectivityPath:
 			res.StatusCode = http.StatusOK
 			cp := struct {
@@ -262,7 +262,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 
 	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
-		switch req.URL.Path {
+		switch req.URL.Path[1:] {
 		case getNodeVersionPath:
 			res.StatusCode = http.StatusOK
 			b := bytes.NewBuffer(nil)
@@ -437,7 +437,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 
 	trans := &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
-		switch req.URL.Path {
+		switch req.URL.Path[1:] {
 		case renderGetStatePath(IdFinalized):
 			res.StatusCode = http.StatusOK
 			res.Body = io.NopCloser(bytes.NewBuffer(ms))
