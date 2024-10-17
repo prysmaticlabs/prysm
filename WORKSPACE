@@ -159,6 +159,16 @@ git_repository(
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
+git_repository(
+    name = "org_golang_google_grpc",
+    commit = "1055b481ed2204a29d233286b9b50c42b63f8825",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:org_golang_google_grpc_clientconn.patch",
+    ],
+    remote = "https://github.com/grpc/grpc-go",
+)
+
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 # A multi-arch base image
