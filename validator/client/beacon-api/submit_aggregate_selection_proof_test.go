@@ -125,7 +125,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				test.attestationDataErr,
 			).Times(test.attestationDataCalled)
 
-			attestationJSON, err := json.Marshal(aggregateAttestation)
+			attestationJSON, err := json.Marshal(jsonifyAttestation(aggregateAttestation))
 			require.NoError(t, err)
 
 			// Call attestation data to get attestation data root to query aggregate attestation.
