@@ -158,7 +158,7 @@ func NewLightClientUpdateFromBeaconState(
 	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate(attestedBlock.Version())
+	result, err := createDefaultLightClientUpdate(currentSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
@@ -238,7 +238,9 @@ func NewLightClientUpdateFromBeaconState(
 	return result, nil
 }
 
-func createDefaultLightClientUpdate(ver int) (interfaces.LightClientUpdate, error) {
+func createDefaultLightClientUpdate(currentSlot primitives.Slot) (interfaces.LightClientUpdate, error) {
+	currentEpoch := slots.ToEpoch(currentSlot)
+
 	syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
 	pubKeys := make([][]byte, syncCommitteeSize)
 	for i := uint64(0); i < syncCommitteeSize; i++ {
@@ -249,14 +251,13 @@ func createDefaultLightClientUpdate(ver int) (interfaces.LightClientUpdate, erro
 		AggregatePubkey: make([]byte, fieldparams.BLSPubkeyLength),
 	}
 
-	var scDepth int
-	if ver >= version.Electra {
-		scDepth = fieldparams.SyncCommitteeBranchDepthElectra
+	var nextSyncCommitteeBranch [][]byte
+	if currentEpoch >= params.BeaconConfig().ElectraForkEpoch {
+		nextSyncCommitteeBranch = make([][]byte, fieldparams.SyncCommitteeBranchDepthElectra)
 	} else {
-		scDepth = fieldparams.SyncCommitteeBranchDepth
+		nextSyncCommitteeBranch = make([][]byte, fieldparams.SyncCommitteeBranchDepth)
 	}
-	nextSyncCommitteeBranch := make([][]byte, scDepth)
-	for i := 0; i < scDepth; i++ {
+	for i := 0; i < len(nextSyncCommitteeBranch); i++ {
 		nextSyncCommitteeBranch[i] = make([]byte, fieldparams.RootLength)
 	}
 
@@ -270,33 +271,30 @@ func createDefaultLightClientUpdate(ver int) (interfaces.LightClientUpdate, erro
 	}
 
 	var m proto.Message
-	switch ver {
-	case version.Altair, version.Bellatrix:
+	if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		m = &pb.LightClientUpdateAltair{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
-	case version.Capella:
+	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
 		m = &pb.LightClientUpdateCapella{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
-	case version.Deneb:
+	} else if currentEpoch < params.BeaconConfig().ElectraForkEpoch {
 		m = &pb.LightClientUpdateDeneb{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
-	case version.Electra:
+	} else {
 		m = &pb.LightClientUpdateElectra{
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
-	default:
-		return nil, fmt.Errorf("unsupported version %s", version.String(ver))
 	}
 
 	return light_client.NewWrappedUpdate(m)
