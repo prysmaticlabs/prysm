@@ -4810,3 +4810,13 @@ def prysm_deps():
         build_file = "//third_party:blst/blst.BUILD",
         sha256 = "132124c074e59ead77e1828cc54b587a182ea67b781b72198e802af4696d78fe",
     )
+
+    http_archive(
+        name = "com_github_prysmaticlabs_hashtree",
+        urls = [
+            "https://github.com/prysmaticlabs/hashtree/archive/refs/tags/v0.2.0.tar.gz",
+        ],
+        strip_prefix = "hashtree-0.2.0",
+        build_file = "//third_party:hashtree/hashtree.BUILD",
+        sha256 = "26e6e14712040be81b5c9c08dc0ad2d48e03f2f9032806a76e98e438af10c1e0",
+    )

@@ -3,6 +3,7 @@ package blocks
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/gohashtree"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -39,7 +40,11 @@ func VerifyKZGInclusionProof(blob ROBlob) error {
 		return errInvalidBodyRoot
 	}
 	chunks := makeChunk(blob.KzgCommitment)
-	gohashtree.HashChunks(chunks, chunks)
+	if features.Get().EnableHashtree {
+		hashtree.HashChunks(chunks, chunks)
+	} else {
+		gohashtree.HashChunks(chunks, chunks)
+	}
 	verified := trie.VerifyMerkleProof(root, chunks[0][:], blob.Index+KZGOffset, blob.CommitmentInclusionProof)
 	if !verified {
 		return errInvalidInclusionProof

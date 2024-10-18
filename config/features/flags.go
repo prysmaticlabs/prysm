@@ -135,6 +135,10 @@ var (
 		Name:  "enable-beacon-rest-api",
 		Usage: "(Experimental): Enables of the beacon REST API when querying a beacon node.",
 	}
+	enableHashtree = &cli.BoolFlag{
+		Name:  "enable-hashtree",
+		Usage: "(Experimental): Enables the hashthree hashing library.",
+	}
 	disableVerboseSigVerification = &cli.BoolFlag{
 		Name:  "disable-verbose-sig-verification",
 		Usage: "Disables identifying invalid signatures if batch verification fails when processing block.",
@@ -215,6 +219,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
+	enableHashtree,
 	enableHistoricalSpaceRepresentation,
 	disableStakinContractCheck,
 	SaveFullExecutionPayloads,
