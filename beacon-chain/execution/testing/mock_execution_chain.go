@@ -131,6 +131,10 @@ func (m *Chain) ExecutionClientConnectionErr() error {
 	return m.CurrError
 }
 
+func (m *Chain) IsExecutionClientSyncing(_ context.Context) (bool, error) {
+	return false, nil
+}
+
 func (m *Chain) ETH1Endpoints() []string {
 	return m.Endpoints
 }
