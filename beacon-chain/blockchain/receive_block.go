@@ -98,6 +98,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
+		s.rollbackBlock(ctx, blockRoot)
 		return errors.Wrap(err, "could not save post state info")
 	}
 	args := &postBlockProcessConfig{
