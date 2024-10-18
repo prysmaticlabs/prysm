@@ -41,15 +41,12 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	isElOnline := s.ExecutionChainInfoFetcher.ExecutionClientConnected()
 	if !isElOnline {
 		isSyncing, err := s.ExecutionChainInfoFetcher.IsExecutionClientSyncing(ctx)
-		if !isSyncing {
-			if err != nil {
-				log.WithField("error", err.Error()).Debug("failed to get execution client sync status")
-			} else {
-				log.Debug("execution client is not syncing and not connected")
-			}
-		}
-		if isSyncing && err == nil {
+		if err != nil {
+			log.WithField("error", err.Error()).Debug("failed to get execution client sync status")
+		} else if isSyncing {
 			isElOnline = true
+		} else {
+			log.Debug("execution client is not syncing and not connected")
 		}
 	}
 
