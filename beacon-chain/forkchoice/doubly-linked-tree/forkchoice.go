@@ -141,7 +141,14 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 	}
 
 	jc, fc = f.store.pullTips(state, node, jc, fc)
-	return f.updateCheckpoints(ctx, jc, fc)
+	if err := f.updateCheckpoints(ctx, jc, fc); err != nil {
+		_, remErr := f.store.removeNode(ctx, node)
+		if remErr != nil {
+			log.WithError(remErr).Error("could not remove node")
+		}
+		return errors.Wrap(err, "could not update checkpoints")
+	}
+	return nil
 }
 
 // updateCheckpoints update the checkpoints when inserting a new node.
