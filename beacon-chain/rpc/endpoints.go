@@ -220,6 +220,16 @@ func (s *Service) validatorEndpoints(
 			methods: []string{http.MethodPost},
 		},
 		{
+			template: "/eth/v2/validator/aggregate_and_proofs",
+			name:     namespace + ".SubmitAggregateAndProofsV2",
+			middleware: []middleware.Middleware{
+				middleware.ContentTypeHandler([]string{api.JsonMediaType}),
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+			},
+			handler: server.SubmitAggregateAndProofsV2,
+			methods: []string{http.MethodPost},
+		},
+		{
 			template: "/eth/v1/validator/sync_committee_contribution",
 			name:     namespace + ".ProduceSyncCommitteeContribution",
 			middleware: []middleware.Middleware{
