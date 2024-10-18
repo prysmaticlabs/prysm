@@ -688,7 +688,7 @@ func (s *Service) handleInvalidExecutionError(ctx context.Context, err error, bl
 
 // In the event of an issue with
 func (s *Service) rollbackBlock(ctx context.Context, blockRoot [32]byte) {
-	log.Warnf("Rolling back insertion of block with root %#x due to processing error")
+	log.Warnf("Rolling back insertion of block with root %#x due to processing error", blockRoot)
 	if err := s.cfg.BeaconDB.DeleteBlock(ctx, blockRoot); err != nil {
 		log.WithError(err).Errorf("Could not delete block with block root %#x", blockRoot)
 	}
