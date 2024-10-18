@@ -129,7 +129,12 @@ func (s *Service) sendLightClientFeeds(cfg *postBlockProcessConfig) {
 	}
 }
 
-func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, finalized *forkchoicetypes.Checkpoint, postState state.BeaconState) {
+func (s *Service) tryPublishLightClientFinalityUpdate(
+	ctx context.Context,
+	signed interfaces.ReadOnlySignedBeaconBlock,
+	finalized *forkchoicetypes.Checkpoint,
+	postState state.BeaconState,
+) {
 	if finalized.Epoch <= s.lastPublishedLightClientEpoch {
 		return
 	}
@@ -184,6 +189,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 
 	_, err = lightclient.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
+		postState.Slot(),
 		postState,
 		signed,
 		attestedState,
@@ -224,6 +230,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 
 	_, err = lightclient.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
+		postState.Slot(),
 		postState,
 		signed,
 		attestedState,

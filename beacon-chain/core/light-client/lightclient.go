@@ -13,10 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	light_client "github.com/prysmaticlabs/prysm/v5/consensus-types/light-client"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/ssz"
-	v11 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -29,13 +28,14 @@ const (
 
 func NewLightClientFinalityUpdateFromBeaconState(
 	ctx context.Context,
+	currentSlot primitives.Slot,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (interfaces.LightClientFinalityUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, finalizedBlock)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, currentSlot, state, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -45,12 +45,13 @@ func NewLightClientFinalityUpdateFromBeaconState(
 
 func NewLightClientOptimisticUpdateFromBeaconState(
 	ctx context.Context,
+	currentSlot primitives.Slot,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	attestedBlock interfaces.ReadOnlySignedBeaconBlock,
 ) (interfaces.LightClientOptimisticUpdate, error) {
-	update, err := NewLightClientUpdateFromBeaconState(ctx, state, block, attestedState, attestedBlock, nil)
+	update, err := NewLightClientUpdateFromBeaconState(ctx, currentSlot, state, block, attestedState, attestedBlock, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +59,16 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 	return light_client.NewOptimisticUpdateFromUpdate(update)
 }
 
+// To form a LightClientUpdate, the following historical states and blocks are needed:
+//   - state: the post state of any block with a post-Altair parent block
+//   - block: the corresponding block
+//   - attested_state: the post state of attested_block
+//   - attested_block: the block referred to by block.parent_root
+//   - finalized_block: the block referred to by attested_state.finalized_checkpoint.root,
+//     if locally available (may be unavailable, e.g., when using checkpoint sync, or if it was pruned locally)
 func NewLightClientUpdateFromBeaconState(
 	ctx context.Context,
+	currentSlot primitives.Slot,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
@@ -155,7 +164,7 @@ func NewLightClientUpdateFromBeaconState(
 	}
 
 	// update.attested_header = block_to_light_client_header(attested_block)
-	attestedLightClientHeader, err := BlockToLightClientHeader(attestedBlock.Version(), attestedBlock)
+	attestedLightClientHeader, err := BlockToLightClientHeader(ctx, currentSlot, attestedBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attested light client header")
 	}
@@ -194,7 +203,7 @@ func NewLightClientUpdateFromBeaconState(
 		// if finalized_block.message.slot != GENESIS_SLOT
 		if finalizedBlock.Block().Slot() != 0 {
 			// update.finalized_header = block_to_light_client_header(finalized_block)
-			finalizedLightClientHeader, err := BlockToLightClientHeader(attestedBlock.Version(), finalizedBlock)
+			finalizedLightClientHeader, err := BlockToLightClientHeader(ctx, currentSlot, finalizedBlock)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not get finalized light client header")
 			}
@@ -329,37 +338,12 @@ func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 	return withdrawalsRoot, nil
 }
 
-func BlockToLightClientHeader(ver int, block interfaces.ReadOnlySignedBeaconBlock) (interfaces.LightClientHeader, error) {
-	var header proto.Message
-	var err error
-
-	switch ver {
-	case version.Altair, version.Bellatrix:
-		header, err = blockToLightClientHeaderAltair(block)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get header")
-		}
-	case version.Capella:
-		header, err = blockToLightClientHeaderCapella(context.Background(), block)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get header")
-		}
-	case version.Deneb, version.Electra:
-		header, err = blockToLightClientHeaderDeneb(context.Background(), block)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get header")
-		}
-	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(ver))
-	}
-
-	return light_client.NewWrappedHeader(header)
-}
-
-func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeader, error) {
-	if block.Version() < version.Altair {
-		return nil, fmt.Errorf("block version %s is before Altair", version.String(block.Version()))
-	}
+func BlockToLightClientHeader(
+	ctx context.Context,
+	currentSlot primitives.Slot,
+	block interfaces.ReadOnlySignedBeaconBlock,
+) (interfaces.LightClientHeader, error) {
+	var m proto.Message
 
 	parentRoot := block.Block().ParentRoot()
 	stateRoot := block.Block().StateRoot()
@@ -368,147 +352,124 @@ func blockToLightClientHeaderAltair(block interfaces.ReadOnlySignedBeaconBlock) 
 		return nil, errors.Wrap(err, "could not get body root")
 	}
 
-	return &ethpbv2.LightClientHeader{
-		Beacon: &ethpbv1.BeaconBlockHeader{
-			Slot:          block.Block().Slot(),
-			ProposerIndex: block.Block().ProposerIndex(),
-			ParentRoot:    parentRoot[:],
-			StateRoot:     stateRoot[:],
-			BodyRoot:      bodyRoot[:],
-		},
-	}, nil
-}
+	currentEpoch := slots.ToEpoch(currentSlot)
+	if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
+		m = &pb.LightClientHeaderAltair{
+			Beacon: &pb.BeaconBlockHeader{
+				Slot:          block.Block().Slot(),
+				ProposerIndex: block.Block().ProposerIndex(),
+				ParentRoot:    parentRoot[:],
+				StateRoot:     stateRoot[:],
+				BodyRoot:      bodyRoot[:],
+			},
+		}
+	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
+		payload, err := block.Block().Body().Execution()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload")
+		}
+		transactionsRoot, err := ComputeTransactionsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+		withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
 
-func blockToLightClientHeaderCapella(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderCapella, error) {
-	if block.Version() < version.Capella {
-		return nil, fmt.Errorf("block version %s is before Capella", version.String(block.Version()))
-	}
+		executionHeader := &enginev1.ExecutionPayloadHeaderCapella{
+			ParentHash:       payload.ParentHash(),
+			FeeRecipient:     payload.FeeRecipient(),
+			StateRoot:        payload.StateRoot(),
+			ReceiptsRoot:     payload.ReceiptsRoot(),
+			LogsBloom:        payload.LogsBloom(),
+			PrevRandao:       payload.PrevRandao(),
+			BlockNumber:      payload.BlockNumber(),
+			GasLimit:         payload.GasLimit(),
+			GasUsed:          payload.GasUsed(),
+			Timestamp:        payload.Timestamp(),
+			ExtraData:        payload.ExtraData(),
+			BaseFeePerGas:    payload.BaseFeePerGas(),
+			BlockHash:        payload.BlockHash(),
+			TransactionsRoot: transactionsRoot,
+			WithdrawalsRoot:  withdrawalsRoot,
+		}
 
-	payload, err := block.Block().Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
+		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload proof")
+		}
 
-	transactionsRoot, err := ComputeTransactionsRoot(payload)
-	if err != nil {
-		return nil, err
-	}
-	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
-	if err != nil {
-		return nil, err
-	}
+		m = &pb.LightClientHeaderCapella{
+			Beacon: &pb.BeaconBlockHeader{
+				Slot:          block.Block().Slot(),
+				ProposerIndex: block.Block().ProposerIndex(),
+				ParentRoot:    parentRoot[:],
+				StateRoot:     stateRoot[:],
+				BodyRoot:      bodyRoot[:],
+			},
+			Execution:       executionHeader,
+			ExecutionBranch: executionPayloadProof,
+		}
+	} else {
+		payload, err := block.Block().Body().Execution()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload")
+		}
+		transactionsRoot, err := ComputeTransactionsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+		withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+		if err != nil {
+			return nil, err
+		}
+		blobGasUsed, err := payload.BlobGasUsed()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get blob gas used")
+		}
+		excessBlobGas, err := payload.ExcessBlobGas()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get excess blob gas")
+		}
 
-	executionHeader := &v11.ExecutionPayloadHeaderCapella{
-		ParentHash:       payload.ParentHash(),
-		FeeRecipient:     payload.FeeRecipient(),
-		StateRoot:        payload.StateRoot(),
-		ReceiptsRoot:     payload.ReceiptsRoot(),
-		LogsBloom:        payload.LogsBloom(),
-		PrevRandao:       payload.PrevRandao(),
-		BlockNumber:      payload.BlockNumber(),
-		GasLimit:         payload.GasLimit(),
-		GasUsed:          payload.GasUsed(),
-		Timestamp:        payload.Timestamp(),
-		ExtraData:        payload.ExtraData(),
-		BaseFeePerGas:    payload.BaseFeePerGas(),
-		BlockHash:        payload.BlockHash(),
-		TransactionsRoot: transactionsRoot,
-		WithdrawalsRoot:  withdrawalsRoot,
-	}
+		executionHeader := &enginev1.ExecutionPayloadHeaderDeneb{
+			ParentHash:       payload.ParentHash(),
+			FeeRecipient:     payload.FeeRecipient(),
+			StateRoot:        payload.StateRoot(),
+			ReceiptsRoot:     payload.ReceiptsRoot(),
+			LogsBloom:        payload.LogsBloom(),
+			PrevRandao:       payload.PrevRandao(),
+			BlockNumber:      payload.BlockNumber(),
+			GasLimit:         payload.GasLimit(),
+			GasUsed:          payload.GasUsed(),
+			Timestamp:        payload.Timestamp(),
+			ExtraData:        payload.ExtraData(),
+			BaseFeePerGas:    payload.BaseFeePerGas(),
+			BlockHash:        payload.BlockHash(),
+			TransactionsRoot: transactionsRoot,
+			WithdrawalsRoot:  withdrawalsRoot,
+			BlobGasUsed:      blobGasUsed,
+			ExcessBlobGas:    excessBlobGas,
+		}
 
-	executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload proof")
-	}
+		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload proof")
+		}
 
-	parentRoot := block.Block().ParentRoot()
-	stateRoot := block.Block().StateRoot()
-	bodyRoot, err := block.Block().Body().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get body root")
-	}
-
-	return &ethpbv2.LightClientHeaderCapella{
-		Beacon: &ethpbv1.BeaconBlockHeader{
-			Slot:          block.Block().Slot(),
-			ProposerIndex: block.Block().ProposerIndex(),
-			ParentRoot:    parentRoot[:],
-			StateRoot:     stateRoot[:],
-			BodyRoot:      bodyRoot[:],
-		},
-		Execution:       executionHeader,
-		ExecutionBranch: executionPayloadProof,
-	}, nil
-}
-
-func blockToLightClientHeaderDeneb(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*ethpbv2.LightClientHeaderDeneb, error) {
-	if block.Version() < version.Deneb {
-		return nil, fmt.Errorf("block version %s is before Deneb", version.String(block.Version()))
-	}
-
-	payload, err := block.Block().Body().Execution()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
-	}
-
-	transactionsRoot, err := ComputeTransactionsRoot(payload)
-	if err != nil {
-		return nil, err
-	}
-	withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
-	if err != nil {
-		return nil, err
-	}
-	blobGasUsed, err := payload.BlobGasUsed()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get blob gas used")
-	}
-	excessBlobGas, err := payload.ExcessBlobGas()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get excess blob gas")
-	}
-
-	executionHeader := &v11.ExecutionPayloadHeaderDeneb{
-		ParentHash:       payload.ParentHash(),
-		FeeRecipient:     payload.FeeRecipient(),
-		StateRoot:        payload.StateRoot(),
-		ReceiptsRoot:     payload.ReceiptsRoot(),
-		LogsBloom:        payload.LogsBloom(),
-		PrevRandao:       payload.PrevRandao(),
-		BlockNumber:      payload.BlockNumber(),
-		GasLimit:         payload.GasLimit(),
-		GasUsed:          payload.GasUsed(),
-		Timestamp:        payload.Timestamp(),
-		ExtraData:        payload.ExtraData(),
-		BaseFeePerGas:    payload.BaseFeePerGas(),
-		BlockHash:        payload.BlockHash(),
-		TransactionsRoot: transactionsRoot,
-		WithdrawalsRoot:  withdrawalsRoot,
-		BlobGasUsed:      blobGasUsed,
-		ExcessBlobGas:    excessBlobGas,
-	}
-
-	executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload proof")
+		m = &pb.LightClientHeaderDeneb{
+			Beacon: &pb.BeaconBlockHeader{
+				Slot:          block.Block().Slot(),
+				ProposerIndex: block.Block().ProposerIndex(),
+				ParentRoot:    parentRoot[:],
+				StateRoot:     stateRoot[:],
+				BodyRoot:      bodyRoot[:],
+			},
+			Execution:       executionHeader,
+			ExecutionBranch: executionPayloadProof,
+		}
 	}
 
-	parentRoot := block.Block().ParentRoot()
-	stateRoot := block.Block().StateRoot()
-	bodyRoot, err := block.Block().Body().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get body root")
-	}
-
-	return &ethpbv2.LightClientHeaderDeneb{
-		Beacon: &ethpbv1.BeaconBlockHeader{
-			Slot:          block.Block().Slot(),
-			ProposerIndex: block.Block().ProposerIndex(),
-			ParentRoot:    parentRoot[:],
-			StateRoot:     stateRoot[:],
-			BodyRoot:      bodyRoot[:],
-		},
-		Execution:       executionHeader,
-		ExecutionBranch: executionPayloadProof,
-	}, nil
+	return light_client.NewWrappedHeader(m)
 }
