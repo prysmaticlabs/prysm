@@ -42,7 +42,7 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 	case version.Deneb:
 		fieldRoots = make([][]byte, 12)
 	case version.Electra:
-		fieldRoots = make([][]byte, 12)
+		fieldRoots = make([][]byte, 13)
 	default:
 		return nil, fmt.Errorf("unknown block body version %s", version.String(blockBody.version))
 	}
@@ -179,6 +179,18 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 		copy(fieldRoots[11], root[:])
 	}
 
+	if blockBody.version >= version.Electra {
+		// Execution Requests
+		er, err := blockBody.ExecutionRequests()
+		if err != nil {
+			return nil, err
+		}
+		root, err := er.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		copy(fieldRoots[12], root[:])
+	}
 	return fieldRoots, nil
 }
 

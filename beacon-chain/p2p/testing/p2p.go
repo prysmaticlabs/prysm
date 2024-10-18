@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	core "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/control"
@@ -18,8 +19,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	bhost "github.com/libp2p/go-libp2p/p2p/host/blank"
-	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -52,7 +53,8 @@ type TestP2P struct {
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
-	h := bhost.NewBlankHost(swarmt.GenSwarm(t, swarmt.OptDisableQUIC))
+	h, err := libp2p.New(libp2p.ResourceManager(&network.NullResourceManager{}), libp2p.Transport(tcp.NewTCPTransport), libp2p.DefaultListenAddrs)
+	require.NoError(t, err)
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
@@ -86,13 +88,17 @@ func (p *TestP2P) Connect(b *TestP2P) {
 }
 
 func connect(a, b host.Host) error {
-	pinfo := b.Peerstore().PeerInfo(b.ID())
+	pinfo := peer.AddrInfo{
+		ID:    b.ID(),
+		Addrs: b.Addrs(),
+	}
 	return a.Connect(context.Background(), pinfo)
 }
 
 // ReceiveRPC simulates an incoming RPC.
 func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
-	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t))
+	h, err := libp2p.New(libp2p.ResourceManager(&network.NullResourceManager{}))
+	require.NoError(p.t, err)
 	if err := connect(h, p.BHost); err != nil {
 		p.t.Fatalf("Failed to connect two peers for RPC: %v", err)
 	}
@@ -122,7 +128,8 @@ func (p *TestP2P) ReceiveRPC(topic string, msg proto.Message) {
 
 // ReceivePubSub simulates an incoming message over pubsub on a given topic.
 func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
-	h := bhost.NewBlankHost(swarmt.GenSwarm(p.t))
+	h, err := libp2p.New(libp2p.ResourceManager(&network.NullResourceManager{}))
+	require.NoError(p.t, err)
 	ps, err := pubsub.NewFloodSub(context.Background(), h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),

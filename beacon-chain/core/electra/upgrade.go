@@ -10,7 +10,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
@@ -102,7 +101,7 @@ import (
 //	    earliest_exit_epoch=earliest_exit_epoch,
 //	    consolidation_balance_to_consume=0,
 //	    earliest_consolidation_epoch=compute_activation_exit_epoch(get_current_epoch(pre)),
-//	    pending_balance_deposits=[],
+//	    pending_deposits=[],
 //	    pending_partial_withdrawals=[],
 //	    pending_consolidations=[],
 //	)
@@ -245,26 +244,23 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderElectra{
-			ParentHash:                payloadHeader.ParentHash(),
-			FeeRecipient:              payloadHeader.FeeRecipient(),
-			StateRoot:                 payloadHeader.StateRoot(),
-			ReceiptsRoot:              payloadHeader.ReceiptsRoot(),
-			LogsBloom:                 payloadHeader.LogsBloom(),
-			PrevRandao:                payloadHeader.PrevRandao(),
-			BlockNumber:               payloadHeader.BlockNumber(),
-			GasLimit:                  payloadHeader.GasLimit(),
-			GasUsed:                   payloadHeader.GasUsed(),
-			Timestamp:                 payloadHeader.Timestamp(),
-			ExtraData:                 payloadHeader.ExtraData(),
-			BaseFeePerGas:             payloadHeader.BaseFeePerGas(),
-			BlockHash:                 payloadHeader.BlockHash(),
-			TransactionsRoot:          txRoot,
-			WithdrawalsRoot:           wdRoot,
-			ExcessBlobGas:             excessBlobGas,
-			BlobGasUsed:               blobGasUsed,
-			DepositRequestsRoot:       bytesutil.Bytes32(0), // [New in Electra:EIP6110]
-			WithdrawalRequestsRoot:    bytesutil.Bytes32(0), // [New in Electra:EIP7002]
-			ConsolidationRequestsRoot: bytesutil.Bytes32(0), // [New in Electra:EIP7251]
+			ParentHash:       payloadHeader.ParentHash(),
+			FeeRecipient:     payloadHeader.FeeRecipient(),
+			StateRoot:        payloadHeader.StateRoot(),
+			ReceiptsRoot:     payloadHeader.ReceiptsRoot(),
+			LogsBloom:        payloadHeader.LogsBloom(),
+			PrevRandao:       payloadHeader.PrevRandao(),
+			BlockNumber:      payloadHeader.BlockNumber(),
+			GasLimit:         payloadHeader.GasLimit(),
+			GasUsed:          payloadHeader.GasUsed(),
+			Timestamp:        payloadHeader.Timestamp(),
+			ExtraData:        payloadHeader.ExtraData(),
+			BaseFeePerGas:    payloadHeader.BaseFeePerGas(),
+			BlockHash:        payloadHeader.BlockHash(),
+			TransactionsRoot: txRoot,
+			WithdrawalsRoot:  wdRoot,
+			ExcessBlobGas:    excessBlobGas,
+			BlobGasUsed:      blobGasUsed,
 		},
 		NextWithdrawalIndex:          wi,
 		NextWithdrawalValidatorIndex: vi,
@@ -276,7 +272,7 @@ func UpgradeToElectra(beaconState state.BeaconState) (state.BeaconState, error) 
 		EarliestExitEpoch:             earliestExitEpoch,
 		ConsolidationBalanceToConsume: helpers.ConsolidationChurnLimit(primitives.Gwei(tab)),
 		EarliestConsolidationEpoch:    helpers.ActivationExitEpoch(slots.ToEpoch(beaconState.Slot())),
-		PendingBalanceDeposits:        make([]*ethpb.PendingBalanceDeposit, 0),
+		PendingDeposits:               make([]*ethpb.PendingDeposit, 0),
 		PendingPartialWithdrawals:     make([]*ethpb.PendingPartialWithdrawal, 0),
 		PendingConsolidations:         make([]*ethpb.PendingConsolidation, 0),
 	}
