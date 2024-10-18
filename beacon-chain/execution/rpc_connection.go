@@ -83,9 +83,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 			if err != nil {
 				errorLogger(err, "Could not exchange capabilities with execution client")
 			}
-			s.capabilitiesLock.Lock()
-			s.capabilities = c
-			s.capabilitiesLock.Unlock()
+			s.capabilityCache.Save(c)
 
 			return
 		case <-s.ctx.Done():

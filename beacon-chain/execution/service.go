@@ -157,10 +157,9 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
-	capabilities            []string
-	capabilitiesLock        sync.RWMutex
 	verifierWaiter          *verification.InitializerWaiter
 	blobVerifier            verification.NewBlobVerifier
+	capabilityCache         *capabilityCache
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.
@@ -198,6 +197,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         genState,
 		eth1HeadTicker:          time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerETH1Block) * time.Second),
+		capabilityCache:         &capabilityCache{},
 	}
 
 	for _, opt := range opts {
@@ -904,4 +904,28 @@ func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.
 	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
 		return ini.NewBlobVerifier(b, reqs)
 	}
+}
+
+type capabilityCache struct {
+	capabilities     []string
+	capabilitiesLock sync.RWMutex
+}
+
+func (c *capabilityCache) Save(cs []string) {
+	c.capabilitiesLock.Lock()
+	defer c.capabilitiesLock.Unlock()
+
+	c.capabilities = cs
+}
+
+func (c *capabilityCache) Has(capability string) bool {
+	c.capabilitiesLock.RLock()
+	defer c.capabilitiesLock.RUnlock()
+
+	for _, existingCapability := range c.capabilities {
+		if existingCapability == capability {
+			return true
+		}
+	}
+	return false
 }

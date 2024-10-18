@@ -2394,7 +2394,7 @@ func Test_ExchangeCapabilities(t *testing.T) {
 }
 
 func TestReconstructBlobSidecars(t *testing.T) {
-	client := &Service{}
+	client := &Service{capabilityCache: &capabilityCache{}}
 	b := util.NewBeaconBlockDeneb()
 	kzgCommitments := createRandomKzgCommitments(t, 6)
 
@@ -2418,6 +2418,10 @@ func TestReconstructBlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, len(verifiedBlobs))
 	})
+
+	client.capabilityCache = &capabilityCache{
+		capabilities: []string{GetBlobsV1},
+	}
 
 	t.Run("recovered 6 missing blobs", func(t *testing.T) {
 		srv := createBlobServer(t, 6)
@@ -2482,7 +2486,9 @@ func setupRpcClient(t *testing.T, url string, client *Service) (*rpc.Client, *Se
 	require.NoError(t, err)
 
 	client.rpcClient = rpcClient
-	client.capabilities = []string{GetBlobsV1}
+	client.capabilityCache = &capabilityCache{
+		capabilities: []string{GetBlobsV1},
+	}
 	client.blobVerifier = testNewBlobVerifier()
 
 	return rpcClient, client

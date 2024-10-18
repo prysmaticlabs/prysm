@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"slices"
 	"strings"
 	"time"
 
@@ -503,12 +502,9 @@ func (s *Service) GetBlobs(ctx context.Context, versionedHashes []common.Hash) (
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobs")
 	defer span.End()
 	// If the execution engine does not support `GetBlobsV1`, return early to prevent encountering an error later.
-	s.capabilitiesLock.RLock()
-	if !slices.Contains(s.capabilities, GetBlobsV1) {
-		s.capabilitiesLock.RUnlock()
+	if !s.capabilityCache.Has(GetBlobsV1) {
 		return nil, nil
 	}
-	s.capabilitiesLock.RUnlock()
 
 	result := make([]*pb.BlobAndProof, len(versionedHashes))
 	err := s.rpcClient.CallContext(ctx, &result, GetBlobsV1, versionedHashes)
@@ -580,7 +576,7 @@ func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blobs")
 	}
-	if blobs == nil {
+	if len(blobs) == 0 {
 		return nil, nil
 	}
 
@@ -596,11 +592,12 @@ func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.
 			continue
 		}
 
-		blob := blobs[blobIndex]
-		blobIndex++
-		if blob == nil {
+		if blobIndex >= len(blobs) || blobs[blobIndex] == nil {
+			blobIndex++
 			continue
 		}
+		blob := blobs[blobIndex]
+		blobIndex++
 
 		proof, err := blocks.MerkleProofKZGCommitment(blockBody, i)
 		if err != nil {
