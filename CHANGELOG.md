@@ -25,6 +25,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Switch to compounding when consolidating with source==target.
 - Revert block db save when saving state fails.
 - Return false from HasBlock if the block is being synced. 
+- Cleanup forkchoice on failed insertions.
 
 ### Deprecated
 
