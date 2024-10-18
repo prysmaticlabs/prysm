@@ -23,6 +23,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Fix `engine_exchangeCapabilities` implementation.
 - Updated the default `scrape-interval` in `Client-stats` to 2 minutes to accommodate Beaconcha.in API rate limits.
 - Switch to compounding when consolidating with source==target.
+- Revert block db save when saving state fails.
+- Return false from HasBlock if the block is being synced. 
 
 ### Deprecated
 
