@@ -18,7 +18,11 @@ func (s *Service) beaconAggregateProofSubscriber(_ context.Context, msg proto.Me
 		return fmt.Errorf("message was not type ethpb.SignedAggregateAttAndProof, type=%T", msg)
 	}
 
-	aggregate := a.AggregateAttestationAndProof().AggregateVal()
+	agg, err := a.AggregateAttestationAndProof()
+	if err != nil {
+		return err
+	}
+	aggregate := agg.AggregateVal()
 
 	if aggregate == nil || aggregate.GetData() == nil {
 		return errors.New("nil aggregate")

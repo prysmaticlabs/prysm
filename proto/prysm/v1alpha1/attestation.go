@@ -46,7 +46,7 @@ type SignedAggregateAttAndProof interface {
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
-	AggregateAttestationAndProof() AggregateAttAndProof
+	AggregateAttestationAndProof() (AggregateAttAndProof, error)
 	GetSignature() []byte
 }
 
@@ -135,6 +135,11 @@ func (a *Attestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
 	return a.Data.CommitteeIndex, nil
 }
 
+func (a *Attestation) AggregateAttestationAndProof() (AggregateAttAndProof, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // Version --
 func (a *PendingAttestation) Version() int {
 	return version.Phase0
@@ -220,6 +225,11 @@ func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, err
 		return 0, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
 	}
 	return primitives.CommitteeIndex(uint64(indices[0])), nil
+}
+
+func (a *AttestationElectra) AggregateAttestationAndProof() (AggregateAttAndProof, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 // Version --
@@ -341,8 +351,8 @@ func (a *SignedAggregateAttestationAndProof) Version() int {
 }
 
 // AggregateAttestationAndProof --
-func (a *SignedAggregateAttestationAndProof) AggregateAttestationAndProof() AggregateAttAndProof {
-	return a.Message
+func (a *SignedAggregateAttestationAndProof) AggregateAttestationAndProof() (AggregateAttAndProof, error) {
+	return a.Message, nil
 }
 
 // Version --
@@ -351,6 +361,6 @@ func (a *SignedAggregateAttestationAndProofElectra) Version() int {
 }
 
 // AggregateAttestationAndProof --
-func (a *SignedAggregateAttestationAndProofElectra) AggregateAttestationAndProof() AggregateAttAndProof {
-	return a.Message
+func (a *SignedAggregateAttestationAndProofElectra) AggregateAttestationAndProof() (AggregateAttAndProof, error) {
+	return a.Message, nil
 }
