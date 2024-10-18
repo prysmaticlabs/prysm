@@ -61,18 +61,18 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	cfg               *Config
-	ctx               context.Context
-	cancel            context.CancelFunc
-	synced            *abool.AtomicBool
-	chainStarted      *abool.AtomicBool
-	counter           *ratecounter.RateCounter
-	genesisChan       chan time.Time
-	clock             *startup.Clock
-	verifierWaiter    *verification.InitializerWaiter
-	newBlobVerifier   verification.NewBlobVerifier
-	newColumnVerifier verification.NewColumnVerifier
-	ctxMap            sync.ContextByteVersions
+	cfg                    *Config
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	synced                 *abool.AtomicBool
+	chainStarted           *abool.AtomicBool
+	counter                *ratecounter.RateCounter
+	genesisChan            chan time.Time
+	clock                  *startup.Clock
+	verifierWaiter         *verification.InitializerWaiter
+	newBlobVerifier        verification.NewBlobVerifier
+	newDataColumnsVerifier verification.NewDataColumnsVerifier
+	ctxMap                 sync.ContextByteVersions
 }
 
 // Option is a functional option for the initial-sync Service.
@@ -153,7 +153,7 @@ func (s *Service) Start() {
 		return
 	}
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
-	s.newColumnVerifier = newColumnVerifierFromInitializer(v)
+	s.newDataColumnsVerifier = newDataColumnsVerifierFromInitializer(v)
 
 	gt := clock.GenesisTime()
 	if gt.IsZero() {
@@ -460,7 +460,7 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 		if len(sidecars) != len(req) {
 			continue
 		}
-		bv := verification.NewDataColumnBatchVerifier(s.newColumnVerifier, verification.InitsyncColumnSidecarRequirements)
+		bv := verification.NewDataColumnBatchVerifier(s.newDataColumnsVerifier, verification.InitsyncColumnSidecarRequirements)
 		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage, bv, s.cfg.P2P.NodeID())
 		current := s.clock.CurrentSlot()
 		if err := avs.PersistColumns(current, sidecars...); err != nil {
@@ -491,8 +491,8 @@ func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.
 	}
 }
 
-func newColumnVerifierFromInitializer(ini *verification.Initializer) verification.NewColumnVerifier {
-	return func(d blocks.RODataColumn, reqs []verification.Requirement) verification.DataColumnVerifier {
-		return ini.NewColumnVerifier(d, reqs)
+func newDataColumnsVerifierFromInitializer(ini *verification.Initializer) verification.NewDataColumnsVerifier {
+	return func(roDataColumns []blocks.RODataColumn, reqs []verification.Requirement) verification.DataColumnsVerifier {
+		return ini.NewDataColumnsVerifier(roDataColumns, reqs)
 	}
 }

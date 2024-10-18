@@ -202,7 +202,7 @@ func setupDataColumnSamplerTest(t *testing.T, blobCount uint64) (*dataSamplerTes
 	iniWaiter := verification.NewInitializerWaiter(clockSync, nil, nil)
 	ini, err := iniWaiter.WaitForInitializer(context.Background())
 	require.NoError(t, err)
-	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil, newColumnVerifierFromInitializer(ini))
+	sampler := newDataColumnSampler1D(p2pSvc, clock, test.ctxMap, nil, newDataColumnsVerifierFromInitializer(ini))
 
 	return test, sampler
 }

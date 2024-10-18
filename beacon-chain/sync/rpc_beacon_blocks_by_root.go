@@ -56,7 +56,7 @@ func (s *Service) sendBeaconBlocksRequest(
 		defer s.pendingQueueLock.Unlock()
 
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blkRoot); err != nil {
-			return err
+			return errors.Wrapf(err, "insert block to pending queue for block with root %x", blkRoot)
 		}
 
 		return nil
@@ -232,15 +232,26 @@ func (s *Service) requestAndSaveDataColumnSidecars(
 		return err
 	}
 
-	RoBlock, err := blocks.NewROBlock(block)
+	roBlock, err := blocks.NewROBlock(block)
 	if err != nil {
 		return err
 	}
 
+	wrappedBlockDataColumns := make([]verify.WrappedBlockDataColumn, 0, len(sidecars))
 	for _, sidecar := range sidecars {
-		if err := verify.ColumnAlignsWithBlock(sidecar, RoBlock, s.newColumnVerifier); err != nil {
-			return err
+		wrappedBlockDataColumn := verify.WrappedBlockDataColumn{
+			ROBlock:    roBlock,
+			DataColumn: sidecar,
 		}
+
+		wrappedBlockDataColumns = append(wrappedBlockDataColumns, wrappedBlockDataColumn)
+	}
+
+	for _, sidecar := range sidecars {
+		if err := verify.DataColumnsAlignWithBlock(wrappedBlockDataColumns, s.newColumnsVerifier); err != nil {
+			return errors.Wrap(err, "data columns align with block")
+		}
+
 		log.WithFields(logging.DataColumnFields(sidecar)).Debug("Received data column sidecar RPC")
 	}
 

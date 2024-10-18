@@ -60,7 +60,7 @@ type dataColumnSampler1D struct {
 	// peerFromColumn maps a column to the peer responsible for custody.
 	peerFromColumn map[uint64]map[peer.ID]bool
 	// columnVerifier verifies a column according to the specified requirements.
-	columnVerifier verification.NewColumnVerifier
+	columnVerifier verification.NewDataColumnsVerifier
 }
 
 // newDataColumnSampler1D creates a new 1D data column sampler.
@@ -69,7 +69,7 @@ func newDataColumnSampler1D(
 	clock *startup.Clock,
 	ctxMap ContextByteVersions,
 	stateNotifier statefeed.Notifier,
-	colVerifier verification.NewColumnVerifier,
+	colVerifier verification.NewDataColumnsVerifier,
 ) *dataColumnSampler1D {
 	numColumns := params.BeaconConfig().NumberOfColumns
 	peerFromColumn := make(map[uint64]map[peer.ID]bool, numColumns)
@@ -509,7 +509,7 @@ func verifyColumn(
 	root [32]byte,
 	pid peer.ID,
 	requestedColumns map[uint64]bool,
-	columnVerifier verification.NewColumnVerifier,
+	dataColumnsVerifier verification.NewDataColumnsVerifier,
 ) bool {
 	retrievedColumn := roDataColumn.ColumnIndex
 
@@ -538,9 +538,11 @@ func verifyColumn(
 		return false
 	}
 
-	vf := columnVerifier(roDataColumn, verification.SamplingColumnSidecarRequirements)
+	// TODO: Once peer sampling is used, we should verify all sampled data columns in a single batch.
+	verifier := dataColumnsVerifier([]blocks.RODataColumn{roDataColumn}, verification.SamplingColumnSidecarRequirements)
+
 	// Filter out columns which did not pass the KZG inclusion proof verification.
-	if err := vf.SidecarInclusionProven(); err != nil {
+	if err := verifier.SidecarInclusionProven(); err != nil {
 		log.WithFields(logrus.Fields{
 			"peerID": pid,
 			"root":   fmt.Sprintf("%#x", root),
@@ -550,7 +552,7 @@ func verifyColumn(
 	}
 
 	// Filter out columns which did not pass the KZG proof verification.
-	if err := vf.SidecarKzgProofVerified(); err != nil {
+	if err := verifier.SidecarKzgProofVerified(); err != nil {
 		log.WithFields(logrus.Fields{
 			"peerID": pid,
 			"root":   fmt.Sprintf("%#x", root),

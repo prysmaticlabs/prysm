@@ -43,7 +43,7 @@ type BlobBatchVerifier struct {
 }
 
 // VerifiedROBlobs satisfies the das.BlobBatchVerifier interface, used by das.AvailabilityStore.
-func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, blk blocks.ROBlock, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+func (batch *BlobBatchVerifier) VerifiedROBlobs(_ context.Context, blk blocks.ROBlock, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
 	if len(scs) == 0 {
 		return nil, nil
 	}
@@ -97,9 +97,9 @@ func (batch *BlobBatchVerifier) verifyOneBlob(sc blocks.ROBlob) (blocks.Verified
 // NewDataColumnBatchVerifier initializes a data column batch verifier. It requires the caller to correctly specify
 // verification Requirements and to also pass in a NewColumnVerifier, which is a callback function that
 // returns a new ColumnVerifier for handling a single column in the batch.
-func NewDataColumnBatchVerifier(newVerifier NewColumnVerifier, reqs []Requirement) *DataColumnBatchVerifier {
+func NewDataColumnBatchVerifier(newVerifier NewDataColumnsVerifier, reqs []Requirement) *DataColumnBatchVerifier {
 	return &DataColumnBatchVerifier{
-		verifyKzg:   peerdas.VerifyDataColumnSidecarKZGProofs,
+		verifyKzg:   peerdas.VerifyDataColumnsSidecarKZGProofs,
 		newVerifier: newVerifier,
 		reqs:        reqs,
 	}
@@ -112,66 +112,66 @@ func NewDataColumnBatchVerifier(newVerifier NewColumnVerifier, reqs []Requiremen
 // method to ColumnVerifier to verify the kzg commitments of all data column sidecars for a block together, then using the cached
 // result of the batch verification when verifying the individual columns.
 type DataColumnBatchVerifier struct {
-	verifyKzg   rodataColumnCommitmentVerifier
-	newVerifier NewColumnVerifier
+	verifyKzg   rodataColumnsCommitmentVerifier
+	newVerifier NewDataColumnsVerifier
 	reqs        []Requirement
 }
 
 // VerifiedRODataColumns satisfies the das.ColumnBatchVerifier interface, used by das.AvailabilityStore.
-func (batch *DataColumnBatchVerifier) VerifiedRODataColumns(ctx context.Context, blk blocks.ROBlock, scs []blocks.RODataColumn) ([]blocks.VerifiedRODataColumn, error) {
-	if len(scs) == 0 {
+func (batch *DataColumnBatchVerifier) VerifiedRODataColumns(
+	_ context.Context,
+	block blocks.ROBlock,
+	roDataColumns []blocks.RODataColumn,
+) ([]blocks.VerifiedRODataColumn, error) {
+	if len(roDataColumns) == 0 {
 		return nil, nil
 	}
-	blkSig := blk.Signature()
-	// We assume the proposer is validated wrt the block in batch block processing before performing the DA check.
+
+	blockSignature := block.Signature()
+
+	// We assume the proposer is validated wrt. the block in batch block processing before performing the DA check.
 	// So at this stage we just need to make sure the value being signed and signature bytes match the block.
-	for i := range scs {
-		blobSig := bytesutil.ToBytes96(scs[i].SignedBlockHeader.Signature)
-		if blkSig != blobSig {
+	for _, roDataColumn := range roDataColumns {
+		dataColumnSignature := bytesutil.ToBytes96(roDataColumn.SignedBlockHeader.Signature)
+		if blockSignature != dataColumnSignature {
 			return nil, ErrBatchSignatureMismatch
 		}
+
 		// Extra defensive check to make sure the roots match. This should be unnecessary in practice since the root from
 		// the block should be used as the lookup key into the cache of sidecars.
-		if blk.Root() != scs[i].BlockRoot() {
+		if block.Root() != roDataColumn.BlockRoot() {
 			return nil, ErrBatchBlockRootMismatch
 		}
 	}
+
 	// Verify commitments for all columns at once. verifyOneColumn assumes it is only called once this check succeeds.
-	for i := range scs {
-		verified, err := batch.verifyKzg(scs[i])
-		if err != nil {
-			return nil, err
-		}
-		if !verified {
-			return nil, ErrSidecarKzgProofInvalid
-		}
+	verified, err := batch.verifyKzg(roDataColumns)
+	if err != nil {
+		return nil, errors.Wrap(err, "verify KZG")
 	}
 
-	vs := make([]blocks.VerifiedRODataColumn, len(scs))
-	for i := range scs {
-		vb, err := batch.verifyOneColumn(scs[i])
-		if err != nil {
-			return nil, err
-		}
-		vs[i] = vb
+	if !verified {
+		return nil, ErrSidecarKzgProofInvalid
 	}
-	return vs, nil
-}
 
-func (batch *DataColumnBatchVerifier) verifyOneColumn(sc blocks.RODataColumn) (blocks.VerifiedRODataColumn, error) {
-	vb := blocks.VerifiedRODataColumn{}
-	bv := batch.newVerifier(sc, batch.reqs)
+	dataColumnsVerifier := batch.newVerifier(roDataColumns, batch.reqs)
 	// We can satisfy the following 2 requirements immediately because VerifiedROColumns always verifies commitments
 	// and block signature for all columns in the batch before calling verifyOneColumn.
-	bv.SatisfyRequirement(RequireSidecarKzgProofVerified)
-	bv.SatisfyRequirement(RequireValidProposerSignature)
+	dataColumnsVerifier.SatisfyRequirement(RequireSidecarKzgProofVerified)
+	dataColumnsVerifier.SatisfyRequirement(RequireValidProposerSignature)
 
-	if err := bv.DataColumnIndexInBounds(); err != nil {
-		return vb, err
-	}
-	if err := bv.SidecarInclusionProven(); err != nil {
-		return vb, err
+	if err := dataColumnsVerifier.DataColumnsIndexInBounds(); err != nil {
+		return nil, errors.Wrap(err, "data columns index in bounds")
 	}
 
-	return bv.VerifiedRODataColumn()
+	if err := dataColumnsVerifier.SidecarInclusionProven(); err != nil {
+		return nil, errors.Wrap(err, "sidecar inclusion proved")
+	}
+
+	verifiedRODataColumns, err := dataColumnsVerifier.VerifiedRODataColumns()
+	if err != nil {
+		return nil, errors.Wrap(err, "verified RO data columns")
+	}
+
+	return verifiedRODataColumns, nil
 }
