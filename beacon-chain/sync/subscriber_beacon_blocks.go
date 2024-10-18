@@ -106,7 +106,7 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 
 	// Broadcast blob sidecars first than save them to the db
 	for _, sidecar := range blobSidecars {
-		if indices[sidecar.Index] {
+		if sidecar.Index >= uint64(len(indices)) || indices[sidecar.Index] {
 			continue
 		}
 		if err := s.cfg.p2p.BroadcastBlob(ctx, sidecar.Index, sidecar.BlobSidecar); err != nil {
@@ -115,12 +115,13 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 	}
 
 	for _, sidecar := range blobSidecars {
-		if indices[sidecar.Index] {
+		if sidecar.Index >= uint64(len(indices)) || indices[sidecar.Index] {
 			blobExistedInDBCount.Inc()
 			continue
 		}
-		if err := s.cfg.chain.ReceiveBlob(ctx, sidecar); err != nil {
+		if err := s.subscribeBlob(ctx, sidecar); err != nil {
 			log.WithFields(blobFields(sidecar.ROBlob)).WithError(err).Error("Failed to receive blob")
+			continue
 		}
 
 		blobRecoveredFromELCount.Inc()

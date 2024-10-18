@@ -185,7 +185,9 @@ func TestReconstructAndBroadcastBlobs(t *testing.T) {
 					executionReconstructor: &mockExecution.EngineClient{
 						BlobSidecars: tt.blobSidecars,
 					},
+					operationNotifier: &chainMock.MockOperationNotifier{},
 				},
+				seenBlobCache: lruwrpr.New(1),
 			}
 			s.reconstructAndBroadcastBlobs(context.Background(), sb)
 			require.Equal(t, tt.expectedBlobCount, len(chainService.Blobs))
