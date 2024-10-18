@@ -64,7 +64,7 @@ func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 		numBytes := num.Bytes()
 		// pad key at the start with zero bytes to make it into a 32 byte key
 		if len(numBytes) < 32 {
-			emptyBytes := make([]byte, 32-len(numBytes))
+			emptyBytes := make([]byte, 0, 32-len(numBytes))
 			numBytes = append(emptyBytes, numBytes...)
 		}
 		priv, err := bls.SecretKeyFromBytes(numBytes)
