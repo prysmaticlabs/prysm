@@ -310,7 +310,8 @@ func (s *Service) updateConnectedETH1(state bool) {
 	s.updateBeaconNodeStats()
 }
 
-// IsExecutionClientSyncing returns a bool whether the execution client is syncing or not.
+// IsExecutionClientSyncing returns true if the execution client is syncing, otherwise false.
+
 func (s *Service) IsExecutionClientSyncing(ctx context.Context) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.IsExecutionClientSyncing")
 	defer span.End()
