@@ -76,6 +76,7 @@ Updating to this release is recommended at your convenience.
 - fastssz version bump (better error messages).
 - SSE implementation that sheds stuck clients. [pr](https://github.com/prysmaticlabs/prysm/pull/14413)
 - Added GetPoolAttesterSlashingsV2 endpoint.
+- Use engine api get-blobs for block subscriber
 
 ### Changed
 
