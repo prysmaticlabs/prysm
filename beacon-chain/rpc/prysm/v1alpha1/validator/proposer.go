@@ -404,7 +404,7 @@ func (vs *Server) PrepareBeaconProposer(
 	_ context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
 	var validatorIndices []primitives.ValidatorIndex
-
+	beforeCacheSize := vs.TrackedValidatorsCache.Size()
 	for _, r := range request.Recipients {
 		recipient := hexutil.Encode(r.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
@@ -428,7 +428,9 @@ func (vs *Server) PrepareBeaconProposer(
 	}
 	if len(validatorIndices) != 0 {
 		log.WithFields(logrus.Fields{
-			"validatorCount": len(validatorIndices),
+			"validatorCount":                 len(validatorIndices),
+			"previousTotalTrackedValidators": beforeCacheSize,
+			"totalTrackedValidators":         vs.TrackedValidatorsCache.Size(),
 		}).Debug("Updated fee recipient addresses for validator indices")
 	}
 	return &emptypb.Empty{}, nil
