@@ -27,6 +27,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Revert block db save when saving state fails.
 - Return false from HasBlock if the block is being synced. 
 - Cleanup forkchoice on failed insertions.
+- Use read only validator for core processing to avoid unnecessary copying.
 
 ### Deprecated
 
