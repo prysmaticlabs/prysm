@@ -18,7 +18,7 @@ import (
 )
 
 func (s *Store) SaveLightClientUpdate(ctx context.Context, period uint64, update interfaces.LightClientUpdate) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLightClientUpdate")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveLightClientUpdate")
 	defer span.End()
 
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -32,7 +32,7 @@ func (s *Store) SaveLightClientUpdate(ctx context.Context, period uint64, update
 }
 
 func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod uint64) (map[uint64]interfaces.LightClientUpdate, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LightClientUpdates")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LightClientUpdates")
 	defer span.End()
 
 	if startPeriod > endPeriod {
@@ -69,7 +69,7 @@ func (s *Store) LightClientUpdates(ctx context.Context, startPeriod, endPeriod u
 }
 
 func (s *Store) LightClientUpdate(ctx context.Context, period uint64) (interfaces.LightClientUpdate, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.LightClientUpdate")
+	_, span := trace.StartSpan(ctx, "BeaconDB.LightClientUpdate")
 	defer span.End()
 
 	var update interfaces.LightClientUpdate
