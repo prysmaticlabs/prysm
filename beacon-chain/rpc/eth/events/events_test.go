@@ -91,7 +91,7 @@ func requireAllEventsReceived(t *testing.T, stn, opn *mockChain.EventFeedWrapper
 	case <-ctx.Done():
 		t.Fatalf("context canceled / timed out waiting for events, err=%v", ctx.Err())
 	}
-	//require.Equal(t, 0, len(expected), "expected events not seen")
+	require.Equal(t, 0, len(expected), "expected events not seen")
 }
 
 func (tr *topicRequest) testHttpRequest(ctx context.Context, _ *testing.T) *http.Request {
@@ -499,9 +499,35 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 	})
 }
 
-func TestStuckReader(t *testing.T) {
+func TestStuckReaderScenarios(t *testing.T) {
+	cases := []struct {
+		name       string
+		queueDepth func([]*feed.Event) int
+	}{
+		{
+			name: "slow reader - queue overflows",
+			queueDepth: func(events []*feed.Event) int {
+				return len(events) - 1
+			},
+		},
+		{
+			name: "slow reader - all queued, but writer is stuck, write timeout",
+			queueDepth: func(events []*feed.Event) int {
+				return len(events) + 1
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			wedgedWriterTestCase(t, c.queueDepth)
+		})
+	}
+}
+
+func wedgedWriterTestCase(t *testing.T, queueDepth func([]*feed.Event) int) {
 	topics, events := operationEventsFixtures(t)
 	require.Equal(t, 8, len(events))
+
 	// set eventFeedDepth to a number lower than the events we intend to send to force the server to drop the reader.
 	stn := mockChain.NewEventFeedWrapper()
 	opn := mockChain.NewEventFeedWrapper()
@@ -509,7 +535,7 @@ func TestStuckReader(t *testing.T) {
 		EventWriteTimeout: 10 * time.Millisecond,
 		StateNotifier:     &mockChain.SimpleNotifier{Feed: stn},
 		OperationNotifier: &mockChain.SimpleNotifier{Feed: opn},
-		EventFeedDepth:    len(events) - 1,
+		EventFeedDepth:    queueDepth(events),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
