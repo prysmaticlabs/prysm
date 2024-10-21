@@ -28,8 +28,6 @@ func createNonEmptyFinalityBranch() [][]byte {
 func TestIsBetterUpdate(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
-	config := params.MainnetConfig()
-	params.OverrideBeaconConfig(config)
 
 	testCases := []struct {
 		name           string

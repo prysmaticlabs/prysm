@@ -1335,6 +1335,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeCountBiggerThanMax(t *te
 func TestLightClientHandler_GetLightClientUpdatesByRangeStartPeriodBeforeAltair(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.AltairForkEpoch = 1
 	config.EpochsPerSyncCommitteePeriod = 1
@@ -1414,6 +1415,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeStartPeriodBeforeAltair(
 func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.AltairForkEpoch = 0
 	config.EpochsPerSyncCommitteePeriod = 1
@@ -1509,6 +1511,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates(t *testin
 func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates2(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.AltairForkEpoch = 0
 	config.EpochsPerSyncCommitteePeriod = 1
@@ -1598,6 +1601,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRangeMissingUpdates2(t *testi
 func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -1708,6 +1712,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateAltair(t *testing.T) {
 func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -1818,6 +1823,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateCapella(t *testing.T) {
 func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -1928,6 +1934,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdateDeneb(t *testing.T) {
 func TestLightClientHandler_GetLightClientOptimisticUpdateAltair(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.AltairForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -2038,6 +2045,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateAltair(t *testing.T) {
 func TestLightClientHandler_GetLightClientOptimisticUpdateCapella(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -2148,6 +2156,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateCapella(t *testing.T) 
 func TestLightClientHandler_GetLightClientOptimisticUpdateDeneb(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.DenebForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -2258,6 +2267,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdateDeneb(t *testing.T) {
 func TestLightClientHandler_GetLightClientEventBlock(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
@@ -2362,6 +2372,7 @@ func TestLightClientHandler_GetLightClientEventBlock(t *testing.T) {
 func TestLightClientHandler_GetLightClientEventBlock_NeedFetchParent(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
+	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	slot := primitives.Slot(config.CapellaForkEpoch * primitives.Epoch(config.SlotsPerEpoch)).Add(1)
 
