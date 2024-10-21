@@ -45,7 +45,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	bootstrap, err := createLightClientBootstrap(ctx, state, blk)
+	bootstrap, err := createLightClientBootstrap(ctx, s.ChainInfoFetcher.CurrentSlot(), state, blk)
 	if err != nil {
 		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -187,7 +187,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	update, err := newLightClientFinalityUpdateFromBeaconState(ctx, st, block, attestedState, attestedBlock, finalizedBlock)
+	update, err := newLightClientFinalityUpdateFromBeaconState(ctx, s.ChainInfoFetcher.CurrentSlot(), st, block, attestedState, attestedBlock, finalizedBlock)
 	if err != nil {
 		httputil.HandleError(w, "Could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -232,7 +232,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 		return
 	}
 
-	update, err := newLightClientOptimisticUpdateFromBeaconState(ctx, st, block, attestedState, attestedBlock)
+	update, err := newLightClientOptimisticUpdateFromBeaconState(ctx, s.ChainInfoFetcher.CurrentSlot(), st, block, attestedState, attestedBlock)
 	if err != nil {
 		httputil.HandleError(w, "Could not get light client optimistic update: "+err.Error(), http.StatusInternalServerError)
 		return
