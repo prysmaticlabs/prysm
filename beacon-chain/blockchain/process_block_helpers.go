@@ -129,7 +129,12 @@ func (s *Service) sendLightClientFeeds(cfg *postBlockProcessConfig) {
 	}
 }
 
-func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, finalized *forkchoicetypes.Checkpoint, postState state.BeaconState) {
+func (s *Service) tryPublishLightClientFinalityUpdate(
+	ctx context.Context,
+	signed interfaces.ReadOnlySignedBeaconBlock,
+	finalized *forkchoicetypes.Checkpoint,
+	postState state.BeaconState,
+) {
 	if finalized.Epoch <= s.lastPublishedLightClientEpoch {
 		return
 	}
@@ -182,15 +187,15 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 		}
 	}
 
-	update, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(
+	_, err = lightclient.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
+		postState.Slot(),
 		postState,
 		signed,
 		attestedState,
 		attestedBlock,
 		finalizedBlock,
 	)
-
 	if err != nil {
 		return 0, errors.Wrap(err, "could not create light client update")
 	}
@@ -198,7 +203,8 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	// Return the result
 	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    update,
+		// TODO: Get back to this when revisiting events
+		//Data:    update,
 	}
 
 	// Send event
@@ -222,14 +228,14 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 		return 0, errors.Wrap(err, "could not get attested state")
 	}
 
-	update, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(
+	_, err = lightclient.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
+		postState.Slot(),
 		postState,
 		signed,
 		attestedState,
 		attestedBlock,
 	)
-
 	if err != nil {
 		return 0, errors.Wrap(err, "could not create light client update")
 	}
@@ -237,7 +243,8 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 	// Return the result
 	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
 		Version: ethpbv2.Version(signed.Version()),
-		Data:    update,
+		// TODO: Get back to this when revisiting events
+		//Data:    update,
 	}
 
 	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
