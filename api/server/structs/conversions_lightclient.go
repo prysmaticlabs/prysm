@@ -3,26 +3,12 @@ package structs
 import (
 	"encoding/json"
 	"fmt"
-	v2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
-
-func LightClientUpdateResponseFromConsensus(update *v2.LightClientUpdateWithVersion) (*LightClientUpdateResponse, error) {
-	data, err := LightClientUpdateFromConsensus(update.Data)
-	if err != nil {
-		return nil, err
-	}
-
-	return &LightClientUpdateResponse{
-		Version: version.String(int(update.Version)),
-		Data:    data,
-	}, nil
-}
 
 func LightClientUpdateFromConsensus(update interfaces.LightClientUpdate) (*LightClientUpdate, error) {
 	attestedHeader, err := lightClientHeaderToJSON(update.AttestedHeader())
