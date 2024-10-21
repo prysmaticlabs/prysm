@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -342,6 +343,8 @@ func BlockToLightClientHeader(
 	block interfaces.ReadOnlySignedBeaconBlock,
 ) (interfaces.LightClientHeader, error) {
 	var m proto.Message
+	currentEpoch := slots.ToEpoch(currentSlot)
+	blockEpoch := slots.ToEpoch(block.Block().Slot())
 
 	parentRoot := block.Block().ParentRoot()
 	stateRoot := block.Block().StateRoot()
@@ -350,7 +353,6 @@ func BlockToLightClientHeader(
 		return nil, errors.Wrap(err, "could not get body root")
 	}
 
-	currentEpoch := slots.ToEpoch(currentSlot)
 	if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		m = &pb.LightClientHeaderAltair{
 			Beacon: &pb.BeaconBlockHeader{
@@ -362,40 +364,57 @@ func BlockToLightClientHeader(
 			},
 		}
 	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
-		payload, err := block.Block().Body().Execution()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload")
-		}
-		transactionsRoot, err := ComputeTransactionsRoot(payload)
-		if err != nil {
-			return nil, err
-		}
-		withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
-		if err != nil {
-			return nil, err
-		}
+		var payloadHeader *enginev1.ExecutionPayloadHeaderCapella
+		var payloadProof [][]byte
 
-		executionHeader := &enginev1.ExecutionPayloadHeaderCapella{
-			ParentHash:       payload.ParentHash(),
-			FeeRecipient:     payload.FeeRecipient(),
-			StateRoot:        payload.StateRoot(),
-			ReceiptsRoot:     payload.ReceiptsRoot(),
-			LogsBloom:        payload.LogsBloom(),
-			PrevRandao:       payload.PrevRandao(),
-			BlockNumber:      payload.BlockNumber(),
-			GasLimit:         payload.GasLimit(),
-			GasUsed:          payload.GasUsed(),
-			Timestamp:        payload.Timestamp(),
-			ExtraData:        payload.ExtraData(),
-			BaseFeePerGas:    payload.BaseFeePerGas(),
-			BlockHash:        payload.BlockHash(),
-			TransactionsRoot: transactionsRoot,
-			WithdrawalsRoot:  withdrawalsRoot,
-		}
+		if blockEpoch < params.BeaconConfig().CapellaForkEpoch {
+			var ok bool
 
-		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload proof")
+			p, err := execution.EmptyExecutionPayload(version.Capella)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get payload header")
+			}
+			payloadHeader, ok = p.(*enginev1.ExecutionPayloadHeaderCapella)
+			if !ok {
+				return nil, errors.Wrapf(err, "payload header type %T is not %T", payloadHeader, &enginev1.ExecutionPayloadHeaderCapella{})
+			}
+			payloadProof = emptyPayloadProof()
+		} else {
+			payload, err := block.Block().Body().Execution()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload")
+			}
+			transactionsRoot, err := ComputeTransactionsRoot(payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get transactions root")
+			}
+			withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get withdrawals root")
+			}
+
+			payloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
+				ParentHash:       payload.ParentHash(),
+				FeeRecipient:     payload.FeeRecipient(),
+				StateRoot:        payload.StateRoot(),
+				ReceiptsRoot:     payload.ReceiptsRoot(),
+				LogsBloom:        payload.LogsBloom(),
+				PrevRandao:       payload.PrevRandao(),
+				BlockNumber:      payload.BlockNumber(),
+				GasLimit:         payload.GasLimit(),
+				GasUsed:          payload.GasUsed(),
+				Timestamp:        payload.Timestamp(),
+				ExtraData:        payload.ExtraData(),
+				BaseFeePerGas:    payload.BaseFeePerGas(),
+				BlockHash:        payload.BlockHash(),
+				TransactionsRoot: transactionsRoot,
+				WithdrawalsRoot:  withdrawalsRoot,
+			}
+
+			payloadProof, err = blocks.PayloadProof(ctx, block.Block())
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload proof")
+			}
 		}
 
 		m = &pb.LightClientHeaderCapella{
@@ -406,54 +425,77 @@ func BlockToLightClientHeader(
 				StateRoot:     stateRoot[:],
 				BodyRoot:      bodyRoot[:],
 			},
-			Execution:       executionHeader,
-			ExecutionBranch: executionPayloadProof,
+			Execution:       payloadHeader,
+			ExecutionBranch: payloadProof,
 		}
 	} else {
-		payload, err := block.Block().Body().Execution()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload")
-		}
-		transactionsRoot, err := ComputeTransactionsRoot(payload)
-		if err != nil {
-			return nil, err
-		}
-		withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
-		if err != nil {
-			return nil, err
-		}
-		blobGasUsed, err := payload.BlobGasUsed()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get blob gas used")
-		}
-		excessBlobGas, err := payload.ExcessBlobGas()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get excess blob gas")
-		}
+		var payloadHeader *enginev1.ExecutionPayloadHeaderDeneb
+		var payloadProof [][]byte
 
-		executionHeader := &enginev1.ExecutionPayloadHeaderDeneb{
-			ParentHash:       payload.ParentHash(),
-			FeeRecipient:     payload.FeeRecipient(),
-			StateRoot:        payload.StateRoot(),
-			ReceiptsRoot:     payload.ReceiptsRoot(),
-			LogsBloom:        payload.LogsBloom(),
-			PrevRandao:       payload.PrevRandao(),
-			BlockNumber:      payload.BlockNumber(),
-			GasLimit:         payload.GasLimit(),
-			GasUsed:          payload.GasUsed(),
-			Timestamp:        payload.Timestamp(),
-			ExtraData:        payload.ExtraData(),
-			BaseFeePerGas:    payload.BaseFeePerGas(),
-			BlockHash:        payload.BlockHash(),
-			TransactionsRoot: transactionsRoot,
-			WithdrawalsRoot:  withdrawalsRoot,
-			BlobGasUsed:      blobGasUsed,
-			ExcessBlobGas:    excessBlobGas,
-		}
+		if blockEpoch < params.BeaconConfig().CapellaForkEpoch {
+			var ok bool
 
-		executionPayloadProof, err := blocks.PayloadProof(ctx, block.Block())
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get execution payload proof")
+			p, err := execution.EmptyExecutionPayload(version.Deneb)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get payload header")
+			}
+			payloadHeader, ok = p.(*enginev1.ExecutionPayloadHeaderDeneb)
+			if !ok {
+				return nil, errors.Wrapf(err, "payload header type %T is not %T", payloadHeader, &enginev1.ExecutionPayloadHeaderDeneb{})
+			}
+			payloadProof = emptyPayloadProof()
+		} else {
+			payload, err := block.Block().Body().Execution()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload")
+			}
+			transactionsRoot, err := ComputeTransactionsRoot(payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get transactions root")
+			}
+			withdrawalsRoot, err := ComputeWithdrawalsRoot(payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get withdrawals root")
+			}
+
+			var blobGasUsed uint64
+			var excessBlobGas uint64
+
+			if blockEpoch >= params.BeaconConfig().DenebForkEpoch {
+				blobGasUsed, err = payload.BlobGasUsed()
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get blob gas used")
+				}
+				excessBlobGas, err = payload.ExcessBlobGas()
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get excess blob gas")
+				}
+			}
+
+			payloadHeader = &enginev1.ExecutionPayloadHeaderDeneb{
+				ParentHash:       payload.ParentHash(),
+				FeeRecipient:     payload.FeeRecipient(),
+				StateRoot:        payload.StateRoot(),
+				ReceiptsRoot:     payload.ReceiptsRoot(),
+				LogsBloom:        payload.LogsBloom(),
+				PrevRandao:       payload.PrevRandao(),
+				BlockNumber:      payload.BlockNumber(),
+				GasLimit:         payload.GasLimit(),
+				GasUsed:          payload.GasUsed(),
+				Timestamp:        payload.Timestamp(),
+				ExtraData:        payload.ExtraData(),
+				BaseFeePerGas:    payload.BaseFeePerGas(),
+				BlockHash:        payload.BlockHash(),
+				TransactionsRoot: transactionsRoot,
+				WithdrawalsRoot:  withdrawalsRoot,
+				BlobGasUsed:      blobGasUsed,
+				ExcessBlobGas:    excessBlobGas,
+			}
+
+			payloadProof, err = blocks.PayloadProof(ctx, block.Block())
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload proof")
+			}
 		}
 
 		m = &pb.LightClientHeaderDeneb{
@@ -464,10 +506,19 @@ func BlockToLightClientHeader(
 				StateRoot:     stateRoot[:],
 				BodyRoot:      bodyRoot[:],
 			},
-			Execution:       executionHeader,
-			ExecutionBranch: executionPayloadProof,
+			Execution:       payloadHeader,
+			ExecutionBranch: payloadProof,
 		}
 	}
 
 	return light_client.NewWrappedHeader(m)
+}
+
+func emptyPayloadProof() [][]byte {
+	branch := interfaces.LightClientExecutionBranch{}
+	proof := make([][]byte, len(branch))
+	for i, b := range branch {
+		proof[i] = b[:]
+	}
+	return proof
 }
