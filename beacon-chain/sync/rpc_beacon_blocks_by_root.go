@@ -240,18 +240,18 @@ func (s *Service) requestAndSaveDataColumnSidecars(
 	wrappedBlockDataColumns := make([]verify.WrappedBlockDataColumn, 0, len(sidecars))
 	for _, sidecar := range sidecars {
 		wrappedBlockDataColumn := verify.WrappedBlockDataColumn{
-			ROBlock:    roBlock,
-			DataColumn: sidecar,
+			ROBlock:      roBlock.Block(),
+			RODataColumn: sidecar,
 		}
 
 		wrappedBlockDataColumns = append(wrappedBlockDataColumns, wrappedBlockDataColumn)
 	}
 
-	for _, sidecar := range sidecars {
-		if err := verify.DataColumnsAlignWithBlock(wrappedBlockDataColumns, s.newColumnsVerifier); err != nil {
-			return errors.Wrap(err, "data columns align with block")
-		}
+	if err := verify.DataColumnsAlignWithBlock(wrappedBlockDataColumns, s.newColumnsVerifier); err != nil {
+		return errors.Wrap(err, "data columns align with block")
+	}
 
+	for _, sidecar := range sidecars {
 		log.WithFields(logging.DataColumnFields(sidecar)).Debug("Received data column sidecar RPC")
 	}
 

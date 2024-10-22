@@ -1197,8 +1197,8 @@ func (f *blocksFetcher) processDataColumns(
 		}
 
 		wrappedBlockDataColumn := verify.WrappedBlockDataColumn{
-			ROBlock:    block,
-			DataColumn: dataColumn,
+			ROBlock:      block.Block(),
+			RODataColumn: dataColumn,
 		}
 
 		wrappedBlockDataColumns = append(wrappedBlockDataColumns, wrappedBlockDataColumn)
@@ -1217,7 +1217,7 @@ func (f *blocksFetcher) processDataColumns(
 	missingColumnsByRoot := wrappedBwbsMissingColumns.missingColumnsByRoot
 
 	for _, wrappedBlockDataColumn := range wrappedBlockDataColumns {
-		dataColumn := wrappedBlockDataColumn.DataColumn
+		dataColumn := wrappedBlockDataColumn.RODataColumn
 
 		// Extract the block root from the data column.
 		blockRoot := dataColumn.BlockRoot()
@@ -1312,7 +1312,7 @@ func (f *blocksFetcher) fetchDataColumnFromPeer(
 	}
 
 	// Send the request to the peer.
-	roDataColumns, err := prysmsync.SendDataColumnsByRangeRequest(ctx, f.clock, f.p2p, peer, f.ctxMap, request)
+	roDataColumns, err := prysmsync.SendDataColumnSidecarsByRangeRequest(ctx, f.clock, f.p2p, peer, f.ctxMap, request)
 	if err != nil {
 		log.WithError(err).Warning("Fetch data columns from peers - could not send data columns by range request")
 		return

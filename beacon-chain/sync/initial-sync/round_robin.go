@@ -176,8 +176,7 @@ func (s *Service) processFetchedDataRegSync(
 		return
 	}
 	if coreTime.PeerDASIsActive(startSlot) {
-		bv := verification.NewDataColumnBatchVerifier(s.newDataColumnsVerifier, verification.InitsyncColumnSidecarRequirements)
-		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage, bv, s.cfg.P2P.NodeID())
+		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
 		batchFields := logrus.Fields{
 			"firstSlot":        data.bwb[0].Block.Block().Slot(),
 			"firstUnprocessed": bwb[0].Block.Block().Slot(),
@@ -367,8 +366,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	}
 	var aStore das.AvailabilityStore
 	if coreTime.PeerDASIsActive(first.Block().Slot()) {
-		bv := verification.NewDataColumnBatchVerifier(s.newDataColumnsVerifier, verification.InitsyncColumnSidecarRequirements)
-		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage, bv, s.cfg.P2P.NodeID())
+		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
 		s.logBatchSyncStatus(genesis, first, len(bwb))
 		for _, bb := range bwb {
 			if len(bb.Columns) == 0 {

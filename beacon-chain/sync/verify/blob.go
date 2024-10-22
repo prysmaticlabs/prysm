@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 )
@@ -53,8 +54,8 @@ func BlobAlignsWithBlock(blob blocks.ROBlob, block blocks.ROBlock) error {
 }
 
 type WrappedBlockDataColumn struct {
-	ROBlock    blocks.ROBlock
-	DataColumn blocks.RODataColumn
+	ROBlock      interfaces.ReadOnlyBeaconBlock
+	RODataColumn blocks.RODataColumn
 }
 
 func DataColumnsAlignWithBlock(
@@ -62,14 +63,14 @@ func DataColumnsAlignWithBlock(
 	dataColumnsVerifier verification.NewDataColumnsVerifier,
 ) error {
 	for _, wrappedBlockDataColumn := range wrappedBlockDataColumns {
-		dataColumn := wrappedBlockDataColumn.DataColumn
+		dataColumn := wrappedBlockDataColumn.RODataColumn
 		block := wrappedBlockDataColumn.ROBlock
 
 		// Extract the block root from the data column.
 		blockRoot := dataColumn.BlockRoot()
 
 		// Retrieve the KZG commitments from the block.
-		blockKZGCommitments, err := block.Block().Body().BlobKzgCommitments()
+		blockKZGCommitments, err := block.Body().BlobKzgCommitments()
 		if err != nil {
 			return errors.Wrap(err, "blob KZG commitments")
 		}
@@ -95,7 +96,7 @@ func DataColumnsAlignWithBlock(
 
 	dataColumns := make([]blocks.RODataColumn, 0, len(wrappedBlockDataColumns))
 	for _, wrappedBlowrappedBlockDataColumn := range wrappedBlockDataColumns {
-		dataColumn := wrappedBlowrappedBlockDataColumn.DataColumn
+		dataColumn := wrappedBlowrappedBlockDataColumn.RODataColumn
 		dataColumns = append(dataColumns, dataColumn)
 	}
 

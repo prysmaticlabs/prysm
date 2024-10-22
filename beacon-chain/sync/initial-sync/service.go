@@ -27,6 +27,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -460,8 +461,22 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 		if len(sidecars) != len(req) {
 			continue
 		}
-		bv := verification.NewDataColumnBatchVerifier(s.newDataColumnsVerifier, verification.InitsyncColumnSidecarRequirements)
-		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage, bv, s.cfg.P2P.NodeID())
+
+		wrappedBlockDataColumns := make([]verify.WrappedBlockDataColumn, 0, len(sidecars))
+		for _, sidecar := range sidecars {
+			wrappedBlockDataColumn := verify.WrappedBlockDataColumn{
+				ROBlock:      blk.Block(),
+				RODataColumn: sidecar,
+			}
+
+			wrappedBlockDataColumns = append(wrappedBlockDataColumns, wrappedBlockDataColumn)
+		}
+
+		if err := verify.DataColumnsAlignWithBlock(wrappedBlockDataColumns, s.newDataColumnsVerifier); err != nil {
+			return errors.Wrap(err, "data columns align with block")
+		}
+
+		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
 		current := s.clock.CurrentSlot()
 		if err := avs.PersistColumns(current, sidecars...); err != nil {
 			return err
