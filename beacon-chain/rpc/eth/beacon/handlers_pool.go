@@ -58,7 +58,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 
 	isEmptyReq := rawSlot == "" && rawCommitteeIndex == ""
 	bothDefined := rawSlot != "" && rawCommitteeIndex != ""
-	var attsData = json.RawMessage{}
+	var attsData json.RawMessage
 
 	if isEmptyReq {
 		allAtts := make([]*structs.Attestation, len(attestations))
@@ -126,7 +126,7 @@ func (s *Server) ListAttestationsV2(w http.ResponseWriter, r *http.Request) {
 
 	var firstVersion int
 	versionSet := false
-	var attsData = json.RawMessage{}
+	var attsData json.RawMessage
 
 	isEmptyReq := rawSlot == "" && rawCommitteeIndex == ""
 	if isEmptyReq {
@@ -189,6 +189,7 @@ func (s *Server) ListAttestationsV2(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	w.Header().Set(api.VersionHeader, version.String(firstVersion))
 	httputil.WriteJson(w, &structs.ListAttestationsResponse{
 		Version: version.String(firstVersion),
 		Data:    attsData,
