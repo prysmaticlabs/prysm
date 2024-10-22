@@ -526,6 +526,7 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 		Version: version.String(sourceSlashings[0].Version()),
 		Data:    attBytes,
 	}
+	w.Header().Set(api.VersionHeader, version.String(sourceSlashings[0].Version()))
 	httputil.WriteJson(w, resp)
 }
 
