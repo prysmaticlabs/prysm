@@ -639,7 +639,7 @@ func (s *Service) beaconEndpoints(
 			},
 			handler: server.ListAttestationsV2,
 			methods: []string{http.MethodGet},
-		}
+		},
 		{
 			template: "/eth/v1/beacon/pool/attestations",
 			name:     namespace + ".SubmitAttestations",
