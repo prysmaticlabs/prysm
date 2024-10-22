@@ -16,8 +16,8 @@ func TestStore_Insert_PayloadContent(t *testing.T) {
 	s := f.store
 	// The tree root is full
 	fr := [32]byte{}
-	n := s.nodeByRoot[fr]
-	require.Equal(t, true, n.isParentFull())
+	tn := s.emptyNodeByRoot[fr]
+	require.Equal(t, true, tn.block.isParentFull())
 
 	// Insert a child with a payload
 	cr := [32]byte{'a'}
@@ -26,7 +26,7 @@ func TestStore_Insert_PayloadContent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, n.isParentFull())
 	require.Equal(t, s.treeRootNode, n.parent)
-	require.Equal(t, s.nodeByRoot[cr], n)
+	require.Equal(t, s.emptyNodeByRoot[cr], n)
 
 	// Insert a grandchild without a payload
 	gr := [32]byte{'b'}
@@ -87,8 +87,8 @@ func TestStore_Insert_PayloadEnvelope(t *testing.T) {
 	s := f.store
 	// The tree root is full
 	fr := [32]byte{}
-	n := s.nodeByRoot[fr]
-	require.Equal(t, true, n.isParentFull())
+	tn := s.emptyNodeByRoot[fr]
+	require.Equal(t, true, tn.block.isParentFull())
 
 	// Insert a child
 	cr := [32]byte{'a'}
@@ -97,7 +97,7 @@ func TestStore_Insert_PayloadEnvelope(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, n.isParentFull())
 	require.Equal(t, s.treeRootNode, n.parent)
-	require.Equal(t, s.nodeByRoot[cr], n)
+	require.Equal(t, s.emptyNodeByRoot[cr], n)
 	// Insert its payload
 	p := &enginev1.ExecutionPayloadEnvelope{
 		Payload: &enginev1.ExecutionPayloadElectra{
@@ -111,8 +111,8 @@ func TestStore_Insert_PayloadEnvelope(t *testing.T) {
 	e, err := blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayloadEnvelope(e))
-	np := s.nodeByPayload[cp]
-	require.Equal(t, np.root, n.root)
+	np := s.fullNodeByPayload[cp]
+	require.Equal(t, np.block.root, n.root)
 	require.NotEqual(t, np, n)
 
 	// Insert a grandchild without a payload, it's parent is the full node,
@@ -137,9 +137,9 @@ func TestStore_Insert_PayloadEnvelope(t *testing.T) {
 	e, err = blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayloadEnvelope(e))
-	gfn := s.nodeByPayload[gp]
-	require.Equal(t, true, gfn.isParentFull())
-	require.Equal(t, np, gfn.parent)
+	gfn := s.fullNodeByPayload[gp]
+	require.Equal(t, true, gfn.block.isParentFull())
+	require.Equal(t, np, gfn.block.parent)
 
 	// Insert an empty great grandchild based on empty
 	ggr := [32]byte{'c'}
@@ -169,9 +169,9 @@ func TestStore_Insert_PayloadEnvelope(t *testing.T) {
 	e, err = blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayloadEnvelope(e))
-	n = s.nodeByPayload[ggp]
-	require.Equal(t, false, n.isParentFull())
-	require.Equal(t, gn, n.parent)
+	tn = s.fullNodeByPayload[ggp]
+	require.Equal(t, false, tn.block.isParentFull())
+	require.Equal(t, gn, tn.block.parent)
 
 	// Insert the payload for the great grandchild based on full
 	ggfp := [32]byte{'s'}
@@ -187,9 +187,9 @@ func TestStore_Insert_PayloadEnvelope(t *testing.T) {
 	e, err = blocks.WrappedROExecutionPayloadEnvelope(p)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayloadEnvelope(e))
-	n = s.nodeByPayload[ggfp]
-	require.Equal(t, true, n.isParentFull())
-	require.Equal(t, gfn, n.parent)
+	tn = s.fullNodeByPayload[ggfp]
+	require.Equal(t, true, tn.block.isParentFull())
+	require.Equal(t, gfn, tn.block.parent)
 }
 
 func TestGetPTCVote(t *testing.T) {
@@ -208,6 +208,4 @@ func TestGetPTCVote(t *testing.T) {
 	require.Equal(t, primitives.PAYLOAD_ABSENT, f.GetPTCVote())
 	driftGenesisTime(f, 1, 0)
 	require.Equal(t, primitives.PAYLOAD_PRESENT, f.GetPTCVote())
-	n.withheld = true
-	require.Equal(t, primitives.PAYLOAD_WITHHELD, f.GetPTCVote())
 }
