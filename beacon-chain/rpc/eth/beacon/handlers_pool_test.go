@@ -130,7 +130,7 @@ func TestListAttestations(t *testing.T) {
 			s.ListAttestations(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
 			resp := &structs.ListAttestationsResponse{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp.Data))
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Data)
 
@@ -147,7 +147,7 @@ func TestListAttestations(t *testing.T) {
 			s.ListAttestations(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
 			resp := &structs.ListAttestationsResponse{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp.Data))
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Data)
 
@@ -167,7 +167,7 @@ func TestListAttestations(t *testing.T) {
 			s.ListAttestations(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
 			resp := &structs.ListAttestationsResponse{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp.Data))
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Data)
 
@@ -187,7 +187,7 @@ func TestListAttestations(t *testing.T) {
 			s.ListAttestations(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
 			resp := &structs.ListAttestationsResponse{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp.Data))
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 			require.NotNil(t, resp)
 			require.NotNil(t, resp.Data)
 
@@ -402,7 +402,7 @@ func TestListAttestations(t *testing.T) {
 				require.NotNil(t, resp)
 				require.NotNil(t, resp.Data)
 
-				var atts []*structs.Attestation
+				var atts []*structs.AttestationElectra
 				require.NoError(t, json.Unmarshal(resp.Data, &atts))
 				assert.Equal(t, 2, len(atts))
 				assert.Equal(t, "electra", resp.Version)
@@ -423,7 +423,7 @@ func TestListAttestations(t *testing.T) {
 				require.NotNil(t, resp)
 				require.NotNil(t, resp.Data)
 
-				var atts []*structs.Attestation
+				var atts []*structs.AttestationElectra
 				require.NoError(t, json.Unmarshal(resp.Data, &atts))
 				assert.Equal(t, 2, len(atts))
 				assert.Equal(t, "electra", resp.Version)
@@ -444,7 +444,7 @@ func TestListAttestations(t *testing.T) {
 				require.NotNil(t, resp)
 				require.NotNil(t, resp.Data)
 
-				var atts []*structs.Attestation
+				var atts []*structs.AttestationElectra
 				require.NoError(t, json.Unmarshal(resp.Data, &atts))
 				assert.Equal(t, 1, len(atts))
 				assert.Equal(t, "electra", resp.Version)
