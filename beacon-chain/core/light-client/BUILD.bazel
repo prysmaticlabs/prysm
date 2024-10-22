@@ -30,13 +30,7 @@ go_test(
     srcs = ["lightclient_test.go"],
     deps = [
         ":go_default_library",
-        "//config/fieldparams:go_default_library",
-        "//consensus-types:go_default_library",
-        "//consensus-types/blocks:go_default_library",
-        "//encoding/ssz:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
     ],
 )

@@ -159,7 +159,7 @@ func NewLightClientUpdateFromBeaconState(
 	updateAttestedPeriod := slots.SyncCommitteePeriod(slots.ToEpoch(attestedBlock.Block().Slot()))
 
 	// update = LightClientUpdate()
-	result, err := createDefaultLightClientUpdate(currentSlot)
+	result, err := CreateDefaultLightClientUpdate(currentSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create default light client update")
 	}
@@ -239,7 +239,7 @@ func NewLightClientUpdateFromBeaconState(
 	return result, nil
 }
 
-func createDefaultLightClientUpdate(currentSlot primitives.Slot) (interfaces.LightClientUpdate, error) {
+func CreateDefaultLightClientUpdate(currentSlot primitives.Slot) (interfaces.LightClientUpdate, error) {
 	currentEpoch := slots.ToEpoch(currentSlot)
 
 	syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
@@ -274,24 +274,28 @@ func createDefaultLightClientUpdate(currentSlot primitives.Slot) (interfaces.Lig
 	var m proto.Message
 	if currentEpoch < params.BeaconConfig().CapellaForkEpoch {
 		m = &pb.LightClientUpdateAltair{
+			AttestedHeader:          &pb.LightClientHeaderAltair{},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
 		m = &pb.LightClientUpdateCapella{
+			AttestedHeader:          &pb.LightClientHeaderCapella{},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	} else if currentEpoch < params.BeaconConfig().ElectraForkEpoch {
 		m = &pb.LightClientUpdateDeneb{
+			AttestedHeader:          &pb.LightClientHeaderDeneb{},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	} else {
 		m = &pb.LightClientUpdateElectra{
+			AttestedHeader:          &pb.LightClientHeaderDeneb{},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
