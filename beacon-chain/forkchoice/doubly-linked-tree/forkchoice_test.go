@@ -98,9 +98,9 @@ func TestForkChoice_UpdateBalancesPositiveChange(t *testing.T) {
 	f.justifiedBalances = []uint64{10, 20, 30}
 	require.NoError(t, f.updateBalances())
 	s := f.store
-	assert.Equal(t, uint64(10), s.nodeByRoot[indexToHash(1)].balance)
-	assert.Equal(t, uint64(20), s.nodeByRoot[indexToHash(2)].balance)
-	assert.Equal(t, uint64(30), s.nodeByRoot[indexToHash(3)].balance)
+	assert.Equal(t, uint64(10), s.emptyNodeByRoot[indexToHash(1)].balance)
+	assert.Equal(t, uint64(20), s.emptyNodeByRoot[indexToHash(2)].balance)
+	assert.Equal(t, uint64(30), s.emptyNodeByRoot[indexToHash(3)].balance)
 }
 
 func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
@@ -116,9 +116,9 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 	s := f.store
-	s.nodeByRoot[indexToHash(1)].balance = 100
-	s.nodeByRoot[indexToHash(2)].balance = 100
-	s.nodeByRoot[indexToHash(3)].balance = 100
+	s.emptyNodeByRoot[indexToHash(1)].balance = 100
+	s.emptyNodeByRoot[indexToHash(2)].balance = 100
+	s.emptyNodeByRoot[indexToHash(3)].balance = 100
 
 	f.balances = []uint64{100, 100, 100}
 	f.votes = []Vote{
@@ -129,9 +129,9 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 
 	f.justifiedBalances = []uint64{10, 20, 30}
 	require.NoError(t, f.updateBalances())
-	assert.Equal(t, uint64(10), s.nodeByRoot[indexToHash(1)].balance)
-	assert.Equal(t, uint64(20), s.nodeByRoot[indexToHash(2)].balance)
-	assert.Equal(t, uint64(30), s.nodeByRoot[indexToHash(3)].balance)
+	assert.Equal(t, uint64(10), s.emptyNodeByRoot[indexToHash(1)].balance)
+	assert.Equal(t, uint64(20), s.emptyNodeByRoot[indexToHash(2)].balance)
+	assert.Equal(t, uint64(30), s.emptyNodeByRoot[indexToHash(3)].balance)
 }
 
 func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
@@ -147,9 +147,9 @@ func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 	s := f.store
-	s.nodeByRoot[indexToHash(1)].balance = 100
-	s.nodeByRoot[indexToHash(2)].balance = 100
-	s.nodeByRoot[indexToHash(3)].balance = 100
+	s.emptyNodeByRoot[indexToHash(1)].balance = 100
+	s.emptyNodeByRoot[indexToHash(2)].balance = 100
+	s.emptyNodeByRoot[indexToHash(3)].balance = 100
 
 	f.balances = []uint64{125, 125, 125}
 	f.votes = []Vote{
@@ -160,9 +160,9 @@ func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
 
 	f.justifiedBalances = []uint64{10, 20, 30}
 	require.NoError(t, f.updateBalances())
-	assert.Equal(t, uint64(0), s.nodeByRoot[indexToHash(1)].balance)
-	assert.Equal(t, uint64(0), s.nodeByRoot[indexToHash(2)].balance)
-	assert.Equal(t, uint64(5), s.nodeByRoot[indexToHash(3)].balance)
+	assert.Equal(t, uint64(0), s.emptyNodeByRoot[indexToHash(1)].balance)
+	assert.Equal(t, uint64(0), s.emptyNodeByRoot[indexToHash(2)].balance)
+	assert.Equal(t, uint64(5), s.emptyNodeByRoot[indexToHash(3)].balance)
 }
 
 func TestForkChoice_IsCanonical(t *testing.T) {
@@ -218,20 +218,20 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 
-	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
+	f.store.emptyNodeByRoot[[32]byte{'3'}].balance = 10
 	require.NoError(t, f.store.treeRootNode.applyWeightChanges(ctx))
-	require.Equal(t, uint64(10), f.store.nodeByRoot[[32]byte{'1'}].weight)
-	require.Equal(t, uint64(0), f.store.nodeByRoot[[32]byte{'2'}].weight)
+	require.Equal(t, uint64(10), f.store.emptyNodeByRoot[[32]byte{'1'}].weight)
+	require.Equal(t, uint64(0), f.store.emptyNodeByRoot[[32]byte{'2'}].weight)
 
 	require.NoError(t, f.store.treeRootNode.updateBestDescendant(ctx, 1, 1, 1))
-	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRootNode.bestDescendant.root)
+	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRootNode.bestDescendant.block.root)
 
 	r1 := [32]byte{'1'}
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: r1}
 	h, err := f.store.head(ctx)
 	require.NoError(t, err)
 	require.DeepEqual(t, [32]byte{'3'}, h)
-	require.DeepEqual(t, h, f.store.headNode.root)
+	require.DeepEqual(t, h, f.store.headNode.block.root)
 
 	require.Equal(t, true, f.IsCanonical(params.BeaconConfig().ZeroHash))
 	require.Equal(t, true, f.IsCanonical([32]byte{'1'}))
@@ -254,8 +254,8 @@ func TestForkChoice_AncestorRoot(t *testing.T) {
 	st, blkRoot, err = prepareForkchoiceState(ctx, 5, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
-	f.store.treeRootNode = f.store.nodeByRoot[indexToHash(1)]
-	f.store.treeRootNode.parent = nil
+	f.store.treeRootNode = f.store.emptyNodeByRoot[indexToHash(1)]
+	f.store.treeRootNode.block.parent = nil
 
 	r, err := f.AncestorRoot(ctx, indexToHash(3), 6)
 	assert.NoError(t, err)
@@ -336,21 +336,21 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 
 	// Process b's slashing, c is now head
 	f.InsertSlashedIndex(ctx, 1)
-	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
+	require.Equal(t, uint64(200), f.store.emptyNodeByRoot[[32]byte{'b'}].balance)
 	f.justifiedBalances = []uint64{100, 200, 200, 300}
 	head, err = f.Head(ctx)
-	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
-	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
+	require.Equal(t, uint64(200), f.store.emptyNodeByRoot[[32]byte{'b'}].weight)
+	require.Equal(t, uint64(300), f.store.emptyNodeByRoot[[32]byte{'c'}].weight)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
 	// Process b's slashing again, should be a noop
 	f.InsertSlashedIndex(ctx, 1)
-	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
+	require.Equal(t, uint64(200), f.store.emptyNodeByRoot[[32]byte{'b'}].balance)
 	f.justifiedBalances = []uint64{100, 200, 200, 300}
 	head, err = f.Head(ctx)
-	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
-	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
+	require.Equal(t, uint64(200), f.store.emptyNodeByRoot[[32]byte{'b'}].weight)
+	require.Equal(t, uint64(300), f.store.emptyNodeByRoot[[32]byte{'c'}].weight)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
@@ -576,16 +576,18 @@ func TestStore_CommonAncestor(t *testing.T) {
 	_, _, err = f.CommonAncestor(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	n := &Node{
-		slot:                     100,
-		root:                     [32]byte{'y'},
-		justifiedEpoch:           1,
-		unrealizedJustifiedEpoch: 1,
-		finalizedEpoch:           1,
-		unrealizedFinalizedEpoch: 1,
-		optimistic:               true,
+		block: &BlockNode{
+			slot:                     100,
+			root:                     [32]byte{'y'},
+			justifiedEpoch:           1,
+			unrealizedJustifiedEpoch: 1,
+			finalizedEpoch:           1,
+			unrealizedFinalizedEpoch: 1,
+		},
+		optimistic: true,
 	}
 
-	f.store.nodeByRoot[[32]byte{'y'}] = n
+	f.store.emptyNodeByRoot[[32]byte{'y'}] = n
 	// broken link
 	_, _, err = f.CommonAncestor(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
@@ -731,7 +733,7 @@ func TestWeight(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 
-	n, ok := f.store.nodeByRoot[root]
+	n, ok := f.store.emptyNodeByRoot[root]
 	require.Equal(t, true, ok)
 	n.weight = 10
 	w, err := f.Weight(root)
@@ -937,7 +939,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			name: "Update PTC votes - all present",
 			setupStore: func(s *Store) {
 				root := [32]byte{1, 2, 3}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
+				s.emptyNodeByRoot[root] = &Node{block: &BlockNode{root: root, ptcVote: make(map[primitives.PTCStatus]uint64)}}
 			},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
@@ -955,7 +957,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			name: "Update PTC votes - all withheld",
 			setupStore: func(s *Store) {
 				root := [32]byte{4, 5, 6}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
+				s.emptyNodeByRoot[root] = &Node{block: &BlockNode{root: root, ptcVote: make(map[primitives.PTCStatus]uint64)}}
 			},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
@@ -973,7 +975,7 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			name: "Update PTC votes - partial attestation",
 			setupStore: func(s *Store) {
 				root := [32]byte{7, 8, 9}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: make([]primitives.PTCStatus, fieldparams.PTCSize)}
+				s.emptyNodeByRoot[root] = &Node{block: &BlockNode{root: root, ptcVote: make(map[primitives.PTCStatus]uint64)}}
 			},
 			payloadAttestation: &ethpb.PayloadAttestation{
 				Data: &ethpb.PayloadAttestationData{
@@ -997,44 +999,12 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 			}(),
 			expectedBoosts: noBoosts,
 		},
-		{
-			name: "Update PTC votes - no change for already set votes",
-			setupStore: func(s *Store) {
-				root := [32]byte{10, 11, 12}
-				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := range votes {
-					if i%2 == 0 {
-						votes[i] = primitives.PAYLOAD_PRESENT
-					}
-				}
-				s.nodeByRoot[root] = &Node{root: root, ptcVote: votes}
-			},
-			payloadAttestation: &ethpb.PayloadAttestation{
-				Data: &ethpb.PayloadAttestationData{
-					BeaconBlockRoot: []byte{10, 11, 12},
-					PayloadStatus:   primitives.PAYLOAD_WITHHELD,
-				},
-				AggregationBits: setAllBits(bitfield.NewBitvector512()),
-			},
-			expectedPTCVotes: func() []primitives.PTCStatus {
-				votes := make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := range votes {
-					if i%2 == 0 {
-						votes[i] = primitives.PAYLOAD_PRESENT
-					} else {
-						votes[i] = primitives.PAYLOAD_WITHHELD
-					}
-				}
-				return votes
-			}(),
-			expectedBoosts: noBoosts,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{
-				nodeByRoot: make(map[[32]byte]*Node),
+				emptyNodeByRoot: make(map[[32]byte]*Node),
 			}
 			tt.setupStore(s)
 
@@ -1044,8 +1014,8 @@ func TestStore_UpdateVotesOnPayloadAttestation(t *testing.T) {
 				require.ErrorIs(t, err, ErrNilNode, "Expected ErrNilNode")
 			} else {
 				require.NoError(t, err)
-				node := s.nodeByRoot[bytesutil.ToBytes32(tt.payloadAttestation.Data.BeaconBlockRoot)]
-				assert.DeepEqual(t, tt.expectedPTCVotes, node.ptcVote, "Unexpected PTC votes")
+				node := s.emptyNodeByRoot[bytesutil.ToBytes32(tt.payloadAttestation.Data.BeaconBlockRoot)]
+				assert.DeepEqual(t, tt.expectedPTCVotes, node.block.ptcVote, "Unexpected PTC votes")
 				assert.Equal(t, tt.expectedBoosts(s), true, "Unexpected boost values")
 			}
 		})
@@ -1069,53 +1039,45 @@ func noBoosts(s *Store) bool {
 func TestStore_UpdatePayloadBoosts(t *testing.T) {
 	tests := []struct {
 		name                  string
-		setupNode             func(*Node)
+		setupNode             func(*BlockNode)
 		expectedRevealBoost   [32]byte
 		expectedWithholdBoost [32]byte
 		expectedWithholdFull  bool
 	}{
 		{
 			name: "No boost",
-			setupNode: func(n *Node) {
-				n.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
+			setupNode: func(n *BlockNode) {
+				n.ptcVote = make(map[primitives.PTCStatus]uint64)
 			},
 		},
 		{
 			name: "Reveal boost",
-			setupNode: func(n *Node) {
+			setupNode: func(n *BlockNode) {
 				n.root = [32]byte{1, 2, 3}
-				n.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := 0; i < int(params.BeaconConfig().PayloadTimelyThreshold)+1; i++ {
-					n.ptcVote[i] = primitives.PAYLOAD_PRESENT
-				}
+				n.ptcVote = make(map[primitives.PTCStatus]uint64)
+				n.ptcVote[primitives.PAYLOAD_PRESENT] = params.BeaconConfig().PayloadTimelyThreshold + 1
 			},
 			expectedRevealBoost: [32]byte{1, 2, 3},
 		},
 		{
 			name: "Withhold boost",
-			setupNode: func(n *Node) {
-				n.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := 0; i < int(params.BeaconConfig().PayloadTimelyThreshold)+1; i++ {
-					n.ptcVote[i] = primitives.PAYLOAD_WITHHELD
-				}
-				n.parent = &Node{root: [32]byte{4, 5, 6}, payloadHash: [32]byte{7, 8, 9}}
+			setupNode: func(n *BlockNode) {
+				n.ptcVote = make(map[primitives.PTCStatus]uint64)
+				n.ptcVote[primitives.PAYLOAD_WITHHELD] = params.BeaconConfig().PayloadTimelyThreshold + 1
+				n.parent = &Node{block: &BlockNode{root: [32]byte{4, 5, 6}, payloadHash: [32]byte{7, 8, 9}}}
 			},
 			expectedWithholdBoost: [32]byte{4, 5, 6},
 			expectedWithholdFull:  true,
 		},
 		{
 			name: "Reveal boost with early return",
-			setupNode: func(n *Node) {
+			setupNode: func(n *BlockNode) {
 				n.root = [32]byte{1, 2, 3}
-				n.ptcVote = make([]primitives.PTCStatus, fieldparams.PTCSize)
-				for i := 0; i < int(params.BeaconConfig().PayloadTimelyThreshold)+1; i++ {
-					n.ptcVote[i] = primitives.PAYLOAD_PRESENT
-				}
+				n.ptcVote = make(map[primitives.PTCStatus]uint64)
+				n.ptcVote[primitives.PAYLOAD_PRESENT] = params.BeaconConfig().PayloadTimelyThreshold + 1
 				// Set up conditions for withhold boost, which should not be applied due to early return
-				n.parent = &Node{root: [32]byte{4, 5, 6}, payloadHash: [32]byte{7, 8, 9}}
-				for i := int(params.BeaconConfig().PayloadTimelyThreshold) + 1; i < fieldparams.PTCSize; i++ {
-					n.ptcVote[i] = primitives.PAYLOAD_WITHHELD
-				}
+				n.parent = &Node{block: &BlockNode{root: [32]byte{4, 5, 6}, payloadHash: [32]byte{7, 8, 9}}}
+				n.ptcVote[primitives.PAYLOAD_WITHHELD] = params.BeaconConfig().PayloadTimelyThreshold - 1
 			},
 			expectedRevealBoost:   [32]byte{1, 2, 3},
 			expectedWithholdBoost: [32]byte{}, // Should remain zero due to early return
@@ -1126,7 +1088,7 @@ func TestStore_UpdatePayloadBoosts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Store{}
-			n := &Node{}
+			n := &BlockNode{}
 			tt.setupNode(n)
 
 			s.updatePayloadBoosts(n)
