@@ -405,6 +405,20 @@ func (s *Service) hasBadBlock(root [32]byte) bool {
 	return seen
 }
 
+// seenBlockRoot returns true if the block is marked as a bad block or if not, if the block is
+// in forkchoice
+func (s *Service) seenBlockRoot(root [32]byte) bool {
+	if s.hasBadBlock(root) {
+		return true
+	}
+	return s.cfg.chain.InForkchoice(root)
+}
+
+// seenBlockHash returns true if the block hash is seen in the fork choice store.
+func (s *Service) seenBlockHash(hash [32]byte) bool {
+	return s.cfg.chain.HashInForkchoice(hash)
+}
+
 // Set bad block in the cache.
 func (s *Service) setBadBlock(ctx context.Context, root [32]byte) {
 	s.badBlockLock.Lock()

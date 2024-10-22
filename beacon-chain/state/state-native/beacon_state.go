@@ -57,6 +57,11 @@ type BeaconState struct {
 	latestExecutionPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
 	nextWithdrawalIndex                 uint64
 	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
+	// ePBS fields
+	latestBlockHash                  [32]byte
+	latestFullSlot                   primitives.Slot
+	latestExecutionPayloadHeaderEPBS *enginev1.ExecutionPayloadHeaderEPBS
+	lastWithdrawalsRoot              [32]byte
 
 	// Electra fields
 	depositRequestsStartIndex     uint64

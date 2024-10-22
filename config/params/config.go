@@ -70,10 +70,15 @@ type BeaconChainConfig struct {
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost              uint64           `yaml:"PROPOSER_SCORE_BOOST" spec:"true"`                // ProposerScoreBoost defines a value that is a % of the committee weight for fork-choice boosting.
+	ProposerScoreBoostEPBS          uint64           `yaml:"PROPOSER_SCORE_BOOST_EPBS" spec:"true"`           // ProposerScoreBoostEPBS defines a value that is a % of the committee weight for fork-choice boosting.
 	ReorgWeightThreshold            uint64           `yaml:"REORG_WEIGHT_THRESHOLD" spec:"true"`              // ReorgWeightThreshold defines a value that is a % of the committee weight to consider a block weak and subject to being orphaned.
 	ReorgParentWeightThreshold      uint64           `yaml:"REORG_PARENT_WEIGHT_THRESHOLD" spec:"true"`       // ReorgParentWeightThreshold defines a value that is a % of the committee weight to consider a parent block strong and subject its child to being orphaned.
 	ReorgMaxEpochsSinceFinalization primitives.Epoch `yaml:"REORG_MAX_EPOCHS_SINCE_FINALIZATION" spec:"true"` // This defines a limit to consider safe to orphan a block if the network is finalizing
 	IntervalsPerSlot                uint64           `yaml:"INTERVALS_PER_SLOT" spec:"true"`                  // IntervalsPerSlot defines the number of fork choice intervals in a slot defined in the fork choice spec.
+	IntervalsPerSlotEPBS            uint64           `yaml:"INTERVALS_PER_SLOT_EPBS" spec:"true"`             // IntervalsPerSlotEPBS defines the number of fork choice intervals in a slot defined in the fork choice spec from EIP-7732.
+	PayloadWithholdBoost            uint64           `yaml:"PAYLOAD_WITHHOLD_BOOST" spec:"true"`              // PayloadWithholdBoost define a value that is the score boost given when a payload is withheld by the builder
+	PayloadRevealBoost              uint64           `yaml:"PAYLOAD_REVEAL_BOOST" spec:"true"`                // PayloadRevealBoost a value that is the score boost given when a payload is revealed by the builder
+	PayloadTimelyThreshold          uint64           `yaml:"PAYLOAD_TIMELY_THRESHOLD" spec:"true"`            // PayloadTimelyThreshold is the threshold for considering a payload timely.
 
 	// Ethereum PoW parameters.
 	DepositChainID         uint64 `yaml:"DEPOSIT_CHAIN_ID" spec:"true"`         // DepositChainID of the eth1 network. This used for replay protection.
@@ -125,6 +130,8 @@ type BeaconChainConfig struct {
 	DomainApplicationMask             [4]byte `yaml:"DOMAIN_APPLICATION_MASK" spec:"true"`               // DomainApplicationMask defines the BLS signature domain for application mask.
 	DomainApplicationBuilder          [4]byte `yaml:"DOMAIN_APPLICATION_BUILDER" spec:"true"`            // DomainApplicationBuilder defines the BLS signature domain for application builder.
 	DomainBLSToExecutionChange        [4]byte `yaml:"DOMAIN_BLS_TO_EXECUTION_CHANGE" spec:"true"`        // DomainBLSToExecutionChange defines the BLS signature domain to change withdrawal addresses to ETH1 prefix
+	DomainBeaconBuilder               [4]byte `yaml:"DOMAIN_BEACON_BUILDER" spec:"false"`                // DomainBeaconBuilder defines the BLS signature domain used by builders [New in ePBS]
+	DomainPTCAttester                 [4]byte `yaml:"DOMAIN_PTC_ATTESTER" spec:"false"`                  // DomainPTCAttester defines the BLS signature domain used by PTC members [New in ePBS]
 
 	// Prysm constants.
 	GenesisValidatorsRoot          [32]byte        // GenesisValidatorsRoot is the root hash of the genesis validators.
@@ -146,6 +153,7 @@ type BeaconChainConfig struct {
 	BeaconStateCapellaFieldCount   int             // BeaconStateCapellaFieldCount defines how many fields are in beacon state post upgrade to Capella.
 	BeaconStateDenebFieldCount     int             // BeaconStateDenebFieldCount defines how many fields are in beacon state post upgrade to Deneb.
 	BeaconStateElectraFieldCount   int             // BeaconStateElectraFieldCount defines how many fields are in beacon state post upgrade to Electra.
+	BeaconStateEpbsFieldCount      int             // BeaconStateEpbsFieldCount defines how many fields are in beacon state post upgrade to ePBS.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    primitives.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -166,6 +174,8 @@ type BeaconChainConfig struct {
 	DenebForkEpoch       primitives.Epoch `yaml:"DENEB_FORK_EPOCH" spec:"true"`       // DenebForkEpoch is used to represent the assigned fork epoch for deneb.
 	ElectraForkVersion   []byte           `yaml:"ELECTRA_FORK_VERSION" spec:"true"`   // ElectraForkVersion is used to represent the fork version for deneb.
 	ElectraForkEpoch     primitives.Epoch `yaml:"ELECTRA_FORK_EPOCH" spec:"true"`     // ElectraForkEpoch is used to represent the assigned fork epoch for deneb.
+	EPBSForkVersion      []byte           `yaml:"EPBS_FORK_VERSION" spec:"true"`      // EPBSForkVersion is used to represent the fork version for ePBS.
+	EPBSForkEpoch        primitives.Epoch `yaml:"EPBS_FORK_EPOCH" spec:"true"`        // EPBSForkEpoch is used to represent the assigned fork epoch for ePBS.
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]primitives.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string           // Human-readable names of fork versions.
@@ -276,6 +286,9 @@ type BeaconChainConfig struct {
 	// PeerDAS
 	NumberOfColumns          uint64 `yaml:"NUMBER_OF_COLUMNS" spec:"true"`            // NumberOfColumns in the extended data matrix.
 	MaxCellsInExtendedMatrix uint64 `yaml:"MAX_CELLS_IN_EXTENDED_MATRIX" spec:"true"` // MaxCellsInExtendedMatrix is the full data of one-dimensional erasure coding extended blobs (in row major format).
+
+	// Builder
+	MinBuilderBalance uint64 `yaml:"MIN_BUILDER_BALANCE" spec:"true"` // MinBuilderBalance defines the minimal builder balance to accept bid from.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
@@ -293,6 +306,7 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	fvs[bytesutil.ToBytes4(b.CapellaForkVersion)] = b.CapellaForkEpoch
 	fvs[bytesutil.ToBytes4(b.DenebForkVersion)] = b.DenebForkEpoch
 	fvs[bytesutil.ToBytes4(b.ElectraForkVersion)] = b.ElectraForkEpoch
+	fvs[bytesutil.ToBytes4(b.EPBSForkVersion)] = b.EPBSForkEpoch
 	return fvs
 }
 
@@ -315,6 +329,7 @@ func ConfigForkVersions(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 		bytesutil.ToBytes4(b.CapellaForkVersion):   version.Capella,
 		bytesutil.ToBytes4(b.DenebForkVersion):     version.Deneb,
 		bytesutil.ToBytes4(b.ElectraForkVersion):   version.Electra,
+		bytesutil.ToBytes4(b.EPBSForkVersion):      version.EPBS,
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
@@ -24,7 +25,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/testing/util/random"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func TestService_Broadcast(t *testing.T) {
@@ -518,4 +521,81 @@ func TestService_BroadcastBlob(t *testing.T) {
 	// Broadcast to peers and wait.
 	require.NoError(t, p.BroadcastBlob(ctx, subnet, blobSidecar))
 	require.Equal(t, false, util.WaitTimeout(&wg, 1*time.Second), "Failed to receive pubsub within 1s")
+}
+
+func TestService_BroadcastExecutionPayloadHeader(t *testing.T) {
+	msg := random.SignedExecutionPayloadHeader(t)
+	testBroadcast(t, SignedExecutionPayloadHeaderTopicFormat, msg)
+}
+
+func TestService_BroadcastExecutionPayloadEnvelope(t *testing.T) {
+	msg := random.SignedExecutionPayloadEnvelope(t)
+	testBroadcast(t, SignedExecutionPayloadEnvelopeTopicFormat, msg)
+}
+
+func TestService_BroadcastPayloadAttestationMessage(t *testing.T) {
+	msg := random.PayloadAttestationMessage(t)
+	testBroadcast(t, PayloadAttestationMessageTopicFormat, msg)
+}
+
+func testBroadcast(t *testing.T, topicFormat string, msg interface{}) {
+	// Create two peers and let them connect.
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+
+	if len(p1.BHost.Network().Peers()) == 0 {
+		t.Fatal("No peers")
+	}
+
+	// Create a `Service` for the first peer.
+	s1 := &Service{
+		host:                  p1.BHost,
+		pubsub:                p1.PubSub(),
+		joinedTopics:          map[string]*pubsub.Topic{},
+		cfg:                   &Config{},
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			ScorerParams: &scorers.Config{},
+		}),
+	}
+
+	// The second peer subscribes to the topic.
+	digest, err := s1.currentForkDigest()
+	require.NoError(t, err)
+	topic := fmt.Sprintf(topicFormat, digest) + s1.Encoding().ProtocolSuffix()
+	subscription, err := p2.SubscribeToTopic(topic)
+	require.NoError(t, err)
+
+	time.Sleep(50 * time.Millisecond) // Wait for libp2p to be set up.
+
+	// Start a goroutine listening for a pubsub message.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		incomingMessage, err := subscription.Next(ctx)
+		require.NoError(t, err)
+
+		result, ok := msg.(ssz.Unmarshaler)
+		require.Equal(t, true, ok)
+		require.NoError(t, s1.Encoding().DecodeGossip(incomingMessage.Data, result))
+		require.DeepEqual(t, result, msg)
+	}()
+
+	// An attempt to broadcast a message unmapped to a topic should fail.
+	ctx := context.Background()
+	require.ErrorContains(t, "message type is not mapped to a PubSub topic", s1.Broadcast(ctx, nil))
+
+	// The first peer broadcasts the message to the second peer.
+	require.NoError(t, s1.Broadcast(ctx, msg.(protoreflect.ProtoMessage)))
+
+	// Wait for one second for the message to be delivered and processed.
+	if util.WaitTimeout(&wg, 1*time.Second) {
+		t.Error("Failed to receive pubsub within 1s")
+	}
 }

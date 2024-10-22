@@ -18,6 +18,7 @@ const (
 	rlockCalled
 	runlockCalled
 	hasNodeCalled
+	hasHashCalled
 	proposerBoostCalled
 	isCanonicalCalled
 	finalizedCheckpointCalled
@@ -28,7 +29,7 @@ const (
 	justifiedPayloadBlockHashCalled
 	unrealizedJustifiedPayloadBlockHashCalled
 	nodeCountCalled
-	highestReceivedBlockSlotCalled
+	highestReceivedBlockSlotRootCalled
 	highestReceivedBlockDelayCalled
 	receivedBlocksLastEpochCalled
 	weightCalled
@@ -38,6 +39,7 @@ const (
 	lastRootCalled
 	targetRootForEpochCalled
 	parentRootCalled
+	getPTCVoteCalled
 )
 
 func _discard(t *testing.T, e error) {
@@ -111,9 +113,9 @@ func TestROLocking(t *testing.T) {
 			cb:   func(g FastGetter) { g.NodeCount() },
 		},
 		{
-			name: "highestReceivedBlockSlotCalled",
-			call: highestReceivedBlockSlotCalled,
-			cb:   func(g FastGetter) { g.HighestReceivedBlockSlot() },
+			name: "highestReceivedBlockSlotRootCalled",
+			call: highestReceivedBlockSlotRootCalled,
+			cb:   func(g FastGetter) { g.HighestReceivedBlockSlotRoot() },
 		},
 		{
 			name: "highestReceivedBlockDelayCalled",
@@ -197,6 +199,11 @@ func (ro *mockROForkchoice) HasNode(_ [32]byte) bool {
 	return false
 }
 
+func (ro *mockROForkchoice) HasHash(_ [32]byte) bool {
+	ro.calls = append(ro.calls, hasHashCalled)
+	return false
+}
+
 func (ro *mockROForkchoice) ProposerBoost() [fieldparams.RootLength]byte {
 	ro.calls = append(ro.calls, proposerBoostCalled)
 	return [fieldparams.RootLength]byte{}
@@ -247,9 +254,9 @@ func (ro *mockROForkchoice) NodeCount() int {
 	return 0
 }
 
-func (ro *mockROForkchoice) HighestReceivedBlockSlot() primitives.Slot {
-	ro.calls = append(ro.calls, highestReceivedBlockSlotCalled)
-	return 0
+func (ro *mockROForkchoice) HighestReceivedBlockSlotRoot() (primitives.Slot, [32]byte) {
+	ro.calls = append(ro.calls, highestReceivedBlockSlotRootCalled)
+	return 0, [32]byte{}
 }
 
 func (ro *mockROForkchoice) HighestReceivedBlockDelay() primitives.Slot {
@@ -296,4 +303,9 @@ func (ro *mockROForkchoice) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) (
 func (ro *mockROForkchoice) ParentRoot(_ [32]byte) ([32]byte, error) {
 	ro.calls = append(ro.calls, parentRootCalled)
 	return [32]byte{}, nil
+}
+
+func (ro *mockROForkchoice) GetPTCVote() primitives.PTCStatus {
+	ro.calls = append(ro.calls, getPTCVoteCalled)
+	return primitives.PAYLOAD_ABSENT
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/async/abool"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -38,6 +39,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	payloadattestation "github.com/prysmaticlabs/prysm/v5/consensus-types/epbs/payload-attestation"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -101,6 +103,7 @@ type config struct {
 // This defines the interface for interacting with block chain service
 type blockchainService interface {
 	blockchain.BlockReceiver
+	blockchain.PayloadAttestationReceiver
 	blockchain.BlobReceiver
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
@@ -112,52 +115,59 @@ type blockchainService interface {
 	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
 	blockchain.ForkchoiceFetcher
+	blockchain.ExecutionPayloadFetcher
 }
 
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                              *config
-	ctx                              context.Context
-	cancel                           context.CancelFunc
-	slotToPendingBlocks              *gcache.Cache
-	seenPendingBlocks                map[[32]byte]bool
-	blkRootToPendingAtts             map[[32]byte][]ethpb.SignedAggregateAttAndProof
-	subHandler                       *subTopicHandler
-	pendingAttsLock                  sync.RWMutex
-	pendingQueueLock                 sync.RWMutex
-	chainStarted                     *abool.AtomicBool
-	validateBlockLock                sync.RWMutex
-	rateLimiter                      *limiter
-	seenBlockLock                    sync.RWMutex
-	seenBlockCache                   *lru.Cache
-	seenBlobLock                     sync.RWMutex
-	seenBlobCache                    *lru.Cache
-	seenAggregatedAttestationLock    sync.RWMutex
-	seenAggregatedAttestationCache   *lru.Cache
-	seenUnAggregatedAttestationLock  sync.RWMutex
-	seenUnAggregatedAttestationCache *lru.Cache
-	seenExitLock                     sync.RWMutex
-	seenExitCache                    *lru.Cache
-	seenProposerSlashingLock         sync.RWMutex
-	seenProposerSlashingCache        *lru.Cache
-	seenAttesterSlashingLock         sync.RWMutex
-	seenAttesterSlashingCache        map[uint64]bool
-	seenSyncMessageLock              sync.RWMutex
-	seenSyncMessageCache             *lru.Cache
-	seenSyncContributionLock         sync.RWMutex
-	seenSyncContributionCache        *lru.Cache
-	badBlockCache                    *lru.Cache
-	badBlockLock                     sync.RWMutex
-	syncContributionBitsOverlapLock  sync.RWMutex
-	syncContributionBitsOverlapCache *lru.Cache
-	signatureChan                    chan *signatureVerifier
-	clockWaiter                      startup.ClockWaiter
-	initialSyncComplete              chan struct{}
-	verifierWaiter                   *verification.InitializerWaiter
-	newBlobVerifier                  verification.NewBlobVerifier
-	availableBlocker                 coverage.AvailableBlocker
-	ctxMap                           ContextByteVersions
+	cfg                                 *config
+	ctx                                 context.Context
+	cancel                              context.CancelFunc
+	slotToPendingBlocks                 *gcache.Cache
+	seenPendingBlocks                   map[[32]byte]bool
+	blkRootToPendingAtts                map[[32]byte][]ethpb.SignedAggregateAttAndProof
+	subHandler                          *subTopicHandler
+	payloadAttestationCache             *cache.PayloadAttestationCache
+	executionPayloadHeaderCache         *cache.ExecutionPayloadHeaders
+	payloadEnvelopeCache                *sync.Map
+	pendingAttsLock                     sync.RWMutex
+	pendingQueueLock                    sync.RWMutex
+	chainStarted                        *abool.AtomicBool
+	validateBlockLock                   sync.RWMutex
+	rateLimiter                         *limiter
+	seenBlockLock                       sync.RWMutex
+	seenBlockCache                      *lru.Cache
+	seenBlobLock                        sync.RWMutex
+	seenBlobCache                       *lru.Cache
+	seenAggregatedAttestationLock       sync.RWMutex
+	seenAggregatedAttestationCache      *lru.Cache
+	seenUnAggregatedAttestationLock     sync.RWMutex
+	seenUnAggregatedAttestationCache    *lru.Cache
+	seenExitLock                        sync.RWMutex
+	seenExitCache                       *lru.Cache
+	seenProposerSlashingLock            sync.RWMutex
+	seenProposerSlashingCache           *lru.Cache
+	seenAttesterSlashingLock            sync.RWMutex
+	seenAttesterSlashingCache           map[uint64]bool
+	seenSyncMessageLock                 sync.RWMutex
+	seenSyncMessageCache                *lru.Cache
+	seenSyncContributionLock            sync.RWMutex
+	seenSyncContributionCache           *lru.Cache
+	badBlockCache                       *lru.Cache
+	badBlockLock                        sync.RWMutex
+	syncContributionBitsOverlapLock     sync.RWMutex
+	syncContributionBitsOverlapCache    *lru.Cache
+	signatureChan                       chan *signatureVerifier
+	clockWaiter                         startup.ClockWaiter
+	initialSyncComplete                 chan struct{}
+	verifierWaiter                      *verification.InitializerWaiter
+	newBlobVerifier                     verification.NewBlobVerifier
+	newPayloadAttestationVerifier       verification.NewPayloadAttestationMsgVerifier
+	newExecutionPayloadEnvelopeVerifier verification.NewExecutionPayloadEnvelopeVerifier
+	newExecutionPayloadHeaderVerifier   verification.NewExecutionPayloadHeaderVerifier
+	availableBlocker                    coverage.AvailableBlocker
+	ctxMap                              ContextByteVersions
 }
 
 // NewService initializes new regular sync service.
@@ -214,6 +224,12 @@ func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.
 	}
 }
 
+func newPayloadAttestationMessageFromInitializer(ini *verification.Initializer) verification.NewPayloadAttestationMsgVerifier {
+	return func(pa payloadattestation.ROMessage, reqs []verification.Requirement) verification.PayloadAttestationMsgVerifier {
+		return ini.NewPayloadAttestationMsgVerifier(pa, reqs)
+	}
+}
+
 // Start the regular sync service.
 func (s *Service) Start() {
 	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
@@ -222,6 +238,7 @@ func (s *Service) Start() {
 		return
 	}
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+	s.newPayloadAttestationVerifier = newPayloadAttestationMessageFromInitializer(v)
 
 	go s.verifierRoutine()
 	go s.registerHandlers()

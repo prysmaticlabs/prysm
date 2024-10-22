@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
@@ -21,6 +22,7 @@ type ForkChoicer interface {
 	Unlock()
 	HeadRetriever        // to compute head.
 	BlockProcessor       // to track new block for fork choice.
+	PayloadProcessor     // to track new execution payload envelopes for forkchoice
 	AttestationProcessor // to track new attestation for fork choice.
 	Getter               // to retrieve fork choice information.
 	Setter               // to set fork choice information.
@@ -45,9 +47,13 @@ type BlockProcessor interface {
 	InsertChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
+type PayloadProcessor interface {
+	InsertPayloadEnvelope(interfaces.ROExecutionPayloadEnvelope) error
+}
+
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
 type AttestationProcessor interface {
-	ProcessAttestation(context.Context, []uint64, [32]byte, primitives.Epoch)
+	ProcessAttestation(context.Context, []uint64, [32]byte, primitives.Slot)
 }
 
 // Getter returns fork choice related information.
@@ -63,7 +69,8 @@ type FastGetter interface {
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
 	FinalizedPayloadBlockHash() [32]byte
 	HasNode([32]byte) bool
-	HighestReceivedBlockSlot() primitives.Slot
+	HasHash([32]byte) bool
+	HighestReceivedBlockSlotRoot() (primitives.Slot, [32]byte)
 	HighestReceivedBlockDelay() primitives.Slot
 	IsCanonical(root [32]byte) bool
 	IsOptimistic(root [32]byte) (bool, error)
@@ -81,6 +88,7 @@ type FastGetter interface {
 	UnrealizedJustifiedPayloadBlockHash() [32]byte
 	Weight(root [32]byte) (uint64, error)
 	ParentRoot(root [32]byte) ([32]byte, error)
+	GetPTCVote() primitives.PTCStatus
 }
 
 // Setter allows to set forkchoice information

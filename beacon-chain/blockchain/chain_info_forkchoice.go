@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
@@ -29,11 +30,11 @@ func (s *Service) SetForkChoiceGenesisTime(timestamp uint64) {
 	s.cfg.ForkChoiceStore.SetGenesisTime(timestamp)
 }
 
-// HighestReceivedBlockSlot returns the corresponding value from forkchoice
-func (s *Service) HighestReceivedBlockSlot() primitives.Slot {
+// HighestReceivedBlockSlotRoot returns the corresponding value from forkchoice
+func (s *Service) HighestReceivedBlockSlotRoot() (primitives.Slot, [32]byte) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
+	return s.cfg.ForkChoiceStore.HighestReceivedBlockSlotRoot()
 }
 
 // ReceivedBlocksLastEpoch returns the corresponding value from forkchoice
@@ -98,4 +99,31 @@ func (s *Service) ParentRoot(root [32]byte) ([32]byte, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.ParentRoot(root)
+}
+
+// GetPTCVote wraps a call to the corresponding method in forkchoice and checks
+// the currently syncing status
+// Warning: this method will return the current PTC status regardless of
+// timeliness. A client MUST call this method when about to submit a PTC
+// attestation, that is exactly at the threshold to submit the attestation.
+func (s *Service) GetPTCVote(root [32]byte) primitives.PTCStatus {
+	s.cfg.ForkChoiceStore.RLock()
+	f := s.cfg.ForkChoiceStore.GetPTCVote()
+	s.cfg.ForkChoiceStore.RUnlock()
+	if f != primitives.PAYLOAD_ABSENT {
+		return f
+	}
+	f, isSyncing := s.payloadBeingSynced.isSyncing(root)
+	if isSyncing {
+		return f
+	}
+	return primitives.PAYLOAD_ABSENT
+}
+
+// insertPayloadEnvelope wraps a locked call to the corresponding method in
+// forkchoice
+func (s *Service) insertPayloadEnvelope(envelope interfaces.ROExecutionPayloadEnvelope) error {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.InsertPayloadEnvelope(envelope)
 }

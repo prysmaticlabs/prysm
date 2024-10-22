@@ -112,6 +112,14 @@ func (f FieldIndex) String() string {
 		return "pendingPartialWithdrawals"
 	case PendingConsolidations:
 		return "pendingConsolidations"
+	case LatestBlockHash: // ePBS fields start here
+		return "LatestBlockHash"
+	case LatestFullSlot:
+		return "LatestFullSlot"
+	case ExecutionPayloadHeader:
+		return "ExecutionPayloadHeader"
+	case LastWithdrawalsRoot:
+		return "LastWithdrawalsRoot"
 	default:
 		return fmt.Sprintf("unknown field index number: %d", f)
 	}
@@ -169,7 +177,7 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb:
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb, ExecutionPayloadHeader:
 		return 24
 	case NextWithdrawalIndex:
 		return 25
@@ -195,6 +203,12 @@ func (f FieldIndex) RealPosition() int {
 		return 35
 	case PendingConsolidations:
 		return 36
+	case LatestBlockHash: // ePBS fields start here
+		return 41
+	case LatestFullSlot:
+		return 42
+	case LastWithdrawalsRoot:
+		return 43
 	default:
 		return -1
 	}
@@ -247,6 +261,7 @@ const (
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
 	LatestExecutionPayloadHeaderDeneb
+	ExecutionPayloadHeader
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
@@ -259,6 +274,9 @@ const (
 	PendingDeposits               // Electra: EIP-7251
 	PendingPartialWithdrawals     // Electra: EIP-7251
 	PendingConsolidations         // Electra: EIP-7251
+	LatestBlockHash               // ePBS fields start here
+	LatestFullSlot
+	LastWithdrawalsRoot
 )
 
 // Enumerator keeps track of the number of states created since the node's start.

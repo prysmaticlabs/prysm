@@ -41,6 +41,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateDenebFieldCount)
 	case version.Electra:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateElectraFieldCount)
+	case version.EPBS:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateEpbsFieldCount)
 	default:
 		return nil, fmt.Errorf("unknown state version %s", version.String(state.version))
 	}
@@ -243,13 +245,30 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[types.LatestExecutionPayloadHeaderCapella.RealPosition()] = executionPayloadRoot[:]
 	}
 
-	if state.version >= version.Deneb {
+	if state.version == version.Deneb {
 		// Execution payload root.
 		executionPayloadRoot, err := state.latestExecutionPayloadHeaderDeneb.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
 		fieldRoots[types.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
+	}
+
+	if state.version == version.Electra {
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderDeneb.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[types.LatestExecutionPayloadHeaderDeneb.RealPosition()] = executionPayloadRoot[:]
+	}
+
+	if state.version == version.EPBS {
+		// Execution payload header root.
+		executionPayloadRoot, err := state.latestExecutionPayloadHeaderEPBS.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[types.ExecutionPayloadHeader.RealPosition()] = executionPayloadRoot[:]
 	}
 
 	if state.version >= version.Capella {
@@ -316,6 +335,20 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 			return nil, errors.Wrap(err, "could not compute pending consolidations merkleization")
 		}
 		fieldRoots[types.PendingConsolidations.RealPosition()] = pcRoot[:]
+	}
+
+	if state.version >= version.EPBS {
+		// Latest block hash root.
+		latestBlockHashRoot := state.latestBlockHash[:]
+		fieldRoots[types.LatestBlockHash.RealPosition()] = latestBlockHashRoot
+
+		// Latest full slot root.
+		latestFullSlotRoot := ssz.Uint64Root(uint64(state.latestFullSlot))
+		fieldRoots[types.LatestFullSlot.RealPosition()] = latestFullSlotRoot[:]
+
+		// Last withdrawals root.
+		lastWithdrawalsRoot := state.lastWithdrawalsRoot[:]
+		fieldRoots[types.LastWithdrawalsRoot.RealPosition()] = lastWithdrawalsRoot
 	}
 
 	return fieldRoots, nil

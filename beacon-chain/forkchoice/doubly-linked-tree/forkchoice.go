@@ -80,7 +80,7 @@ func (f *ForkChoice) Head(
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
-func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch primitives.Epoch) {
+func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, attSlot primitives.Slot) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
 
@@ -94,9 +94,9 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash &&
 			f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
 
-		// Vote gets updated if it's newly allocated or high target epoch.
-		if newVote || targetEpoch > f.votes[index].nextEpoch {
-			f.votes[index].nextEpoch = targetEpoch
+		// Vote gets updated if it's newly allocated or higher attestation slot.
+		if newVote || attSlot > f.votes[index].slot {
+			f.votes[index].slot = attSlot
 			f.votes[index].nextRoot = blockRoot
 		}
 	}
@@ -115,8 +115,14 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errNilBlockHeader
 	}
 	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
-	var payloadHash [32]byte
-	if state.Version() >= version.Bellatrix {
+	var payloadHash, parentHash [32]byte
+	if state.Version() >= version.EPBS {
+		latestHash, err := state.LatestBlockHash()
+		if err != nil {
+			return err
+		}
+		copy(parentHash[:], latestHash)
+	} else if state.Version() >= version.Bellatrix {
 		ph, err := state.LatestExecutionPayloadHeader()
 		if err != nil {
 			return err
@@ -135,7 +141,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, parentHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
 	}
@@ -174,6 +180,13 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 // false else wise.
 func (f *ForkChoice) HasNode(root [32]byte) bool {
 	_, ok := f.store.nodeByRoot[root]
+	return ok
+}
+
+// HasHash returns true if the node with the given payload hash exists in fork choice store,
+// false else wise.
+func (f *ForkChoice) HasHash(hash [32]byte) bool {
+	_, ok := f.store.nodeByPayload[hash]
 	return ok
 }
 
@@ -497,8 +510,12 @@ func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.B
 		if err != nil {
 			return err
 		}
+		parentHash, err := blocks.GetBlockParentHash(b)
+		if err != nil {
+			return err
+		}
 		if _, err := f.store.insert(ctx,
-			b.Slot(), r, parentRoot, payloadHash,
+			b.Slot(), r, parentRoot, payloadHash, parentHash,
 			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
@@ -697,4 +714,63 @@ func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 		return [32]byte{}, nil
 	}
 	return n.parent.root, nil
+}
+
+// UpdateVotesOnPayloadAttestation processes a new aggregated
+// payload attestation message and updates
+// the Payload Timeliness Committee (PTC) votes for the corresponding block.
+func (s *Store) updateVotesOnPayloadAttestation(
+	payloadAttestation *ethpb.PayloadAttestation) error {
+	// Extract the attestation data and convert the beacon block root to a 32-byte array
+	data := payloadAttestation.Data
+	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
+
+	// Check if the block exists in the store
+	node, ok := s.nodeByRoot[blockRoot]
+	if !ok || node == nil {
+		return ErrNilNode
+	}
+
+	// Update the PTC votes based on the attestation
+	// We only set the vote if it hasn't been set before
+	// to handle potential equivocations
+	for i := uint64(0); i < fieldparams.PTCSize; i++ {
+		if payloadAttestation.AggregationBits.BitAt(i) && node.ptcVote[i] == primitives.PAYLOAD_ABSENT {
+			node.ptcVote[i] = data.PayloadStatus
+		}
+	}
+
+	return nil
+}
+
+// updatePayloadBoosts checks the PTC votes for a given node and updates
+// the payload reveal and withhold boost roots if the necessary thresholds are met.
+func (s *Store) updatePayloadBoosts(node *Node) {
+	presentCount := 0
+	withheldCount := 0
+
+	// Count the number of PRESENT and WITHHELD votes
+	for _, vote := range node.ptcVote {
+		if vote == primitives.PAYLOAD_PRESENT {
+			presentCount++
+		} else if vote == primitives.PAYLOAD_WITHHELD {
+			withheldCount++
+		}
+	}
+
+	// If the number of PRESENT votes exceeds the threshold,
+	// update the payload reveal boost root
+	if presentCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
+		s.payloadRevealBoostRoot = node.root
+		return
+	}
+	// If the number of WITHHELD votes exceeds the threshold,
+	// update the payload reveal boost root
+	if withheldCount > int(params.BeaconConfig().PayloadTimelyThreshold) {
+		if node.parent != nil {
+			s.payloadWithholdBoostRoot = node.parent.root
+			// A node is considered "full" if it has a non-zero payload hash
+			s.payloadWithholdBoostFull = node.parent.payloadHash != [32]byte{}
+		}
+	}
 }
