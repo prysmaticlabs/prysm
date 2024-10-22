@@ -15,6 +15,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Light client support: Consensus types for Electra
 - Added SubmitPoolAttesterSlashingV2 endpoint.
 - Added SubmitAggregateAndProofsRequestV2 endpoint.
+- Updated the `beacon-chain/monitor` package to Electra. [PR](https://github.com/prysmaticlabs/prysm/pull/14562)
 - Added ListAttestationsV2 endpoint.
 
 ### Changed
@@ -27,6 +28,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Revert block db save when saving state fails.
 - Return false from HasBlock if the block is being synced. 
 - Cleanup forkchoice on failed insertions.
+- Use read only validator for core processing to avoid unnecessary copying.
 
 ### Deprecated
 
