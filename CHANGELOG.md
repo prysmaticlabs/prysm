@@ -14,6 +14,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Added GetBlockAttestationsV2 endpoint.
 - Light client support: Consensus types for Electra
 - Added SubmitPoolAttesterSlashingV2 endpoint.
+- Added SubmitAggregateAndProofsRequestV2 endpoint.
 
 ### Changed
 
@@ -23,6 +24,10 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Updated the default `scrape-interval` in `Client-stats` to 2 minutes to accommodate Beaconcha.in API rate limits.
 - Switch to compounding when consolidating with source==target.
 - Changed `GetLightClientUpdatesByRange` API to read from the DB instead of computing.
+- Revert block db save when saving state fails.
+- Return false from HasBlock if the block is being synced. 
+- Cleanup forkchoice on failed insertions.
+- Use read only validator for core processing to avoid unnecessary copying.
 
 ### Deprecated
 
