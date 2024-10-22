@@ -529,7 +529,6 @@ func (s *Service) initPOWService() {
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				err = errors.Wrap(err, "cacheHeadersForEth1DataVote")
-				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
 					log.WithError(err).Debug("Unable to cache headers for execution client votes")
 				} else {
@@ -557,7 +556,6 @@ func (s *Service) initPOWService() {
 				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
 					err = errors.Wrap(err, "savePowchainData")
-					s.retryExecutionClientConnection(ctx, err)
 					errorLogger(err, "Unable to save execution client data")
 					continue
 				}
