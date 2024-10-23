@@ -80,18 +80,20 @@ func requireAllEventsReceived(t *testing.T, stn, opn *mockChain.EventFeedWrapper
 			}
 		}
 	}()
-	select {
-	case entry := <-logs:
-		errAttr, ok := entry.Data[logrus.ErrorKey]
-		if ok {
-			t.Errorf("unexpected error in logs: %v", errAttr)
+	for {
+		select {
+		case entry := <-logs:
+			errAttr, ok := entry.Data[logrus.ErrorKey]
+			if ok {
+				t.Errorf("unexpected error in logs: %v", errAttr)
+			}
+		case <-done:
+			require.Equal(t, 0, len(expected), "expected events not seen")
+			return
+		case <-ctx.Done():
+			t.Fatalf("context canceled / timed out waiting for events, err=%v", ctx.Err())
 		}
-	case <-done:
-		break
-	case <-ctx.Done():
-		t.Fatalf("context canceled / timed out waiting for events, err=%v", ctx.Err())
 	}
-	require.Equal(t, 0, len(expected), "expected events not seen")
 }
 
 func (tr *topicRequest) testHttpRequest(ctx context.Context, _ *testing.T) *http.Request {
@@ -255,12 +257,12 @@ type streamTestSync struct {
 
 func (s *streamTestSync) cleanup() {
 	s.cancel()
-	s.undo()
 	select {
 	case <-s.done:
 	case <-time.After(10 * time.Millisecond):
 		s.t.Fatal("timed out waiting for handler to finish")
 	}
+	s.undo()
 }
 
 func (s *streamTestSync) markDone() {
@@ -268,7 +270,7 @@ func (s *streamTestSync) markDone() {
 }
 
 func newStreamTestSync(t *testing.T) *streamTestSync {
-	logChan := make(chan *logrus.Entry)
+	logChan := make(chan *logrus.Entry, 100)
 	cew := util.NewChannelEntryWriter(logChan)
 	undo := util.RegisterHookWithUndo(logger, cew)
 	ctx, cancel := context.WithCancel(context.Background())
