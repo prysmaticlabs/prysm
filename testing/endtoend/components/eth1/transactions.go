@@ -342,18 +342,17 @@ func EncodeBlobs(data []byte) ([]kzg4844.Blob, []kzg4844.Commitment, []kzg4844.P
 		versionedHashes []common.Hash
 	)
 	for _, blob := range blobs {
-		b := blob
-		commit, err := kzg4844.BlobToCommitment(&b)
+		commit, err := kzg4844.BlobToCommitment(&blob)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
 		commits = append(commits, commit)
 
-		proof, err := kzg4844.ComputeBlobProof(&b, commit)
+		proof, err := kzg4844.ComputeBlobProof(&blob, commit)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		if err := kzg4844.VerifyBlobProof(&b, commit, proof); err != nil {
+		if err := kzg4844.VerifyBlobProof(&blob, commit, proof); err != nil {
 			return nil, nil, nil, nil, err
 		}
 		proofs = append(proofs, proof)
