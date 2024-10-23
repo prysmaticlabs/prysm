@@ -14,6 +14,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Added GetBlockAttestationsV2 endpoint.
 - Light client support: Consensus types for Electra
 - Added SubmitPoolAttesterSlashingV2 endpoint.
+- Builder API endpooint to support Electra
 - Added SubmitAggregateAndProofsRequestV2 endpoint.
 - Updated the `beacon-chain/monitor` package to Electra. [PR](https://github.com/prysmaticlabs/prysm/pull/14562)
 
