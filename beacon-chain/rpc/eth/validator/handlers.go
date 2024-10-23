@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared"
@@ -678,7 +677,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	if len(validatorIndices) == 0 {
 		return
 	}
-	rpc.TrackedValidatorsCount.Set(float64(s.TrackedValidatorsCache.Size()))
+	api.TrackedValidatorsCount.Set(float64(s.TrackedValidatorsCache.Size()))
 	log.WithFields(logrus.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses")
