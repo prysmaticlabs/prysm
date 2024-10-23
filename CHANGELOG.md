@@ -42,6 +42,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
 - Fix skipping partial withdrawals count.
 - recover from panics when writing the event stream [pr](https://github.com/prysmaticlabs/prysm/pull/14545)
+- Return the correct light client payload proof. [PR](https://github.com/prysmaticlabs/prysm/pull/14565)
 
 ### Security
 
