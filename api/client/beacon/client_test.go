@@ -107,6 +107,12 @@ func TestValidHostname(t *testing.T) {
 			joined:  "https://mydomain.org:3500/eth/v1/node/version",
 		},
 		{
+			name:    "https scheme, hostname with port",
+			hostArg: "https://mydomain.org:3500/base/",
+			path:    getNodeVersionPath,
+			joined:  "https://mydomain.org:3500/base/eth/v1/node/version",
+		},
+		{
 			name:    "http scheme, hostname without port",
 			hostArg: "http://mydomain.org",
 			path:    getNodeVersionPath,
@@ -119,10 +125,22 @@ func TestValidHostname(t *testing.T) {
 			joined:  "http://mydomain.org/eth/v1/node/version",
 		},
 		{
+			name:    "http scheme, trailing slash, hostname without port",
+			hostArg: "http://mydomain.org/base/",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org/base/eth/v1/node/version",
+		},
+		{
 			name:    "http scheme, hostname with basic auth creds and no port",
 			hostArg: "http://username:pass@mydomain.org/",
 			path:    getNodeVersionPath,
 			joined:  "http://username:pass@mydomain.org/eth/v1/node/version",
+		},
+		{
+			name:    "http scheme, hostname with basic auth creds and no port",
+			hostArg: "http://username:pass@mydomain.org/base/",
+			path:    getNodeVersionPath,
+			joined:  "http://username:pass@mydomain.org/base/eth/v1/node/version",
 		},
 	}
 	for _, c := range cases {
