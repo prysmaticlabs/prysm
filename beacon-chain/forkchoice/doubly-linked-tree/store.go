@@ -107,7 +107,9 @@ func (s *Store) insert(ctx context.Context,
 			s.headNode = n
 			s.highestReceivedNode = n
 		} else {
-			return n, errInvalidParentRoot
+			delete(s.nodeByRoot, root)
+			delete(s.nodeByPayload, payloadHash)
+			return nil, errInvalidParentRoot
 		}
 	} else {
 		parent.children = append(parent.children, n)
@@ -128,7 +130,11 @@ func (s *Store) insert(ctx context.Context,
 		jEpoch := s.justifiedCheckpoint.Epoch
 		fEpoch := s.finalizedCheckpoint.Epoch
 		if err := s.treeRootNode.updateBestDescendant(ctx, jEpoch, fEpoch, slots.ToEpoch(currentSlot)); err != nil {
-			return n, err
+			_, remErr := s.removeNode(ctx, n)
+			if remErr != nil {
+				log.WithError(remErr).Error("could not remove node")
+			}
+			return nil, errors.Wrap(err, "could not update best descendants")
 		}
 	}
 	// Update metrics.

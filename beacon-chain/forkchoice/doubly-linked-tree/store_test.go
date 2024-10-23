@@ -525,3 +525,12 @@ func TestStore_TargetRootForEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, root4, target)
 }
+
+func TestStore_CleanupInserting(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+	st, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NotNil(t, f.InsertNode(ctx, st, blkRoot))
+	require.Equal(t, false, f.HasNode(blkRoot))
+}
