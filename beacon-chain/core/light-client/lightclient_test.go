@@ -15,36 +15,36 @@ func TestLightClient_NewLightClientOptimisticUpdateFromBeaconState(t *testing.T)
 		update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State.Slot(), l.State, l.Block, l.AttestedState, l.AttestedBlock)
 		require.NoError(t, err)
 		require.NotNil(t, update, "update is nil")
-		require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+		require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot(), "Signature slot is not equal")
 
 		l.CheckSyncAggregate(update.SyncAggregate())
 		l.CheckAttestedHeader(update.AttestedHeader())
 	})
 
-	//t.Run("Capella", func(t *testing.T) {
-	//	l := util.NewTestLightClient(t).SetupTestCapella(false)
-	//
-	//	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock)
-	//	require.NoError(t, err)
-	//	require.NotNil(t, update, "update is nil")
-	//
-	//	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
-	//
-	//	l.CheckSyncAggregate(update.SyncAggregate)
-	//	l.CheckAttestedHeader(update.AttestedHeader)
-	//})
-	//
+	t.Run("Capella", func(t *testing.T) {
+		l := util.NewTestLightClient(t).SetupTestCapella(false)
+
+		update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State.Slot(), l.State, l.Block, l.AttestedState, l.AttestedBlock)
+		require.NoError(t, err)
+		require.NotNil(t, update, "update is nil")
+
+		require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot(), "Signature slot is not equal")
+
+		l.CheckSyncAggregate(update.SyncAggregate())
+		l.CheckAttestedHeader(update.AttestedHeader())
+	})
+
 	//t.Run("Deneb", func(t *testing.T) {
 	//	l := util.NewTestLightClient(t).SetupTestDeneb(false)
 	//
-	//	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State, l.Block, l.AttestedState, l.AttestedBlock)
+	//	update, err := lightClient.NewLightClientOptimisticUpdateFromBeaconState(l.Ctx, l.State.Slot(), l.State, l.Block, l.AttestedState, l.AttestedBlock)
 	//	require.NoError(t, err)
 	//	require.NotNil(t, update, "update is nil")
 	//
-	//	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot, "Signature slot is not equal")
+	//	require.Equal(t, l.Block.Block().Slot(), update.SignatureSlot(), "Signature slot is not equal")
 	//
-	//	l.CheckSyncAggregate(update.SyncAggregate)
-	//	l.CheckAttestedHeader(update.AttestedHeader)
+	//	l.CheckSyncAggregate(update.SyncAggregate())
+	//	l.CheckAttestedHeader(update.AttestedHeader())
 	//})
 }
 

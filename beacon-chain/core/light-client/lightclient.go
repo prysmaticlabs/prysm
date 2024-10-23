@@ -281,21 +281,33 @@ func CreateDefaultLightClientUpdate(currentSlot primitives.Slot) (interfaces.Lig
 		}
 	} else if currentEpoch < params.BeaconConfig().DenebForkEpoch {
 		m = &pb.LightClientUpdateCapella{
-			AttestedHeader:          &pb.LightClientHeaderCapella{},
+			AttestedHeader: &pb.LightClientHeaderCapella{
+				Beacon:          &pb.BeaconBlockHeader{},
+				Execution:       &enginev1.ExecutionPayloadHeaderCapella{},
+				ExecutionBranch: executionBranch,
+			},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	} else if currentEpoch < params.BeaconConfig().ElectraForkEpoch {
 		m = &pb.LightClientUpdateDeneb{
-			AttestedHeader:          &pb.LightClientHeaderDeneb{},
+			AttestedHeader: &pb.LightClientHeaderDeneb{
+				Beacon:          &pb.BeaconBlockHeader{},
+				Execution:       &enginev1.ExecutionPayloadHeaderDeneb{},
+				ExecutionBranch: executionBranch,
+			},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
 		}
 	} else {
 		m = &pb.LightClientUpdateElectra{
-			AttestedHeader:          &pb.LightClientHeaderDeneb{},
+			AttestedHeader: &pb.LightClientHeaderDeneb{
+				Beacon:          &pb.BeaconBlockHeader{},
+				Execution:       &enginev1.ExecutionPayloadHeaderDeneb{},
+				ExecutionBranch: executionBranch,
+			},
 			NextSyncCommittee:       nextSyncCommittee,
 			NextSyncCommitteeBranch: nextSyncCommitteeBranch,
 			FinalityBranch:          finalityBranch,
