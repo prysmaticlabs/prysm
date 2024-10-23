@@ -24,7 +24,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	consensus_blocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -568,7 +567,7 @@ func prepareForkchoiceState(
 	payloadHash [32]byte,
 	justified *ethpb.Checkpoint,
 	finalized *ethpb.Checkpoint,
-) (state.BeaconState, consensus_blocks.ROBlock, error) {
+) (state.BeaconState, blocks.ROBlock, error) {
 	blockHeader := &ethpb.BeaconBlockHeader{
 		ParentRoot: parentRoot[:],
 	}
@@ -590,7 +589,7 @@ func prepareForkchoiceState(
 	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
 	st, err := state_native.InitializeFromProtoBellatrix(base)
 	if err != nil {
-		return nil, consensus_blocks.ROBlock{}, err
+		return nil, blocks.ROBlock{}, err
 	}
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
@@ -605,9 +604,9 @@ func prepareForkchoiceState(
 	}
 	signed, err := blocks.NewSignedBeaconBlock(blk)
 	if err != nil {
-		return nil, consensus_blocks.ROBlock{}, err
+		return nil, blocks.ROBlock{}, err
 	}
-	roblock, err := consensus_blocks.NewROBlockWithRoot(signed, blockRoot)
+	roblock, err := blocks.NewROBlockWithRoot(signed, blockRoot)
 	return st, roblock, err
 }
 
@@ -651,7 +650,7 @@ func (s *ChainService) HighestReceivedBlockSlot() primitives.Slot {
 }
 
 // InsertNode mocks the same method in the chain service
-func (s *ChainService) InsertNode(ctx context.Context, st state.BeaconState, block consensus_blocks.ROBlock) error {
+func (s *ChainService) InsertNode(ctx context.Context, st state.BeaconState, block blocks.ROBlock) error {
 	if s.ForkChoiceStore != nil {
 		return s.ForkChoiceStore.InsertNode(ctx, st, block)
 	}
