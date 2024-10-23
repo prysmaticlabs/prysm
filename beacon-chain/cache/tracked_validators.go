@@ -47,3 +47,9 @@ func (t *TrackedValidatorsCache) Validating() bool {
 	defer t.Unlock()
 	return len(t.trackedValidators) > 0
 }
+
+func (t *TrackedValidatorsCache) Size() int {
+	t.Lock()
+	defer t.Unlock()
+	return len(t.trackedValidators)
+}

@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -427,6 +428,7 @@ func (vs *Server) PrepareBeaconProposer(
 		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
 	if len(validatorIndices) != 0 {
+		rpc.TrackedValidatorsCount.Set(float64(vs.TrackedValidatorsCache.Size()))
 		log.WithFields(logrus.Fields{
 			"validatorCount": len(validatorIndices),
 		}).Debug("Updated fee recipient addresses for validator indices")
