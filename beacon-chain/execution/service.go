@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache/depositsnapshot"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -506,7 +508,9 @@ func (s *Service) initPOWService() {
 			header, err := s.HeaderByNumber(ctx, nil)
 			if err != nil {
 				err = errors.Wrap(err, "HeaderByNumber")
-				s.retryExecutionClientConnection(ctx, err)
+				if strings.Contains(err.Error(), client.ErrConnectionIssue.Error()) {
+					s.retryExecutionClientConnection(ctx, err)
+				}
 				errorLogger(err, "Unable to retrieve latest execution client header")
 				continue
 			}
@@ -529,6 +533,9 @@ func (s *Service) initPOWService() {
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				err = errors.Wrap(err, "cacheHeadersForEth1DataVote")
+				if strings.Contains(err.Error(), client.ErrConnectionIssue.Error()) {
+					s.retryExecutionClientConnection(ctx, err)
+				}
 				if errors.Is(err, errBlockTimeTooLate) {
 					log.WithError(err).Debug("Unable to cache headers for execution client votes")
 				} else {
@@ -547,7 +554,9 @@ func (s *Service) initPOWService() {
 					genHeader, err := s.HeaderByHash(ctx, genHash)
 					if err != nil {
 						err = errors.Wrapf(err, "HeaderByHash, hash=%#x", genHash)
-						s.retryExecutionClientConnection(ctx, err)
+						if strings.Contains(err.Error(), client.ErrConnectionIssue.Error()) {
+							s.retryExecutionClientConnection(ctx, err)
+						}
 						errorLogger(err, "Unable to retrieve proof-of-stake genesis block data")
 						continue
 					}
