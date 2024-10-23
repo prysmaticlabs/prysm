@@ -206,7 +206,7 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 
 		sidecars = append(sidecars, sidecar)
 	}
-	dataColumnComputationTime.Observe(float64(time.Since(startTime).Milliseconds()))
+	dataColumnComputationTime.Observe(float64(time.Since(startTime).Seconds()))
 	return sidecars, nil
 }
 

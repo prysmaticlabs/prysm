@@ -278,6 +278,16 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DataColumnsIgnoreSlotMultiple = ctx.Uint64(DataColumnsIgnoreSlotMultiple.Name)
 	}
 
+	if ctx.IsSet(DataColumnsWithholdCount.Name) {
+		logEnabled(DataColumnsWithholdCount)
+		cfg.DataColumnsWithholdCount = ctx.Uint64(DataColumnsWithholdCount.Name)
+	}
+
+	if ctx.IsSet(DataColumnsIgnoreSlotMultiple.Name) {
+		logEnabled(DataColumnsIgnoreSlotMultiple)
+		cfg.DataColumnsIgnoreSlotMultiple = ctx.Uint64(DataColumnsIgnoreSlotMultiple.Name)
+	}
+
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
 	return nil
