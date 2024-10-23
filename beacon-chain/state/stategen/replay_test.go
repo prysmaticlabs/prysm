@@ -4,15 +4,18 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/v5/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
+	stateTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/testing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -209,13 +212,29 @@ func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateElectra(t, 1)
 	require.NoError(t, beaconState.SetDepositBalanceToConsume(100))
 	amountAvailForProcessing := helpers.ActivationExitChurnLimit(1_000 * 1e9)
-	require.NoError(t, beaconState.SetPendingBalanceDeposits([]*ethpb.PendingBalanceDeposit{
+	genesisBlock := util.NewBeaconBlockElectra()
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	ethAddress, err := hexutil.Decode("0x967646dCD8d34F4E02204faeDcbAe0cC96fB9245")
+	require.NoError(t, err)
+	newCredentials := make([]byte, 12)
+	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	withdrawalCredentials := append(newCredentials, ethAddress...)
+	ffe := params.BeaconConfig().FarFutureEpoch
+	require.NoError(t, beaconState.SetValidators([]*ethpb.Validator{
 		{
-			Amount: uint64(amountAvailForProcessing) / 10,
-			Index:  primitives.ValidatorIndex(0),
+			PublicKey:             sk.PublicKey().Marshal(),
+			WithdrawalCredentials: withdrawalCredentials,
+			ExitEpoch:             ffe,
+			EffectiveBalance:      params.BeaconConfig().MinActivationBalance,
 		},
 	}))
-	genesisBlock := util.NewBeaconBlockElectra()
+
+	require.NoError(t, beaconState.SetPendingDeposits([]*ethpb.PendingDeposit{
+		stateTesting.GeneratePendingDeposit(t, sk, uint64(amountAvailForProcessing)/10, bytesutil.ToBytes32(withdrawalCredentials), genesisBlock.Block.Slot),
+	}))
+
 	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	err = beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
@@ -238,7 +257,7 @@ func TestReplayBlocks_ProcessEpoch_Electra(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, primitives.Gwei(0), res)
 
-	remaining, err := newState.PendingBalanceDeposits()
+	remaining, err := newState.PendingDeposits()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(remaining))
 

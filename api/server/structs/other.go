@@ -257,9 +257,12 @@ type ConsolidationRequest struct {
 	TargetPubkey  string `json:"target_pubkey"`
 }
 
-type PendingBalanceDeposit struct {
-	Index  string `json:"index"`
-	Amount string `json:"amount"`
+type PendingDeposit struct {
+	Pubkey                string `json:"pubkey"`
+	WithdrawalCredentials string `json:"withdrawal_credentials"`
+	Amount                string `json:"amount"`
+	Signature             string `json:"signature"`
+	Slot                  string `json:"slot"`
 }
 
 type PendingPartialWithdrawal struct {

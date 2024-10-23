@@ -269,7 +269,7 @@ func TestExtractDataType(t *testing.T) {
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
 			wantBlock: func() interfaces.ReadOnlySignedBeaconBlock {
-				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: &ethpb.BeaconBlockElectra{Body: &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadElectra{}}}})
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockElectra{Block: &ethpb.BeaconBlockElectra{Body: &ethpb.BeaconBlockBodyElectra{ExecutionPayload: &enginev1.ExecutionPayloadDeneb{}}}})
 				require.NoError(t, err)
 				return wsb
 			}(),

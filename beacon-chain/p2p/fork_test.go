@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	ma "github.com/multiformats/go-multiaddr"
@@ -60,7 +59,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 		DisableLivenessCheck: true,
 	}
 
-	var listeners []*discover.UDPv5
+	var listeners []*listenerWrapper
 	for i := 1; i <= 5; i++ {
 		port := 3000 + i
 		cfg.UDPPort = uint(port)
@@ -153,7 +152,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		DisableLivenessCheck: true,
 	}
 
-	var listeners []*discover.UDPv5
+	var listeners []*listenerWrapper
 	for i := 1; i <= 5; i++ {
 		port := 3000 + i
 		cfg.UDPPort = uint(port)

@@ -227,7 +227,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.5.0-alpha.5"
+consensus_spec_version = "v1.5.0-alpha.8"
 
 bls_test_version = "v0.1.1"
 
@@ -243,7 +243,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-R9vG5HEL5eGMOAmbkKfJ2jfelNqL5V0xBUPiXOiGM6U=",
+    integrity = "sha256-BsGIbEyJuYrzhShGl0tHhR4lP5Qwno8R3k8a6YBR/DA=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -259,7 +259,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-AEIiEOlf1XuxoRMCsN+kgJMo4LrS05+biTA1p/7Ro00=",
+    integrity = "sha256-DkdvhPP2KiqUOpwFXQIFDCWCwsUDIC/xhTBD+TZevm0=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -275,7 +275,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-LH/Xr20yrJRYnbpjRGupMWTIOWt3cpxZJWXgThwVDsk=",
+    integrity = "sha256-vkZqV0HB8A2Uc56C1Us/p5G57iaHL+zw2No93Xt6M/4=",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -290,7 +290,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-mlytz4MPjKh0DwV7FMiAtnRbJw9B6o78/x66/vmnYc8=",
+    integrity = "sha256-D/HPAW61lKqjoWwl7N0XvhdX+67dCEFAy8JxVzqBGtU=",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -340,6 +340,22 @@ filegroup(
     integrity = "sha256-b7ZTT+olF+VXEJYNTV5jggNtCkt9dOejm1i2VE+zy+0=",
     strip_prefix = "holesky-874c199423ccd180607320c38cbaca05d9a1573a",
     url = "https://github.com/eth-clients/holesky/archive/874c199423ccd180607320c38cbaca05d9a1573a.tar.gz",  # 2024-06-18
+)
+
+http_archive(
+    name = "sepolia_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "metadata/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+""",
+    integrity = "sha256-cY/UgpCcYEhQf7JefD65FI8tn/A+rAvKhcm2/qiVdqY=",
+    strip_prefix = "sepolia-f2c219a93c4491cee3d90c18f2f8e82aed850eab",
+    url = "https://github.com/eth-clients/sepolia/archive/f2c219a93c4491cee3d90c18f2f8e82aed850eab.tar.gz",  # 2024-09-19
 )
 
 http_archive(

@@ -105,7 +105,6 @@ type WriteOnlyBeaconState interface {
 	AppendHistoricalRoots(root [32]byte) error
 	AppendHistoricalSummaries(*ethpb.HistoricalSummary) error
 	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
-	SaveValidatorIndices()
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -141,7 +140,6 @@ type ReadOnlyBalances interface {
 	Balances() []uint64
 	BalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
 	BalancesLength() int
-	ActiveBalanceAtIndex(idx primitives.ValidatorIndex) (uint64, error)
 }
 
 // ReadOnlyCheckpoint defines a struct which only has read access to checkpoint methods.
@@ -225,7 +223,7 @@ type ReadOnlySyncCommittee interface {
 type ReadOnlyDeposits interface {
 	DepositBalanceToConsume() (primitives.Gwei, error)
 	DepositRequestsStartIndex() (uint64, error)
-	PendingBalanceDeposits() ([]*ethpb.PendingBalanceDeposit, error)
+	PendingDeposits() ([]*ethpb.PendingDeposit, error)
 }
 
 type ReadOnlyConsolidations interface {
@@ -331,8 +329,8 @@ type WriteOnlyConsolidations interface {
 }
 
 type WriteOnlyDeposits interface {
-	AppendPendingBalanceDeposit(index primitives.ValidatorIndex, amount uint64) error
+	AppendPendingDeposit(pd *ethpb.PendingDeposit) error
 	SetDepositRequestsStartIndex(index uint64) error
-	SetPendingBalanceDeposits(val []*ethpb.PendingBalanceDeposit) error
+	SetPendingDeposits(val []*ethpb.PendingDeposit) error
 	SetDepositBalanceToConsume(primitives.Gwei) error
 }

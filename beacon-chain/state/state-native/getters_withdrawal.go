@@ -113,13 +113,14 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	epoch := slots.ToEpoch(b.slot)
 
 	// Electra partial withdrawals functionality.
+	var partialWithdrawalsCount uint64
 	if b.version >= version.Electra {
 		for _, w := range b.pendingPartialWithdrawals {
 			if w.WithdrawableEpoch > epoch || len(withdrawals) >= int(params.BeaconConfig().MaxPendingPartialsPerWithdrawalsSweep) {
 				break
 			}
 
-			v, err := b.validatorAtIndex(w.Index)
+			v, err := b.validatorAtIndexReadOnly(w.Index)
 			if err != nil {
 				return nil, 0, fmt.Errorf("failed to determine withdrawals at index %d: %w", w.Index, err)
 			}
@@ -127,26 +128,26 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 			if err != nil {
 				return nil, 0, fmt.Errorf("could not retrieve balance at index %d: %w", w.Index, err)
 			}
-			hasSufficientEffectiveBalance := v.EffectiveBalance >= params.BeaconConfig().MinActivationBalance
+			hasSufficientEffectiveBalance := v.EffectiveBalance() >= params.BeaconConfig().MinActivationBalance
 			hasExcessBalance := vBal > params.BeaconConfig().MinActivationBalance
-			if v.ExitEpoch == params.BeaconConfig().FarFutureEpoch && hasSufficientEffectiveBalance && hasExcessBalance {
+			if v.ExitEpoch() == params.BeaconConfig().FarFutureEpoch && hasSufficientEffectiveBalance && hasExcessBalance {
 				amount := min(vBal-params.BeaconConfig().MinActivationBalance, w.Amount)
 				withdrawals = append(withdrawals, &enginev1.Withdrawal{
 					Index:          withdrawalIndex,
 					ValidatorIndex: w.Index,
-					Address:        v.WithdrawalCredentials[12:],
+					Address:        v.GetWithdrawalCredentials()[12:],
 					Amount:         amount,
 				})
 				withdrawalIndex++
 			}
+			partialWithdrawalsCount++
 		}
 	}
-	partialWithdrawalsCount := uint64(len(withdrawals))
 
 	validatorsLen := b.validatorsLen()
 	bound := mathutil.Min(uint64(validatorsLen), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 	for i := uint64(0); i < bound; i++ {
-		val, err := b.validatorAtIndex(validatorIndex)
+		val, err := b.validatorAtIndexReadOnly(validatorIndex)
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "could not retrieve validator at index %d", validatorIndex)
 		}

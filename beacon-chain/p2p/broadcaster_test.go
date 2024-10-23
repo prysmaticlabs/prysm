@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/discover"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -236,7 +235,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	bootNode := bootListener.Self()
 	subnet := uint64(5)
 
-	var listeners []*discover.UDPv5
+	var listeners []*listenerWrapper
 	var hosts []host.Host
 	// setup other nodes.
 	cfg = &Config{
