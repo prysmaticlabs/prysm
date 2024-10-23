@@ -153,8 +153,11 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 		return pubsub.ValidationReject, err
 	}
 
-	if len(verifiedRODataColumns) != 1 {
+	verifiedRODataColumnsCount := len(verifiedRODataColumns)
+
+	if verifiedRODataColumnsCount != 1 {
 		// This should never happen.
+		log.WithField("verifiedRODataColumnsCount", verifiedRODataColumnsCount).Error("Verified data columns count is not 1")
 		return pubsub.ValidationIgnore, errors.New("Wrong number of verified data columns")
 	}
 
