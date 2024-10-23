@@ -7,8 +7,8 @@ import (
 
 var dataColumnComputationTime = promauto.NewHistogram(
 	prometheus.HistogramOpts{
-		Name:    "data_column_sidecar_computation_milliseconds",
+		Name:    "beacon_data_column_sidecar_computation_seconds",
 		Help:    "Captures the time taken to compute data column sidecars from blobs.",
-		Buckets: []float64{100, 250, 500, 750, 1000, 1500, 2000, 4000, 8000, 12000, 16000},
+		Buckets: []float64{0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 4, 8, 12, 16},
 	},
 )
