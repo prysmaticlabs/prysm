@@ -24,6 +24,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	consensus_blocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	forkchoice2 "github.com/prysmaticlabs/prysm/v5/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -567,7 +568,7 @@ func prepareForkchoiceState(
 	payloadHash [32]byte,
 	justified *ethpb.Checkpoint,
 	finalized *ethpb.Checkpoint,
-) (state.BeaconState, [32]byte, error) {
+) (state.BeaconState, consensus_blocks.ROBlock, error) {
 	blockHeader := &ethpb.BeaconBlockHeader{
 		ParentRoot: parentRoot[:],
 	}
@@ -588,7 +589,26 @@ func prepareForkchoiceState(
 
 	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
 	st, err := state_native.InitializeFromProtoBellatrix(base)
-	return st, blockRoot, err
+	if err != nil {
+		return nil, consensus_blocks.ROBlock{}, err
+	}
+	blk := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Slot:       slot,
+			ParentRoot: parentRoot[:],
+			Body: &ethpb.BeaconBlockBodyBellatrix{
+				ExecutionPayload: &enginev1.ExecutionPayload{
+					BlockHash: payloadHash[:],
+				},
+			},
+		},
+	}
+	signed, err := blocks.NewSignedBeaconBlock(blk)
+	if err != nil {
+		return nil, consensus_blocks.ROBlock{}, err
+	}
+	roblock, err := consensus_blocks.NewROBlockWithRoot(signed, blockRoot)
+	return st, roblock, err
 }
 
 // CachedHeadRoot mocks the same method in the chain service
@@ -631,9 +651,9 @@ func (s *ChainService) HighestReceivedBlockSlot() primitives.Slot {
 }
 
 // InsertNode mocks the same method in the chain service
-func (s *ChainService) InsertNode(ctx context.Context, st state.BeaconState, root [32]byte) error {
+func (s *ChainService) InsertNode(ctx context.Context, st state.BeaconState, block consensus_blocks.ROBlock) error {
 	if s.ForkChoiceStore != nil {
-		return s.ForkChoiceStore.InsertNode(ctx, st, root)
+		return s.ForkChoiceStore.InsertNode(ctx, st, block)
 	}
 	return nil
 }

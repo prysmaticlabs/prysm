@@ -145,7 +145,6 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	fcp2 := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r0}
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp2))
-
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
