@@ -10,9 +10,6 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
@@ -24,7 +21,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // uint64MapToSortedSlice produces a sorted uint64 slice from a map.
@@ -82,11 +81,12 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 		requestedColumnsByRoot[root][columnIndex] = true
 	}
 
-	requestedColumnsByRootLog := make(map[[fieldparams.RootLength]byte]interface{})
+	requestedColumnsByRootLog := make(map[string]interface{})
 	for root, columns := range requestedColumnsByRoot {
-		requestedColumnsByRootLog[root] = "all"
+		rootStr := fmt.Sprintf("%#x", root)
+		requestedColumnsByRootLog[rootStr] = "all"
 		if uint64(len(columns)) != numberOfColumns {
-			requestedColumnsByRootLog[root] = uint64MapToSortedSlice(columns)
+			requestedColumnsByRootLog[rootStr] = uint64MapToSortedSlice(columns)
 		}
 	}
 
@@ -125,17 +125,8 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg int
 	log := log.WithFields(logrus.Fields{
 		"peer":    remotePeer,
 		"custody": custody,
+		"columns": requestedColumnsByRootLog,
 	})
-
-	i := 0
-	for root, columns := range requestedColumnsByRootLog {
-		log = log.WithFields(logrus.Fields{
-			fmt.Sprintf("root%d", i):    fmt.Sprintf("%#x", root),
-			fmt.Sprintf("columns%d", i): columns,
-		})
-
-		i++
-	}
 
 	log.Debug("Serving data column sidecar by root request")
 

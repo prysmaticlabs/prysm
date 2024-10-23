@@ -152,6 +152,42 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		return nil, err
 	}
 
+	if b.version >= version.Electra {
+		p, ok := payload.Proto().(*enginev1.ExecutionPayloadElectra)
+		if !ok {
+			return nil, fmt.Errorf("%T is not an execution payload header of Deneb version", p)
+		}
+		header, err := PayloadToHeaderElectra(payload)
+		if err != nil {
+			return nil, err
+		}
+		return initBlindedSignedBlockFromProtoElectra(
+			&eth.SignedBlindedBeaconBlockElectra{
+				Message: &eth.BlindedBeaconBlockElectra{
+					Slot:          b.block.slot,
+					ProposerIndex: b.block.proposerIndex,
+					ParentRoot:    b.block.parentRoot[:],
+					StateRoot:     b.block.stateRoot[:],
+					Body: &eth.BlindedBeaconBlockBodyElectra{
+						RandaoReveal:           b.block.body.randaoReveal[:],
+						Eth1Data:               b.block.body.eth1Data,
+						Graffiti:               b.block.body.graffiti[:],
+						ProposerSlashings:      b.block.body.proposerSlashings,
+						AttesterSlashings:      b.block.body.attesterSlashingsElectra,
+						Attestations:           b.block.body.attestationsElectra,
+						Deposits:               b.block.body.deposits,
+						VoluntaryExits:         b.block.body.voluntaryExits,
+						SyncAggregate:          b.block.body.syncAggregate,
+						ExecutionPayloadHeader: header,
+						BlsToExecutionChanges:  b.block.body.blsToExecutionChanges,
+						BlobKzgCommitments:     b.block.body.blobKzgCommitments,
+						ExecutionRequests:      b.block.body.executionRequests,
+					},
+				},
+				Signature: b.signature[:],
+			})
+	}
+
 	switch p := payload.Proto().(type) {
 	case *enginev1.ExecutionPayload:
 		header, err := PayloadToHeader(payload)
@@ -237,46 +273,13 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 				},
 				Signature: b.signature[:],
 			})
-	case *enginev1.ExecutionPayloadElectra:
-		pe, ok := payload.(interfaces.ExecutionDataElectra)
-		if !ok {
-			return nil, interfaces.ErrIncompatibleFork
-		}
-		header, err := PayloadToHeaderElectra(pe)
-		if err != nil {
-			return nil, err
-		}
-		return initBlindedSignedBlockFromProtoElectra(
-			&eth.SignedBlindedBeaconBlockElectra{
-				Message: &eth.BlindedBeaconBlockElectra{
-					Slot:          b.block.slot,
-					ProposerIndex: b.block.proposerIndex,
-					ParentRoot:    b.block.parentRoot[:],
-					StateRoot:     b.block.stateRoot[:],
-					Body: &eth.BlindedBeaconBlockBodyElectra{
-						RandaoReveal:           b.block.body.randaoReveal[:],
-						Eth1Data:               b.block.body.eth1Data,
-						Graffiti:               b.block.body.graffiti[:],
-						ProposerSlashings:      b.block.body.proposerSlashings,
-						AttesterSlashings:      b.block.body.attesterSlashingsElectra,
-						Attestations:           b.block.body.attestationsElectra,
-						Deposits:               b.block.body.deposits,
-						VoluntaryExits:         b.block.body.voluntaryExits,
-						SyncAggregate:          b.block.body.syncAggregate,
-						ExecutionPayloadHeader: header,
-						BlsToExecutionChanges:  b.block.body.blsToExecutionChanges,
-						BlobKzgCommitments:     b.block.body.blobKzgCommitments,
-					},
-				},
-				Signature: b.signature[:],
-			})
 	default:
 		return nil, fmt.Errorf("%T is not an execution payload header", p)
 	}
 }
 
 func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
-	if e.IsNil() {
+	if e == nil || e.IsNil() {
 		return errors.New("cannot unblind with nil execution data")
 	}
 	if !b.IsBlinded() {
@@ -1108,6 +1111,14 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	default:
 		return nil, errIncorrectBlockVersion
 	}
+}
+
+// ExecutionRequests returns the execution requests
+func (b *BeaconBlockBody) ExecutionRequests() (*enginev1.ExecutionRequests, error) {
+	if b.version < version.Electra {
+		return nil, consensus_types.ErrNotSupported("ExecutionRequests", b.version)
+	}
+	return b.executionRequests, nil
 }
 
 // Version returns the version of the beacon block body

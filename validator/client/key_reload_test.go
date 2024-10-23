@@ -36,6 +36,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			genesisTime:      1,
 			chainClient:      chainClient,
 			prysmChainClient: prysmChainClient,
+			pubkeyToStatus:   make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactive.pub[:], active.pub[:]})
@@ -73,6 +74,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			genesisTime:      1,
 			chainClient:      chainClient,
 			prysmChainClient: prysmChainClient,
+			pubkeyToStatus:   make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{kp.pub[:]})
@@ -103,6 +105,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			validatorClient: client,
 			km:              newMockKeymanager(t, kp),
 			genesisTime:     1,
+			pubkeyToStatus:  make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		}
 
 		client.EXPECT().MultipleValidatorStatus(

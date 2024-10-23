@@ -167,15 +167,6 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 		if err != nil {
 			return nil, handleRPCError(err)
 		}
-	case *pb.ExecutionPayloadElectra:
-		payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadElectra)
-		if !ok {
-			return nil, errors.New("execution data must be a Electra execution payload")
-		}
-		err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV4, payloadPb, versionedHashes, parentBlockRoot)
-		if err != nil {
-			return nil, handleRPCError(err)
-		}
 	default:
 		return nil, errors.New("unknown execution data type")
 	}
@@ -268,9 +259,6 @@ func (s *Service) ForkchoiceUpdated(
 
 func getPayloadMethodAndMessage(slot primitives.Slot) (string, proto.Message) {
 	pe := slots.ToEpoch(slot)
-	if pe >= params.BeaconConfig().ElectraForkEpoch {
-		return GetPayloadMethodV4, &pb.ExecutionPayloadElectraWithValueAndBlobsBundle{}
-	}
 	if pe >= params.BeaconConfig().DenebForkEpoch {
 		return GetPayloadMethodV3, &pb.ExecutionPayloadDenebWithValueAndBlobsBundle{}
 	}
@@ -526,7 +514,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 func fullPayloadFromPayloadBody(
 	header interfaces.ExecutionData, body *pb.ExecutionPayloadBody, bVersion int,
 ) (interfaces.ExecutionData, error) {
-	if header.IsNil() || body == nil {
+	if header == nil || header.IsNil() || body == nil {
 		return nil, errors.New("execution block and header cannot be nil")
 	}
 
@@ -566,7 +554,7 @@ func fullPayloadFromPayloadBody(
 			Transactions:  pb.RecastHexutilByteSlice(body.Transactions),
 			Withdrawals:   body.Withdrawals,
 		}) // We can't get the block value and don't care about the block value for this instance
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
@@ -594,50 +582,6 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:   body.Withdrawals,
 				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
-			}) // We can't get the block value and don't care about the block value for this instance
-	case version.Electra:
-		ebg, err := header.ExcessBlobGas()
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
-		}
-		bgu, err := header.BlobGasUsed()
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
-		}
-		wr, err := pb.JsonWithdrawalRequestsToProto(body.WithdrawalRequests)
-		if err != nil {
-			return nil, err
-		}
-		dr, err := pb.JsonDepositRequestsToProto(body.DepositRequests)
-		if err != nil {
-			return nil, err
-		}
-		cr, err := pb.JsonConsolidationRequestsToProto(body.ConsolidationRequests)
-		if err != nil {
-			return nil, err
-		}
-		return blocks.WrappedExecutionPayloadElectra(
-			&pb.ExecutionPayloadElectra{
-				ParentHash:            header.ParentHash(),
-				FeeRecipient:          header.FeeRecipient(),
-				StateRoot:             header.StateRoot(),
-				ReceiptsRoot:          header.ReceiptsRoot(),
-				LogsBloom:             header.LogsBloom(),
-				PrevRandao:            header.PrevRandao(),
-				BlockNumber:           header.BlockNumber(),
-				GasLimit:              header.GasLimit(),
-				GasUsed:               header.GasUsed(),
-				Timestamp:             header.Timestamp(),
-				ExtraData:             header.ExtraData(),
-				BaseFeePerGas:         header.BaseFeePerGas(),
-				BlockHash:             header.BlockHash(),
-				Transactions:          pb.RecastHexutilByteSlice(body.Transactions),
-				Withdrawals:           body.Withdrawals,
-				ExcessBlobGas:         ebg,
-				BlobGasUsed:           bgu,
-				DepositRequests:       dr,
-				WithdrawalRequests:    wr,
-				ConsolidationRequests: cr,
 			}) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
@@ -761,7 +705,7 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		}, nil
-	case version.Deneb:
+	case version.Deneb, version.Electra:
 		return &pb.ExecutionPayloadDeneb{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
@@ -774,22 +718,6 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
-		}, nil
-	case version.Electra:
-		return &pb.ExecutionPayloadElectra{
-			ParentHash:         make([]byte, fieldparams.RootLength),
-			FeeRecipient:       make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:          make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:       make([]byte, fieldparams.RootLength),
-			LogsBloom:          make([]byte, fieldparams.LogsBloomLength),
-			PrevRandao:         make([]byte, fieldparams.RootLength),
-			ExtraData:          make([]byte, 0),
-			BaseFeePerGas:      make([]byte, fieldparams.RootLength),
-			BlockHash:          make([]byte, fieldparams.RootLength),
-			Transactions:       make([][]byte, 0),
-			Withdrawals:        make([]*pb.Withdrawal, 0),
-			WithdrawalRequests: make([]*pb.WithdrawalRequest, 0),
-			DepositRequests:    make([]*pb.DepositRequest, 0),
 		}, nil
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedVersion, "version=%s", version.String(v))

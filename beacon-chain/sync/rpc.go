@@ -185,8 +185,8 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
-		span.AddAttributes(trace.StringAttribute("topic", topic))
-		span.AddAttributes(trace.StringAttribute("peer", remotePeer.String()))
+		span.SetAttributes(trace.StringAttribute("topic", topic))
+		span.SetAttributes(trace.StringAttribute("peer", remotePeer.String()))
 		log := log.WithField("peer", stream.Conn().RemotePeer().String()).WithField("topic", string(stream.Protocol()))
 
 		// Check before hand that peer is valid.

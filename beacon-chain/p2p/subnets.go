@@ -146,7 +146,7 @@ func (s *Service) FindPeersWithSubnet(
 	ctx, span := trace.StartSpan(ctx, "p2p.FindPeersWithSubnet")
 	defer span.End()
 
-	span.AddAttributes(trace.Int64Attribute("index", int64(index))) // lint:ignore uintcast -- It's safe to do this for tracing.
+	span.SetAttributes(trace.Int64Attribute("index", int64(index))) // lint:ignore uintcast -- It's safe to do this for tracing.
 
 	if s.dv5Listener == nil {
 		// Return if discovery isn't set

@@ -11,13 +11,9 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/network"
-	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
-	"github.com/sirupsen/logrus"
-
 	kzg "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
@@ -25,12 +21,15 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/sirupsen/logrus"
 )
 
 func TestRandomizeColumns(t *testing.T) {
@@ -84,7 +83,7 @@ func createAndConnectPeer(
 	require.NoError(t, err)
 
 	// Create the peer.
-	peer := p2ptest.NewTestP2P(t, swarmt.OptPeerPrivateKey(privateKey))
+	peer := p2ptest.NewTestP2P(t, libp2p.Identity(privateKey))
 
 	peer.SetStreamHandler(p2p.RPCDataColumnSidecarsByRootTopicV1+"/ssz_snappy", func(stream network.Stream) {
 		// Decode the request.

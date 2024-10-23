@@ -114,7 +114,7 @@ func (c *client) Send(
 	ctx, span := trace.StartSpan(ctx, "p2p.Send")
 	defer span.End()
 	topic := baseTopic + c.Encoding().ProtocolSuffix()
-	span.AddAttributes(trace.StringAttribute("topic", topic))
+	span.SetAttributes(trace.StringAttribute("topic", topic))
 
 	// Apply max dial timeout when opening a new stream.
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)

@@ -107,7 +107,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		ev.DenebForkTransition,
-		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.FeeRecipientIsPresent,
@@ -163,7 +162,6 @@ func scenarioEvals() []types.Evaluator {
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		ev.DenebForkTransition,
-		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
@@ -184,7 +182,6 @@ func scenarioEvalsMulti() []types.Evaluator {
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		ev.DenebForkTransition,
-		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 	}

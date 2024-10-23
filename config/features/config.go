@@ -48,7 +48,7 @@ type Flags struct {
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
-	EnableCommitteeAwarePacking         bool // EnableCommitteeAwarePacking TODO
+	DisableCommitteeAwarePacking        bool // DisableCommitteeAwarePacking changes the attestation packing algorithm to one that is not aware of attesting committees.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 	EnableFullSSZDataLogging  bool // Enables logging for full ssz data on rejected gossip messages
@@ -179,9 +179,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.Bool(enableExperimentalState.Name) {
-		logEnabled(enableExperimentalState)
-		cfg.EnableExperimentalState = true
+	cfg.EnableExperimentalState = true
+	if ctx.Bool(disableExperimentalState.Name) {
+		logEnabled(disableExperimentalState)
+		cfg.EnableExperimentalState = false
 	}
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
@@ -262,9 +263,19 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableQUIC)
 		cfg.EnableQUIC = true
 	}
-	if ctx.IsSet(EnableCommitteeAwarePacking.Name) {
-		logEnabled(EnableCommitteeAwarePacking)
-		cfg.EnableCommitteeAwarePacking = true
+	if ctx.IsSet(DisableCommitteeAwarePacking.Name) {
+		logEnabled(DisableCommitteeAwarePacking)
+		cfg.DisableCommitteeAwarePacking = true
+	}
+
+	if ctx.IsSet(DataColumnsWithholdCount.Name) {
+		logEnabled(DataColumnsWithholdCount)
+		cfg.DataColumnsWithholdCount = ctx.Uint64(DataColumnsWithholdCount.Name)
+	}
+
+	if ctx.IsSet(DataColumnsIgnoreSlotMultiple.Name) {
+		logEnabled(DataColumnsIgnoreSlotMultiple)
+		cfg.DataColumnsIgnoreSlotMultiple = ctx.Uint64(DataColumnsIgnoreSlotMultiple.Name)
 	}
 
 	if ctx.IsSet(DataColumnsWithholdCount.Name) {

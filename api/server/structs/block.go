@@ -365,6 +365,7 @@ type BeaconBlockBodyElectra struct {
 	ExecutionPayload      *ExecutionPayloadElectra      `json:"execution_payload"`
 	BLSToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes"`
 	BlobKzgCommitments    []string                      `json:"blob_kzg_commitments"`
+	ExecutionRequests     *ExecutionRequests            `json:"execution_requests"`
 }
 
 type BlindedBeaconBlockElectra struct {
@@ -403,6 +404,7 @@ type BlindedBeaconBlockBodyElectra struct {
 	ExecutionPayloadHeader *ExecutionPayloadHeaderElectra `json:"execution_payload_header"`
 	BLSToExecutionChanges  []*SignedBLSToExecutionChange  `json:"bls_to_execution_changes"`
 	BlobKzgCommitments     []string                       `json:"blob_kzg_commitments"`
+	ExecutionRequests      *ExecutionRequests             `json:"execution_requests"`
 }
 
 type SignedBeaconBlockHeaderContainer struct {
@@ -514,6 +516,8 @@ type ExecutionPayloadDeneb struct {
 	ExcessBlobGas string        `json:"excess_blob_gas"`
 }
 
+type ExecutionPayloadElectra = ExecutionPayloadDeneb
+
 type ExecutionPayloadHeaderDeneb struct {
 	ParentHash       string `json:"parent_hash"`
 	FeeRecipient     string `json:"fee_recipient"`
@@ -534,48 +538,10 @@ type ExecutionPayloadHeaderDeneb struct {
 	ExcessBlobGas    string `json:"excess_blob_gas"`
 }
 
-type ExecutionPayloadElectra struct {
-	ParentHash            string                  `json:"parent_hash"`
-	FeeRecipient          string                  `json:"fee_recipient"`
-	StateRoot             string                  `json:"state_root"`
-	ReceiptsRoot          string                  `json:"receipts_root"`
-	LogsBloom             string                  `json:"logs_bloom"`
-	PrevRandao            string                  `json:"prev_randao"`
-	BlockNumber           string                  `json:"block_number"`
-	GasLimit              string                  `json:"gas_limit"`
-	GasUsed               string                  `json:"gas_used"`
-	Timestamp             string                  `json:"timestamp"`
-	ExtraData             string                  `json:"extra_data"`
-	BaseFeePerGas         string                  `json:"base_fee_per_gas"`
-	BlockHash             string                  `json:"block_hash"`
-	Transactions          []string                `json:"transactions"`
-	Withdrawals           []*Withdrawal           `json:"withdrawals"`
-	BlobGasUsed           string                  `json:"blob_gas_used"`
-	ExcessBlobGas         string                  `json:"excess_blob_gas"`
-	DepositRequests       []*DepositRequest       `json:"deposit_requests"`
-	WithdrawalRequests    []*WithdrawalRequest    `json:"withdrawal_requests"`
-	ConsolidationRequests []*ConsolidationRequest `json:"consolidation_requests"`
-}
+type ExecutionPayloadHeaderElectra = ExecutionPayloadHeaderDeneb
 
-type ExecutionPayloadHeaderElectra struct {
-	ParentHash                string `json:"parent_hash"`
-	FeeRecipient              string `json:"fee_recipient"`
-	StateRoot                 string `json:"state_root"`
-	ReceiptsRoot              string `json:"receipts_root"`
-	LogsBloom                 string `json:"logs_bloom"`
-	PrevRandao                string `json:"prev_randao"`
-	BlockNumber               string `json:"block_number"`
-	GasLimit                  string `json:"gas_limit"`
-	GasUsed                   string `json:"gas_used"`
-	Timestamp                 string `json:"timestamp"`
-	ExtraData                 string `json:"extra_data"`
-	BaseFeePerGas             string `json:"base_fee_per_gas"`
-	BlockHash                 string `json:"block_hash"`
-	TransactionsRoot          string `json:"transactions_root"`
-	WithdrawalsRoot           string `json:"withdrawals_root"`
-	BlobGasUsed               string `json:"blob_gas_used"`
-	ExcessBlobGas             string `json:"excess_blob_gas"`
-	DepositRequestsRoot       string `json:"deposit_requests_root"`
-	WithdrawalRequestsRoot    string `json:"withdrawal_requests_root"`
-	ConsolidationRequestsRoot string `json:"consolidation_requests_root"`
+type ExecutionRequests struct {
+	Deposits       []*DepositRequest       `json:"deposits"`
+	Withdrawals    []*WithdrawalRequest    `json:"withdrawals"`
+	Consolidations []*ConsolidationRequest `json:"consolidations"`
 }

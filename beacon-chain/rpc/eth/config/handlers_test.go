@@ -176,10 +176,6 @@ func TestGetSpec(t *testing.T) {
 	var dam [4]byte
 	copy(dam[:], []byte{'1', '0', '0', '0'})
 	config.DomainApplicationMask = dam
-	var dc [4]byte
-	copy(dc[:], []byte{'1', '1', '0', '0'})
-	config.DomainConsolidation = dc
-
 	params.OverrideBeaconConfig(config)
 
 	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/spec", nil)
@@ -518,8 +514,6 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "86", v)
 			case "MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD":
 				assert.Equal(t, "87", v)
-			case "DOMAIN_CONSOLIDATION":
-				assert.Equal(t, "0x31313030", v)
 			case "MAX_ATTESTER_SLASHINGS_ELECTRA":
 				assert.Equal(t, "88", v)
 			case "MAX_ATTESTATIONS_ELECTRA":

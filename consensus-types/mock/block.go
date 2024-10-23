@@ -5,6 +5,7 @@ import (
 	field_params "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/validator-client"
@@ -270,6 +271,10 @@ func (b *BeaconBlockBody) SetBLSToExecutionChanges([]*eth.SignedBLSToExecutionCh
 
 // BlobKzgCommitments returns the blob kzg commitments in the block.
 func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) ExecutionRequests() (*enginev1.ExecutionRequests, error) {
 	panic("implement me")
 }
 

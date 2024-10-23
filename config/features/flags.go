@@ -28,9 +28,9 @@ var (
 		Name:  "dev",
 		Usage: "Enables experimental features still in development. These features may not be stable.",
 	}
-	enableExperimentalState = &cli.BoolFlag{
-		Name:  "enable-experimental-state",
-		Usage: "Turns on the latest and greatest (but potentially unstable) changes to the beacon state.",
+	disableExperimentalState = &cli.BoolFlag{
+		Name:  "disable-experimental-state",
+		Usage: "Turns off the latest and greatest changes to the beacon state. Disabling this is safe to do after the feature has been enabled.",
 	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
@@ -166,10 +166,9 @@ var (
 		Name:  "enable-quic",
 		Usage: "Enables connection using the QUIC protocol for peers which support it.",
 	}
-	// EnablePeerDAS is a flag for enabling the peer data availability sampling.
-	EnableCommitteeAwarePacking = &cli.BoolFlag{
-		Name:  "enable-committee-aware-packing",
-		Usage: "Changes the attestation packing algorithm to one that is aware of attesting committees.",
+	DisableCommitteeAwarePacking = &cli.BoolFlag{
+		Name:  "disable-committee-aware-packing",
+		Usage: "Changes the attestation packing algorithm to one that is not aware of attesting committees.",
 	}
 	EnablePeerDAS = &cli.BoolFlag{
 		Name:  "peer-das",
@@ -193,7 +192,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableExperimentalState,
 	backfill.EnableExperimentalBackfill,
 	EnableQUIC,
 }
@@ -220,7 +218,7 @@ var E2EValidatorFlags = []string{
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
-	enableExperimentalState,
+	disableExperimentalState,
 	writeSSZStateTransitionsFlag,
 	saveInvalidBlockTempFlag,
 	saveInvalidBlobTempFlag,
@@ -246,7 +244,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	EnableLightClient,
 	BlobSaveFsync,
 	EnableQUIC,
-	EnableCommitteeAwarePacking,
+	DisableCommitteeAwarePacking,
 	EnablePeerDAS,
 	DataColumnsWithholdCount,
 	DataColumnsIgnoreSlotMultiple,

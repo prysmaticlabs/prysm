@@ -16,11 +16,11 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
@@ -457,7 +457,7 @@ func createAndConnectPeer(t *testing.T, p2pService *testp2p.TestP2P, offset int)
 	require.NoError(t, err)
 
 	// Create the peer.
-	peer := testp2p.NewTestP2P(t, swarmt.OptPeerPrivateKey(privateKey))
+	peer := testp2p.NewTestP2P(t, libp2p.Identity(privateKey))
 
 	// Add the peer and connect it.
 	p2pService.Peers().Add(&enr.Record{}, peer.PeerID(), nil, network.DirOutbound)
