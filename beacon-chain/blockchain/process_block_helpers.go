@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	lightclient "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/light-client"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
@@ -23,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v5/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
@@ -187,7 +188,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 		}
 	}
 
-	_, err = lightclient.NewLightClientFinalityUpdateFromBeaconState(
+	update, err := lightclient.NewLightClientFinalityUpdateFromBeaconState(
 		ctx,
 		postState.Slot(),
 		postState,
@@ -199,12 +200,15 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	if err != nil {
 		return 0, errors.Wrap(err, "could not create light client update")
 	}
+	finalityUpdate, err := structs.LightClientFinalityUpdateFromConsensus(update)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not convert light client update")
+	}
 
 	// Return the result
-	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
-		Version: ethpbv2.Version(signed.Version()),
-		// TODO: Get back to this when revisiting events
-		//Data:    update,
+	result := &structs.LightClientFinalityUpdateResponse{
+		Version: hexutil.EncodeUint64(uint64(signed.Version())),
+		Data:    finalityUpdate,
 	}
 
 	// Send event
@@ -228,7 +232,7 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 		return 0, errors.Wrap(err, "could not get attested state")
 	}
 
-	_, err = lightclient.NewLightClientOptimisticUpdateFromBeaconState(
+	update, err := lightclient.NewLightClientOptimisticUpdateFromBeaconState(
 		ctx,
 		postState.Slot(),
 		postState,
@@ -239,12 +243,15 @@ func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed in
 	if err != nil {
 		return 0, errors.Wrap(err, "could not create light client update")
 	}
+	optimisticUpdate, err := structs.LightClientOptimisticUpdateFromConsensus(update)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not convert light client update")
+	}
 
 	// Return the result
-	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
-		Version: ethpbv2.Version(signed.Version()),
-		// TODO: Get back to this when revisiting events
-		//Data:    update,
+	result := &structs.LightClientOptimisticUpdateResponse{
+		Version: hexutil.EncodeUint64(uint64(signed.Version())),
+		Data:    optimisticUpdate,
 	}
 
 	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
