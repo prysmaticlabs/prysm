@@ -1135,7 +1135,7 @@ func TestComputePayloadAttribute(t *testing.T) {
 	// Cache hit, advance state, no fee recipient
 	slot := primitives.Slot(1)
 	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
-	blk := &ethpb.SignedBeaconBlockBellatrix{}
+	blk := util.NewBeaconBlockBellatrix()
 	signed, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	roblock, err := consensusblocks.NewROBlockWithRoot(signed, [32]byte{'a'})
