@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
-## [Unreleased](https://github.com/prysmaticlabs/prysm/compare/v5.1.1...HEAD)
+## [Unreleased](https://github.com/prysmaticlabs/prysm/compare/v5.1.2...HEAD)
 
 ### Added
 
@@ -16,6 +16,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Added SubmitPoolAttesterSlashingV2 endpoint.
 - Builder API endpooint to support Electra
 - Added SubmitAggregateAndProofsRequestV2 endpoint.
+- Updated the `beacon-chain/monitor` package to Electra. [PR](https://github.com/prysmaticlabs/prysm/pull/14562)
 
 ### Changed
 
@@ -41,10 +42,26 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 - Fixed mesh size by appending `gParams.Dhi = gossipSubDhi`
 - Fix skipping partial withdrawals count.
-- recover from panics when writing the event stream [pr](https://github.com/prysmaticlabs/prysm/pull/14545)
 
 ### Security
 
+## [v5.1.2](https://github.com/prysmaticlabs/prysm/compare/v5.1.1...v5.1.2) - 2024-10-16 
+
+This is a hotfix release with one change. 
+
+Prysm v5.1.1 contains an updated implementation of the beacon api streaming events endpoint. This
+new implementation contains a bug that can cause a panic in certain conditions. The issue is
+difficult to reproduce reliably and we are still trying to determine the root cause, but in the
+meantime we are issuing a patch that recovers from the panic to prevent the node from crashing.
+
+This only impacts the v5.1.1 release beacon api event stream endpoints. This endpoint is used by the
+prysm REST mode validator (a feature which requires the validator to be configured to use the beacon
+api intead of prysm's stock grpc endpoints) or accessory software that connects to the events api,
+like https://github.com/ethpandaops/ethereum-metrics-exporter
+
+### Fixed 
+
+- Recover from panics when writing the event stream [#14545](https://github.com/prysmaticlabs/prysm/pull/14545)
 
 ## [v5.1.1](https://github.com/prysmaticlabs/prysm/compare/v5.1.0...v5.1.1) - 2024-10-15
 
