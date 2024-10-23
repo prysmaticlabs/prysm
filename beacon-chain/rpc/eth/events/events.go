@@ -142,6 +142,7 @@ func newTopicRequest(topics []string) (*topicRequest, error) {
 // Servers may send SSE comments beginning with ':' for any purpose,
 // including to keep the event stream connection alive in the presence of proxy servers.
 func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Starting StreamEvents handler")
 	ctx, span := trace.StartSpan(r.Context(), "events.StreamEvents")
 	defer span.End()
 
@@ -176,7 +177,9 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	if err := es.recvEventLoop(ctx, cancel, topics, s); err != nil {
 		log.WithError(err).Debug("Shutting down StreamEvents handler.")
 	}
+	cleanupStart := time.Now()
 	es.waitForCleanup()
+	log.WithField("cleanup_wait", time.Since(cleanupStart)).Debug("streamEvents shutdown complete")
 }
 
 func newEventStreamer(buffSize int, ka time.Duration) *eventStreamer {
