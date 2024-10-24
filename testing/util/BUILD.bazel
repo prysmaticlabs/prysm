@@ -85,7 +85,7 @@ go_test(
         "deneb_test.go",
         "deposits_test.go",
         "helpers_test.go",
-        "loging_test.go",
+        "logging_test.go",
         "state_test.go",
     ],
     embed = [":go_default_library"],
