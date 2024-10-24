@@ -83,7 +83,7 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 	}
 	for _, index := range indices {
 		if index {
-			blobExistedInDBCount.Inc()
+			blobExistedInDBTotal.Inc()
 		}
 	}
 
@@ -116,7 +116,7 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 
 	for _, sidecar := range blobSidecars {
 		if sidecar.Index >= uint64(len(indices)) || indices[sidecar.Index] {
-			blobExistedInDBCount.Inc()
+			blobExistedInDBTotal.Inc()
 			continue
 		}
 		if err := s.subscribeBlob(ctx, sidecar); err != nil {
@@ -124,7 +124,7 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 			continue
 		}
 
-		blobRecoveredFromELCount.Inc()
+		blobRecoveredFromELTotal.Inc()
 		fields := blobFields(sidecar.ROBlob)
 		fields["sinceSlotStartTime"] = s.cfg.clock.Now().Sub(startTime)
 		log.WithFields(fields).Debug("Processed blob sidecar from EL")

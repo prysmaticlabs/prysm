@@ -171,16 +171,16 @@ var (
 		},
 	)
 
-	blobRecoveredFromELCount = promauto.NewCounter(
+	blobRecoveredFromELTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blob_recovered_from_el_count",
+			Name: "blob_recovered_from_el_total",
 			Help: "Count the number of times blobs have been recovered from the execution layer.",
 		},
 	)
 
-	blobExistedInDBCount = promauto.NewCounter(
+	blobExistedInDBTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "blob_existed_in_db_count",
+			Name: "blob_existed_in_db_total",
 			Help: "Count the number of times blobs have been found in the database.",
 		},
 	)

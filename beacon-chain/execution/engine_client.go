@@ -502,7 +502,7 @@ func (s *Service) GetBlobs(ctx context.Context, versionedHashes []common.Hash) (
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobs")
 	defer span.End()
 	// If the execution engine does not support `GetBlobsV1`, return early to prevent encountering an error later.
-	if !s.capabilityCache.Has(GetBlobsV1) {
+	if !s.capabilityCache.has(GetBlobsV1) {
 		return nil, nil
 	}
 
@@ -543,7 +543,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 // It retrieves the KZG commitments from the block body, fetches the associated blobs and proofs,
 // and constructs the corresponding verified read-only blob sidecars.
 //
-// The 'exists' argument is a boolean array of length 6, where each element corresponds to whether a
+// The 'exists' argument is a boolean array of length 6 (max blobs per block), where each element corresponds to whether a
 // particular blob sidecar already exists. If exists[i] is true, the blob for the i-th KZG commitment
 // has already been retrieved and does not need to be fetched again from the execution layer (EL).
 //
@@ -553,7 +553,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 //   - If exists = [false ... x 6], the function will attempt to fetch all blobs.
 //
 // Only the blobs that do not already exist (where exists[i] is false) are fetched using the KZG commitments from block body.
-func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, exists [6]bool) ([]blocks.VerifiedROBlob, error) {
+func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, exists [fieldparams.MaxBlobsPerBlock]bool) ([]blocks.VerifiedROBlob, error) {
 	blockBody := block.Block().Body()
 	kzgCommitments, err := blockBody.BlobKzgCommitments()
 	if err != nil {
@@ -585,7 +585,7 @@ func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.
 		return nil, errors.Wrap(err, "could not get header")
 	}
 
-	// Reconstruct verify blob sidecars
+	// Reconstruct verified blob sidecars
 	var verifiedBlobs []blocks.VerifiedROBlob
 	for i, blobIndex := 0, 0; i < len(kzgCommitments); i++ {
 		if exists[i] {

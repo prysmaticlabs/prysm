@@ -907,25 +907,31 @@ func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.
 }
 
 type capabilityCache struct {
-	capabilities     []string
+	capabilities     map[string]interface{}
 	capabilitiesLock sync.RWMutex
 }
 
-func (c *capabilityCache) Save(cs []string) {
+func (c *capabilityCache) save(cs []string) {
 	c.capabilitiesLock.Lock()
 	defer c.capabilitiesLock.Unlock()
 
-	c.capabilities = cs
+	if c.capabilities == nil {
+		c.capabilities = make(map[string]interface{})
+	}
+
+	for _, capability := range cs {
+		c.capabilities[capability] = struct{}{}
+	}
 }
 
-func (c *capabilityCache) Has(capability string) bool {
+func (c *capabilityCache) has(capability string) bool {
 	c.capabilitiesLock.RLock()
 	defer c.capabilitiesLock.RUnlock()
 
-	for _, existingCapability := range c.capabilities {
-		if existingCapability == capability {
-			return true
-		}
+	if c.capabilities == nil {
+		return false
 	}
-	return false
+
+	_, ok := c.capabilities[capability]
+	return ok
 }
