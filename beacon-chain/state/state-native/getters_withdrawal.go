@@ -161,7 +161,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 		if b.version >= version.Electra {
 			var partiallyWithdrawnBalance uint64
 			for _, w := range withdrawals {
-				if w.Index == uint64(validatorIndex) {
+				if w.ValidatorIndex == validatorIndex {
 					partiallyWithdrawnBalance += w.Amount
 				}
 			}
