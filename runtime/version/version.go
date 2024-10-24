@@ -11,11 +11,15 @@ import (
 	"time"
 )
 
+const unknown = "Unknown"
+
 // The value of these vars are set through linker options.
-var gitCommit = "Local build"
-var buildDate = "Moments ago"
-var buildDateUnix = "0"
-var gitTag = "Unknown"
+var (
+	gitCommit     = "Local build"
+	buildDate     = "Moments ago"
+	buildDateUnix = "0"
+	gitTag        = unknown
+)
 
 // Version returns the version string of this build.
 func Version() string {
@@ -31,6 +35,10 @@ func Version() string {
 
 // SemanticVersion returns the Major.Minor.Patch version of this build.
 func SemanticVersion() string {
+	if gitTag == unknown {
+		return BuildData()
+	}
+
 	return gitTag
 }
 
