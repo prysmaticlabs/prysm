@@ -13,6 +13,7 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -478,7 +479,10 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
 	err := s.rpcClient.CallContext(ctx, &hdr, BlockByHashMethod, hash, false /* no transactions */)
-	if err == nil && hdr == nil {
+	if err != nil {
+		return nil, errors.Wrap(err, client.ErrConnectionIssue.Error())
+	}
+	if hdr == nil {
 		err = ethereum.NotFound
 	}
 	return hdr, err
@@ -488,7 +492,10 @@ func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.He
 func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
 	err := s.rpcClient.CallContext(ctx, &hdr, BlockByNumberMethod, toBlockNumArg(number), false /* no transactions */)
-	if err == nil && hdr == nil {
+	if err != nil {
+		return nil, errors.Wrap(err, client.ErrConnectionIssue.Error())
+	}
+	if hdr == nil {
 		err = ethereum.NotFound
 	}
 	return hdr, err
