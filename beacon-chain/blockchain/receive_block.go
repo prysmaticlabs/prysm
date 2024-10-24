@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
+	consensus_blocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -100,10 +101,13 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
 		return errors.Wrap(err, "could not save post state info")
 	}
+	roblock, err := consensus_blocks.NewROBlockWithRoot(blockCopy, blockRoot)
+	if err != nil {
+		return err
+	}
 	args := &postBlockProcessConfig{
 		ctx:            ctx,
-		signed:         blockCopy,
-		blockRoot:      blockRoot,
+		roblock:        roblock,
 		postState:      postState,
 		isValidPayload: isValidPayload,
 	}
@@ -273,7 +277,6 @@ func (s *Service) reportPostBlockProcessing(
 func (s *Service) executePostFinalizationTasks(ctx context.Context, finalizedState state.BeaconState) {
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	go func() {
-		finalizedState.SaveValidatorIndices() // used to handle Validator index invariant from EIP6110
 		s.sendNewFinalizedEvent(ctx, finalizedState)
 	}()
 	depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
@@ -350,6 +353,9 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 
 // HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
 func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
+	if s.BlockBeingSynced(root) {
+		return false
+	}
 	return s.hasBlockInInitSyncOrDB(ctx, root)
 }
 

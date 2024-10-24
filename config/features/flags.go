@@ -166,9 +166,13 @@ var (
 		Name:  "enable-quic",
 		Usage: "Enables connection using the QUIC protocol for peers which support it.",
 	}
-	EnableCommitteeAwarePacking = &cli.BoolFlag{
-		Name:  "enable-committee-aware-packing",
-		Usage: "Changes the attestation packing algorithm to one that is aware of attesting committees.",
+	DisableCommitteeAwarePacking = &cli.BoolFlag{
+		Name:  "disable-committee-aware-packing",
+		Usage: "Changes the attestation packing algorithm to one that is not aware of attesting committees.",
+	}
+	EnableDiscoveryReboot = &cli.BoolFlag{
+		Name:  "enable-discovery-reboot",
+		Usage: "Experimental: Enables the discovery listener to rebooted in the event of connectivity issues.",
 	}
 )
 
@@ -226,7 +230,8 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	EnableLightClient,
 	BlobSaveFsync,
 	EnableQUIC,
-	EnableCommitteeAwarePacking,
+	DisableCommitteeAwarePacking,
+	EnableDiscoveryReboot,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

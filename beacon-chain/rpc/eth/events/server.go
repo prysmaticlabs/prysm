@@ -4,6 +4,8 @@
 package events
 
 import (
+	"time"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	opfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/operation"
@@ -18,4 +20,7 @@ type Server struct {
 	HeadFetcher            blockchain.HeadFetcher
 	ChainInfoFetcher       blockchain.ChainInfoFetcher
 	TrackedValidatorsCache *cache.TrackedValidatorsCache
+	KeepAliveInterval      time.Duration
+	EventFeedDepth         int
+	EventWriteTimeout      time.Duration
 }

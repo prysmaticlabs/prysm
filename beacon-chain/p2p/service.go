@@ -71,7 +71,7 @@ type Service struct {
 	subnetsLock           map[uint64]*sync.RWMutex
 	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	initializationLock    sync.Mutex
-	dv5Listener           Listener
+	dv5Listener           ListenerRebooter
 	startupErr            error
 	ctx                   context.Context
 	host                  host.Host

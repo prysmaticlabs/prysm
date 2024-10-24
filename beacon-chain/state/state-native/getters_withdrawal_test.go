@@ -343,10 +343,28 @@ func TestExpectedWithdrawals(t *testing.T) {
 		require.NoError(t, pb.UnmarshalSSZ(serializedSSZ))
 		s, err := state_native.InitializeFromProtoElectra(pb)
 		require.NoError(t, err)
-		t.Log(s.NumPendingPartialWithdrawals())
 		expected, partialWithdrawalsCount, err := s.ExpectedWithdrawals()
 		require.NoError(t, err)
 		require.Equal(t, 8, len(expected))
 		require.Equal(t, uint64(8), partialWithdrawalsCount)
+	})
+
+	t.Run("electra some pending partial withdrawals", func(t *testing.T) {
+		// Load a serialized Electra state from disk.
+		// This spectest has a fully hydrated beacon state with partial pending withdrawals.
+		serializedBytes, err := util.BazelFileBytes("tests/mainnet/electra/operations/withdrawal_request/pyspec_tests/pending_withdrawals_consume_all_excess_balance/pre.ssz_snappy")
+		require.NoError(t, err)
+		serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
+		require.NoError(t, err)
+		pb := &ethpb.BeaconStateElectra{}
+		require.NoError(t, pb.UnmarshalSSZ(serializedSSZ))
+		s, err := state_native.InitializeFromProtoElectra(pb)
+		require.NoError(t, err)
+		p, err := s.PendingPartialWithdrawals()
+		require.NoError(t, err)
+		require.NoError(t, s.UpdateBalancesAtIndex(p[0].Index, 0)) // This should still count as partial withdrawal.
+		_, partialWithdrawalsCount, err := s.ExpectedWithdrawals()
+		require.NoError(t, err)
+		require.Equal(t, uint64(10), partialWithdrawalsCount)
 	})
 }

@@ -176,7 +176,7 @@ type BeaconStateElectra struct {
 	EarliestExitEpoch             string                         `json:"earliest_exit_epoch"`
 	ConsolidationBalanceToConsume string                         `json:"consolidation_balance_to_consume"`
 	EarliestConsolidationEpoch    string                         `json:"earliest_consolidation_epoch"`
-	PendingBalanceDeposits        []*PendingBalanceDeposit       `json:"pending_balance_deposits"`
+	PendingDeposits               []*PendingDeposit              `json:"pending_deposits"`
 	PendingPartialWithdrawals     []*PendingPartialWithdrawal    `json:"pending_partial_withdrawals"`
 	PendingConsolidations         []*PendingConsolidation        `json:"pending_consolidations"`
 }
