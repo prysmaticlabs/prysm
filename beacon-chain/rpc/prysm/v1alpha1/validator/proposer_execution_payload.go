@@ -137,7 +137,7 @@ func (vs *Server) getLocalPayloadFromEngine(
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
-	case version.Deneb, version.Electra:
+	case version.Deneb, version.Electra, version.EPBS:
 		withdrawals, _, err := st.ExpectedWithdrawals()
 		if err != nil {
 			return nil, err

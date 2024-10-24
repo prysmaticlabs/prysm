@@ -360,6 +360,18 @@ service BeaconNodeValidator {
     // ePBS RPC endpoints
     rpc SubmitSignedExecutionPayloadEnvelope(ethereum.engine.v1.SignedExecutionPayloadEnvelope) returns (google.protobuf.Empty) {}
     rpc SubmitSignedExecutionPayloadHeader(ethereum.engine.v1.SignedExecutionPayloadHeader) returns (google.protobuf.Empty) {}
+    rpc GetExecutionPayloadEnvelope(PayloadEnvelopeRequest) returns (ethereum.engine.v1.ExecutionPayloadEnvelope) {}
+    rpc GetLocalHeader(HeaderRequest) returns (ethereum.engine.v1.ExecutionPayloadHeaderEPBS) {}
+}
+
+message PayloadEnvelopeRequest {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
+}
+
+message HeaderRequest {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.ValidatorIndex"];
 }
 
 message GetPayloadAttestationDataRequest {

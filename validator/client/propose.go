@@ -59,6 +59,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	span.SetAttributes(trace.StringAttribute("validator", fmtKey))
 	log := log.WithField("pubkey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
+	if params.BeaconConfig().EPBSForkEpoch > slots.ToEpoch(slot) {
+		if err := v.SubmitHeader(ctx, slot, pubKey); err != nil {
+			log.WithError(err).Error("Failed to submit header")
+			return
+		}
+	}
+
 	// Sign randao reveal, it's used to request block from beacon node
 	epoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
 	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch, slot)
@@ -171,7 +178,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	span.SetAttributes(
+	if params.BeaconConfig().EPBSForkEpoch > slots.ToEpoch(slot) {
+		if err := v.SubmitExecutionPayloadEnvelope(ctx, slot, pubKey); err != nil {
+			log.WithError(err).Error("Failed to submit header")
+			return
+		}
+	}
+
+	span.AddAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),
 		trace.Int64Attribute("numDeposits", int64(len(blk.Block().Body().Deposits()))),
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
