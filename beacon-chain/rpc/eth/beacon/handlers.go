@@ -269,6 +269,7 @@ func (s *Server) GetBlockAttestationsV2(w http.ResponseWriter, r *http.Request) 
 		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, root),
 		Data:                attBytes,
 	}
+	w.Header().Set(api.VersionHeader, version.String(v))
 	httputil.WriteJson(w, resp)
 }
 
