@@ -46,14 +46,14 @@ func (l *TestLightClient) SetupTestCapella(blinded bool) *TestLightClient {
 
 	finalizedBlock, err := blocks.NewSignedBeaconBlock(NewBeaconBlockCapella())
 	require.NoError(l.T, err)
-	finalizedBlock.SetSlot(1)
+	finalizedBlock.SetSlot(primitives.Slot(params.BeaconConfig().CapellaForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)))
 	finalizedHeader, err := finalizedBlock.Header()
 	require.NoError(l.T, err)
 	finalizedRoot, err := finalizedHeader.Header.HashTreeRoot()
 	require.NoError(l.T, err)
 
 	require.NoError(l.T, attestedState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
-		Epoch: params.BeaconConfig().CapellaForkEpoch - 10,
+		Epoch: params.BeaconConfig().CapellaForkEpoch,
 		Root:  finalizedRoot[:],
 	}))
 
@@ -440,14 +440,14 @@ func (l *TestLightClient) SetupTestDeneb(blinded bool) *TestLightClient {
 
 	finalizedBlock, err := blocks.NewSignedBeaconBlock(NewBeaconBlockDeneb())
 	require.NoError(l.T, err)
-	finalizedBlock.SetSlot(1)
+	finalizedBlock.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)))
 	finalizedHeader, err := finalizedBlock.Header()
 	require.NoError(l.T, err)
 	finalizedRoot, err := finalizedHeader.Header.HashTreeRoot()
 	require.NoError(l.T, err)
 
 	require.NoError(l.T, attestedState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
-		Epoch: params.BeaconConfig().DenebForkEpoch - 10,
+		Epoch: params.BeaconConfig().DenebForkEpoch,
 		Root:  finalizedRoot[:],
 	}))
 
@@ -664,14 +664,14 @@ func (l *TestLightClient) SetupTestDenebFinalizedBlockCapella(blinded bool) *Tes
 
 	finalizedBlock, err := blocks.NewSignedBeaconBlock(NewBeaconBlockCapella())
 	require.NoError(l.T, err)
-	finalizedBlock.SetSlot(1)
+	finalizedBlock.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Sub(15))
 	finalizedHeader, err := finalizedBlock.Header()
 	require.NoError(l.T, err)
 	finalizedRoot, err := finalizedHeader.Header.HashTreeRoot()
 	require.NoError(l.T, err)
 
 	require.NoError(l.T, attestedState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
-		Epoch: params.BeaconConfig().CapellaForkEpoch - 10,
+		Epoch: params.BeaconConfig().DenebForkEpoch - 1,
 		Root:  finalizedRoot[:],
 	}))
 

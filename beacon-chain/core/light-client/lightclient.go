@@ -388,15 +388,18 @@ func BlockToLightClientHeader(
 		var payloadProof [][]byte
 
 		if blockEpoch < params.BeaconConfig().CapellaForkEpoch {
-			var ok bool
-
-			p, err := execution.EmptyExecutionPayload(version.Capella)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not get payload header")
-			}
-			payloadHeader, ok = p.(*enginev1.ExecutionPayloadHeaderCapella)
-			if !ok {
-				return nil, errors.Wrapf(err, "payload header type %T is not %T", payloadHeader, &enginev1.ExecutionPayloadHeaderCapella{})
+			payloadHeader = &enginev1.ExecutionPayloadHeaderCapella{
+				ParentHash:       make([]byte, fieldparams.RootLength),
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       make([]byte, fieldparams.RootLength),
+				ExtraData:        make([]byte, 0),
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: make([]byte, fieldparams.RootLength),
+				WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 			}
 			payloadProof = emptyPayloadProof()
 		} else {
