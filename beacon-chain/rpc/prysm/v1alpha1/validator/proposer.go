@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	builderapi "github.com/prysmaticlabs/prysm/v5/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
@@ -427,6 +428,7 @@ func (vs *Server) PrepareBeaconProposer(
 		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
 	if len(validatorIndices) != 0 {
+		api.TrackedValidatorsCount.Set(float64(vs.TrackedValidatorsCache.Size()))
 		log.WithFields(logrus.Fields{
 			"validatorCount": len(validatorIndices),
 		}).Debug("Updated fee recipient addresses for validator indices")

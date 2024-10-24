@@ -677,6 +677,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	if len(validatorIndices) == 0 {
 		return
 	}
+	api.TrackedValidatorsCount.Set(float64(s.TrackedValidatorsCache.Size()))
 	log.WithFields(logrus.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses")
