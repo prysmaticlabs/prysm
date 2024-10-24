@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
+	"sort"
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
@@ -18,11 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
 )
 
 var errBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
@@ -208,9 +210,272 @@ func SendBlobSidecarByRoot(
 	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRootReq(req), max)
 }
 
+// SendDataColumnSidecarsByRootRequest sends a request for data column sidecars by root
+// and returns the fetched data column sidecars.
+func SendDataColumnSidecarsByRootRequest(
+	ctx context.Context,
+	tor blockchain.TemporalOracle,
+	p2pApi p2p.P2P,
+	pid peer.ID,
+	ctxMap ContextByteVersions,
+	req *p2ptypes.DataColumnSidecarsByRootReq,
+) ([]blocks.RODataColumn, error) {
+	reqCount := uint64(len(*req))
+	maxRequestDataColumnSideCar := params.BeaconConfig().MaxRequestDataColumnSidecars
+
+	// Verify that the request count is within the maximum allowed.
+	if reqCount > maxRequestDataColumnSideCar {
+		return nil, errors.Wrapf(p2ptypes.ErrMaxDataColumnReqExceeded, "current: %d, max: %d", reqCount, maxRequestDataColumnSideCar)
+	}
+
+	// Get the topic for the request.
+	topic, err := p2p.TopicFromMessage(p2p.DataColumnSidecarsByRootName, slots.ToEpoch(tor.CurrentSlot()))
+	if err != nil {
+		return nil, errors.Wrap(err, "topic from message")
+	}
+
+	// Send the request to the peer.
+	stream, err := p2pApi.Send(ctx, req, topic, pid)
+	if err != nil {
+		return nil, errors.Wrap(err, "send")
+	}
+
+	// Close the stream when done.
+	defer closeStream(stream, log)
+
+	// Read the data column sidecars from the stream.
+	roDataColumns := make([]blocks.RODataColumn, 0, reqCount)
+
+	for i := uint64(0); ; /* no stop condition */ i++ {
+		roDataColumn, err := readChunkedDataColumnSideCar(stream, p2pApi, ctxMap, []DataColumnResponseValidation{dataColumnValidatorFromRootReq(req)})
+		if errors.Is(err, io.EOF) {
+			// End of stream.
+			break
+		}
+
+		if roDataColumn == nil {
+			return nil, errors.Wrap(err, "validation error")
+		}
+
+		if err != nil {
+			return nil, errors.Wrap(err, "read chunked data column sidecar")
+		}
+
+		if i >= reqCount {
+			// The response MUST contain no more than `reqCount` blocks.
+			// (`reqCount` is already capped by `maxRequestDataColumnSideCar`.)
+			return nil, errors.Wrap(ErrInvalidFetchedData, "response contains more data column sidecars than requested")
+		}
+
+		roDataColumns = append(roDataColumns, *roDataColumn)
+	}
+
+	return roDataColumns, nil
+}
+
+// dataColumnValidatorFromRangeReq verifies that the slot of the data column sidecar is within the bounds of the request.
+func dataColumnValidatorFromRangeReq(req *pb.DataColumnSidecarsByRangeRequest) DataColumnResponseValidation {
+	end := req.StartSlot + primitives.Slot(req.Count)
+
+	return func(sc blocks.RODataColumn) bool {
+		slot := sc.Slot()
+		valid := slot >= req.StartSlot && slot < end
+
+		if valid {
+			return true
+		}
+
+		log.WithFields(logrus.Fields{
+			"reqStartSlot": req.StartSlot,
+			"reqCount":     req.Count,
+			"respSlot":     slot,
+			"respRoot":     fmt.Sprintf("%#x", sc.BlockRoot()),
+		}).Debug("Data column sidecar slot out of range")
+
+		return false
+	}
+}
+
+// dataColumnIndexValidatorFromRangeReq verifies that the data column sidecar is requested in the request.
+func dataColumnIndexValidatorFromRangeReq(req *pb.DataColumnSidecarsByRangeRequest) DataColumnResponseValidation {
+	columnIds := make(map[uint64]bool)
+	for _, col := range req.Columns {
+		columnIds[col] = true
+	}
+
+	return func(sc blocks.RODataColumn) bool {
+		columnIndex := sc.ColumnIndex
+
+		valid := columnIds[columnIndex]
+
+		if valid {
+			return true
+		}
+
+		columnsIdsSlice := make([]uint64, 0, len(columnIds))
+		for k := range columnIds {
+			columnsIdsSlice = append(columnsIdsSlice, k)
+		}
+
+		sort.Slice(columnsIdsSlice, func(i, j int) bool {
+			return columnsIdsSlice[i] < columnsIdsSlice[j]
+		})
+
+		log.WithFields(logrus.Fields{
+			"reqColumns": columnsIdsSlice,
+			"respColumn": columnIndex,
+			"respRoot":   fmt.Sprintf("%#x", sc.BlockRoot()),
+		}).Debug("Data column sidecar column index not requested")
+
+		return false
+	}
+}
+
+// SendDataColumnSidecarsByRangeRequest sends a request for data column sidecars by range
+// and returns the fetched data column sidecars.
+func SendDataColumnSidecarsByRangeRequest(
+	ctx context.Context,
+	tor blockchain.TemporalOracle,
+	p2pApi p2p.P2P,
+	pid peer.ID,
+	ctxMap ContextByteVersions,
+	req *pb.DataColumnSidecarsByRangeRequest,
+) ([]blocks.RODataColumn, error) {
+	topic, err := p2p.TopicFromMessage(p2p.DataColumnSidecarsByRangeName, slots.ToEpoch(tor.CurrentSlot()))
+	if err != nil {
+		return nil, errors.Wrap(err, "topic from message")
+	}
+
+	var columnsLog interface{} = "all"
+	numberOfColumns := params.BeaconConfig().NumberOfColumns
+	columnsCount := uint64(len(req.Columns))
+
+	if columnsCount < numberOfColumns {
+		columns := req.Columns
+		slices.Sort[[]uint64](columns)
+		columnsLog = columns
+	}
+
+	log := log.WithFields(logrus.Fields{
+		"peer":       pid,
+		"topic":      topic,
+		"startSlot":  req.StartSlot,
+		"count":      req.Count,
+		"columns":    columnsLog,
+		"totalCount": req.Count * uint64(len(req.Columns)),
+	})
+
+	stream, err := p2pApi.Send(ctx, req, topic, pid)
+	if err != nil {
+		return nil, err
+	}
+	defer closeStream(stream, log)
+
+	max := params.BeaconConfig().MaxRequestDataColumnSidecars
+
+	if max > req.Count*fieldparams.NumberOfColumns {
+		max = req.Count * fieldparams.NumberOfColumns
+	}
+
+	vfuncs := []DataColumnResponseValidation{
+		dataColumnValidatorFromRangeReq(req),
+		dataColumnIndexValidatorFromRangeReq(req),
+	}
+
+	// Read the data column sidecars from the stream.
+	roDataColumns := make([]blocks.RODataColumn, 0, max)
+
+	for i := uint64(0); ; /* no stop condition */ i++ {
+		roDataColumn, err := readChunkedDataColumnSideCar(stream, p2pApi, ctxMap, vfuncs)
+		if errors.Is(err, io.EOF) {
+			// End of stream.
+			break
+		}
+
+		if err != nil {
+			log.WithError(err).Debug("Error reading chunked data column sidecar")
+			break
+		}
+
+		if roDataColumn == nil {
+			log.WithError(err).Debug("Validation error")
+			continue
+		}
+
+		if i >= max {
+			// The response MUST contain no more than `reqCount` blocks.
+			// (`reqCount` is already capped by `maxRequestDataColumnSideCar`.)
+			log.WithError(err).Debug("Response contains more data column sidecars than maximum")
+			break
+		}
+
+		roDataColumns = append(roDataColumns, *roDataColumn)
+	}
+
+	return roDataColumns, nil
+}
+
+func readChunkedDataColumnSideCar(
+	stream network.Stream,
+	p2pApi p2p.P2P,
+	ctxMap ContextByteVersions,
+	validation []DataColumnResponseValidation,
+) (*blocks.RODataColumn, error) {
+	// Read the status code from the stream.
+	statusCode, errMessage, err := ReadStatusCode(stream, p2pApi.Encoding())
+	if err != nil {
+		return nil, errors.Wrap(err, "read status code")
+	}
+
+	if statusCode != 0 {
+		return nil, errors.Wrap(errBlobChunkedReadFailure, errMessage)
+	}
+	// Retrieve the fork digest.
+	ctxBytes, err := readContextFromStream(stream)
+	if err != nil {
+		return nil, errors.Wrap(err, "read context from stream")
+	}
+
+	// Check if the fork digest is recognized.
+	v, ok := ctxMap[bytesutil.ToBytes4(ctxBytes)]
+	if !ok {
+		return nil, errors.Errorf("unrecognized fork digest %#x", ctxBytes)
+	}
+
+	// Check if we are on debeb.
+	// Only deneb is supported at this time, because we lack a fork-spanning interface/union type for blobs.
+	if v != version.Deneb {
+		return nil, errors.Errorf("unexpected context bytes for deneb DataColumnSidecar, ctx=%#x, v=%v", ctxBytes, v)
+	}
+
+	// Decode the data column sidecar from the stream.
+	dataColumnSidecar := new(pb.DataColumnSidecar)
+	if err := p2pApi.Encoding().DecodeWithMaxLength(stream, dataColumnSidecar); err != nil {
+		return nil, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
+	}
+
+	// Create a read-only data column from the data column sidecar.
+	roDataColumn, err := blocks.NewRODataColumn(dataColumnSidecar)
+	if err != nil {
+		return nil, errors.Wrap(err, "new read only data column")
+	}
+
+	// Run validation functions.
+	for _, val := range validation {
+		if !val(roDataColumn) {
+			return nil, nil
+		}
+	}
+	return &roDataColumn, nil
+}
+
 // BlobResponseValidation represents a function that can validate aspects of a single unmarshaled blob
 // that was received from a peer in response to an rpc request.
 type BlobResponseValidation func(blocks.ROBlob) error
+
+// DataColumnResponseValidation represents a function that can validate aspects of a single unmarshaled data column
+// that was received from a peer in response to an rpc request.
+type DataColumnResponseValidation func(column blocks.RODataColumn) bool
 
 func composeBlobValidations(vf ...BlobResponseValidation) BlobResponseValidation {
 	return func(blob blocks.ROBlob) error {
@@ -308,6 +573,51 @@ func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) BlobResponseV
 	}
 }
 
+func dataColumnValidatorFromRootReq(req *p2ptypes.DataColumnSidecarsByRootReq) DataColumnResponseValidation {
+	columnsIndexFromRoot := make(map[[fieldparams.RootLength]byte]map[uint64]bool)
+
+	for _, sc := range *req {
+		blockRoot := bytesutil.ToBytes32(sc.BlockRoot)
+		if columnsIndexFromRoot[blockRoot] == nil {
+			columnsIndexFromRoot[blockRoot] = make(map[uint64]bool)
+		}
+
+		columnsIndexFromRoot[blockRoot][sc.ColumnIndex] = true
+	}
+
+	return func(sc blocks.RODataColumn) bool {
+		root := sc.BlockRoot()
+		columnsIndex, ok := columnsIndexFromRoot[root]
+
+		if !ok {
+			log.WithField("root", fmt.Sprintf("%#x", root)).Debug("Data column sidecar root not requested")
+			return false
+		}
+
+		if !columnsIndex[sc.ColumnIndex] {
+			columnsIndexSlice := make([]uint64, 0, len(columnsIndex))
+
+			for index := range columnsIndex {
+				columnsIndexSlice = append(columnsIndexSlice, index)
+			}
+
+			sort.Slice(columnsIndexSlice, func(i, j int) bool {
+				return columnsIndexSlice[i] < columnsIndexSlice[j]
+			})
+
+			log.WithFields(logrus.Fields{
+				"root":              fmt.Sprintf("%#x", root),
+				"column":            sc.ColumnIndex,
+				"reaquestedColumns": columnsIndexSlice,
+			}).Debug("Data column sidecar column index not requested")
+
+			return false
+		}
+
+		return true
+	}
+}
+
 func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf BlobResponseValidation, max uint64) ([]blocks.ROBlob, error) {
 	sidecars := make([]blocks.ROBlob, 0)
 	// Attempt an extra read beyond max to check if the peer is violating the spec by
@@ -334,7 +644,7 @@ func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncodi
 
 func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf BlobResponseValidation) (blocks.ROBlob, error) {
 	var b blocks.ROBlob
-	pb := &ethpb.BlobSidecar{}
+	pb := &pb.BlobSidecar{}
 	decode := encoding.DecodeWithMaxLength
 	var (
 		code uint8

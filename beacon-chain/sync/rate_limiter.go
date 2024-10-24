@@ -7,12 +7,14 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/trailofbits/go-mutexasserts"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
-	"github.com/sirupsen/logrus"
-	"github.com/trailofbits/go-mutexasserts"
 )
 
 const defaultBurstLimit = 5
@@ -46,13 +48,18 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	allowedBlobsPerSecond := float64(flags.Get().BlobBatchLimit)
 	allowedBlobsBurst := int64(flags.Get().BlobBatchLimitBurstFactor * flags.Get().BlobBatchLimit)
 
+	// Initialize data column limits.
+	allowedDataColumnsPerSecond := float64(flags.Get().DataColumnBatchLimit * int(params.BeaconConfig().CustodyRequirement))
+	allowedDataColumnsBurst := int64(flags.Get().DataColumnBatchLimitBurstFactor * flags.Get().DataColumnBatchLimit * int(params.BeaconConfig().CustodyRequirement))
+
 	// Set topic map for all rpc topics.
 	topicMap := make(map[string]*leakybucket.Collector, len(p2p.RPCTopicMappings))
 	// Goodbye Message
 	topicMap[addEncoding(p2p.RPCGoodByeTopicV1)] = leakybucket.NewCollector(1, 1, leakyBucketPeriod, false /* deleteEmptyBuckets */)
-	// MetadataV0 Message
+	// Metadata Message
 	topicMap[addEncoding(p2p.RPCMetaDataTopicV1)] = leakybucket.NewCollector(1, defaultBurstLimit, leakyBucketPeriod, false /* deleteEmptyBuckets */)
 	topicMap[addEncoding(p2p.RPCMetaDataTopicV2)] = leakybucket.NewCollector(1, defaultBurstLimit, leakyBucketPeriod, false /* deleteEmptyBuckets */)
+	topicMap[addEncoding(p2p.RPCMetaDataTopicV3)] = leakybucket.NewCollector(1, defaultBurstLimit, leakyBucketPeriod, false /* deleteEmptyBuckets */)
 	// Ping Message
 	topicMap[addEncoding(p2p.RPCPingTopicV1)] = leakybucket.NewCollector(1, defaultBurstLimit, leakyBucketPeriod, false /* deleteEmptyBuckets */)
 	// Status Message
@@ -66,6 +73,9 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// for BlobSidecarsByRoot and BlobSidecarsByRange
 	blobCollector := leakybucket.NewCollector(allowedBlobsPerSecond, allowedBlobsBurst, blockBucketPeriod, false)
 
+	// for DataColumnSidecarsByRoot and DataColumnSidecarsByRange
+	columnCollector := leakybucket.NewCollector(allowedDataColumnsPerSecond, allowedDataColumnsBurst, blockBucketPeriod, false)
+
 	// BlocksByRoots requests
 	topicMap[addEncoding(p2p.RPCBlocksByRootTopicV1)] = blockCollector
 	topicMap[addEncoding(p2p.RPCBlocksByRootTopicV2)] = blockCollectorV2
@@ -78,6 +88,11 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	topicMap[addEncoding(p2p.RPCBlobSidecarsByRootTopicV1)] = blobCollector
 	// BlobSidecarsByRangeV1
 	topicMap[addEncoding(p2p.RPCBlobSidecarsByRangeTopicV1)] = blobCollector
+
+	// DataColumnSidecarsByRootV1
+	topicMap[addEncoding(p2p.RPCDataColumnSidecarsByRootTopicV1)] = columnCollector
+	// DataColumnSidecarsByRangeV1
+	topicMap[addEncoding(p2p.RPCDataColumnSidecarsByRangeTopicV1)] = columnCollector
 
 	// General topic for all rpc requests.
 	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(5, defaultBurstLimit*2, leakyBucketPeriod, false /* deleteEmptyBuckets */)
@@ -98,19 +113,20 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 	defer l.RUnlock()
 
 	topic := string(stream.Protocol())
+	remotePeer := stream.Conn().RemotePeer()
 
 	collector, err := l.retrieveCollector(topic)
 	if err != nil {
 		return err
 	}
-	key := stream.Conn().RemotePeer().String()
-	remaining := collector.Remaining(key)
+
+	remaining := collector.Remaining(remotePeer.String())
 	// Treat each request as a minimum of 1.
 	if amt == 0 {
 		amt = 1
 	}
 	if amt > uint64(remaining) {
-		l.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
+		l.p2p.Peers().Scorers().BadResponsesScorer().Increment(remotePeer)
 		writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrRateLimited.Error(), stream, l.p2p)
 		return p2ptypes.ErrRateLimited
 	}

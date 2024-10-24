@@ -52,6 +52,12 @@ type BlobReceiver interface {
 	ReceiveBlob(context.Context, blocks.VerifiedROBlob) error
 }
 
+// DataColumnReceiver interface defines the methods of chain service for receiving new
+// data columns
+type DataColumnReceiver interface {
+	ReceiveDataColumn(blocks.VerifiedRODataColumn) error
+}
+
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
 type SlashingReceiver interface {
 	ReceiveAttesterSlashing(ctx context.Context, slashing ethpb.AttSlashing)
@@ -70,6 +76,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Ignoring already synced block")
 		return nil
 	}
+
 	receivedTime := time.Now()
 	s.blockBeingSynced.set(blockRoot)
 	defer s.blockBeingSynced.unset(blockRoot)
@@ -78,6 +85,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
+
 	preState, err := s.getBlockPreState(ctx, blockCopy.Block())
 	if err != nil {
 		return errors.Wrap(err, "could not get block's prestate")
@@ -88,10 +96,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err != nil {
 		return err
 	}
+
 	daWaitedTime, err := s.handleDA(ctx, blockCopy, blockRoot, avs)
 	if err != nil {
 		return err
 	}
+
 	// Defragment the state before continuing block processing.
 	s.defragmentState(postState)
 
@@ -232,12 +242,14 @@ func (s *Service) handleDA(
 		if err != nil {
 			return 0, err
 		}
-		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), rob); err != nil {
+
+		nodeID := s.cfg.P2P.NodeID()
+		if err := avs.IsDataAvailable(ctx, nodeID, s.CurrentSlot(), rob); err != nil {
 			return 0, errors.Wrap(err, "could not validate blob data availability (AvailabilityStore.IsDataAvailable)")
 		}
 	} else {
 		if err := s.isDataAvailable(ctx, blockRoot, block); err != nil {
-			return 0, errors.Wrap(err, "could not validate blob data availability")
+			return 0, errors.Wrap(err, "is data available")
 		}
 	}
 	daWaitedTime := time.Since(daStartTime)

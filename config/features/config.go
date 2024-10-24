@@ -84,6 +84,12 @@ type Flags struct {
 	// changed on disk. This feature is for advanced use cases only.
 	KeystoreImportDebounceInterval time.Duration
 
+	// DataColumnsWithholdCount specifies the number of data columns that should be withheld when proposing a block.
+	DataColumnsWithholdCount uint64
+
+	// DataColumnsIgnoreSlotMultiple specifies the multiple of slot number where data columns should be ignored.
+	DataColumnsIgnoreSlotMultiple uint64
+
 	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
 	AggregateIntervals [3]time.Duration
 }
@@ -144,6 +150,7 @@ func configureTestnet(ctx *cli.Context) error {
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
+			params.UseCustomNetworkConfig()
 		} else {
 			log.Info("Running on Ethereum Mainnet")
 		}
@@ -155,11 +162,11 @@ func configureTestnet(ctx *cli.Context) error {
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
-func applySepoliaFeatureFlags(ctx *cli.Context) {
+func applySepoliaFeatureFlags(_ *cli.Context) {
 }
 
 // Insert feature flags within the function to be enabled for Holesky testnet.
-func applyHoleskyFeatureFlags(ctx *cli.Context) {
+func applyHoleskyFeatureFlags(_ *cli.Context) {
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -265,6 +272,16 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnableDiscoveryReboot.Name) {
 		logEnabled(EnableDiscoveryReboot)
 		cfg.EnableDiscoveryReboot = true
+	}
+
+	if ctx.IsSet(DataColumnsWithholdCount.Name) {
+		logEnabled(DataColumnsWithholdCount)
+		cfg.DataColumnsWithholdCount = ctx.Uint64(DataColumnsWithholdCount.Name)
+	}
+
+	if ctx.IsSet(DataColumnsIgnoreSlotMultiple.Name) {
+		logEnabled(DataColumnsIgnoreSlotMultiple)
+		cfg.DataColumnsIgnoreSlotMultiple = ctx.Uint64(DataColumnsIgnoreSlotMultiple.Name)
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}

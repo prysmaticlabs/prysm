@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -87,6 +88,8 @@ func (s *Service) startBlocksQueue(ctx context.Context, highestSlot primitives.S
 		highestExpectedSlot: highestSlot,
 		mode:                mode,
 		bs:                  summarizer,
+		bv:                  s.newBlobVerifier,
+		cv:                  s.newDataColumnsVerifier,
 	}
 	queue := newBlocksQueue(ctx, cfg)
 	if err := queue.start(); err != nil {
@@ -172,26 +175,51 @@ func (s *Service) processFetchedDataRegSync(
 	if len(bwb) == 0 {
 		return
 	}
-	bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncSidecarRequirements)
-	avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
-	batchFields := logrus.Fields{
-		"firstSlot":        data.bwb[0].Block.Block().Slot(),
-		"firstUnprocessed": bwb[0].Block.Block().Slot(),
-	}
-	for _, b := range bwb {
-		if err := avs.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
-			log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to BlobSidecar issues")
-			return
+	if coreTime.PeerDASIsActive(startSlot) {
+		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
+		batchFields := logrus.Fields{
+			"firstSlot":        data.bwb[0].Block.Block().Slot(),
+			"firstUnprocessed": bwb[0].Block.Block().Slot(),
 		}
-		if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
-			switch {
-			case errors.Is(err, errParentDoesNotExist):
-				log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
-					WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
+		for _, b := range bwb {
+			if err := avs.PersistColumns(s.clock.CurrentSlot(), b.Columns...); err != nil {
+				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to DataColumnSidecar issues")
 				return
-			default:
-				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Block processing failure")
+			}
+			if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
+				switch {
+				case errors.Is(err, errParentDoesNotExist):
+					log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
+						WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
+					return
+				default:
+					log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Block processing failure")
+					return
+				}
+			}
+		}
+	} else {
+		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
+		avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
+		batchFields := logrus.Fields{
+			"firstSlot":        data.bwb[0].Block.Block().Slot(),
+			"firstUnprocessed": bwb[0].Block.Block().Slot(),
+		}
+		for _, b := range bwb {
+			if err := avs.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
+				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to BlobSidecar issues")
 				return
+			}
+			if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
+				switch {
+				case errors.Is(err, errParentDoesNotExist):
+					log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
+						WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
+					return
+				default:
+					log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Block processing failure")
+					return
+				}
 			}
 		}
 	}
@@ -205,12 +233,18 @@ func syncFields(b blocks.ROBlock) logrus.Fields {
 }
 
 // highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
-// Note this can be lower than our finalized epoch if we have no peers or peers that are all behind us.
+// It returns `0` if no peers are connected.
+// Note this can be lower than our finalized epoch if our connected peers are all behind us.
 func (s *Service) highestFinalizedEpoch() primitives.Epoch {
 	highest := primitives.Epoch(0)
 	for _, pid := range s.cfg.P2P.Peers().Connected() {
 		peerChainState, err := s.cfg.P2P.Peers().ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch > highest {
+
+		if err != nil || peerChainState == nil {
+			continue
+		}
+
+		if peerChainState.FinalizedEpoch > highest {
 			highest = peerChainState.FinalizedEpoch
 		}
 	}
@@ -330,20 +364,34 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)",
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
-
-	bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncSidecarRequirements)
-	avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
-	s.logBatchSyncStatus(genesis, first, len(bwb))
-	for _, bb := range bwb {
-		if len(bb.Blobs) == 0 {
-			continue
+	var aStore das.AvailabilityStore
+	if coreTime.PeerDASIsActive(first.Block().Slot()) {
+		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
+		s.logBatchSyncStatus(genesis, first, len(bwb))
+		for _, bb := range bwb {
+			if len(bb.Columns) == 0 {
+				continue
+			}
+			if err := avs.PersistColumns(s.clock.CurrentSlot(), bb.Columns...); err != nil {
+				return err
+			}
 		}
-		if err := avs.Persist(s.clock.CurrentSlot(), bb.Blobs...); err != nil {
-			return err
+		aStore = avs
+	} else {
+		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
+		avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
+		s.logBatchSyncStatus(genesis, first, len(bwb))
+		for _, bb := range bwb {
+			if len(bb.Blobs) == 0 {
+				continue
+			}
+			if err := avs.Persist(s.clock.CurrentSlot(), bb.Blobs...); err != nil {
+				return err
+			}
 		}
+		aStore = avs
 	}
-
-	return bFunc(ctx, blocks.BlockWithROBlobsSlice(bwb).ROBlocks(), avs)
+	return bFunc(ctx, blocks.BlockWithROBlobsSlice(bwb).ROBlocks(), aStore)
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.

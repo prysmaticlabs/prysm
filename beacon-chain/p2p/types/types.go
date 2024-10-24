@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
@@ -183,31 +184,118 @@ func (b *BlobSidecarsByRootReq) UnmarshalSSZ(buf []byte) error {
 	return nil
 }
 
-var _ sort.Interface = BlobSidecarsByRootReq{}
+var _ sort.Interface = (*BlobSidecarsByRootReq)(nil)
 
 // Less reports whether the element with index i must sort before the element with index j.
 // BlobIdentifier will be sorted in lexicographic order by root, with Blob Index as tiebreaker for a given root.
-func (s BlobSidecarsByRootReq) Less(i, j int) bool {
-	rootCmp := bytes.Compare(s[i].BlockRoot, s[j].BlockRoot)
+func (s *BlobSidecarsByRootReq) Less(i, j int) bool {
+	rootCmp := bytes.Compare((*s)[i].BlockRoot, (*s)[j].BlockRoot)
 	if rootCmp != 0 {
 		// They aren't equal; return true if i < j, false if i > j.
 		return rootCmp < 0
 	}
 	// They are equal; blob index is the tie breaker.
-	return s[i].Index < s[j].Index
+	return (*s)[i].Index < (*s)[j].Index
 }
 
 // Swap swaps the elements with indexes i and j.
-func (s BlobSidecarsByRootReq) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
+func (s *BlobSidecarsByRootReq) Swap(i, j int) {
+	(*s)[i], (*s)[j] = (*s)[j], (*s)[i]
 }
 
 // Len is the number of elements in the collection.
-func (s BlobSidecarsByRootReq) Len() int {
-	return len(s)
+func (s *BlobSidecarsByRootReq) Len() int {
+	return len(*s)
+}
+
+// ===================================
+// DataColumnSidecarsByRootReq section
+// ===================================
+var _ ssz.Marshaler = (*DataColumnSidecarsByRootReq)(nil)
+var _ ssz.Unmarshaler = (*DataColumnSidecarsByRootReq)(nil)
+var _ sort.Interface = (*DataColumnSidecarsByRootReq)(nil)
+
+// DataColumnSidecarsByRootReq is used to specify a list of data column targets (root+index) in a DataColumnSidecarsByRoot RPC request.
+type DataColumnSidecarsByRootReq []*eth.DataColumnIdentifier
+
+// DataColumnIdentifier is a fixed size value, so we can compute its fixed size at start time (see init below)
+var dataColumnIdSize int
+
+// UnmarshalSSZ implements ssz.Unmarshaler. It unmarshals the provided bytes buffer into the DataColumnSidecarsByRootReq value.
+func (d *DataColumnSidecarsByRootReq) UnmarshalSSZ(buf []byte) error {
+	bufLen := len(buf)
+	maxLen := int(params.BeaconConfig().MaxRequestDataColumnSidecars) * dataColumnIdSize
+	if bufLen > maxLen {
+		return errors.Errorf("expected buffer with length of up to %d but received length %d", maxLen, bufLen)
+	}
+	if bufLen%dataColumnIdSize != 0 {
+		return errors.Wrapf(ssz.ErrIncorrectByteSize, "size=%d", bufLen)
+	}
+	count := bufLen / dataColumnIdSize
+	*d = make([]*eth.DataColumnIdentifier, count)
+	for i := 0; i < count; i++ {
+		id := &eth.DataColumnIdentifier{}
+		err := id.UnmarshalSSZ(buf[i*dataColumnIdSize : (i+1)*dataColumnIdSize])
+		if err != nil {
+			return err
+		}
+		(*d)[i] = id
+	}
+	return nil
+}
+
+// MarshalSSZ implements ssz.Marshaler. It serializes the DataColumnSidecarsByRootReq value to a byte slice.
+func (d *DataColumnSidecarsByRootReq) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, d.SizeSSZ())
+	for i, id := range *d {
+		bytes, err := id.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+		copy(buf[i*dataColumnIdSize:(i+1)*dataColumnIdSize], bytes)
+	}
+
+	return buf, nil
+}
+
+// MarshalSSZTo implements ssz.Marshaler. It appends the serialized DataColumnSidecarsByRootReq value to the provided byte slice.
+func (d *DataColumnSidecarsByRootReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+	mobj, err := d.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+	return append(dst, mobj...), nil
+}
+
+// SizeSSZ implements ssz.Marshaler. It returns the size of the serialized representation.
+func (d *DataColumnSidecarsByRootReq) SizeSSZ() int {
+	return len(*d) * dataColumnIdSize
+}
+
+// Len implements sort.Interface. It returns the number of elements in the collection.
+func (d *DataColumnSidecarsByRootReq) Len() int {
+	return len(*d)
+}
+
+// Less implements sort.Interface. It reports whether the element with index i must sort before the element with index j.
+func (d *DataColumnSidecarsByRootReq) Less(i, j int) bool {
+	rootCmp := bytes.Compare((*d)[i].BlockRoot, (*d)[j].BlockRoot)
+	if rootCmp != 0 {
+		return rootCmp < 0
+	}
+
+	return (*d)[i].ColumnIndex < (*d)[j].ColumnIndex
+}
+
+// Swap implements sort.Interface. It swaps the elements with indexes i and j.
+func (d *DataColumnSidecarsByRootReq) Swap(i, j int) {
+	(*d)[i], (*d)[j] = (*d)[j], (*d)[i]
 }
 
 func init() {
-	sizer := &eth.BlobIdentifier{}
-	blobIdSize = sizer.SizeSSZ()
+	blobSizer := &eth.BlobIdentifier{}
+	blobIdSize = blobSizer.SizeSSZ()
+
+	dataColumnSizer := &eth.DataColumnIdentifier{}
+	dataColumnIdSize = dataColumnSizer.SizeSSZ()
 }

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -44,6 +45,12 @@ func (m *MockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uin
 
 // BroadcastBlob broadcasts a blob for mock.
 func (m *MockBroadcaster) BroadcastBlob(context.Context, uint64, *ethpb.BlobSidecar) error {
+	m.BroadcastCalled.Store(true)
+	return nil
+}
+
+// BroadcastDataColumn broadcasts a data column for mock.
+func (m *MockBroadcaster) BroadcastDataColumn(context.Context, [fieldparams.RootLength]byte, uint64, *ethpb.DataColumnSidecar) error {
 	m.BroadcastCalled.Store(true)
 	return nil
 }

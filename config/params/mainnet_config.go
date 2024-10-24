@@ -35,6 +35,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 	ETH2Key:                    "eth2",
 	AttSubnetKey:               "attnets",
 	SyncCommsSubnetKey:         "syncnets",
+	CustodySubnetCountKey:      "csc",
 	MinimumPeersInSubnetSearch: 20,
 	ContractDeploymentBlock:    11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
 	BootstrapNodes: []string{
@@ -216,6 +217,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DenebForkEpoch:       mainnetDenebForkEpoch,
 	ElectraForkVersion:   []byte{5, 0, 0, 0},
 	ElectraForkEpoch:     mainnetElectraForkEpoch,
+	Eip7594ForkEpoch:     math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -295,8 +297,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	UnsetDepositRequestsStartIndex:        math.MaxUint64,
 
 	// PeerDAS
-	NumberOfColumns:          128,
-	MaxCellsInExtendedMatrix: 768,
+	NumberOfColumns:                       128,
+	MaxCellsInExtendedMatrix:              768,
+	SamplesPerSlot:                        8,
+	CustodyRequirement:                    4,
+	MinEpochsForDataColumnSidecarsRequest: 4096,
 
 	// Values related to networking parameters.
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB

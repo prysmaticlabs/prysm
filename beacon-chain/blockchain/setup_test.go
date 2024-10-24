@@ -19,8 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p"
+	p2pTesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
+	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"google.golang.org/protobuf/proto"
@@ -45,6 +47,11 @@ type mockBroadcaster struct {
 	broadcastCalled bool
 }
 
+type mockAccesser struct {
+	mockBroadcaster
+	p2pTesting.MockPeerManager
+}
+
 func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 	mb.broadcastCalled = true
 	return nil
@@ -61,6 +68,11 @@ func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ ui
 }
 
 func (mb *mockBroadcaster) BroadcastBlob(_ context.Context, _ uint64, _ *ethpb.BlobSidecar) error {
+	mb.broadcastCalled = true
+	return nil
+}
+
+func (mb *mockBroadcaster) BroadcastDataColumn(_ context.Context, _ [fieldparams.RootLength]byte, _ uint64, _ *ethpb.DataColumnSidecar) error {
 	mb.broadcastCalled = true
 	return nil
 }
@@ -122,6 +134,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 		WithSyncChecker(mock.MockChecker{}),
 		WithExecutionEngineCaller(&mockExecution.EngineClient{}),
+		WithP2PBroadcaster(&mockAccesser{}),
 	}
 	// append the variadic opts so they override the defaults by being processed afterwards
 	opts = append(defOpts, opts...)

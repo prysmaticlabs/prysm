@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/pkg/errors"
@@ -10,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
@@ -230,7 +232,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 				return err
 			}
 		}
-		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), b); err != nil {
+
+		nodeID := s.cfg.P2P.NodeID()
+		if err := avs.IsDataAvailable(ctx, nodeID, s.CurrentSlot(), b); err != nil {
 			return errors.Wrapf(err, "could not validate blob data availability at slot %d", b.Block().Slot())
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b,
@@ -502,7 +506,7 @@ func missingIndices(bs *filesystem.BlobStorage, root [32]byte, expected [][]byte
 	}
 	indices, err := bs.Indices(root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "indices")
 	}
 	missing := make(map[uint64]struct{}, len(expected))
 	for i := range expected {
@@ -516,12 +520,40 @@ func missingIndices(bs *filesystem.BlobStorage, root [32]byte, expected [][]byte
 	return missing, nil
 }
 
+func missingDataColumns(bs *filesystem.BlobStorage, root [32]byte, expected map[uint64]bool) (map[uint64]bool, error) {
+	if len(expected) == 0 {
+		return nil, nil
+	}
+
+	if len(expected) > int(params.BeaconConfig().NumberOfColumns) {
+		return nil, errMaxDataColumnsExceeded
+	}
+
+	indices, err := bs.ColumnIndices(root)
+	if err != nil {
+		return nil, err
+	}
+
+	missing := make(map[uint64]bool, len(expected))
+	for col := range expected {
+		if !indices[col] {
+			missing[col] = true
+		}
+	}
+
+	return missing, nil
+}
+
 // isDataAvailable blocks until all BlobSidecars committed to in the block are available,
 // or an error or context cancellation occurs. A nil result means that the data availability check is successful.
 // The function will first check the database to see if all sidecars have been persisted. If any
 // sidecars are missing, it will then read from the blobNotifier channel for the given root until the channel is
 // closed, the context hits cancellation/timeout, or notifications have been received for all the missing sidecars.
 func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
+	if coreTime.PeerDASIsActive(signed.Block().Slot()) {
+		return s.areDataColumnsAvailable(ctx, root, signed)
+	}
+
 	if signed.Version() < version.Deneb {
 		return nil
 	}
@@ -551,7 +583,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	// get a map of BlobSidecar indices that are not currently available.
 	missing, err := missingIndices(s.blobStorage, root, kzgCommitments)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "missing indices")
 	}
 	// If there are no missing indices, all BlobSidecars are available.
 	if len(missing) == 0 {
@@ -570,8 +602,13 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			if len(missing) == 0 {
 				return
 			}
-			log.WithFields(daCheckLogFields(root, signed.Block().Slot(), expected, len(missing))).
-				Error("Still waiting for DA check at slot end.")
+
+			log.WithFields(logrus.Fields{
+				"slot":          signed.Block().Slot(),
+				"root":          fmt.Sprintf("%#x", root),
+				"blobsExpected": expected,
+				"blobsWaiting":  len(missing),
+			}).Error("Still waiting for blobs DA check at slot end.")
 		})
 		defer nst.Stop()
 	}
@@ -593,12 +630,166 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	}
 }
 
-func daCheckLogFields(root [32]byte, slot primitives.Slot, expected, missing int) logrus.Fields {
-	return logrus.Fields{
-		"slot":          slot,
-		"root":          fmt.Sprintf("%#x", root),
-		"blobsExpected": expected,
-		"blobsWaiting":  missing,
+// uint64MapToSortedSlice produces a sorted uint64 slice from a map.
+func uint64MapToSortedSlice(input map[uint64]bool) []uint64 {
+	output := make([]uint64, 0, len(input))
+	for idx := range input {
+		output = append(output, idx)
+	}
+	slices.Sort[[]uint64](output)
+	return output
+}
+
+func (s *Service) areDataColumnsAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
+	if signed.Version() < version.Deneb {
+		return nil
+	}
+
+	block := signed.Block()
+	if block == nil {
+		return errors.New("invalid nil beacon block")
+	}
+	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+	if !params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot())) {
+		return nil
+	}
+
+	body := block.Body()
+	if body == nil {
+		return errors.New("invalid nil beacon block body")
+	}
+
+	kzgCommitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return errors.Wrap(err, "blob KZG commitments")
+	}
+
+	// If block has not commitments there is nothing to wait for.
+	if len(kzgCommitments) == 0 {
+		return nil
+	}
+
+	// All columns to sample need to be available for the block to be considered available.
+	// https://github.com/ethereum/consensus-specs/blob/dev/specs/_features/eip7594/das-core.md#subnet-sampling
+	nodeID := s.cfg.P2P.NodeID()
+	subnetSamplingSize := peerdas.SubnetSamplingSize()
+
+	colMap, err := peerdas.CustodyColumns(nodeID, subnetSamplingSize)
+	if err != nil {
+		return errors.Wrap(err, "custody columns")
+	}
+
+	// colMap represents the data columnns a node is expected to custody.
+	if len(colMap) == 0 {
+		return nil
+	}
+
+	// Subscribe to newsly data columns stored in the database.
+	rootIndexChan := make(chan filesystem.RootIndexPair)
+	subscription := s.blobStorage.DataColumnFeed.Subscribe(rootIndexChan)
+	defer subscription.Unsubscribe()
+
+	// Get the count of data columns we already have in the store.
+	retrievedDataColumns, err := s.blobStorage.ColumnIndices(root)
+	if err != nil {
+		return errors.Wrap(err, "column indices")
+	}
+
+	retrievedDataColumnsCount := uint64(len(retrievedDataColumns))
+
+	// As soon as we have more than half of the data columns, we can reconstruct the missing ones.
+	// We don't need to wait for the rest of the data columns to declare the block as available.
+	if peerdas.CanSelfReconstruct(retrievedDataColumnsCount) {
+		return nil
+	}
+
+	// Get a map of data column indices that are not currently available.
+	missingMap, err := missingDataColumns(s.blobStorage, root, colMap)
+	if err != nil {
+		return err
+	}
+
+	// If there are no missing indices, all data column sidecars are available.
+	// This is the happy path.
+	if len(missingMap) == 0 {
+		return nil
+	}
+
+	// Log for DA checks that cross over into the next slot; helpful for debugging.
+	nextSlot := slots.BeginsAt(signed.Block().Slot()+1, s.genesisTime)
+	// Avoid logging if DA check is called after next slot start.
+	if nextSlot.After(time.Now()) {
+		nst := time.AfterFunc(time.Until(nextSlot), func() {
+			missingMapCount := uint64(len(missingMap))
+
+			if missingMapCount == 0 {
+				return
+			}
+
+			var (
+				expected interface{} = "all"
+				missing  interface{} = "all"
+			)
+
+			numberOfColumns := params.BeaconConfig().NumberOfColumns
+			colMapCount := uint64(len(colMap))
+
+			if colMapCount < numberOfColumns {
+				expected = uint64MapToSortedSlice(colMap)
+			}
+
+			if missingMapCount < numberOfColumns {
+				missing = uint64MapToSortedSlice(missingMap)
+			}
+
+			log.WithFields(logrus.Fields{
+				"slot":            signed.Block().Slot(),
+				"root":            fmt.Sprintf("%#x", root),
+				"columnsExpected": expected,
+				"columnsWaiting":  missing,
+			}).Error("Some data columns are still unavailable at slot end")
+		})
+
+		defer nst.Stop()
+	}
+
+	for {
+		select {
+		case rootIndex := <-rootIndexChan:
+			if rootIndex.Root != root {
+				// This is not the root we are looking for.
+				continue
+			}
+
+			// This is a data column we are expecting.
+			if _, ok := missingMap[rootIndex.Index]; ok {
+				retrievedDataColumnsCount++
+			}
+
+			// As soon as we have more than half of the data columns, we can reconstruct the missing ones.
+			// We don't need to wait for the rest of the data columns to declare the block as available.
+			if peerdas.CanSelfReconstruct(retrievedDataColumnsCount) {
+				return nil
+			}
+
+			// Remove the index from the missing map.
+			delete(missingMap, rootIndex.Index)
+
+			// Exit if there is no more missing data columns.
+			if len(missingMap) == 0 {
+				return nil
+			}
+		case <-ctx.Done():
+			var missingIndices interface{} = "all"
+			numberOfColumns := params.BeaconConfig().NumberOfColumns
+			missingIndicesCount := uint64(len(missingMap))
+
+			if missingIndicesCount < numberOfColumns {
+				missingIndices = uint64MapToSortedSlice(missingMap)
+			}
+
+			return errors.Wrapf(ctx.Err(), "data column sidecars slot: %d, BlockRoot: %#x, missing %v", block.Slot(), root, missingIndices)
+		}
 	}
 }
 
@@ -681,7 +872,7 @@ func (s *Service) waitForSync() error {
 	}
 }
 
-func (s *Service) handleInvalidExecutionError(ctx context.Context, err error, blockRoot [32]byte, parentRoot [32]byte) error {
+func (s *Service) handleInvalidExecutionError(ctx context.Context, err error, blockRoot, parentRoot [32]byte) error {
 	if IsInvalidBlock(err) && InvalidBlockLVH(err) != [32]byte{} {
 		return s.pruneInvalidBlock(ctx, blockRoot, parentRoot, InvalidBlockLVH(err))
 	}

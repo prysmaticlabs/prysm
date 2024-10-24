@@ -34,6 +34,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/peerdata"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/peers/scorers"
@@ -157,6 +158,14 @@ func (p *Status) Add(record *enr.Record, pid peer.ID, address ma.Multiaddr, dire
 	}
 	p.store.SetPeerData(pid, peerData)
 	p.addIpToTracker(pid)
+}
+
+func (p *Status) UpdateENR(record *enr.Record, pid peer.ID) {
+	p.store.Lock()
+	defer p.store.Unlock()
+	if peerData, ok := p.store.PeerData(pid); ok {
+		peerData.Enr = record
+	}
 }
 
 // Address returns the multiaddress of the given remote peer.
@@ -335,19 +344,29 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 
 // IsBad states if the peer is to be considered bad (by *any* of the registered scorers).
 // If the peer is unknown this will return `false`, which makes using this function easier than returning an error.
-func (p *Status) IsBad(pid peer.ID) bool {
+func (p *Status) IsBad(pid peer.ID) error {
 	p.store.RLock()
 	defer p.store.RUnlock()
+
 	return p.isBad(pid)
 }
 
 // isBad is the lock-free version of IsBad.
-func (p *Status) isBad(pid peer.ID) bool {
+func (p *Status) isBad(pid peer.ID) error {
 	// Do not disconnect from trusted peers.
 	if p.store.IsTrustedPeer(pid) {
-		return false
+		return nil
 	}
-	return p.isfromBadIP(pid) || p.scorers.IsBadPeerNoLock(pid)
+
+	if err := p.isfromBadIP(pid); err != nil {
+		return errors.Wrap(err, "peer is from a bad IP")
+	}
+
+	if err := p.scorers.IsBadPeerNoLock(pid); err != nil {
+		return errors.Wrap(err, "is bad peer no lock")
+	}
+
+	return nil
 }
 
 // NextValidTime gets the earliest possible time it is to contact/dial
@@ -592,7 +611,7 @@ func (p *Status) Prune() {
 		return
 	}
 	notBadPeer := func(pid peer.ID) bool {
-		return !p.isBad(pid)
+		return p.isBad(pid) == nil
 	}
 	notTrustedPeer := func(pid peer.ID) bool {
 		return !p.isTrustedPeers(pid)
@@ -685,31 +704,47 @@ func (p *Status) deprecatedPrune() {
 	p.tallyIPTracker()
 }
 
-// BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed
-// upon by the majority of peers. This method may not return the absolute highest finalized, but
-// the finalized epoch in which most peers can serve blocks (plurality voting).
-// Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their
-// own latency, or because of their finalized epoch at the time we queried them.
-// Returns epoch number and list of peers that are at or beyond that epoch.
+// BestFinalized returns the highest finalized epoch equal to or higher than `ourFinalizedEpoch`
+// that is agreed upon by the majority of peers, and the peers agreeing on this finalized epoch.
+// This method may not return the absolute highest finalized epoch, but the finalized epoch in which
+// most peers can serve blocks (plurality voting). Ideally, all peers would be reporting the same
+// finalized epoch but some may be behind due to their own latency, or because of their finalized
+// epoch at the time we queried them. Returns epoch number and list of peers that are at or beyond
+// that epoch.
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch primitives.Epoch) (primitives.Epoch, []peer.ID) {
+	// Retrieve all connected peers.
 	connected := p.Connected()
+
+	// key: finalized epoch, value: number of peers that support this finalized epoch.
 	finalizedEpochVotes := make(map[primitives.Epoch]uint64)
+
+	// key: peer ID, value: finalized epoch of the peer.
 	pidEpoch := make(map[peer.ID]primitives.Epoch, len(connected))
+
+	// key: peer ID, value: head slot of the peer.
 	pidHead := make(map[peer.ID]primitives.Slot, len(connected))
+
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= ourFinalizedEpoch {
-			finalizedEpochVotes[peerChainState.FinalizedEpoch]++
-			pidEpoch[pid] = peerChainState.FinalizedEpoch
-			potentialPIDs = append(potentialPIDs, pid)
-			pidHead[pid] = peerChainState.HeadSlot
+
+		// Skip if the peer's finalized epoch is not defined, or if the peer's finalized epoch is
+		// lower than ours.
+		if err != nil || peerChainState == nil || peerChainState.FinalizedEpoch < ourFinalizedEpoch {
+			continue
 		}
+
+		finalizedEpochVotes[peerChainState.FinalizedEpoch]++
+
+		pidEpoch[pid] = peerChainState.FinalizedEpoch
+		pidHead[pid] = peerChainState.HeadSlot
+
+		potentialPIDs = append(potentialPIDs, pid)
 	}
 
 	// Select the target epoch, which is the epoch most peers agree upon.
-	var targetEpoch primitives.Epoch
-	var mostVotes uint64
+	// If there is a tie, select the highest epoch.
+	targetEpoch, mostVotes := primitives.Epoch(0), uint64(0)
 	for epoch, count := range finalizedEpochVotes {
 		if count > mostVotes || (count == mostVotes && epoch > targetEpoch) {
 			mostVotes = count
@@ -717,11 +752,12 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch primitives.Epoch)
 		}
 	}
 
-	// Sort PIDs by finalized epoch, in decreasing order.
+	// Sort PIDs by finalized (epoch, head), in decreasing order.
 	sort.Slice(potentialPIDs, func(i, j int) bool {
 		if pidEpoch[potentialPIDs[i]] == pidEpoch[potentialPIDs[j]] {
 			return pidHead[potentialPIDs[i]] > pidHead[potentialPIDs[j]]
 		}
+
 		return pidEpoch[potentialPIDs[i]] > pidEpoch[potentialPIDs[j]]
 	})
 
@@ -744,26 +780,42 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch primitives.Epoch)
 // BestNonFinalized returns the highest known epoch, higher than ours,
 // and is shared by at least minPeers.
 func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch primitives.Epoch) (primitives.Epoch, []peer.ID) {
+	// Retrieve all connected peers.
 	connected := p.Connected()
+
+	// Calculate our head slot.
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	ourHeadSlot := slotsPerEpoch.Mul(uint64(ourHeadEpoch))
+
+	// key: head epoch, value: number of peers that support this epoch.
 	epochVotes := make(map[primitives.Epoch]uint64)
+
+	// key: peer ID, value: head epoch of the peer.
 	pidEpoch := make(map[peer.ID]primitives.Epoch, len(connected))
+
+	// key: peer ID, value: head slot of the peer.
 	pidHead := make(map[peer.ID]primitives.Slot, len(connected))
+
 	potentialPIDs := make([]peer.ID, 0, len(connected))
 
-	ourHeadSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(ourHeadEpoch))
 	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.HeadSlot > ourHeadSlot {
-			epoch := slots.ToEpoch(peerChainState.HeadSlot)
-			epochVotes[epoch]++
-			pidEpoch[pid] = epoch
-			pidHead[pid] = peerChainState.HeadSlot
-			potentialPIDs = append(potentialPIDs, pid)
+		// Skip if the peer's head epoch is not defined, or if the peer's head slot is
+		// lower or equal than ours.
+		if err != nil || peerChainState == nil || peerChainState.HeadSlot <= ourHeadSlot {
+			continue
 		}
+
+		epoch := slots.ToEpoch(peerChainState.HeadSlot)
+
+		epochVotes[epoch]++
+		pidEpoch[pid] = epoch
+		pidHead[pid] = peerChainState.HeadSlot
+		potentialPIDs = append(potentialPIDs, pid)
 	}
 
 	// Select the target epoch, which has enough peers' votes (>= minPeers).
-	var targetEpoch primitives.Epoch
+	targetEpoch := primitives.Epoch(0)
 	for epoch, votes := range epochVotes {
 		if votes >= uint64(minPeers) && targetEpoch < epoch {
 			targetEpoch = epoch
@@ -982,24 +1034,35 @@ func (p *Status) isTrustedPeers(pid peer.ID) bool {
 
 // this method assumes the store lock is acquired before
 // executing the method.
-func (p *Status) isfromBadIP(pid peer.ID) bool {
+func (p *Status) isfromBadIP(pid peer.ID) error {
 	peerData, ok := p.store.PeerData(pid)
 	if !ok {
-		return false
+		return nil
 	}
+
 	if peerData.Address == nil {
-		return false
+		return nil
 	}
-	ip, err := manet.ToIP(peerData.Address)
-	if err != nil {
-		return true
-	}
-	if val, ok := p.ipTracker[ip.String()]; ok {
-		if val > CollocationLimit {
-			return true
-		}
-	}
-	return false
+
+	// ip, err := manet.ToIP(peerData.Address)
+	// if err != nil {
+	// 	return errors.Wrap(err, "to ip")
+	// }
+
+	// if val, ok := p.ipTracker[ip.String()]; ok {
+	// if val > CollocationLimit {
+	// TODO: Remove this out of denvet.
+	// return errors.Errorf("colocation limit exceeded: got %d - limit %d", val, CollocationLimit)
+	// log.WithFields(logrus.Fields{
+	// 	"pid":             pid,
+	// 	"ip":              ip.String(),
+	// 	"colocationCount": val,
+	// 	"colocationLimit": CollocationLimit,
+	// }).Debug("Colocation limit exceeded. Peer should be banned.")
+	// }
+	// }
+
+	return nil
 }
 
 func (p *Status) addIpToTracker(pid peer.ID) {

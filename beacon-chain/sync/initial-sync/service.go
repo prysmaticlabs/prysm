@@ -8,13 +8,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/v5/async/abool"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/peerdas"
+	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
@@ -22,6 +27,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -32,7 +38,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v5/time"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/sirupsen/logrus"
 )
 
 var _ runtime.Service = (*Service)(nil)
@@ -57,17 +62,18 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	cfg             *Config
-	ctx             context.Context
-	cancel          context.CancelFunc
-	synced          *abool.AtomicBool
-	chainStarted    *abool.AtomicBool
-	counter         *ratecounter.RateCounter
-	genesisChan     chan time.Time
-	clock           *startup.Clock
-	verifierWaiter  *verification.InitializerWaiter
-	newBlobVerifier verification.NewBlobVerifier
-	ctxMap          sync.ContextByteVersions
+	cfg                    *Config
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	synced                 *abool.AtomicBool
+	chainStarted           *abool.AtomicBool
+	counter                *ratecounter.RateCounter
+	genesisChan            chan time.Time
+	clock                  *startup.Clock
+	verifierWaiter         *verification.InitializerWaiter
+	newBlobVerifier        verification.NewBlobVerifier
+	newDataColumnsVerifier verification.NewDataColumnsVerifier
+	ctxMap                 sync.ContextByteVersions
 }
 
 // Option is a functional option for the initial-sync Service.
@@ -148,6 +154,7 @@ func (s *Service) Start() {
 		return
 	}
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+	s.newDataColumnsVerifier = newDataColumnsVerifierFromInitializer(v)
 
 	gt := clock.GenesisTime()
 	if gt.IsZero() {
@@ -184,9 +191,16 @@ func (s *Service) Start() {
 		log.WithError(err).Error("Error waiting for minimum number of peers")
 		return
 	}
-	if err := s.fetchOriginBlobs(peers); err != nil {
-		log.WithError(err).Error("Failed to fetch missing blobs for checkpoint origin")
-		return
+	if coreTime.PeerDASIsActive(s.cfg.Chain.HeadSlot()) {
+		if err := s.fetchOriginColumns(peers); err != nil {
+			log.WithError(err).Error("Failed to fetch missing columns for checkpoint origin")
+			return
+		}
+	} else {
+		if err := s.fetchOriginBlobs(peers); err != nil {
+			log.WithError(err).Error("Failed to fetch missing blobs for checkpoint origin")
+			return
+		}
 	}
 	if err := s.roundRobinSync(gt); err != nil {
 		if errors.Is(s.ctx.Err(), context.Canceled) {
@@ -306,6 +320,56 @@ func missingBlobRequest(blk blocks.ROBlock, store *filesystem.BlobStorage) (p2pt
 	return req, nil
 }
 
+func (s *Service) missingColumnRequest(roBlock blocks.ROBlock, store *filesystem.BlobStorage) (p2ptypes.DataColumnSidecarsByRootReq, error) {
+	// No columns for pre-Deneb blocks.
+	if roBlock.Version() < version.Deneb {
+		return nil, nil
+	}
+
+	// Get the block root.
+	blockRoot := roBlock.Root()
+
+	// Get the commitments from the block.
+	commitments, err := roBlock.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get blob KZG commitments")
+	}
+
+	// Return early if there are no commitments.
+	if len(commitments) == 0 {
+		return nil, nil
+	}
+
+	// Check which columns are already on disk.
+	storedColumns, err := store.ColumnIndices(blockRoot)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error checking existing blobs for checkpoint sync block root %#x", blockRoot)
+	}
+
+	// Get our node ID.
+	nodeID := s.cfg.P2P.NodeID()
+
+	// Get the custodied columns.
+	custodiedColumns, err := peerdas.CustodyColumns(nodeID, peerdas.CustodySubnetCount())
+	if err != nil {
+		return nil, errors.Wrap(err, "custody columns")
+	}
+
+	// Build blob sidecars by root requests based on missing columns.
+	req := make(p2ptypes.DataColumnSidecarsByRootReq, 0, len(commitments))
+	for columnIndex := range custodiedColumns {
+		isColumnAvailable := storedColumns[columnIndex]
+		if !isColumnAvailable {
+			req = append(req, &eth.DataColumnIdentifier{
+				BlockRoot:   blockRoot[:],
+				ColumnIndex: columnIndex,
+			})
+		}
+	}
+
+	return req, nil
+}
+
 func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 	r, err := s.cfg.DB.OriginCheckpointBlockRoot(s.ctx)
 	if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
@@ -340,13 +404,16 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 		if len(sidecars) != len(req) {
 			continue
 		}
-		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncSidecarRequirements)
+		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
 		avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
 		current := s.clock.CurrentSlot()
 		if err := avs.Persist(current, sidecars...); err != nil {
 			return err
 		}
-		if err := avs.IsDataAvailable(s.ctx, current, rob); err != nil {
+
+		// node ID is not used for checking blobs data availability.
+		emptyNodeID := enode.ID{}
+		if err := avs.IsDataAvailable(s.ctx, emptyNodeID, current, rob); err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", r)).WithField("peerID", pids[i]).Warn("Blobs from peer for origin block were unusable")
 			continue
 		}
@@ -354,6 +421,76 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 		return nil
 	}
 	return fmt.Errorf("no connected peer able to provide blobs for checkpoint sync block %#x", r)
+}
+
+func (s *Service) fetchOriginColumns(pids []peer.ID) error {
+	r, err := s.cfg.DB.OriginCheckpointBlockRoot(s.ctx)
+	if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
+		return nil
+	}
+	blk, err := s.cfg.DB.Block(s.ctx, r)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", r)).Error("Block for checkpoint sync origin root not found in db")
+		return err
+	}
+	if !params.WithinDAPeriod(slots.ToEpoch(blk.Block().Slot()), slots.ToEpoch(s.clock.CurrentSlot())) {
+		return nil
+	}
+	rob, err := blocks.NewROBlockWithRoot(blk, r)
+	if err != nil {
+		return err
+	}
+	req, err := s.missingColumnRequest(rob, s.cfg.BlobStorage)
+	if err != nil {
+		return err
+	}
+	if len(req) == 0 {
+		log.WithField("root", fmt.Sprintf("%#x", r)).Debug("All columns for checkpoint block are present")
+		return nil
+	}
+	shufflePeers(pids)
+	pids, err = s.cfg.P2P.DataColumnsAdmissibleCustodyPeers(pids)
+	if err != nil {
+		return err
+	}
+	for i := range pids {
+		sidecars, err := sync.SendDataColumnSidecarsByRootRequest(s.ctx, s.clock, s.cfg.P2P, pids[i], s.ctxMap, &req)
+		if err != nil {
+			continue
+		}
+		if len(sidecars) != len(req) {
+			continue
+		}
+
+		wrappedBlockDataColumns := make([]verify.WrappedBlockDataColumn, 0, len(sidecars))
+		for _, sidecar := range sidecars {
+			wrappedBlockDataColumn := verify.WrappedBlockDataColumn{
+				ROBlock:      blk.Block(),
+				RODataColumn: sidecar,
+			}
+
+			wrappedBlockDataColumns = append(wrappedBlockDataColumns, wrappedBlockDataColumn)
+		}
+
+		if err := verify.DataColumnsAlignWithBlock(wrappedBlockDataColumns, s.newDataColumnsVerifier); err != nil {
+			return errors.Wrap(err, "data columns align with block")
+		}
+
+		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
+		current := s.clock.CurrentSlot()
+		if err := avs.PersistColumns(current, sidecars...); err != nil {
+			return err
+		}
+
+		nodeID := s.cfg.P2P.NodeID()
+		if err := avs.IsDataAvailable(s.ctx, nodeID, current, rob); err != nil {
+			log.WithField("root", fmt.Sprintf("%#x", r)).WithField("peerID", pids[i]).Warn("Columns from peer for origin block were unusable")
+			continue
+		}
+		log.WithField("nColumns", len(sidecars)).WithField("root", fmt.Sprintf("%#x", r)).Info("Successfully downloaded blobs for checkpoint sync block")
+		return nil
+	}
+	return fmt.Errorf("no connected peer able to provide columns for checkpoint sync block %#x", r)
 }
 
 func shufflePeers(pids []peer.ID) {
@@ -366,5 +503,11 @@ func shufflePeers(pids []peer.ID) {
 func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
 	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
 		return ini.NewBlobVerifier(b, reqs)
+	}
+}
+
+func newDataColumnsVerifierFromInitializer(ini *verification.Initializer) verification.NewDataColumnsVerifier {
+	return func(roDataColumns []blocks.RODataColumn, reqs []verification.Requirement) verification.DataColumnsVerifier {
+		return ini.NewDataColumnsVerifier(roDataColumns, reqs)
 	}
 }

@@ -97,13 +97,14 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationPool(attestations.NewPool()),
 		WithSlashingPool(slashings.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
-		WithP2PBroadcaster(&mockBroadcaster{}),
+		WithP2PBroadcaster(&mockAccesser{}),
 		WithStateNotifier(&mockBeaconNode{}),
 		WithForkChoiceStore(fc),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 		WithPayloadIDCache(cache.NewPayloadIDCache()),
 		WithClockSynchronizer(startup.NewClockSynchronizer()),
+		WithP2PBroadcaster(&mockAccesser{}),
 	}
 
 	chainService, err := NewService(ctx, opts...)
@@ -587,7 +588,7 @@ func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 func TestNotifyIndex(t *testing.T) {
 	// Initialize a blobNotifierMap
 	bn := &blobNotifierMap{
-		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
+		seenIndex: make(map[[32]byte][fieldparams.NumberOfColumns]bool),
 		notifiers: make(map[[32]byte]chan uint64),
 	}
 

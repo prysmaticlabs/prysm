@@ -10,11 +10,16 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
 
-// SchemaVersionV1 specifies the schema version for our rpc protocol ID.
-const SchemaVersionV1 = "/1"
+const (
+	// SchemaVersionV1 specifies the schema version for our rpc protocol ID.
+	SchemaVersionV1 = "/1"
 
-// SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
-const SchemaVersionV2 = "/2"
+	// SchemaVersionV2 specifies the next schema version for our rpc protocol ID.
+	SchemaVersionV2 = "/2"
+
+	// SchemaVersionV3 specifies the next schema version for our rpc protocol ID.
+	SchemaVersionV3 = "/3"
+)
 
 // Specifies the protocol prefix for all our Req/Resp topics.
 const protocolPrefix = "/eth2/beacon_chain/req"
@@ -43,6 +48,12 @@ const BlobSidecarsByRangeName = "/blob_sidecars_by_range"
 // BlobSidecarsByRootName is the name for the BlobSidecarsByRoot v1 message topic.
 const BlobSidecarsByRootName = "/blob_sidecars_by_root"
 
+// DataColumnSidecarsByRootName is the name for the DataColumnSidecarsByRoot v1 message topic.
+const DataColumnSidecarsByRootName = "/data_column_sidecars_by_root"
+
+// DataColumnSidecarsByRangeName is the name for the DataColumnSidecarsByRange v1 message topic.
+const DataColumnSidecarsByRangeName = "/data_column_sidecars_by_range"
+
 const (
 	// V1 RPC Topics
 	// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
@@ -65,6 +76,12 @@ const (
 	// RPCBlobSidecarsByRootTopicV1 is a topic for requesting blob sidecars by their block root. New in deneb.
 	// /eth2/beacon_chain/req/blob_sidecars_by_root/1/
 	RPCBlobSidecarsByRootTopicV1 = protocolPrefix + BlobSidecarsByRootName + SchemaVersionV1
+	// RPCDataColumnSidecarsByRootTopicV1 is a topic for requesting data column sidecars by their block root. New in PeerDAS.
+	// /eth2/beacon_chain/req/data_column_sidecars_by_root/1
+	RPCDataColumnSidecarsByRootTopicV1 = protocolPrefix + DataColumnSidecarsByRootName + SchemaVersionV1
+	// RPCDataColumnSidecarsByRangeTopicV1 is a topic for requesting data column sidecars by their slot. New in PeerDAS.
+	// /eth2/beacon_chain/req/data_column_sidecars_by_range/1
+	RPCDataColumnSidecarsByRangeTopicV1 = protocolPrefix + DataColumnSidecarsByRangeName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
@@ -73,6 +90,9 @@ const (
 	RPCBlocksByRootTopicV2 = protocolPrefix + BeaconBlocksByRootsMessageName + SchemaVersionV2
 	// RPCMetaDataTopicV2 defines the v2 topic for the metadata rpc method.
 	RPCMetaDataTopicV2 = protocolPrefix + MetadataMessageName + SchemaVersionV2
+
+	// V3 RPC Topics
+	RPCMetaDataTopicV3 = protocolPrefix + MetadataMessageName + SchemaVersionV3
 )
 
 // RPC errors for topic parsing.
@@ -97,10 +117,15 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
+	RPCMetaDataTopicV3: new(interface{}),
 	// BlobSidecarsByRange v1 Message
 	RPCBlobSidecarsByRangeTopicV1: new(pb.BlobSidecarsByRangeRequest),
 	// BlobSidecarsByRoot v1 Message
 	RPCBlobSidecarsByRootTopicV1: new(p2ptypes.BlobSidecarsByRootReq),
+	// DataColumnSidecarsByRange v1 Message
+	RPCDataColumnSidecarsByRangeTopicV1: new(pb.DataColumnSidecarsByRangeRequest),
+	// DataColumnSidecarsByRoot v1 Message
+	RPCDataColumnSidecarsByRootTopicV1: new(p2ptypes.DataColumnSidecarsByRootReq),
 }
 
 // Maps all registered protocol prefixes.
@@ -119,6 +144,8 @@ var messageMapping = map[string]bool{
 	MetadataMessageName:            true,
 	BlobSidecarsByRangeName:        true,
 	BlobSidecarsByRootName:         true,
+	DataColumnSidecarsByRootName:   true,
+	DataColumnSidecarsByRangeName:  true,
 }
 
 // Maps all the RPC messages which are to updated in altair.
@@ -128,9 +155,15 @@ var altairMapping = map[string]bool{
 	MetadataMessageName:            true,
 }
 
+// Maps all the RPC messages which are to updated with peerDAS fork epoch.
+var peerDASMapping = map[string]bool{
+	MetadataMessageName: true,
+}
+
 var versionMapping = map[string]bool{
 	SchemaVersionV1: true,
 	SchemaVersionV2: true,
+	SchemaVersionV3: true,
 }
 
 // OmitContextBytesV1 keeps track of which RPC methods do not write context bytes in their v1 incarnations.
@@ -258,13 +291,25 @@ func (r RPCTopic) Version() string {
 // TopicFromMessage constructs the rpc topic from the provided message
 // type and epoch.
 func TopicFromMessage(msg string, epoch primitives.Epoch) (string, error) {
+	// Check if the topic is known.
 	if !messageMapping[msg] {
 		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
+
+	// Base version is version 1.
 	version := SchemaVersionV1
+
+	// Check if the message is to be updated in altair.
 	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
 	if isAltair && altairMapping[msg] {
 		version = SchemaVersionV2
 	}
+
+	// Check if the message is to be updated in peerDAS.
+	isPeerDAS := epoch >= params.BeaconConfig().Eip7594ForkEpoch
+	if isPeerDAS && peerDASMapping[msg] {
+		version = SchemaVersionV3
+	}
+
 	return protocolPrefix + msg + version, nil
 }

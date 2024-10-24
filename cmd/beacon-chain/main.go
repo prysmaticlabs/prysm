@@ -12,6 +12,9 @@ import (
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/v5/cmd"
@@ -35,8 +38,6 @@ import (
 	_ "github.com/prysmaticlabs/prysm/v5/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 )
 
 var appFlags = []cli.Flag{
@@ -59,6 +60,8 @@ var appFlags = []cli.Flag{
 	flags.BlockBatchLimitBurstFactor,
 	flags.BlobBatchLimit,
 	flags.BlobBatchLimitBurstFactor,
+	flags.DataColumnBatchLimit,
+	flags.DataColumnBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropNumValidatorsFlag,
 	flags.InteropGenesisTimeFlag,
@@ -165,7 +168,7 @@ func before(ctx *cli.Context) error {
 	switch format {
 	case "text":
 		formatter := new(prefixed.TextFormatter)
-		formatter.TimestampFormat = "2006-01-02 15:04:05"
+		formatter.TimestampFormat = "2006-01-02 15:04:05.00"
 		formatter.FullTimestamp = true
 
 		// If persistent log files are written - we disable the log messages coloring because
@@ -181,7 +184,9 @@ func before(ctx *cli.Context) error {
 
 		logrus.SetFormatter(f)
 	case "json":
-		logrus.SetFormatter(&logrus.JSONFormatter{})
+		logrus.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: "2006-01-02 15:04:05.00",
+		})
 	case "journald":
 		if err := journald.Enable(); err != nil {
 			return err
