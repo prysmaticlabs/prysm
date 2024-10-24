@@ -88,7 +88,7 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 	}
 
 	// Reconstruct blob sidecars from the EL
-	blobSidecars, err := s.cfg.executionReconstructor.ReconstructBlobSidecars(ctx, block, blockRoot, indices)
+	blobSidecars, err := s.cfg.executionReconstructor.ReconstructBlobSidecars(ctx, block, blockRoot, indices[:])
 	if err != nil {
 		log.WithError(err).Error("Failed to reconstruct blob sidecars")
 		return

@@ -2406,14 +2406,14 @@ func TestReconstructBlobSidecars(t *testing.T) {
 
 	ctx := context.Background()
 	t.Run("all seen", func(t *testing.T) {
-		exists := [6]bool{true, true, true, true, true, true}
+		exists := []bool{true, true, true, true, true, true}
 		verifiedBlobs, err := client.ReconstructBlobSidecars(ctx, sb, r, exists)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(verifiedBlobs))
 	})
 
 	t.Run("get-blobs end point is not supported", func(t *testing.T) {
-		exists := [6]bool{true, true, true, true, true, false}
+		exists := []bool{true, true, true, true, true, false}
 		verifiedBlobs, err := client.ReconstructBlobSidecars(ctx, sb, r, exists)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(verifiedBlobs))
@@ -2429,7 +2429,7 @@ func TestReconstructBlobSidecars(t *testing.T) {
 		defer rpcClient.Close()
 
 		exists := [6]bool{}
-		verifiedBlobs, err := client.ReconstructBlobSidecars(ctx, sb, r, exists)
+		verifiedBlobs, err := client.ReconstructBlobSidecars(ctx, sb, r, exists[:])
 		require.NoError(t, err)
 		require.Equal(t, 6, len(verifiedBlobs))
 	})
@@ -2441,7 +2441,7 @@ func TestReconstructBlobSidecars(t *testing.T) {
 		rpcClient, client := setupRpcClient(t, srv.URL, client)
 		defer rpcClient.Close()
 
-		exists := [6]bool{true, false, true, false, true, false}
+		exists := []bool{true, false, true, false, true, false}
 		verifiedBlobs, err := client.ReconstructBlobSidecars(ctx, sb, r, exists)
 		require.NoError(t, err)
 		require.Equal(t, 3, len(verifiedBlobs))

@@ -105,7 +105,7 @@ type Reconstructor interface {
 	ReconstructFullBellatrixBlockBatch(
 		ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 	) ([]interfaces.SignedBeaconBlock, error)
-	ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, indices [6]bool) ([]blocks.VerifiedROBlob, error)
+	ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, indices []bool) ([]blocks.VerifiedROBlob, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -543,21 +543,25 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 // It retrieves the KZG commitments from the block body, fetches the associated blobs and proofs,
 // and constructs the corresponding verified read-only blob sidecars.
 //
-// The 'exists' argument is a boolean array of length 6 (max blobs per block), where each element corresponds to whether a
+// The 'exists' argument is a boolean list (must be the same length as body.BlobKzgCommitments), where each element corresponds to whether a
 // particular blob sidecar already exists. If exists[i] is true, the blob for the i-th KZG commitment
 // has already been retrieved and does not need to be fetched again from the execution layer (EL).
 //
 // For example:
+//   - len(block.Body().BlobKzgCommitments()) == 6
 //   - If exists = [true, false, true, false, true, false], the function will fetch the blobs
 //     associated with indices 1, 3, and 5 (since those are marked as non-existent).
 //   - If exists = [false ... x 6], the function will attempt to fetch all blobs.
 //
 // Only the blobs that do not already exist (where exists[i] is false) are fetched using the KZG commitments from block body.
-func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, exists [fieldparams.MaxBlobsPerBlock]bool) ([]blocks.VerifiedROBlob, error) {
+func (s *Service) ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, exists []bool) ([]blocks.VerifiedROBlob, error) {
 	blockBody := block.Block().Body()
 	kzgCommitments, err := blockBody.BlobKzgCommitments()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blob KZG commitments")
+	}
+	if len(kzgCommitments) != len(exists) {
+		return nil, fmt.Errorf("mismatched lengths: KZG commitments %d, exists %d", len(kzgCommitments), len(exists))
 	}
 
 	// Collect KZG hashes for non-existing blobs
