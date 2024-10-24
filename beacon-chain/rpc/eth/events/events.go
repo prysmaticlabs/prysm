@@ -168,9 +168,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	api.SetSSEHeaders(w)
 	sw := newStreamingResponseController(w, timeout)
 	ctx, cancel := context.WithCancel(ctx)
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 	es := newEventStreamer(buffSize, ka)
 
 	go es.outboxWriteLoop(ctx, cancel, sw)
@@ -198,9 +196,7 @@ type eventStreamer struct {
 
 func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.CancelFunc, req *topicRequest, s *Server) error {
 	defer close(es.outbox)
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 	eventsChan := make(chan *feed.Event, len(es.outbox))
 	if req.needOpsFeed {
 		opsSub := s.OperationNotifier.OperationFeed().Subscribe(eventsChan)
@@ -273,9 +269,7 @@ func (es *eventStreamer) outboxWriteLoop(ctx context.Context, cancel context.Can
 		}
 		es.exit()
 	}()
-	defer func() {
-		cancel()
-	}()
+	defer cancel()
 	// Write a keepalive at the start to test the connection and simplify test setup.
 	if err = es.writeOutbox(ctx, w, nil); err != nil {
 		return
