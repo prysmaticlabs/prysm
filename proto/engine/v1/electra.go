@@ -19,35 +19,39 @@ var (
 	crSize    = crExample.SizeSSZ()
 )
 
-const LenExecutionRequestsElectra = 3
+const (
+	depositRequestType       = 0
+	withdrawalRequestType    = 1
+	consolidationRequestType = 2
+)
 
 func (ebe *ExecutionBundleElectra) GetDecodedExecutionRequests() (*ExecutionRequests, error) {
 	requests := &ExecutionRequests{}
 
-	if len(ebe.ExecutionRequests) != LenExecutionRequestsElectra /* types of requests */ {
-		return nil, errors.Errorf("invalid execution request size: %d", len(ebe.ExecutionRequests))
+	for i := range ebe.ExecutionRequests {
+		requestType := ebe.ExecutionRequests[i][0]
+		requestListInSSZBytes := ebe.ExecutionRequests[i][1:]
+		switch requestType {
+		case depositRequestType:
+			drs, err := unmarshalItems(requestListInSSZBytes, drSize, func() *DepositRequest { return &DepositRequest{} })
+			if err != nil {
+				return nil, err
+			}
+			requests.Deposits = drs
+		case withdrawalRequestType:
+			wrs, err := unmarshalItems(requestListInSSZBytes, wrSize, func() *WithdrawalRequest { return &WithdrawalRequest{} })
+			if err != nil {
+				return nil, err
+			}
+			requests.Withdrawals = wrs
+		case consolidationRequestType:
+			crs, err := unmarshalItems(requestListInSSZBytes, crSize, func() *ConsolidationRequest { return &ConsolidationRequest{} })
+			if err != nil {
+				return nil, err
+			}
+			requests.Consolidations = crs
+		}
 	}
-
-	// deposit requests
-	drs, err := unmarshalItems(ebe.ExecutionRequests[0], drSize, func() *DepositRequest { return &DepositRequest{} })
-	if err != nil {
-		return nil, err
-	}
-	requests.Deposits = drs
-
-	// withdrawal requests
-	wrs, err := unmarshalItems(ebe.ExecutionRequests[1], wrSize, func() *WithdrawalRequest { return &WithdrawalRequest{} })
-	if err != nil {
-		return nil, err
-	}
-	requests.Withdrawals = wrs
-
-	// consolidation requests
-	crs, err := unmarshalItems(ebe.ExecutionRequests[2], crSize, func() *ConsolidationRequest { return &ConsolidationRequest{} })
-	if err != nil {
-		return nil, err
-	}
-	requests.Consolidations = crs
 
 	return requests, nil
 }
@@ -57,21 +61,37 @@ func EncodeExecutionRequests(requests *ExecutionRequests) ([]hexutil.Bytes, erro
 		return nil, errors.New("invalid execution requests")
 	}
 
-	drBytes, err := marshalItems(requests.Deposits)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal deposit requests")
+	var requestsData []hexutil.Bytes
+
+	if len(requests.Deposits) > 0 {
+		drBytes, err := marshalItems(requests.Deposits)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal deposit requests")
+		}
+		requestData := []byte{0}
+		requestData = append(requestData, drBytes...)
+		requestsData = append(requestsData, requestData)
+	}
+	if len(requests.Withdrawals) > 0 {
+		wrBytes, err := marshalItems(requests.Withdrawals)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal withdrawal requests")
+		}
+		requestData := []byte{1}
+		requestData = append(requestData, wrBytes...)
+		requestsData = append(requestsData, requestData)
+	}
+	if len(requests.Consolidations) > 0 {
+		crBytes, err := marshalItems(requests.Consolidations)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal consolidation requests")
+		}
+		requestData := []byte{2}
+		requestData = append(requestData, crBytes...)
+		requestsData = append(requestsData, requestData)
 	}
 
-	wrBytes, err := marshalItems(requests.Withdrawals)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal withdrawal requests")
-	}
-
-	crBytes, err := marshalItems(requests.Consolidations)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal consolidation requests")
-	}
-	return []hexutil.Bytes{drBytes, wrBytes, crBytes}, nil
+	return requestsData, nil
 }
 
 type sszUnmarshaler interface {
