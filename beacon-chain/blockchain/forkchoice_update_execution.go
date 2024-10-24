@@ -87,7 +87,7 @@ func (s *Service) sendFCUWithAttributes(cfg *postBlockProcessConfig, fcuArgs *fc
 	}
 }
 
-// fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
+// forkchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
 func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, args *fcuConfig) error {
 	_, span := trace.StartSpan(ctx, "beacon-chain.blockchain.forkchoiceUpdateWithExecution")
 	defer span.End()

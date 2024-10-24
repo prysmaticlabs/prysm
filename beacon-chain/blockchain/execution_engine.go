@@ -278,7 +278,7 @@ func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [
 	}
 }
 
-// getPayloadAttributes returns the payload attributes for the given state and slot.
+// getPayloadAttribute returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
 func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) payloadattribute.Attributer {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
