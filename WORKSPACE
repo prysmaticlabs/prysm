@@ -101,9 +101,9 @@ http_archive(
 
 http_archive(
     name = "aspect_bazel_lib",
-    sha256 = "f5ea76682b209cc0bd90d0f5a3b26d2f7a6a2885f0c5f615e72913f4805dbb0d",
-    strip_prefix = "bazel-lib-2.5.0",
-    url = "https://github.com/aspect-build/bazel-lib/releases/download/v2.5.0/bazel-lib-v2.5.0.tar.gz",
+    sha256 = "a272d79bb0ac6b6965aa199b1f84333413452e87f043b53eca7f347a23a478e8",
+    strip_prefix = "bazel-lib-2.9.3",
+    url = "https://github.com/bazel-contrib/bazel-lib/releases/download/v2.9.3/bazel-lib-v2.9.3.tar.gz",
 )
 
 load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains")
@@ -114,21 +114,18 @@ aspect_bazel_lib_register_toolchains()
 
 http_archive(
     name = "rules_oci",
-    sha256 = "4a276e9566c03491649eef63f27c2816cc222f41ccdebd97d2c5159e84917c3b",
-    strip_prefix = "rules_oci-1.7.4",
-    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.7.4/rules_oci-v1.7.4.tar.gz",
+    sha256 = "acbf8f40e062f707f8754e914dcb0013803c6e5e3679d3e05b571a9f5c7e0b43",
+    strip_prefix = "rules_oci-2.0.1",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v2.0.1/rules_oci-v2.0.1.tar.gz",
 )
 
 load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
 
 rules_oci_dependencies()
 
-load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "oci_register_toolchains")
+load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
 
-oci_register_toolchains(
-    name = "oci",
-    crane_version = LATEST_CRANE_VERSION,
-)
+oci_register_toolchains(name = "oci")
 
 http_archive(
     name = "io_bazel_rules_go",
@@ -162,6 +159,9 @@ git_repository(
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 # A multi-arch base image
+# Note: Downloading this image from gcr.io requires docker credentials to be configured from a valid
+# gcloud account. If you are seeing a 401 Unauthorized error, consider running the following: 
+#   `gcloud auth configure-docker`
 oci_pull(
     name = "linux_debian11_multiarch_base",  # Debian bullseye
     digest = "sha256:b82f113425c5b5c714151aaacd8039bc141821cdcd3c65202d42bdf9c43ae60b",  # 2023-12-12
