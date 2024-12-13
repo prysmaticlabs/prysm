@@ -36,6 +36,7 @@ import (
 )
 
 const broadcastBLSChangesRateLimit = 128
+const voluntaryExitEpochValidationBuffer = 5
 
 // ListAttestationsV2 retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -497,7 +498,7 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	currentWallEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
-	if currentWallEpoch < exit.Exit.Epoch {
+	if currentWallEpoch+voluntaryExitEpochValidationBuffer < exit.Exit.Epoch {
 		httputil.HandleError(w, "Exit epoch is in the future", http.StatusBadRequest)
 		return
 	}
