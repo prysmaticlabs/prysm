@@ -29,6 +29,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
@@ -1344,24 +1345,29 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 			PublicKey:        keys[0].PublicKey().Marshal(),
 		}
+		currentWallEpoch := params.BeaconConfig().ShardCommitteePeriod
+		currentWallSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(currentWallEpoch))
+		genesisTime := time.Now().Add(time.Duration(-1*int64(currentWallSlot)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 		bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
-			slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
 			// Intentionally set genesis time to use wall clock time.
-			state.GenesisTime = uint64(time.Now().Add(time.Duration(-1*int64(slot)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+			state.GenesisTime = uint64(genesisTime.Unix())
 			state.Validators = []*ethpbv1alpha1.Validator{validator}
-			state.Slot = slot
+			state.Slot = currentWallSlot
 			state.Balances = []uint64{params.BeaconConfig().MaxEffectiveBalance}
 			return nil
 		})
 		require.NoError(t, err)
 		// Ensure the state is at the correct slot relative to genesis.
-		require.Equal(t, params.BeaconConfig().ShardCommitteePeriod, slots.EpochsSinceGenesis(time.Unix(int64(bs.GenesisTime()), 0)))
+		require.Equal(t, currentWallEpoch, slots.EpochsSinceGenesis(time.Unix(int64(bs.GenesisTime()), 0)))
 
 		broadcaster := &p2pMock.MockBroadcaster{}
 		s := &Server{
 			ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 			VoluntaryExitsPool: &mock.PoolMock{},
 			Broadcaster:        broadcaster,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: genesisTime,
+			},
 		}
 
 		var body bytes.Buffer
