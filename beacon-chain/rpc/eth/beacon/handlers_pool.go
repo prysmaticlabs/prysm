@@ -496,6 +496,11 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not get epoch start: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	currentWallEpoch := slots.ToEpoch(s.GenesisTimeFetcher.CurrentSlot())
+	if currentWallEpoch < exit.Exit.Epoch {
+		httputil.HandleError(w, "Exit epoch is in the future", http.StatusBadRequest)
+		return
+	}
 	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, epochStart)
 	if err != nil {
 		httputil.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
