@@ -1213,6 +1213,9 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 			ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 			VoluntaryExitsPool: &mock.PoolMock{},
 			Broadcaster:        broadcaster,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 		}
 
 		var body bytes.Buffer
@@ -1237,14 +1240,20 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		params.OverrideBeaconConfig(config)
 
 		bs, _ := util.DeterministicGenesisState(t, 1)
+		currentWallEpoch := params.BeaconConfig().ShardCommitteePeriod
+		currentWallSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(currentWallEpoch))
+		genesisTime := time.Now().Add(time.Duration(-1*int64(currentWallSlot)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 		// Satisfy activity time required before exiting.
-		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))))
+		require.NoError(t, bs.SetSlot(currentWallSlot))
 
 		broadcaster := &p2pMock.MockBroadcaster{}
 		s := &Server{
 			ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 			VoluntaryExitsPool: &mock.PoolMock{},
 			Broadcaster:        broadcaster,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: genesisTime,
+			},
 		}
 
 		var body bytes.Buffer
@@ -1292,7 +1301,12 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 	})
 	t.Run("wrong signature", func(t *testing.T) {
 		bs, _ := util.DeterministicGenesisState(t, 1)
-		s := &Server{ChainInfoFetcher: &blockchainmock.ChainService{State: bs}}
+		s := &Server{
+			ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+		}
 
 		var body bytes.Buffer
 		_, err := body.WriteString(invalidExit2)
@@ -1321,7 +1335,12 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		s := &Server{ChainInfoFetcher: &blockchainmock.ChainService{State: bs}}
+		s := &Server{
+			ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+		}
 
 		var body bytes.Buffer
 		_, err = body.WriteString(invalidExit3)
