@@ -1336,6 +1336,51 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not get validator"))
 	})
+	t.Run("invalid: future exit epoch", func(t *testing.T) {
+		_, keys, err := util.DeterministicDepositsAndKeys(1)
+		require.NoError(t, err)
+		validator := &ethpbv1alpha1.Validator{
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			PublicKey:        keys[0].PublicKey().Marshal(),
+		}
+		bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+			slot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
+			// Intentionally set genesis time to use wall clock time.
+			state.GenesisTime = uint64(time.Now().Add(time.Duration(-1*int64(slot)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+			state.Validators = []*ethpbv1alpha1.Validator{validator}
+			state.Slot = slot
+			state.Balances = []uint64{params.BeaconConfig().MaxEffectiveBalance}
+			return nil
+		})
+		require.NoError(t, err)
+		// Ensure the state is at the correct slot relative to genesis.
+		require.Equal(t, params.BeaconConfig().ShardCommitteePeriod, slots.EpochsSinceGenesis(time.Unix(int64(bs.GenesisTime()), 0)))
+
+		broadcaster := &p2pMock.MockBroadcaster{}
+		s := &Server{
+			ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+			VoluntaryExitsPool: &mock.PoolMock{},
+			Broadcaster:        broadcaster,
+		}
+
+		var body bytes.Buffer
+		// NOTE: invalidExit4 contains an exit epoch that is in the future with valid signature.
+		// 		 current epoch = 256, exit epoch = 500
+		_, err = body.WriteString(invalidExit4)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitVoluntaryExit(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		require.NoError(t, err)
+		pendingExits, err := s.VoluntaryExitsPool.PendingExits()
+		require.NoError(t, err)
+		require.Equal(t, 0, len(pendingExits))
+		assert.Equal(t, false, broadcaster.BroadcastCalled.Load())
+	})
 }
 
 func TestSubmitSyncCommitteeSignatures(t *testing.T) {
@@ -2693,6 +2738,14 @@ var (
     "validator_index": "99"
   },
   "signature": "0xa430330829331089c4381427217231c32c26ac551de410961002491257b1ef50c3d49a89fc920ac2f12f0a27a95ab9b811e49f04cb08020ff7dbe03bdb479f85614608c4e5d0108052497f4ae0148c0c2ef79c05adeaf74e6c003455f2cc5716"
+}`
+	// future exit epoch
+	invalidExit4 = `{
+  "message": {
+    "epoch": "500",
+    "validator_index": "0"
+  },
+  "signature": "0xa4e54a8984619d616295cd91e5e4c0f05d9111ddaf90c739f3f73215a5ec0e1a531ca06c2632c0e0df52944cf14be47a0ddde16891711a413e27359e45cf2be28100ad6a7bf5bfd11aa1fe8deb324a1e4fb97bf19a83d26c016346c9c4f0fb0e"
 }`
 	singleSyncCommitteeMsg = `[
   {
