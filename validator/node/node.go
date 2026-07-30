@@ -606,7 +606,6 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		DB:                     c.db,
 		Wallet:                 c.wallet,
 		WalletDir:              walletDir,
-		WalletInitializedFeed:  c.walletInitializedFeed,
 		ValidatorService:       vs,
 		AuthTokenPath:          authTokenPath,
 		Middlewares:            middlewares,
