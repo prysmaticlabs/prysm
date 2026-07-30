@@ -49,7 +49,6 @@ type Flags struct {
 	EnableExperimentalAttestationPool   bool // EnableExperimentalAttestationPool enables an experimental attestation pool design.
 	EnableFastConfirmation              bool // EnableFastConfirmation enables the fast confirmation rule (FCR) for rapid block confirmation.
 	DisableDutiesV2                     bool // DisableDutiesV2 sets validator client to use the get Duties endpoint
-	EnableWeb                           bool // EnableWeb enables the webui on the validator client
 	EnableStateDiff                     bool // EnableStateDiff enables the experimental state diff feature for the beacon node.
 	DisableProgressiveSSZ               bool // DisableProgressiveSSZ turns off progressive SSZ merkleization for Gloas consensus types.
 	ReorgLatePayloads                   bool // ReorgLatePayloads enables reorging late payloads in the beacon node.
@@ -378,10 +377,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(DisableDutiesV2.Name) {
 		logEnabled(DisableDutiesV2)
 		cfg.DisableDutiesV2 = true
-	}
-	if ctx.Bool(EnableWebFlag.Name) {
-		logEnabled(EnableWebFlag)
-		cfg.EnableWeb = true
 	}
 
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
