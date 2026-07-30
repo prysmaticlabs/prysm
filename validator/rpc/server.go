@@ -94,7 +94,6 @@ type Server struct {
 	startFailure              error
 	ctx                       context.Context
 	walletDir                 string
-	jwtSecret                 []byte
 	grpcHeaders               []string
 }
 
