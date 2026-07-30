@@ -80,6 +80,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedWriteWalletPasswordOnWebOnboarding = &cli.BoolFlag{
+		Name:   "write-wallet-password-on-web-onboarding",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -95,6 +100,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedTrackEquivocations,
 	deprecatedDisableRegistrationCache,
 	deprecatedWeb,
+	deprecatedWriteWalletPasswordOnWebOnboarding,
 }
 
 var upcomingDeprecation = []cli.Flag{
