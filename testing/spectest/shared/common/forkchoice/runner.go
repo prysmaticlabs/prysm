@@ -108,13 +108,10 @@ func runTest(t *testing.T, config string, fork int, basePath string, fcr bool) {
 					builder = NewBuilder(t, beaconState, beaconBlock)
 				}
 
-				// Vectors generated with bls_setting 2 carry unsigned blocks.
+				// Vectors generated with bls_setting 2 predate consensus-specs#5489 and carry the stub aggregate pubkey.
 				if metaFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml"); err == nil {
 					meta := &Meta{}
 					require.NoError(t, utils.UnmarshalYaml(metaFile, meta))
-					if meta.BlsSetting == 2 {
-						builder.service.DisableBlockSignatureVerificationForTesting()
-					}
 				}
 
 				for _, step := range steps {
