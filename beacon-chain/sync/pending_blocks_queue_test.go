@@ -1,7 +1,11 @@
 package sync
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"math"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -12,11 +16,14 @@ import (
 	dbtest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
 	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
 	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -26,7 +33,10 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -972,4 +982,127 @@ func TestExpirationCache_PruneOldBlocksCorrectly(t *testing.T) {
 	assert.Equal(t, false, r.seenPendingBlocks[b1Root])
 	assert.Equal(t, false, r.seenPendingBlocks[b2Root])
 	assert.Equal(t, 0, len(r.pendingBlocksInCache(1)))
+}
+
+// Override only the transport so requests still exercise the shared fetch and RPC paths.
+type parentRequestP2P struct {
+	p2p.P2P
+	send func(context.Context, any) (network.Stream, error)
+}
+
+func (p *parentRequestP2P) Send(ctx context.Context, msg any, _ string, _ peer.ID) (network.Stream, error) {
+	return p.send(ctx, msg)
+}
+
+type stalledParentStream struct {
+	network.Stream
+	reading chan struct{}
+	reset   chan struct{}
+	started sync.Once
+	once    sync.Once
+}
+
+func (s *stalledParentStream) Read([]byte) (int, error) {
+	s.started.Do(func() { close(s.reading) })
+	<-s.reset
+	return 0, network.ErrReset
+}
+
+func (s *stalledParentStream) Reset() error {
+	s.once.Do(func() { close(s.reset) })
+	return nil
+}
+
+func (*stalledParentStream) Close() error                    { return nil }
+func (*stalledParentStream) SetReadDeadline(time.Time) error { return nil }
+
+func parentRequestService(t *testing.T, send func(context.Context, any) (network.Stream, error)) *Service {
+	t.Helper()
+	p := &parentRequestP2P{P2P: p2ptest.NewTestP2P(t), send: send}
+	pid := peer.ID("parent-peer")
+	p.Peers().Add(new(enr.Record), pid, nil, network.DirOutbound)
+	p.Peers().SetConnectionState(pid, peers.Connected)
+	p.Peers().SetChainState(pid, &ethpb.StatusV2{FinalizedEpoch: 1})
+	s := NewService(t.Context(), WithP2P(p), WithDatabase(dbtest.SetupDB(t)),
+		WithChainService(&mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}))
+	t.Cleanup(s.cancel)
+	s.cfg.clock = startup.NewClock(time.Now(), [32]byte{})
+	s.cfg.initialSync = &mockSync.Sync{}
+	return s
+}
+
+func TestValidateSidecar_ParentRequestServiceLifetime(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.BeaconConfig().FuluForkEpoch = 0
+	params.BeaconConfig().GloasForkEpoch = 1
+	params.BeaconConfig().InitializeForkSchedule()
+
+	for _, kind := range []string{"blob", "data column"} {
+		t.Run(kind, func(t *testing.T) {
+			requests := make(chan context.Context, numOfTries)
+			stream := &stalledParentStream{reading: make(chan struct{}), reset: make(chan struct{})}
+			t.Cleanup(func() { _ = stream.Reset() })
+			s := parentRequestService(t, func(ctx context.Context, _ any) (network.Stream, error) {
+				requests <- ctx
+				return stream, nil
+			})
+			missingParent := errors.New("missing parent")
+			s.newBlobVerifier = func(blocks.ROBlob, []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarParentSeen: missingParent}
+			}
+			s.newColumnsVerifier = testNewDataColumnSidecarsVerifier(verification.MockDataColumnsVerifier{ErrSidecarParentSeen: missingParent})
+			_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{1}, 1, 1)
+			blob := blobs[0].BlobSidecar
+			buf := new(bytes.Buffer)
+			var topic string
+			validate := s.validateBlob
+			if kind == "blob" {
+				_, err := s.cfg.p2p.Encoding().EncodeGossip(buf, blob)
+				require.NoError(t, err)
+				topic = p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.BlobSidecar]()]
+			} else {
+				column := &ethpb.DataColumnSidecar{
+					SignedBlockHeader:            blob.SignedBlockHeader,
+					KzgCommitmentsInclusionProof: make([][]byte, 4),
+				}
+				for i := range column.KzgCommitmentsInclusionProof {
+					column.KzgCommitmentsInclusionProof[i] = make([]byte, 32)
+				}
+				_, err := s.cfg.p2p.Encoding().EncodeGossip(buf, column)
+				require.NoError(t, err)
+				topic = p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.DataColumnSidecar]()]
+				validate = s.validateDataColumn
+			}
+			topic = s.addDigestAndIndexToTopic(topic, s.currentForkDigest(), 0) + s.cfg.p2p.Encoding().ProtocolSuffix()
+
+			// Regression of #13061.
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			result, err := validate(ctx, "", &pubsub.Message{Message: &pb.Message{Data: buf.Bytes(), Topic: &topic}})
+			cancel()
+			require.Equal(t, pubsub.ValidationIgnore, result)
+			require.ErrorIs(t, err, missingParent)
+
+			select {
+			case <-stream.reading:
+			case <-time.After(time.Second):
+				t.Fatal("parent request did not reach response read after validation returned")
+			}
+			requestCtx := <-requests
+			require.NoError(t, requestCtx.Err(), "validation cancellation must not cancel parent fetch")
+
+			// Ensure the request context has a bounded deadline.
+			_, bounded := requestCtx.Deadline()
+			require.Equal(t, true, bounded)
+
+			// Stop the service and ensure the parent request is canceled.
+			require.NoError(t, s.Stop())
+			require.ErrorIs(t, requestCtx.Err(), context.Canceled)
+			select {
+			case <-stream.reset:
+			case <-time.After(time.Second):
+				t.Fatal("service stop did not interrupt the parent response read")
+			}
+		})
+	}
 }
