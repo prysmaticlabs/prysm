@@ -429,7 +429,6 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 
 		// Optimistically request parent payload envelopes in parallel with the parent blocks.
 		var wg sync.WaitGroup
-		wg.Add(1)
 		wg.Go(func() {
 			s.fetchAndQueuePayloadEnvelopesForRoots(ctx, pid, req)
 		})
