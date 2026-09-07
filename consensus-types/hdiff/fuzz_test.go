@@ -113,12 +113,6 @@ func FuzzNewHdiff(f *testing.F) {
 // FuzzNewStateDiff tests the newStateDiff function with valid random state diffs
 func FuzzNewStateDiff(f *testing.F) {
 	f.Fuzz(func(t *testing.T, validatorCount uint8, slotDelta uint64, balanceData []byte, validatorData []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("newStateDiff panicked: %v", r)
-			}
-		}()
-
 		// Bound validator count to reasonable range
 		validators := uint64(validatorCount%32 + 8) // 8-39 validators
 		if slotDelta > 100 {
@@ -189,12 +183,6 @@ func FuzzNewStateDiff(f *testing.F) {
 // FuzzNewValidatorDiffs tests validator diff deserialization with valid diffs
 func FuzzNewValidatorDiffs(f *testing.F) {
 	f.Fuzz(func(t *testing.T, validatorCount uint8, changeData []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("newValidatorDiffs panicked: %v", r)
-			}
-		}()
-
 		// Bound validator count to reasonable range
 		validators := uint64(validatorCount%16 + 4) // 4-19 validators
 
@@ -248,12 +236,6 @@ func FuzzNewValidatorDiffs(f *testing.F) {
 // FuzzNewBalancesDiff tests balance diff deserialization with valid diffs
 func FuzzNewBalancesDiff(f *testing.F) {
 	f.Fuzz(func(t *testing.T, balanceCount uint8, balanceData []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("newBalancesDiff panicked: %v", r)
-			}
-		}()
-
 		// Bound balance count to reasonable range
 		numBalances := int(balanceCount%32 + 8) // 8-39 balances
 
@@ -401,12 +383,6 @@ func FuzzReadPendingAttestation(f *testing.F) {
 	f.Add(largeLength)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("readPendingAttestation panicked: %v", r)
-			}
-		}()
-
 		// Make a copy since the function modifies the slice
 		dataCopy := make([]byte, len(data))
 		copy(dataCopy, data)
@@ -435,12 +411,6 @@ func FuzzKmpIndex(f *testing.F) {
 	f.Add("1,1,1", "2,2,2")
 
 	f.Fuzz(func(t *testing.T, sourceStr string, targetStr string) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("kmpIndex panicked: %v", r)
-			}
-		}()
-
 		// Parse comma-separated strings into int slices
 		var source, target []int
 		if sourceStr != "" {
@@ -499,12 +469,6 @@ func FuzzComputeLPS(f *testing.F) {
 	f.Add("")
 
 	f.Fuzz(func(t *testing.T, patternStr string) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("computeLPS panicked: %v", r)
-			}
-		}()
-
 		// Parse comma-separated string into int slice
 		var pattern []int
 		if patternStr != "" {
@@ -551,12 +515,6 @@ func FuzzComputeLPS(f *testing.F) {
 // FuzzDiffToBalances tests balance diff computation
 func FuzzDiffToBalances(f *testing.F) {
 	f.Fuzz(func(t *testing.T, sourceData, targetData []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("diffToBalances panicked: %v", r)
-			}
-		}()
-
 		// Convert byte data to balance arrays
 		var sourceBalances, targetBalances []uint64
 
@@ -599,12 +557,6 @@ func FuzzDiffToBalances(f *testing.F) {
 // FuzzValidatorsEqual tests validator comparison
 func FuzzValidatorsEqual(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("validatorsEqual panicked: %v", r)
-			}
-		}()
-
 		// Create two validators and fuzz their fields
 		if len(data) < 16 {
 			return
