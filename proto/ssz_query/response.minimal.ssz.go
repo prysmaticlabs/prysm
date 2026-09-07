@@ -5,7 +5,6 @@ package ssz_query
 import (
 	binary "encoding/binary"
 	"fmt"
-
 	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
 )
 

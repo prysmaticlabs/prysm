@@ -5,7 +5,6 @@ package enginev1
 import (
 	binary "encoding/binary"
 	"fmt"
-
 	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
 )
 
