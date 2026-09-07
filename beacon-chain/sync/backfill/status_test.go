@@ -26,12 +26,13 @@ type mockBackfillDB struct {
 	block                       func(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	saveBackfillStatus          func(ctx context.Context, status *dbval.BackfillStatus) error
 	backfillStatus              func(context.Context) (*dbval.BackfillStatus, error)
-	updateEarliestAvailableSlot func(ctx context.Context, earliestAvailableSlot primitives.Slot) error
+	updateEarliestAvailableSlot func(ctx context.Context, earliestAvailableSlot, currentSlot primitives.Slot) error
 	status                      *dbval.BackfillStatus
 	err                         error
 	states                      map[[32]byte]state.BeaconState
 	blocks                      map[[32]byte]blocks.ROBlock
 	easUpdates                  []primitives.Slot
+	easCurrents                 []primitives.Slot
 }
 
 var _ BeaconDB = &mockBackfillDB{}
@@ -91,11 +92,12 @@ func (d *mockBackfillDB) BackfillFinalizedIndex(ctx context.Context, blocks []bl
 	return nil
 }
 
-func (d *mockBackfillDB) UpdateEarliestAvailableSlot(ctx context.Context, earliestAvailableSlot primitives.Slot) error {
+func (d *mockBackfillDB) UpdateEarliestAvailableSlot(ctx context.Context, earliestAvailableSlot, currentSlot primitives.Slot) error {
 	if d.updateEarliestAvailableSlot != nil {
-		return d.updateEarliestAvailableSlot(ctx, earliestAvailableSlot)
+		return d.updateEarliestAvailableSlot(ctx, earliestAvailableSlot, currentSlot)
 	}
 	d.easUpdates = append(d.easUpdates, earliestAvailableSlot)
+	d.easCurrents = append(d.easCurrents, currentSlot)
 	return nil
 }
 

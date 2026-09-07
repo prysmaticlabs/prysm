@@ -141,8 +141,8 @@ func (s *Store) recoverLegacy(ctx context.Context) error {
 }
 
 // updateEarliestAvailableSlot persists a new earliest available slot to the database.
-func (s *Store) updateEarliestAvailableSlot(ctx context.Context, sl primitives.Slot) error {
-	return s.store.UpdateEarliestAvailableSlot(ctx, sl)
+func (s *Store) updateEarliestAvailableSlot(ctx context.Context, sl, current primitives.Slot) error {
+	return s.store.UpdateEarliestAvailableSlot(ctx, sl, current)
 }
 
 func (s *Store) saveStatus(ctx context.Context, bs *dbval.BackfillStatus) error {
@@ -182,5 +182,5 @@ type BeaconDB interface {
 	Block(context.Context, [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	SaveROBlocks(ctx context.Context, blks []blocks.ROBlock, cache bool) error
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	UpdateEarliestAvailableSlot(ctx context.Context, earliestAvailableSlot primitives.Slot) error
+	UpdateEarliestAvailableSlot(ctx context.Context, earliestAvailableSlot, currentSlot primitives.Slot) error
 }

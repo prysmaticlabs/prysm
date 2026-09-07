@@ -199,7 +199,7 @@ func (s *Service) importBatches(ctx context.Context) {
 		// lowered to the actual lowest imported slot. Update failures are logged inside and do
 		// not affect batch sequencing.
 		if bs != nil {
-			s.updateEarliestAvailableSlot(ctx, primitives.Slot(bs.LowSlot))
+			s.updateEarliestAvailableSlot(ctx, primitives.Slot(bs.LowSlot), current)
 		}
 		log.WithFields(ib.logFields()).WithField("batchesRemaining", s.batchSeq.numTodo()).Debug("Imported batch")
 	}

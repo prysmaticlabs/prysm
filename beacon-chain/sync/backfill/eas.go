@@ -54,11 +54,13 @@ func (s *Service) configureEASUpdates(ctx context.Context) {
 // updateEarliestAvailableSlot lowers the persisted and advertised earliest available slot to
 // lowSlot, the lowest slot of a backfill batch that has already been durably imported. lowSlot
 // must come from the importer-returned BackfillStatus rather than the batch boundary, because
-// the lowest slots of a batch may be skipped.
+// the lowest slots of a batch may be skipped. currentSlot is the wall-clock slot, forwarded to
+// the database update, which uses it to refuse raising the earliest available slot within the
+// mandatory block-serving window.
 // The database and p2p updates are attempted independently and failures are only logged: the
 // batch is already committed, so a failed update must not make it look unimported or stop the
 // import loop. A subsequent batch retries naturally by publishing its own, lower slot.
-func (s *Service) updateEarliestAvailableSlot(ctx context.Context, lowSlot primitives.Slot) {
+func (s *Service) updateEarliestAvailableSlot(ctx context.Context, lowSlot, currentSlot primitives.Slot) {
 	if !params.FuluEnabled() || !s.easAllowed || s.custody == nil {
 		return
 	}
@@ -91,7 +93,7 @@ func (s *Service) updateEarliestAvailableSlot(ctx context.Context, lowSlot primi
 	if lowSlot >= current {
 		return
 	}
-	if err := s.store.updateEarliestAvailableSlot(ctx, lowSlot); err != nil {
+	if err := s.store.updateEarliestAvailableSlot(ctx, lowSlot, currentSlot); err != nil {
 		log.WithError(err).WithField("earliestAvailableSlot", lowSlot).Error("Could not persist the earliest available slot after backfill import")
 	}
 	if err := s.custody.UpdateEarliestAvailableSlot(lowSlot); err != nil {

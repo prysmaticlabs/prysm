@@ -65,8 +65,9 @@ func TestUpdateEarliestAvailableSlotLowersBoth(t *testing.T) {
 	custody := &mockEASCustody{eas: 100, cgc: 4}
 	s := testEASService(db, custody, 100)
 
-	s.updateEarliestAvailableSlot(t.Context(), 50)
+	s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 	require.DeepEqual(t, []primitives.Slot{50}, db.easUpdates)
+	require.DeepEqual(t, []primitives.Slot{1000}, db.easCurrents)
 	require.DeepEqual(t, []primitives.Slot{50}, custody.attempts)
 	require.Equal(t, primitives.Slot(50), custody.eas)
 }
@@ -77,7 +78,7 @@ func TestUpdateEarliestAvailableSlotFuluDisabled(t *testing.T) {
 	custody := &mockEASCustody{eas: 100, cgc: 4}
 	s := testEASService(db, custody, 100)
 
-	s.updateEarliestAvailableSlot(t.Context(), 50)
+	s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 	require.Equal(t, 0, len(db.easUpdates))
 	require.Equal(t, 0, len(custody.attempts))
 	require.Equal(t, primitives.Slot(100), custody.eas)
@@ -90,7 +91,7 @@ func TestUpdateEarliestAvailableSlotNotAllowed(t *testing.T) {
 	s := testEASService(db, custody, 100)
 	s.easAllowed = false
 
-	s.updateEarliestAvailableSlot(t.Context(), 50)
+	s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 	require.Equal(t, 0, len(db.easUpdates))
 	require.Equal(t, 0, len(custody.attempts))
 }
@@ -103,7 +104,7 @@ func TestUpdateEarliestAvailableSlotCustodyGroupCountChanged(t *testing.T) {
 	// Simulate a custody group count increase after backfill startup.
 	custody.cgc = 8
 
-	s.updateEarliestAvailableSlot(t.Context(), 50)
+	s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 	require.Equal(t, 0, len(db.easUpdates))
 	require.Equal(t, 0, len(custody.attempts))
 	require.Equal(t, primitives.Slot(100), custody.eas)
@@ -116,13 +117,13 @@ func TestUpdateEarliestAvailableSlotNeverMovesForward(t *testing.T) {
 	s := testEASService(db, custody, 100)
 
 	// A slot above the currently advertised earliest available slot must not be published.
-	s.updateEarliestAvailableSlot(t.Context(), 50)
+	s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 	require.Equal(t, 0, len(db.easUpdates))
 	require.Equal(t, 0, len(custody.attempts))
 	require.Equal(t, primitives.Slot(40), custody.eas)
 
 	// An equal slot is a no-op as well.
-	s.updateEarliestAvailableSlot(t.Context(), 40)
+	s.updateEarliestAvailableSlot(t.Context(), 40, 1000)
 	require.Equal(t, 0, len(db.easUpdates))
 	require.Equal(t, 0, len(custody.attempts))
 }
@@ -132,14 +133,14 @@ func TestUpdateEarliestAvailableSlotIndependentUpdates(t *testing.T) {
 	t.Run("db error still updates p2p", func(t *testing.T) {
 		db := &mockBackfillDB{}
 		dbAttempts := make([]primitives.Slot, 0)
-		db.updateEarliestAvailableSlot = func(_ context.Context, sl primitives.Slot) error {
+		db.updateEarliestAvailableSlot = func(_ context.Context, sl, _ primitives.Slot) error {
 			dbAttempts = append(dbAttempts, sl)
 			return errors.New("db failure")
 		}
 		custody := &mockEASCustody{eas: 100, cgc: 4}
 		s := testEASService(db, custody, 100)
 
-		s.updateEarliestAvailableSlot(t.Context(), 50)
+		s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 		require.DeepEqual(t, []primitives.Slot{50}, dbAttempts)
 		require.DeepEqual(t, []primitives.Slot{50}, custody.attempts)
 		require.Equal(t, primitives.Slot(50), custody.eas)
@@ -149,7 +150,7 @@ func TestUpdateEarliestAvailableSlotIndependentUpdates(t *testing.T) {
 		custody := &mockEASCustody{eas: 100, cgc: 4, updateErr: errors.New("p2p failure")}
 		s := testEASService(db, custody, 100)
 
-		s.updateEarliestAvailableSlot(t.Context(), 50)
+		s.updateEarliestAvailableSlot(t.Context(), 50, 1000)
 		require.DeepEqual(t, []primitives.Slot{50}, db.easUpdates)
 		require.DeepEqual(t, []primitives.Slot{50}, custody.attempts)
 		require.Equal(t, primitives.Slot(100), custody.eas)
@@ -241,7 +242,7 @@ func TestConfigureEASUpdatesPreservesRaisedEAS(t *testing.T) {
 	s.configureEASUpdates(t.Context())
 	require.Equal(t, false, s.easAllowed)
 
-	s.updateEarliestAvailableSlot(t.Context(), 50)
+	s.updateEarliestAvailableSlot(t.Context(), 50, 10000)
 	require.Equal(t, 0, len(db.easUpdates))
 	require.Equal(t, 0, len(custody.attempts))
 	require.Equal(t, primitives.Slot(10000), custody.eas)
@@ -292,6 +293,8 @@ func TestImportBatchesUpdatesEAS(t *testing.T) {
 	want := []primitives.Slot{451, 387}
 	require.DeepEqual(t, want, fx.custody.attempts)
 	require.DeepEqual(t, want, fx.db.easUpdates)
+	// The database updates must carry the clock slot the fixture was built with (high+1).
+	require.DeepEqual(t, []primitives.Slot{513, 513}, fx.db.easCurrents)
 	require.Equal(t, primitives.Slot(387), fx.custody.eas)
 	require.NotEqual(t, fx.batches[0].begin, fx.custody.attempts[0])
 }
@@ -314,7 +317,7 @@ func TestImportBatchesImporterFailureNoEASUpdate(t *testing.T) {
 func TestImportBatchesEASUpdaterErrorsDoNotFailImport(t *testing.T) {
 	fx := newEASImportFixture(t)
 	dbAttempts := make([]primitives.Slot, 0)
-	fx.db.updateEarliestAvailableSlot = func(_ context.Context, sl primitives.Slot) error {
+	fx.db.updateEarliestAvailableSlot = func(_ context.Context, sl, _ primitives.Slot) error {
 		dbAttempts = append(dbAttempts, sl)
 		return errors.New("db failure")
 	}
