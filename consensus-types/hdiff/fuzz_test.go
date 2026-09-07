@@ -136,7 +136,7 @@ func FuzzNewStateDiff(f *testing.F) {
 		if len(balanceData) >= 8 {
 			balances := target.Balances()
 			numChanges := int(binary.LittleEndian.Uint64(balanceData[:8])) % len(balances)
-			for i := 0; i < numChanges && i*8+8 < len(balanceData); i++ {
+			for i := 0; i < numChanges && (i+2)*8 <= len(balanceData); i++ {
 				idx := i % len(balances)
 				delta := int64(binary.LittleEndian.Uint64(balanceData[i*8+8 : (i+1)*8+8]))
 				// Keep delta reasonable
@@ -266,7 +266,7 @@ func FuzzNewBalancesDiff(f *testing.F) {
 			balances := target.Balances()
 			numChanges := int(binary.LittleEndian.Uint64(balanceData[:8])) % numBalances
 
-			for i := 0; i < numChanges && i*8+8 < len(balanceData); i++ {
+			for i := 0; i < numChanges && (i+2)*8 <= len(balanceData); i++ {
 				idx := i % numBalances
 				delta := int64(binary.LittleEndian.Uint64(balanceData[i*8+8 : (i+1)*8+8]))
 				// Keep delta reasonable
