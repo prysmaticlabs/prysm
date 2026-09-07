@@ -64,6 +64,34 @@ func TestGetSSZ_NonJSONErrorBodyIsTyped(t *testing.T) {
 	require.Equal(t, http.StatusNotAcceptable, errJson.Code)
 }
 
+// A 204 carries no body, so it must surface as a typed error rather than an empty
+// success that callers would then fail to decode.
+func TestGetSSZ_NoContentIsTypedError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c := newHandler(http.Client{}, srv.URL)
+	body, _, err := c.GetSSZ(context.Background(), "/eth/v1/test")
+	require.NotNil(t, err)
+	require.Equal(t, 0, len(body))
+	require.Equal(t, true, errors.Is(err, &httputil.DefaultJsonError{Code: http.StatusNoContent}),
+		"expected a 204 DefaultJsonError, got %v", err)
+}
+
+// A write has no body to decode, so a 204 there is a plain success and must not be
+// turned into an error the way a 204 on a read is.
+func TestPostSSZ_NoContentIsSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	c := newHandler(http.Client{}, srv.URL)
+	require.NoError(t, c.PostSSZ(context.Background(), "/eth/v1/test", nil, bytes.NewBuffer([]byte{0x01})))
+}
+
 // A JSON error body is decoded into the typed error's fields.
 func TestPostSSZ_JSONErrorBodyIsDecoded(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
