@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"sync"
@@ -1103,6 +1104,95 @@ func TestValidateSidecar_ParentRequestServiceLifetime(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("service stop did not interrupt the parent response read")
 			}
+		})
+	}
+}
+
+func TestService_BatchRootRequestCancellation(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.BeaconConfig().GloasForkEpoch = 0
+	params.BeaconConfig().InitializeForkSchedule()
+
+	t.Run("block and envelope reads", func(t *testing.T) {
+		streams := make(chan *stalledParentStream, 2*numOfTries)
+		s := parentRequestService(t, func(ctx context.Context, _ any) (network.Stream, error) {
+			_, bounded := ctx.Deadline()
+			assert.Equal(t, true, bounded)
+			stream := &stalledParentStream{reading: make(chan struct{}), reset: make(chan struct{})}
+			t.Cleanup(func() { _ = stream.Reset() })
+			streams <- stream
+			return stream, nil
+		})
+		done := make(chan error, 1)
+		go func() { done <- s.sendBatchRootRequest(s.ctx, [][32]byte{{1}}, rand.NewGenerator()) }()
+		for range 2 {
+			select {
+			case stream := <-streams:
+				select {
+				case <-stream.reading:
+				case <-time.After(time.Second):
+					t.Fatal("request did not reach response read")
+				}
+			case <-time.After(time.Second):
+				t.Fatal("block and envelope requests did not both start")
+			}
+		}
+		require.NoError(t, s.Stop())
+		select {
+		case err := <-done:
+			require.ErrorIs(t, err, context.Canceled)
+		case <-time.After(time.Second):
+			t.Fatal("canceled batch did not return promptly")
+		}
+		require.Equal(t, 0, len(streams), "canceled requests must not be retried")
+	})
+
+	t.Run("envelope timeouts preserve retries", func(t *testing.T) {
+		previousTimeout := respTimeout
+		respTimeout = 20 * time.Millisecond
+		t.Cleanup(func() { respTimeout = previousTimeout })
+
+		blockAttempts, envelopeAttempts := 0, 0
+		s := parentRequestService(t, func(ctx context.Context, msg any) (network.Stream, error) {
+			if _, ok := msg.(*p2ptypes.ExecutionPayloadEnvelopesByRootReq); ok {
+				envelopeAttempts++
+				<-ctx.Done()
+				assert.Equal(t, context.DeadlineExceeded, ctx.Err())
+				return nil, ctx.Err()
+			}
+			blockAttempts++
+			return nil, errors.New("request failed")
+		})
+
+		require.NoError(t, s.sendBatchRootRequest(s.ctx, [][32]byte{{1}}, rand.NewGenerator()))
+		require.NoError(t, s.ctx.Err())
+		require.Equal(t, numOfTries, blockAttempts)
+		require.Equal(t, numOfTries, envelopeAttempts)
+	})
+
+	params.BeaconConfig().GloasForkEpoch = 1
+	for _, cancelAt := range []int{0, 1, numOfTries, numOfTries + 1} {
+		t.Run(fmt.Sprintf("cancel at attempt %d", cancelAt), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			attempts := 0
+			s := parentRequestService(t, func(context.Context, any) (network.Stream, error) {
+				attempts++
+				if attempts == cancelAt {
+					cancel()
+				}
+				return nil, errors.New("request failed")
+			})
+			if cancelAt == 0 {
+				cancel()
+			}
+			err := s.sendBatchRootRequest(ctx, [][32]byte{{1}}, rand.NewGenerator())
+			if cancelAt <= numOfTries {
+				require.ErrorIs(t, err, context.Canceled)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, min(cancelAt, numOfTries), attempts)
 		})
 	}
 }
