@@ -11,14 +11,21 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
-const maxFuzzValidators = 10000
-const maxFuzzStateDiffSize = 1000
-const maxFuzzHistoricalRoots = 10000
-const maxFuzzDecodedSize = maxFuzzStateDiffSize * 10
-const maxFuzzScanRange = 200
-const fuzzRootsLengthOffset = 16
-const maxFuzzInputSize = 10
-const oneEthInGwei = 1000000000
+const (
+	oneEthInGwei = 1000000000
+	// Caps the StateDiff decode buffer at 8 MiB (= 256KiB * 32) via snappyDecode.
+	maxFuzzStateDiffSize = 256 << 10
+)
+
+// snappyBombSeed is a 15-byte StateDiff whose snappy header declares 2.37 GiB of decoded data.
+// https://github.com/OffchainLabs/prysm/actions/runs/32725115585/job/97425742241
+// Kept as hex escapes: bytes 2-3 were once written as the literal character U+017D, which
+// only happens to be \xc5\xbd while the file stays UTF-8.
+var snappyBombSeed = [][]byte{
+	[]byte("\xff\xc5\xbd\xbd\t\t\t\t\t\xbd\xb6\xaf\xbd\xbd0"),
+	[]byte("\xff"),
+	[]byte("p"),
+}
 
 // FuzzNewHdiff tests parsing variations of realistic diffs
 func FuzzNewHdiff(f *testing.F) {
@@ -65,37 +72,12 @@ func FuzzNewHdiff(f *testing.F) {
 			}
 		}
 	}
+	f.Add(snappyBombSeed[0], snappyBombSeed[1], snappyBombSeed[2])
 
 	f.Fuzz(func(t *testing.T, stateDiff, validatorDiffs, balancesDiff []byte) {
 		// Limit input sizes to reasonable bounds
-		if len(stateDiff) > 5000 || len(validatorDiffs) > 5000 || len(balancesDiff) > 5000 {
+		if len(stateDiff) > maxFuzzStateDiffSize || len(validatorDiffs) > 5000 || len(balancesDiff) > 5000 {
 			return
-		}
-
-		// Bound historical roots length in stateDiff (if it contains snappy-compressed data)
-		// The historicalRootsLength is read after snappy decompression, but we can still
-		// limit the compressed input size to prevent extreme decompression ratios
-		if len(stateDiff) > maxFuzzStateDiffSize {
-			// Limit stateDiff to prevent potential memory bombs from snappy decompression
-			stateDiff = stateDiff[:maxFuzzStateDiffSize]
-		}
-
-		// Bound validator count in validatorDiffs
-		if len(validatorDiffs) >= 8 {
-			count := binary.LittleEndian.Uint64(validatorDiffs[0:8])
-			if count >= maxFuzzValidators {
-				boundedCount := count % maxFuzzValidators
-				binary.LittleEndian.PutUint64(validatorDiffs[0:8], boundedCount)
-			}
-		}
-
-		// Bound balance count in balancesDiff
-		if len(balancesDiff) >= 8 {
-			count := binary.LittleEndian.Uint64(balancesDiff[0:8])
-			if count >= maxFuzzValidators {
-				boundedCount := count % maxFuzzValidators
-				binary.LittleEndian.PutUint64(balancesDiff[0:8], boundedCount)
-			}
 		}
 
 		input := HdiffBytes{
@@ -316,51 +298,22 @@ func FuzzApplyDiff(f *testing.F) {
 		}
 
 		for _, scenario := range scenarios {
-			testTarget := source.Copy()
+			target = source.Copy()
 			scenario()
 
-			validDiff, err := Diff(source, testTarget)
+			validDiff, err := Diff(source, target)
 			if err == nil {
 				f.Add(validDiff.StateDiff, validDiff.ValidatorDiffs, validDiff.BalancesDiff)
 			}
 		}
 	}
 
-	// https://github.com/OffchainLabs/prysm/actions/runs/32725115585/job/97425742241
-	// With 15 bytes of input, it allocated 2.37GiB of memory because of snappy.Decode.
-	f.Add(
-		[]byte("\xffŽ\xbd\t\t\t\t\t\xbd\xb6\xaf\xbd\xbd0"),
-		[]byte("\xff"),
-		[]byte("p"),
-	)
+	f.Add(snappyBombSeed[0], snappyBombSeed[1], snappyBombSeed[2])
 
 	f.Fuzz(func(t *testing.T, stateDiff, validatorDiffs, balancesDiff []byte) {
 		// Only test with reasonable sized inputs
-		if len(stateDiff) > 10000 || len(validatorDiffs) > 10000 || len(balancesDiff) > 10000 {
+		if len(stateDiff) > maxFuzzStateDiffSize || len(validatorDiffs) > 10000 || len(balancesDiff) > 10000 {
 			return
-		}
-
-		// Bound historical roots length in stateDiff (same as FuzzNewHdiff)
-		if len(stateDiff) > maxFuzzStateDiffSize {
-			stateDiff = stateDiff[:maxFuzzStateDiffSize]
-		}
-
-		// Bound validator count in validatorDiffs
-		if len(validatorDiffs) >= 8 {
-			count := binary.LittleEndian.Uint64(validatorDiffs[0:8])
-			if count >= maxFuzzValidators {
-				boundedCount := count % maxFuzzValidators
-				binary.LittleEndian.PutUint64(validatorDiffs[0:8], boundedCount)
-			}
-		}
-
-		// Bound balance count in balancesDiff
-		if len(balancesDiff) >= 8 {
-			count := binary.LittleEndian.Uint64(balancesDiff[0:8])
-			if count >= maxFuzzValidators {
-				boundedCount := count % maxFuzzValidators
-				binary.LittleEndian.PutUint64(balancesDiff[0:8], boundedCount)
-			}
 		}
 
 		// Create fresh source state for each test
@@ -391,22 +344,7 @@ func FuzzReadPendingAttestation(f *testing.F) {
 	f.Add(largeLength)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Make a copy since the function modifies the slice
-		dataCopy := make([]byte, len(data))
-		copy(dataCopy, data)
-
-		// Bound the bits length by modifying the first 8 bytes if they exist
-		if len(dataCopy) >= 8 {
-			// Read the bits length and bound it to maxFuzzValidators
-			bitsLength := binary.LittleEndian.Uint64(dataCopy[0:8])
-			if bitsLength >= maxFuzzValidators {
-				boundedLength := bitsLength % maxFuzzValidators
-				binary.LittleEndian.PutUint64(dataCopy[0:8], boundedLength)
-			}
-		}
-
-		_, err := readPendingAttestation(&dataCopy)
-		_ = err
+		_, _ = readPendingAttestation(&data)
 	})
 }
 
