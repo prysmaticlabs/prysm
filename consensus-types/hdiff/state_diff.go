@@ -151,6 +151,15 @@ type hdiff struct {
 	balancesDiff   []int64
 }
 
+// minValidatorDiffSize is the serialized size of a validatorDiff with nil PublicKey and WithdrawalCredentials.
+// - index: 4 bytes
+// - PublicKey: 1 byte (nil marker)
+// - WithdrawalCredentials: 1 byte (nil marker)
+// - EffectiveBalance: 8 bytes
+// - Slashed: 1 byte
+// - ActivationEpoch: 4*8 bytes (4 fields of 8 bytes each)
+const minValidatorDiffSize = 4 + 1 + 1 + 8 + 1 + 4*8
+
 // validatorDiff is a type that represents a difference between two validators.
 type validatorDiff struct {
 	Slashed                    bool             // new value (here because of alignement)
@@ -391,6 +400,9 @@ func (ret *stateDiff) readSlashings(data *[]byte) error {
 	return nil
 }
 
+// pendingAttestationFixedSize is 8 (bits length field) + 128 (AttestationData) + 16 (inclusion delay, proposer index).
+const pendingAttestationFixedSize = 152
+
 func readPendingAttestation(data *[]byte) (*ethpb.PendingAttestation, error) {
 	if len(*data) < 8 {
 		return nil, errors.Wrap(errDataSmall, "pendingAttestation")
@@ -399,9 +411,7 @@ func readPendingAttestation(data *[]byte) (*ethpb.PendingAttestation, error) {
 	if bitsLength < 0 {
 		return nil, errors.Wrap(errDataSmall, "pendingAttestation: negative bitsLength")
 	}
-	// Check for integer overflow: 8 + bitsLength + 144
-	const fixedSize = 152 // 8 (length field) + 144 (fixed fields)
-	if bitsLength > len(*data)-fixedSize {
+	if bitsLength > len(*data)-pendingAttestationFixedSize {
 		return nil, errors.Wrap(errDataSmall, "pendingAttestation")
 	}
 	pending := &ethpb.PendingAttestation{}
@@ -422,8 +432,8 @@ func (ret *stateDiff) readPreviousEpochAttestations(data *[]byte) error {
 		return errors.Wrap(errDataSmall, "previousEpochAttestations")
 	}
 	previousEpochAttestationsLength := int(binary.LittleEndian.Uint64((*data)[:8])) // lint:ignore uintcast
-	if previousEpochAttestationsLength < 0 {
-		return errors.Wrap(errDataSmall, "previousEpochAttestations: negative length")
+	if previousEpochAttestationsLength < 0 || previousEpochAttestationsLength > (len(*data)-8)/pendingAttestationFixedSize {
+		return errors.Wrap(errDataSmall, "previousEpochAttestations")
 	}
 	ret.previousEpochAttestations = make([]*ethpb.PendingAttestation, previousEpochAttestationsLength)
 	(*data) = (*data)[8:]
@@ -442,8 +452,8 @@ func (ret *stateDiff) readCurrentEpochAttestations(data *[]byte) error {
 		return errors.Wrap(errDataSmall, "currentEpochAttestations")
 	}
 	currentEpochAttestationsLength := int(binary.LittleEndian.Uint64((*data)[:8])) // lint:ignore uintcast
-	if currentEpochAttestationsLength < 0 {
-		return errors.Wrap(errDataSmall, "currentEpochAttestations: negative length")
+	if currentEpochAttestationsLength < 0 || currentEpochAttestationsLength > (len(*data)-8)/pendingAttestationFixedSize {
+		return errors.Wrap(errDataSmall, "currentEpochAttestations")
 	}
 	ret.currentEpochAttestations = make([]*ethpb.PendingAttestation, currentEpochAttestationsLength)
 	(*data) = (*data)[8:]
@@ -916,6 +926,10 @@ func newValidatorDiffs(input []byte) ([]validatorDiff, error) {
 	}
 	validatorDiffsLength := binary.LittleEndian.Uint64(data[cursor : cursor+8])
 	cursor += 8
+	if validatorDiffsLength > uint64(len(data)-cursor)/minValidatorDiffSize {
+		return nil, errors.Wrap(errDataSmall, "validatorDiffs")
+	}
+
 	validatorDiffs := make([]validatorDiff, validatorDiffsLength)
 	for i := range validatorDiffsLength {
 		if len(data[cursor:]) < 4 {

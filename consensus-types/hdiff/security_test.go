@@ -1,6 +1,7 @@
 package hdiff
 
 import (
+	"encoding/binary"
 	"fmt"
 	"runtime"
 	"sync"
@@ -389,6 +390,11 @@ func TestConcurrencySafety(t *testing.T) {
 }
 
 func TestOversizedLengthFields(t *testing.T) {
+	hugeCount := make([]byte, 8)
+
+	// Keep a regressed decoder's allocation bounded while exceeding the 1 MiB budget.
+	binary.LittleEndian.PutUint64(hugeCount, 1<<18)
+	s := &stateDiff{}
 	cases := []struct {
 		name    string
 		decode  func([]byte) error
@@ -396,6 +402,9 @@ func TestOversizedLengthFields(t *testing.T) {
 		wantErr error
 	}{
 		{"snappy_header_4GiB", func(b []byte) error { _, err := newStateDiff(b); return err }, []byte{0xff, 0xff, 0xff, 0xff, 0x0f, 0x00}, snappy.ErrCorrupt},
+		{"validator_diffs_count", func(b []byte) error { _, err := newValidatorDiffs(b); return err }, snappy.Encode(nil, hugeCount), errDataSmall},
+		{"previous_epoch_attestations_count", func(b []byte) error { return s.readPreviousEpochAttestations(&b) }, hugeCount, errDataSmall},
+		{"current_epoch_attestations_count", func(b []byte) error { return s.readCurrentEpochAttestations(&b) }, hugeCount, errDataSmall},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -406,6 +415,42 @@ func TestOversizedLengthFields(t *testing.T) {
 			require.ErrorIs(t, err, tc.wantErr)
 			allocated := after.TotalAlloc - before.TotalAlloc
 			require.Equal(t, true, allocated < 1<<20, "allocated %d bytes for a %d-byte input", allocated, len(tc.input))
+		})
+	}
+}
+
+func TestCollectionCountBoundaries(t *testing.T) {
+	s := &stateDiff{}
+	for _, decoder := range []struct {
+		name        string
+		elementSize int
+		decode      func([]byte) error
+	}{
+		{"validator_diffs", minValidatorDiffSize, func(b []byte) error { _, err := newValidatorDiffs(snappy.Encode(nil, b)); return err }},
+		{"previous_epoch_attestations", pendingAttestationFixedSize, func(b []byte) error { return s.readPreviousEpochAttestations(&b) }},
+		{"current_epoch_attestations", pendingAttestationFixedSize, func(b []byte) error { return s.readCurrentEpochAttestations(&b) }},
+	} {
+		t.Run(decoder.name, func(t *testing.T) {
+			for _, tc := range []struct {
+				name        string
+				count       uint64
+				payloadSize int
+				wantErr     error
+			}{
+				{"empty", 0, 0, nil},
+				{"one_element", 1, decoder.elementSize, nil},
+				{"two_elements", 2, 2 * decoder.elementSize, nil},
+				{"missing_element", 1, 0, errDataSmall},
+				{"one_byte_short", 1, decoder.elementSize - 1, errDataSmall},
+				{"count_exceeds_payload", 2, decoder.elementSize, errDataSmall},
+				{"max_uint64", ^uint64(0), 0, errDataSmall},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					input := make([]byte, 8+tc.payloadSize)
+					binary.LittleEndian.PutUint64(input, tc.count)
+					require.ErrorIs(t, decoder.decode(input), tc.wantErr)
+				})
+			}
 		})
 	}
 }
