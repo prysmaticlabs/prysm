@@ -309,7 +309,7 @@ func (ret *stateDiff) readHistoricalRoots(data *[]byte) error {
 	}
 	historicalRootsLength := int(binary.LittleEndian.Uint64((*data)[:8])) // lint:ignore uintcast
 	(*data) = (*data)[8:]
-	if len(*data) < historicalRootsLength*fieldparams.RootLength {
+	if historicalRootsLength < 0 || historicalRootsLength > len(*data)/fieldparams.RootLength {
 		return errors.Wrap(errDataSmall, "historicalRoots")
 	}
 	ret.historicalRoots = make([][fieldparams.RootLength]byte, historicalRootsLength)
@@ -348,7 +348,7 @@ func (ret *stateDiff) readEth1DataVotes(data *[]byte) error {
 	}
 	ret.eth1VotesAppend = ((*data)[0] == nilMarker)
 	eth1DataVotesLength := int(binary.LittleEndian.Uint64((*data)[1 : 1+8])) // lint:ignore uintcast
-	if len(*data) < 1+8+eth1DataVotesLength*eth1DataLength {
+	if eth1DataVotesLength < 0 || eth1DataVotesLength > (len(*data)-9)/eth1DataLength {
 		return errors.Wrap(errDataSmall, "eth1DataVotes")
 	}
 	ret.eth1DataVotes = make([]*ethpb.Eth1Data, eth1DataVotesLength)
@@ -554,7 +554,7 @@ func (ret *stateDiff) readInactivityScores(data *[]byte) error {
 	if inactivityScoresLength < 0 {
 		return errors.Wrap(errDataSmall, "inactivityScores: negative length")
 	}
-	if len(*data)-8 < inactivityScoresLength*8 {
+	if inactivityScoresLength > (len(*data)-8)/8 {
 		return errors.Wrap(errDataSmall, "inactivityScores")
 	}
 	ret.inactivityScores = make([]uint64, inactivityScoresLength)
@@ -672,7 +672,7 @@ func (ret *stateDiff) readHistoricalSummaries(data *[]byte) error {
 	if historicalSummariesLength < 0 {
 		return errors.Wrap(errDataSmall, "historicalSummaries: negative length")
 	}
-	if len(*data) < 8+historicalSummariesLength*fieldparams.RootLength*2 {
+	if historicalSummariesLength > (len(*data)-8)/(2*fieldparams.RootLength) {
 		return errors.Wrap(errDataSmall, "historicalSummaries")
 	}
 	ret.historicalSummaries = make([]*ethpb.HistoricalSummary, historicalSummariesLength)
@@ -711,7 +711,7 @@ func (ret *stateDiff) readPendingDeposits(data *[]byte) error {
 	if pendingDepositDiffLength < 0 {
 		return errors.Wrap(errDataSmall, "pendingDeposits: negative length")
 	}
-	if len(*data) < 16+pendingDepositDiffLength*pendingDepositLength {
+	if pendingDepositDiffLength > (len(*data)-16)/pendingDepositLength {
 		return errors.Wrap(errDataSmall, "pendingDepositDiff")
 	}
 	ret.pendingDepositDiff = make([]*ethpb.PendingDeposit, pendingDepositDiffLength)
@@ -739,7 +739,7 @@ func (ret *stateDiff) readPendingPartialWithdrawals(data *[]byte) error {
 	if pendingPartialWithdrawalsDiffLength < 0 {
 		return errors.Wrap(errDataSmall, "pendingPartialWithdrawals: negative length")
 	}
-	if len(*data) < 16+pendingPartialWithdrawalsDiffLength*pendingPartialWithdrawalLength {
+	if pendingPartialWithdrawalsDiffLength > (len(*data)-16)/pendingPartialWithdrawalLength {
 		return errors.Wrap(errDataSmall, "pendingPartialWithdrawalsDiff")
 	}
 	ret.pendingPartialWithdrawalsDiff = make([]*ethpb.PendingPartialWithdrawal, pendingPartialWithdrawalsDiffLength)
@@ -765,7 +765,7 @@ func (ret *stateDiff) readPendingConsolidations(data *[]byte) error {
 	if pendingConsolidationsDiffsLength < 0 {
 		return errors.Wrap(errDataSmall, "pendingConsolidations: negative length")
 	}
-	if len(*data) < 16+pendingConsolidationsDiffsLength*pendingConsolidationLength {
+	if pendingConsolidationsDiffsLength > (len(*data)-16)/pendingConsolidationLength {
 		return errors.Wrap(errDataSmall, "pendingConsolidationsDiffs")
 	}
 	ret.pendingConsolidationsDiffs = make([]*ethpb.PendingConsolidation, pendingConsolidationsDiffsLength)
@@ -1006,8 +1006,8 @@ func newBalancesDiff(input []byte) ([]int64, error) {
 		return nil, errors.Wrap(errDataSmall, "balancesDiff")
 	}
 	balancesLength := int(binary.LittleEndian.Uint64(data[:8])) // lint:ignore uintcast
-	if balancesLength < 0 {
-		return nil, errors.Wrap(errDataSmall, "balancesDiff: negative length")
+	if balancesLength < 0 || balancesLength > (len(data)-8)/8 {
+		return nil, errors.Wrap(errDataSmall, "balancesDiff")
 	}
 	if len(data) != 8+balancesLength*8 {
 		return nil, errors.Errorf("incorrect length of balancesDiff, expected %d, got %d", 8+balancesLength*8, len(data))
