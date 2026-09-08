@@ -117,7 +117,32 @@ func TestGetPeerScoringGreyListed(t *testing.T) {
 	assert.Equal(t, true, resp.Data.GreyListed)
 	require.NotNil(t, resp.Data.GreyListDetails)
 	require.StringContains(t, "rate-limit/spam", resp.Data.GreyListDetails.BadResponses)
-	assert.Equal(t, "1h0m0s", resp.Data.TimeToWhiteListing)
+	assert.DeepEqual(t, map[string]string{peerscoring.AspectBadResponses: "1h0m0s"}, resp.Data.GreyListRecovery)
+	assert.Equal(t, false, bytes.Contains(writer.Body.Bytes(), []byte(`"time_to_white_listing"`)))
+
+	t.Run("mixed recovery", func(t *testing.T) {
+		tp.PeerScoring().SetGossipScore(pid, -16001, 0, nil)
+		writer := getScoring(t, s, "http://example.com/x", scoringTestPeerID)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &peerscoring.PeerScoringDebugResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.DeepEqual(t, map[string]string{
+			peerscoring.AspectBadResponses: "1h0m0s",
+			peerscoring.AspectGossip:       "unknown",
+		}, resp.Data.GreyListRecovery)
+	})
+
+	t.Run("trusted exemption", func(t *testing.T) {
+		tp.Peers().SetTrustedPeers([]peer.ID{pid})
+		writer := getScoring(t, s, "http://example.com/x", scoringTestPeerID)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &peerscoring.PeerScoringDebugResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, false, resp.Data.GreyListed)
+		assert.Equal(t, peerscoring.GreyListExemptionTrusted, resp.Data.GreyListExemption)
+		require.NotNil(t, resp.Data.GreyListDetails)
+		assert.Equal(t, false, bytes.Contains(writer.Body.Bytes(), []byte(`"grey_list_recovery"`)))
+	})
 }
 
 func TestGetPeerScoringInvalidPeerID(t *testing.T) {

@@ -23,7 +23,7 @@ func TestBuildPeerDebugUnknownPeer(t *testing.T) {
 	require.Equal(t, false, d.GreyListed)
 	require.IsNil(t, d.GreyListDetails)
 	require.Equal(t, "", d.GreyListExemption)
-	require.Equal(t, "", d.TimeToWhiteListing)
+	require.IsNil(t, d.GreyListRecovery)
 	require.Equal(t, 0, d.BadResponses.StandingCount)
 	require.Equal(t, defaultBadResponseGreyListThreshold, d.BadResponses.GreyListThreshold)
 	require.Equal(t, 0, len(d.BadResponses.History))
@@ -106,7 +106,7 @@ func TestBuildPeerDebugGreyListed(t *testing.T) {
 	require.Equal(t, "", d.GreyListDetails.BadIP)
 	require.Equal(t, "", d.GreyListExemption)
 	// 4 strikes at threshold 3 need 2 decays of 30m each.
-	require.Equal(t, "1h0m0s", d.TimeToWhiteListing)
+	require.DeepEqual(t, map[string]string{AspectBadResponses: "1h0m0s"}, d.GreyListRecovery)
 	require.Equal(t, 0, len(d.Gossip.Rejections))
 }
 
@@ -124,7 +124,7 @@ func TestBuildPeerDebugBadIPAndTrustedExemption(t *testing.T) {
 	require.StringContains(t, "rpc-request/spam", d.GreyListDetails.BadResponses)
 	require.StringContains(t, "colocation limit exceeded", d.GreyListDetails.BadIP)
 	require.Equal(t, GreyListExemptionTrusted, d.GreyListExemption)
-	require.Equal(t, "1h0m0s", d.TimeToWhiteListing)
+	require.IsNil(t, d.GreyListRecovery)
 
 	// Same state without trust: the composite verdict fires and no exemption is reported.
 	require.NotNil(t, s.IsPeerGreyListed(pid))
@@ -132,6 +132,62 @@ func TestBuildPeerDebugBadIPAndTrustedExemption(t *testing.T) {
 	require.Equal(t, true, d.GreyListed)
 	require.Equal(t, "", d.GreyListExemption)
 	require.StringContains(t, "colocation limit exceeded", d.GreyListDetails.BadIP)
+	require.DeepEqual(t, map[string]string{AspectBadResponses: "1h0m0s", AspectBadIP: "unknown"}, d.GreyListRecovery)
+}
+
+func TestBuildPeerDebugRecovery(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		badResponses bool
+		status       bool
+		gossip       bool
+		badIP        bool
+	}{
+		{name: "bad responses", badResponses: true},
+		{name: "status", status: true},
+		{name: "gossip", gossip: true},
+		{name: "bad IP", badIP: true},
+		{name: "mixed", badResponses: true, status: true, gossip: true, badIP: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := NewScorer(WithBadResponseGreyListThreshold(2))
+			pid := peer.ID("peer")
+			opts := PeerDebugOptions{GreyListed: true}
+			want := make(map[string]string)
+			if tc.badResponses {
+				s.RecordBadResponse(pid, SourceSync, "bad block")
+				s.RecordBadResponse(pid, SourceSync, "bad block")
+				want[AspectBadResponses] = "1h0m0s"
+			}
+			if tc.status {
+				s.SetPeerStatus(pid, &pb.StatusV2{}, p2ptypes.ErrWrongForkDigestVersion)
+			}
+			if tc.gossip {
+				s.SetGossipScore(pid, float64(defaultGossipGreyListThreshold)-1, 0, nil)
+				want[AspectGossip] = "unknown"
+			}
+			if tc.badIP {
+				opts.BadIPError = errors.New("colocation limit exceeded")
+				want[AspectBadIP] = "unknown"
+			}
+
+			d := BuildPeerDebug(pid, opts, s, nil)
+			if tc.status {
+				ttw, err := time.ParseDuration(d.GreyListRecovery[AspectPeerStatus])
+				require.NoError(t, err)
+				require.Equal(t, true, ttw > 0 && ttw <= defaultStatusGreyListTTL)
+				want[AspectPeerStatus] = ttw.String()
+			}
+			require.DeepEqual(t, want, d.GreyListRecovery)
+
+			// Trusted peers keep diagnostic verdicts without a recovery countdown.
+			opts.Trusted, opts.GreyListed = true, false
+			d = BuildPeerDebug(pid, opts, s, nil)
+			require.IsNil(t, d.GreyListRecovery)
+			require.NotNil(t, d.GreyListDetails)
+			require.Equal(t, GreyListExemptionTrusted, d.GreyListExemption)
+		})
+	}
 }
 
 func TestBuildPeerDebugTopicScores(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -485,6 +486,34 @@ func TestPrune(t *testing.T) {
 
 	// The scorer forgets pruned peers along with the store.
 	assert.Equal(t, 0, scoring.BadResponseCount(secondPID), "Expected scorer to forget pruned peer")
+}
+
+func TestPruneOrphanedScoring(t *testing.T) {
+	scoring := peerscoring.NewScorer(peerscoring.WithBadResponseGreyListThreshold(2), peerscoring.WithDecayInterval(time.Millisecond))
+	p := peers.NewStatus(t.Context(), &peers.StatusConfig{Scoring: scoring})
+	for i := 0; i < p.MaxPeerLimit(); i++ {
+		p.SetConnectionState(peer.ID(strconv.Itoa(i)), peers.Connected)
+	}
+	pid := peer.ID("departed")
+	p.Add(nil, pid, nil, network.DirUnknown)
+	require.DeepEqual(t, []peer.ID{pid}, p.Prune())
+	scoring.SetPeerStatus("0", &pb.StatusV2{}, nil)
+
+	// A late validation result recreates scoring state after the registry entry is gone.
+	scoring.RecordBadResponse(pid, peerscoring.SourceGossip, "late validation")
+	p.Prune()
+	assert.DeepEqual(t, []peer.ID{"0"}, scoring.TrackedPeers())
+
+	// Orphaned grey-listed peers remain refused until their penalties decay.
+	scoring.RecordBadResponse(pid, peerscoring.SourceGossip, "late validation")
+	scoring.RecordBadResponse(pid, peerscoring.SourceGossip, "late validation")
+	p.Prune()
+	require.NotNil(t, scoring.IsPeerGreyListed(pid))
+	go scoring.Start(t.Context())
+	require.Eventually(t, func() bool { return scoring.IsPeerGreyListed(pid) == nil }, time.Second, time.Millisecond)
+	p.Prune()
+	assert.DeepEqual(t, []peer.ID{"0"}, scoring.TrackedPeers())
+	assert.Equal(t, p.MaxPeerLimit(), len(p.Connected()))
 }
 
 func TestPeerIPTracker(t *testing.T) {
@@ -1018,6 +1047,53 @@ func TestTrustedPeerCallbacks(t *testing.T) {
 	p = peers.NewStatus(t.Context(), &peers.StatusConfig{PeerLimit: 30})
 	p.SetTrustedPeers(pids)
 	p.DeleteTrustedPeers(pids)
+}
+
+func TestTrustedPeerCallbacksConcurrent(t *testing.T) {
+	for _, addFirst := range []bool{true, false} {
+		t.Run("add_first="+strconv.FormatBool(addFirst), func(t *testing.T) {
+			var protected atomic.Bool
+			entered, release := make(chan struct{}), make(chan struct{})
+			firstDone, secondDone := make(chan struct{}), make(chan struct{})
+			callback := func(add bool) func(peer.ID) {
+				return func(peer.ID) {
+					if add == addFirst {
+						close(entered)
+						<-release
+					}
+					protected.Store(add)
+				}
+			}
+			p := peers.NewStatus(t.Context(), &peers.StatusConfig{
+				OnTrustedPeerAdded:   callback(true),
+				OnTrustedPeerRemoved: callback(false),
+			})
+			pids := []peer.ID{"peer"}
+			first, second := p.SetTrustedPeers, p.DeleteTrustedPeers
+			if !addFirst {
+				p.SetTrustedPeers(pids)
+				first, second = second, first
+			}
+			go func() {
+				first(pids)
+				close(firstDone)
+			}()
+			<-entered
+			go func() {
+				second(pids)
+				close(secondDone)
+			}()
+			select {
+			case <-secondDone:
+			case <-time.After(50 * time.Millisecond):
+			}
+			close(release)
+			<-firstDone
+			<-secondDone
+			assert.Equal(t, !addFirst, p.IsTrustedPeers(pids[0]))
+			assert.Equal(t, !addFirst, protected.Load())
+		})
+	}
 }
 
 func TestStatus_BestPeer(t *testing.T) {

@@ -28,6 +28,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/OffchainLabs/go-bitfield"
@@ -101,6 +102,7 @@ type (
 		rand                  *rand.Rand
 		ipTracker             map[string]uint64
 		ipColocationWhitelist []*net.IPNet
+		trustedPeersMu        sync.Mutex // Serializes trust changes and their callbacks.
 		onTrustedPeerAdded    func(peer.ID)
 		onTrustedPeerRemoved  func(peer.ID)
 	}
@@ -629,6 +631,15 @@ func (p *Status) Prune() []peer.ID {
 	p.store.Lock()
 	defer p.store.Unlock()
 
+	// Collect scoring entries recreated by late results after their peers were pruned.
+	var orphaned []peer.ID
+	for _, pid := range p.scoring.TrackedPeers() {
+		if _, known := p.store.PeerData(pid); !known {
+			orphaned = append(orphaned, pid)
+		}
+	}
+	p.scoring.RemovePeers(orphaned)
+
 	// Exit early if there is nothing to prune.
 	if len(p.store.Peers()) <= p.store.Config().MaxPeers {
 		return nil
@@ -871,6 +882,9 @@ func (p *Status) ConnectedPeerLimit() uint64 {
 // SetTrustedPeers sets our trusted peer set into
 // our peerstore.
 func (p *Status) SetTrustedPeers(peers []peer.ID) {
+	p.trustedPeersMu.Lock()
+	defer p.trustedPeersMu.Unlock()
+
 	p.store.Lock()
 	p.store.SetTrustedPeers(peers)
 	p.store.Unlock()
@@ -892,6 +906,9 @@ func (p *Status) GetTrustedPeers() []peer.ID {
 
 // DeleteTrustedPeers removes peers from trusted peer set
 func (p *Status) DeleteTrustedPeers(peers []peer.ID) {
+	p.trustedPeersMu.Lock()
+	defer p.trustedPeersMu.Unlock()
+
 	p.store.Lock()
 	p.store.DeleteTrustedPeers(peers)
 	p.store.Unlock()

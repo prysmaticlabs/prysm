@@ -81,11 +81,9 @@ type PeerScoringDebug struct {
 	GreyListDetails *GreyListDetailsDebug `json:"grey_list_details,omitempty"`
 	// GreyListExemption is set when a refusal source fires but the peer is exempt from it.
 	GreyListExemption string `json:"grey_list_exemption,omitempty"`
-	// TimeToWhiteListing is set when a scoring aspect grey-lists the peer; "0s" means
-	// recovery is not time based (gossip recovery is libp2p-driven). Status grey-listing
-	// clears on the next valid status exchange or when the terminal verdict's TTL expires.
-	TimeToWhiteListing string            `json:"time_to_white_listing,omitempty"`
-	BadResponses       BadResponsesDebug `json:"bad_responses"`
+	// GreyListRecovery estimates recovery per refusal source; "unknown" means no local estimate.
+	GreyListRecovery map[string]string `json:"grey_list_recovery,omitempty"`
+	BadResponses     BadResponsesDebug `json:"bad_responses"`
 	// RpcStatus is nil when the peer never completed a status exchange.
 	RpcStatus *RpcStatusDebug `json:"rpc_status,omitempty"`
 	Gossip    GossipDebug     `json:"gossip"`
@@ -239,8 +237,15 @@ func BuildPeerDebug(pid peer.ID, opts PeerDebugOptions, scorer *Scorer, rejectio
 			d.GreyListDetails = &GreyListDetailsDebug{}
 		}
 		d.GreyListDetails.BadIP = opts.BadIPError.Error()
+		if d.GreyListRecovery == nil {
+			d.GreyListRecovery = make(map[string]string)
+		}
+		d.GreyListRecovery[AspectBadIP] = "unknown"
 	}
 	d.GreyListed = opts.GreyListed
+	if !d.GreyListed {
+		d.GreyListRecovery = nil
+	}
 	if opts.Trusted && !opts.GreyListed && d.GreyListDetails != nil {
 		d.GreyListExemption = GreyListExemptionTrusted
 	}
@@ -314,13 +319,17 @@ func (s *Scorer) debugInfo(pid peer.ID, includeTopicScores bool) *PeerScoringDeb
 		}
 		d.GreyListDetails = details
 
-		var longest time.Duration
+		d.GreyListRecovery = make(map[string]string, len(verdicts))
 		for _, greyLister := range s.greyListers {
-			if ttw := greyLister.TimeToWhiteListing(pid, si); ttw > longest {
-				longest = ttw
+			aspect := greyLister.Aspect()
+			if verdicts[aspect] == nil {
+				continue
+			}
+			d.GreyListRecovery[aspect] = "unknown"
+			if ttw := greyLister.TimeToWhiteListing(pid, si); ttw > 0 {
+				d.GreyListRecovery[aspect] = ttw.String()
 			}
 		}
-		d.TimeToWhiteListing = longest.String()
 	}
 
 	d.BadResponses.StandingCount = pi.badResponseCount
