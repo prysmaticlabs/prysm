@@ -326,6 +326,14 @@ func FuzzApplyDiff(f *testing.F) {
 		}
 	}
 
+	// https://github.com/OffchainLabs/prysm/actions/runs/32725115585/job/97425742241
+	// With 15 bytes of input, it allocated 2.37GiB of memory because of snappy.Decode.
+	f.Add(
+		[]byte("\xffŽ\xbd\t\t\t\t\t\xbd\xb6\xaf\xbd\xbd0"),
+		[]byte("\xff"),
+		[]byte("p"),
+	)
+
 	f.Fuzz(func(t *testing.T, stateDiff, validatorDiffs, balancesDiff []byte) {
 		// Only test with reasonable sized inputs
 		if len(stateDiff) > 10000 || len(validatorDiffs) > 10000 || len(balancesDiff) > 10000 {

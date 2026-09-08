@@ -2,12 +2,14 @@ package hdiff
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/golang/snappy"
 )
 
 // TestIntegerOverflowProtection tests protection against balance overflow attacks
@@ -384,4 +386,26 @@ func TestConcurrencySafety(t *testing.T) {
 			t.Error(err)
 		}
 	})
+}
+
+func TestOversizedLengthFields(t *testing.T) {
+	cases := []struct {
+		name    string
+		decode  func([]byte) error
+		input   []byte
+		wantErr error
+	}{
+		{"snappy_header_4GiB", func(b []byte) error { _, err := newStateDiff(b); return err }, []byte{0xff, 0xff, 0xff, 0xff, 0x0f, 0x00}, snappy.ErrCorrupt},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			err := tc.decode(tc.input)
+			runtime.ReadMemStats(&after)
+			require.ErrorIs(t, err, tc.wantErr)
+			allocated := after.TotalAlloc - before.TotalAlloc
+			require.Equal(t, true, allocated < 1<<20, "allocated %d bytes for a %d-byte input", allocated, len(tc.input))
+		})
+	}
 }

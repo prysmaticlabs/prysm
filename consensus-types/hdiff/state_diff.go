@@ -787,7 +787,7 @@ func (ret *stateDiff) readProposerLookahead(data *[]byte) error {
 
 // newStateDiff deserializes a new stateDiff object from the given data.
 func newStateDiff(input []byte) (*stateDiff, error) {
-	data, err := snappy.Decode(nil, input)
+	data, err := snappyDecode(input)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode snappy")
 	}
@@ -906,7 +906,7 @@ func newStateDiff(input []byte) (*stateDiff, error) {
 
 // newValidatorDiffs deserializes a new validator diffs from the given data.
 func newValidatorDiffs(input []byte) ([]validatorDiff, error) {
-	data, err := snappy.Decode(nil, input)
+	data, err := snappyDecode(input)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode snappy")
 	}
@@ -984,7 +984,7 @@ func newValidatorDiffs(input []byte) ([]validatorDiff, error) {
 
 // newBalancesDiff deserializes a new balances diff from the given data.
 func newBalancesDiff(input []byte) ([]int64, error) {
-	data, err := snappy.Decode(nil, input)
+	data, err := snappyDecode(input)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode snappy")
 	}
