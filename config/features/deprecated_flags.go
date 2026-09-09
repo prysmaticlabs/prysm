@@ -65,6 +65,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedTrackEquivocations = &cli.BoolFlag{
+		Name:   "track-equivocations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -78,6 +83,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedInteropEth1DataVotes,
 	deprecatedInteropWriteSSZStateTransitions,
 	deprecatedDisablePeerScorer,
+	deprecatedTrackEquivocations,
 }
 
 var upcomingDeprecation = []cli.Flag{
