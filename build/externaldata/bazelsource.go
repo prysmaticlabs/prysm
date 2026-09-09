@@ -18,9 +18,12 @@ var (
 	workspaceContent = sync.OnceValue(func() string { return readBazelFile(workspaceFile) })
 	e2eDepsContent   = sync.OnceValue(func() string { return readBazelFile(e2eDepsFile) })
 
-	consensusSpecVersion = sync.OnceValue(func() string { return bazelVar(workspaceContent(), workspaceFile, "consensus_spec_version") })
-	blsVersion           = sync.OnceValue(func() string { return bazelVar(workspaceContent(), workspaceFile, "bls_test_version") })
-	lighthouseVersion    = sync.OnceValue(func() string { return bazelVar(e2eDepsContent(), e2eDepsFile, "lighthouse_version") })
+	consensusSpecVersion         = sync.OnceValue(func() string { return bazelVar(workspaceContent(), workspaceFile, "consensus_spec_version") })
+	cryptographySpecTestsVersion = sync.OnceValue(func() string {
+		return bazelVar(workspaceContent(), workspaceFile, "cryptography_spec_tests_version")
+	})
+	blsVersion        = sync.OnceValue(func() string { return bazelVar(workspaceContent(), workspaceFile, "bls_test_version") })
+	lighthouseVersion = sync.OnceValue(func() string { return bazelVar(e2eDepsContent(), e2eDepsFile, "lighthouse_version") })
 )
 
 // readBazelFile reads a Bazel build file relative to the module root.
@@ -37,6 +40,26 @@ func readBazelFile(relPath string) string {
 	}
 
 	return string(data)
+}
+
+// bazelMapValue extracts the string value for key from the Starlark dict assigned to
+// mapName (e.g. `mapName = { "key": "value", ... }`). It first narrows to the dict body so
+// a same-named key elsewhere in the file can't match.
+// lint:nopanic
+func bazelMapValue(content, file, mapName, key string) string {
+	dictRe := regexp.MustCompile(`(?s)` + regexp.QuoteMeta(mapName) + `\s*=\s*\{(.*?)\}`)
+	dm := dictRe.FindStringSubmatch(content)
+	if dm == nil {
+		panic(fmt.Sprintf("externaldata: map %q not found in %s", mapName, file))
+	}
+
+	kvRe := regexp.MustCompile(`"` + regexp.QuoteMeta(key) + `"\s*:\s*"([^"]*)"`)
+	m := kvRe.FindStringSubmatch(dm[1])
+	if m == nil {
+		panic(fmt.Sprintf("externaldata: key %q not found in map %q in %s", key, mapName, file))
+	}
+
+	return m[1]
 }
 
 // bazelVar extracts a top-level `name = "value"` string assignment.

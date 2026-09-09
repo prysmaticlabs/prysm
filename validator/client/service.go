@@ -37,7 +37,7 @@ import (
 type ValidatorService struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	validator               iface.Validator
+	validator               *validator
 	db                      db.Database
 	conn                    *validatorHelpers.NodeConnection
 	wallet                  *wallet.Wallet
@@ -59,7 +59,6 @@ type ValidatorService struct {
 
 // Config for the validator service.
 type Config struct {
-	Validator               iface.Validator
 	DB                      db.Database
 	Wallet                  *wallet.Wallet
 	WalletInitializedFeed   *event.Feed
@@ -95,7 +94,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	s := &ValidatorService{
 		ctx:                     ctx,
 		cancel:                  cancel,
-		validator:               cfg.Validator,
 		db:                      cfg.DB,
 		wallet:                  cfg.Wallet,
 		walletInitializedFeed:   cfg.WalletInitializedFeed,
@@ -186,8 +184,10 @@ func (v *ValidatorService) Start() {
 	}
 
 	validatorClient := NewValidatorClient(v.conn, iface.WithStateless(v.stateless))
+	hm := newHealthMonitor(v.ctx, v.cancel, v.maxHealthChecks, validatorClient)
 
 	v.validator = &validator{
+		healthMonitor:                hm,
 		slotFeed:                     new(event.Feed),
 		startBalances:                make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevEpochBalances:            make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
@@ -221,7 +221,6 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:           v.emitAccountMetrics,
 		enableAPI:                    v.enableAPI,
 		duties:                       &dutyStore{},
-		submittedPrefSlots:           make(map[primitives.Slot]bool),
 		distributed:                  v.distributed,
 		disableDutiesPolling:         v.disableDutiesPolling,
 		accountsChangedChannel:       make(chan [][fieldparams.BLSPubkeyLength]byte, 1),
@@ -230,19 +229,17 @@ func (v *ValidatorService) Start() {
 		head:                         newHeadTracker(),
 	}
 
-	val := v.validator.(*validator)
 	if v.distributed {
-		val.aggSelector = newDistributedSelector(val)
+		v.validator.aggSelector = newDistributedSelector(v.validator)
 	} else {
-		selector, err := newLocalSelector(val)
+		selector, err := newLocalSelector(v.validator)
 		if err != nil {
 			log.WithError(err).Error("Could not create aggregator selector")
 			return
 		}
-		val.aggSelector = selector
+		v.validator.aggSelector = selector
 	}
 
-	hm := newHealthMonitor(v.ctx, v.cancel, v.maxHealthChecks, v.validator)
 	hm.Start()
 	defer v.closeClientFunc()
 
@@ -261,7 +258,7 @@ func (v *ValidatorService) Start() {
 			log.Info("Starting validator runner")
 			runnerCtx, runnerCancel := context.WithCancel(v.ctx)
 
-			runner, err := newRunner(runnerCtx, v.validator, hm)
+			runner, err := newRunner(runnerCtx, v.validator)
 			if err != nil {
 				log.WithError(err).Error("Could not create validator runner")
 				runnerCancel() // Ensure context is cancelled
@@ -311,15 +308,10 @@ func (v *ValidatorService) ProposerSettings() *proposer.Settings {
 	return nil
 }
 
-// SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
-func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *proposer.Settings) error {
-	// validator service proposer settings is only used for pass through from node -> validator service -> validator.
-	// in memory use of proposer settings happens on validator.
-	v.proposerSettings = settings
-
-	// passes settings down to be updated in database and saved in memory.
-	// updates to validator proposer settings will be in the validator object and not validator service.
-	return v.validator.SetProposerSettings(ctx, settings)
+// UpdateProposerSettings atomically mutates the proposer settings on the
+// underlying validator; see iface.Validator.UpdateProposerSettings.
+func (v *ValidatorService) UpdateProposerSettings(ctx context.Context, mutate func(*proposer.Settings) (*proposer.Settings, error)) error {
+	return v.validator.UpdateProposerSettings(ctx, mutate)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options
