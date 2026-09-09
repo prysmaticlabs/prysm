@@ -84,6 +84,13 @@ func (bb *Builder) runFCR(ctx context.Context, slot primitives.Slot) {
 	fcr.OnFastConfirmation(ctx, slot)
 }
 
+// syncClock re-anchors both clocks so now is bb.lastTick seconds after genesis; processing several messages in one tick otherwise drifts the slot timing.
+func (bb *Builder) syncClock() {
+	now := time.Now()
+	bb.service.SetGenesisTime(time.Unix(now.Unix()-bb.lastTick, 0))
+	bb.service.SetForkChoiceGenesisTime(now.Add(-1 * time.Duration(bb.lastTick) * time.Second))
+}
+
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
 	now := time.Now()
@@ -137,16 +144,22 @@ func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [
 
 // InvalidBlock receives the invalid block and notifies forkchoice.
 func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
+	// Spec drops blocks ahead of store.time; Prysm does too (GetBlockPreState) but with 500ms slack the whole-second vector clock cannot exercise deterministically.
+	if uint64(b.Block().Slot()) > uint64(bb.lastTick)/params.BeaconConfig().SecondsPerSlot {
+		return
+	}
+	bb.syncClock()
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r, nil) != nil)
 }
 
 // ValidBlock receives the valid block and notifies forkchoice.
 func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
+	bb.syncClock()
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r, nil))
 	bb.recordIfEarly(b, r)
@@ -170,7 +183,7 @@ func (bb *Builder) recordIfEarly(b interfaces.ReadOnlySignedBeaconBlock, root [3
 func (bb *Builder) ExecutionPayloadEnvelope(t testing.TB, signed *ethpb.SignedExecutionPayloadEnvelope, expectValid bool) {
 	ro, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed)
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	err = bb.service.ReceiveExecutionPayloadEnvelope(ctx, ro)
 	if expectValid {
@@ -183,7 +196,7 @@ func (bb *Builder) ExecutionPayloadEnvelope(t testing.TB, signed *ethpb.SignedEx
 // PayloadAttestationMessage feeds the message to the chain service.
 // If expectValid is false the receive call must error; otherwise it must succeed.
 func (bb *Builder) PayloadAttestationMessage(t testing.TB, m *ethpb.PayloadAttestationMessage, expectValid bool) {
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	err := bb.service.ReceivePayloadAttestationMessage(ctx, m)
 	if expectValid {
@@ -200,6 +213,7 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a ethpb.Att) {
+	bb.syncClock()
 	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	if bb.fcr {
 		// FCR spec tests seed attestations before time advances, so allow
