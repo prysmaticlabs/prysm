@@ -1,0 +1,24 @@
+load("@prysm//tools/go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "altair__forkchoice_compliance__forkchoice_test.go",
+        "bellatrix__forkchoice_compliance__forkchoice_test.go",
+        "capella__forkchoice_compliance__forkchoice_test.go",
+        "deneb__forkchoice_compliance__forkchoice_test.go",
+        "electra__forkchoice_compliance__forkchoice_test.go",
+        "fulu__forkchoice_compliance__forkchoice_test.go",
+        "gloas__forkchoice_compliance__forkchoice_test.go",
+    ],
+    data = ["@consensus_spec_comptests//:test_data"],
+    eth_network = "minimal",
+    tags = [
+        "minimal",
+        "spectest",
+    ],
+    deps = [
+        "//runtime/version:go_default_library",
+        "//testing/spectest/shared/common/forkchoice:go_default_library",
+    ],
+)

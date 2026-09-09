@@ -53,7 +53,13 @@ func UnmarshalYaml(y []byte, dest any) error {
 // Cases whose bls_setting does not match the compiled-in backend are dropped, and a handler
 // left with none is skipped rather than passed.
 func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.DirEntry, string) {
-	testsFolderPath := path.Join("tests", config, forkOrPhase, folderPath)
+	return TestFoldersIn(t, "tests", config, forkOrPhase, folderPath)
+}
+
+// TestFoldersIn is TestFolders for vectors that unpack under a root other than "tests",
+// e.g. the fork-choice compliance archive under external/consensus_spec_comptests/tests.
+func TestFoldersIn(t testing.TB, root, config, forkOrPhase, folderPath string) ([]os.DirEntry, string) {
+	testsFolderPath := path.Join(root, config, forkOrPhase, folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
 	require.NoError(t, err)
 	testFolders, err := os.ReadDir(filepath)
