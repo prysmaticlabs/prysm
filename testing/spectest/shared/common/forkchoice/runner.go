@@ -151,7 +151,7 @@ func runTest(t *testing.T, config string, fork int, basePath string, fcr bool) {
 							builder.ValidBlock(t, beaconBlock)
 						}
 					}
-					runAttesterSlashingStep(t, step, folder, testsFolderPath, builder)
+					runAttesterSlashingStep(t, step, fork, folder, testsFolderPath, builder)
 					runAttestationStep(t, step, fork, folder, testsFolderPath, builder)
 					if step.PayloadStatus != nil {
 						require.NoError(t, builder.SetPayloadStatus(step.PayloadStatus))
@@ -166,7 +166,7 @@ func runTest(t *testing.T, config string, fork int, basePath string, fcr bool) {
 	}
 }
 
-func runAttesterSlashingStep(t *testing.T, step Step, folder os.DirEntry, testsFolderPath string, builder *Builder) {
+func runAttesterSlashingStep(t *testing.T, step Step, fork int, folder os.DirEntry, testsFolderPath string, builder *Builder) {
 	if step.AttesterSlashing == nil {
 		return
 	}
@@ -174,7 +174,10 @@ func runAttesterSlashingStep(t *testing.T, step Step, folder os.DirEntry, testsF
 	require.NoError(t, err)
 	slashingSSZ, err := snappy.Decode(nil /* dst */, slashingFile)
 	require.NoError(t, err)
-	slashing := &ethpb.AttesterSlashing{}
+	var slashing ethpb.AttSlashing = &ethpb.AttesterSlashing{}
+	if fork >= version.Electra {
+		slashing = &ethpb.AttesterSlashingElectra{}
+	}
 	require.NoError(t, slashing.UnmarshalSSZ(slashingSSZ), "Failed to unmarshal")
 	builder.AttesterSlashing(slashing)
 }
