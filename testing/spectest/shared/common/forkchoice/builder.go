@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -302,6 +304,36 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := fmt.Sprintf("%#x", bb.service.GetProposerHead())
 		require.Equal(t, want, got)
 	}
+	if c.ViableForHeadRootsAndWeights != nil {
+		dlt, ok := bb.fc.(*doublylinkedtree.ForkChoice)
+		require.Equal(t, true, ok, "forkchoice is not a doubly linked tree")
+		bb.fc.Lock()
+		tips := dlt.ViableTips()
+		bb.fc.Unlock()
+		// Pre-Gloas vectors carry no payload status, so only compare it when the vector does.
+		withStatus := len(c.ViableForHeadRootsAndWeights) > 0 && c.ViableForHeadRootsAndWeights[0].PayloadStatus != nil
+		format := func(root []byte, weight uint64, status int) string {
+			if withStatus {
+				return fmt.Sprintf("%#x weight=%d payload_status=%d", root, weight, status)
+			}
+			return fmt.Sprintf("%#x weight=%d", root, weight)
+		}
+		want := make([]string, 0, len(c.ViableForHeadRootsAndWeights))
+		for _, rw := range c.ViableForHeadRootsAndWeights {
+			status := 0
+			if rw.PayloadStatus != nil {
+				status = *rw.PayloadStatus
+			}
+			want = append(want, format(common.FromHex(rw.Root), rw.Weight, status))
+		}
+		got := make([]string, 0, len(tips))
+		for _, tip := range tips {
+			got = append(got, format(tip.Root[:], tip.Weight, payloadStatus(tip.Full)))
+		}
+		slices.Sort(want)
+		slices.Sort(got)
+		require.Equal(t, strings.Join(want, "\n"), strings.Join(got, "\n"), "viable_for_head_roots_and_weights mismatch")
+	}
 	/* TODO: We need to mock the entire proposer system to be able to test this.
 	if c.ShouldOverrideFCU != nil {
 		require.DeepEqual(t, c.ShouldOverrideFCU.Result, bb.service.ShouldOverrideFCU())
@@ -380,6 +412,14 @@ func checkPTCVotes(t testing.TB, name string, want *PTCVotes, attesters, values 
 		require.Equal(t, true, voted, fmt.Sprintf("%s: expected vote at index %d", name, i))
 		require.Equal(t, *v, values.BitAt(uint64(i)), fmt.Sprintf("%s: vote value mismatch at index %d", name, i))
 	}
+}
+
+// payloadStatus maps a full/empty head to the spec's PAYLOAD_STATUS_FULL (1) / PAYLOAD_STATUS_EMPTY (0).
+func payloadStatus(full bool) int {
+	if full {
+		return 1
+	}
+	return 0
 }
 
 // ffgConsistent mirrors the gossip check that the target root is the attested block's ancestor at the target epoch start.

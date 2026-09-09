@@ -402,6 +402,38 @@ func (f *ForkChoice) Tips() ([][32]byte, []primitives.Slot) {
 	return f.store.tips()
 }
 
+// ViableTip is a leaf of the filtered block tree (spec get_filtered_block_tree); from Gloas on a block yields one tip per payload node.
+type ViableTip struct {
+	Root   [fieldparams.RootLength]byte
+	Weight uint64
+	Full   bool
+}
+
+// ViableTips returns the leaves of the filtered block tree with their fork choice weights.
+func (f *ForkChoice) ViableTips() []ViableTip {
+	justified := f.store.justifiedCheckpoint
+	currentEpoch := slots.EpochsSinceGenesis(f.store.genesisTime)
+	var tips []ViableTip
+	for root, en := range f.store.emptyNodeByRoot {
+		n := en.node
+		if !inSubtree(n, justified.Root) || !n.leadsToViableHead(justified.Epoch, currentEpoch) {
+			continue
+		}
+		if slots.ToEpoch(n.slot) < params.BeaconConfig().GloasForkEpoch {
+			if !f.store.hasConsensusChildren(n) {
+				tips = append(tips, ViableTip{Root: root, Weight: n.weight, Full: true})
+			}
+			continue
+		}
+		for _, pn := range []*PayloadNode{en, f.store.fullNodeByRoot[root]} {
+			if pn != nil && len(pn.children) == 0 {
+				tips = append(tips, ViableTip{Root: root, Weight: pn.weight, Full: pn.full})
+			}
+		}
+	}
+	return tips
+}
+
 // ProposerBoost returns the proposerBoost of the store
 func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
@@ -1022,4 +1054,21 @@ func (f *ForkChoice) VoteSnapshot(buf []forkchoicetypes.VoteData) []forkchoicety
 // ConfirmedPayloadBlockHash resolves the Gloas empty/full payload ambiguity the same way as the justified and finalized hashes.
 func (f *ForkChoice) ConfirmedPayloadBlockHash(root [32]byte) [32]byte {
 	return f.store.checkpointPayloadHashForRoot(root)
+}
+
+// inSubtree reports whether n is root or one of its descendants.
+func inSubtree(n *Node, root [fieldparams.RootLength]byte) bool {
+	for ; n != nil; n = parentNode(n) {
+		if n.root == root {
+			return true
+		}
+	}
+	return false
+}
+
+func parentNode(n *Node) *Node {
+	if n.parent == nil {
+		return nil
+	}
+	return n.parent.node
 }

@@ -1,8 +1,10 @@
 package doublylinkedtree
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
+	"slices"
 	"testing"
 	"time"
 
@@ -1301,4 +1303,34 @@ func TestForkChoice_ConfirmedPayloadBlockHash(t *testing.T) {
 	// Unknown root: returns zero hash
 	h = f.ConfirmedPayloadBlockHash([32]byte{'x'})
 	require.Equal(t, [32]byte{}, h)
+}
+
+func TestViableTips(t *testing.T) {
+	ctx := t.Context()
+	f := setup(0, 0)
+	// a <- b, a <- c: two leaves, a is internal.
+	for _, blk := range []struct {
+		slot         primitives.Slot
+		root, parent byte
+	}{{1, 'a', 0}, {2, 'b', 'a'}, {3, 'c', 'a'}} {
+		parent := params.BeaconConfig().ZeroHash
+		if blk.parent != 0 {
+			parent = [32]byte{blk.parent}
+		}
+		st, roblock, err := prepareForkchoiceState(ctx, blk.slot, [32]byte{blk.root}, parent, [32]byte{blk.root - 32}, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, st, roblock))
+	}
+	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, params.BeaconConfig().SlotsPerEpoch, true)
+	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, params.BeaconConfig().SlotsPerEpoch, true)
+	f.justifiedBalances = []uint64{100, 200, 200, 300}
+	_, err := f.Head(ctx)
+	require.NoError(t, err)
+
+	tips := f.ViableTips()
+	slices.SortFunc(tips, func(x, y ViableTip) int { return bytes.Compare(x.Root[:], y.Root[:]) })
+	require.DeepEqual(t, []ViableTip{
+		{Root: [32]byte{'b'}, Weight: 400, Full: true},
+		{Root: [32]byte{'c'}, Weight: 300, Full: true},
+	}, tips)
 }
