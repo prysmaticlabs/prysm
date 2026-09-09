@@ -11,6 +11,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//cmd:__subpackages__",
+        "//testing/endtoend/components:__pkg__",
     ],
     deps = [
         "//beacon-chain/forkchoice/types:go_default_library",

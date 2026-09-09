@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Size E2E peer limits to allow all expected peers to connect inbound, preventing inbound-limit pruning from breaking small test networks.
 - Peer-scoring debug responses replace `time_to_white_listing` with per-reason `grey_list_recovery` estimates; gossip and bad-IP recovery are `"unknown"`, and recovery estimates are omitted for non-grey-listed peers, including trusted peers.
 - Peer grey-listing and peer chain-status tracking now live in `p2p/peerscoring`, wired directly into the p2p service; `peers.Status` no longer exposes scoring or badness APIs.
 - The block provider scorer is now the self-contained `p2p/blockprovider.Selector` (it is a sync peer-selection mechanism, not scoring), owned by the p2p service and reached via `BlockProviderSelector()`; it keeps its own state instead of writing into `peerdata.PeerData`, drops fully-decayed idle entries, and is pruned alongside the peer store.

@@ -102,7 +102,7 @@ type (
 		rand                  *rand.Rand
 		ipTracker             map[string]uint64
 		ipColocationWhitelist []*net.IPNet
-		trustedPeersMu        sync.Mutex // Serializes trust changes and their callbacks.
+		trustedPeersMu        sync.Mutex
 		onTrustedPeerAdded    func(peer.ID)
 		onTrustedPeerRemoved  func(peer.ID)
 	}
@@ -113,8 +113,7 @@ type (
 		PeerLimit int
 		// Scoring judges peers; a default scorer is created when nil.
 		Scoring *peerscoring.Scorer
-		// Rand overrides the internal random generator; a deterministic generator is created
-		// when nil. Used by tests that need reproducible eviction ordering.
+		// Rand overrides the internal random generator.
 		Rand *rand.Rand
 		// IPColocationWhitelist contains CIDR ranges that are exempt from IP colocation limits.
 		IPColocationWhitelist []*net.IPNet
@@ -137,10 +136,9 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	}
 
 	// Random generator used for dial backoff periods and eviction ordering.
-	// It is ok to use deterministic generator, no need for true entropy.
 	randGen := config.Rand
 	if randGen == nil {
-		randGen = rand.NewDeterministicGenerator()
+		randGen = rand.NewGenerator()
 	}
 
 	return &Status{
@@ -333,8 +331,6 @@ func (p *Status) SetConnectionState(pid peer.ID, state peerdata.ConnectionState)
 	defer p.store.Unlock()
 
 	peerData := p.store.PeerDataGetOrCreate(pid)
-	// Stamp connection time on the transition into Connected only, so redundant
-	// updates don't reset tenure while reconnects start it afresh.
 	if state == Connected && peerData.ConnState != Connected {
 		peerData.ConnectedAt = prysmTime.Now()
 	}
@@ -365,8 +361,7 @@ func (p *Status) ConnectedAt(pid peer.ID) (time.Time, error) {
 	return time.Time{}, peerdata.ErrPeerUnknown
 }
 
-// SetConnectedAt overrides the peer's connection timestamp. Production code relies on
-// SetConnectionState stamping it; this exists for tests that need controlled tenure.
+// SetConnectedAt overrides the peer's connection timestamp.
 func (p *Status) SetConnectedAt(pid peer.ID, connectedAt time.Time) {
 	p.store.Lock()
 	defer p.store.Unlock()
@@ -798,12 +793,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch primitives.Epoch) (
 
 // PruneCandidates returns every connected, inbound, non-trusted peer ordered by eviction
 // priority, along with how many of them must be disconnected to get back under the
-// connection and inbound limits. Grey-listed peers always come first (shuffled); the rest
-// are ordered uniformly at random, except that the oldest quarter by connection time is
-// moved to the back, youngest-first, so long-lived peers are evicted last. With probability
-// pruneTenureEpsilon a round ignores tenure so it can never confer permanent immunity.
-// Callers may drop protected candidates (e.g. peers needed for subnet coverage) before
-// disconnecting the first numToPrune of the remainder.
+// connection and inbound limits.
 func (p *Status) PruneCandidates() ([]peer.ID, uint64) {
 	connLimit := p.ConnectedPeerLimit()
 	inBoundLimit := uint64(p.InboundLimit())
@@ -854,8 +844,6 @@ func (p *Status) PruneCandidates() ([]peer.ID, uint64) {
 	p.rand.Shuffle(len(remainder), func(i, j int) { remainder[i], remainder[j] = remainder[j], remainder[i] })
 
 	if p.rand.Float64() >= pruneTenureEpsilon {
-		// Tenure round: youngest first, so the oldest quarter becomes the list's tail,
-		// ordered youngest-first with the absolute oldest peer strictly last.
 		sort.SliceStable(remainder, func(i, j int) bool {
 			return remainder[i].connectedAt.After(remainder[j].connectedAt)
 		})
