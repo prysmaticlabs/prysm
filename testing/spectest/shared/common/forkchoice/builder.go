@@ -232,6 +232,15 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		wantedRoot := common.FromHex(c.Head.Root)
 		require.Equal(t, true, bytes.Equal(wantedRoot, r), fmt.Sprintf("Roots differ. wanted %#x, got %#x", wantedRoot, r))
 		require.Equal(t, primitives.Slot(c.Head.Slot), bb.service.HeadSlot())
+		if c.Head.PayloadStatus != nil {
+			_, _, full, err := bb.fc.FullHead(ctx)
+			require.NoError(t, err)
+			got := 0
+			if full {
+				got = 1
+			}
+			require.Equal(t, *c.Head.PayloadStatus, got, "head payload status mismatch")
+		}
 	}
 	if c.JustifiedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
@@ -258,16 +267,6 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.GetProposerHead))
 		got := fmt.Sprintf("%#x", bb.service.GetProposerHead())
 		require.Equal(t, want, got)
-	}
-	if c.HeadPayloadStatus != nil {
-		_, _, full, err := bb.fc.FullHead(ctx)
-		require.NoError(t, err)
-		want := *c.HeadPayloadStatus
-		got := 0
-		if full {
-			got = 1
-		}
-		require.Equal(t, want, got, "head payload status mismatch")
 	}
 	/* TODO: We need to mock the entire proposer system to be able to test this.
 	if c.ShouldOverrideFCU != nil {
