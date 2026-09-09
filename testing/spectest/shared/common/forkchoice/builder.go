@@ -24,6 +24,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -196,6 +197,10 @@ func (bb *Builder) ExecutionPayloadEnvelope(t testing.TB, signed *ethpb.SignedEx
 // PayloadAttestationMessage feeds the message to the chain service.
 // If expectValid is false the receive call must error; otherwise it must succeed.
 func (bb *Builder) PayloadAttestationMessage(t testing.TB, m *ethpb.PayloadAttestationMessage, expectValid bool) {
+	// Gossip drops wire PTC messages that are not for the current slot; the chain service does not re-check them.
+	if !expectValid && uint64(m.Data.Slot) != uint64(bb.lastTick)/params.BeaconConfig().SecondsPerSlot {
+		return
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	err := bb.service.ReceivePayloadAttestationMessage(ctx, m)
@@ -211,16 +216,31 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 	bb.execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
 }
 
-// Attestation receives the attestation and updates forkchoice.
-func (bb *Builder) Attestation(t testing.TB, a ethpb.Att) {
+// Attestation receives the attestation and updates forkchoice; valid says whether the spec accepts it.
+func (bb *Builder) Attestation(t testing.TB, a ethpb.Att, valid bool) {
 	bb.syncClock()
-	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
+	// Gossip rejects Gloas payload votes (index != 0) that validate_on_attestation rejects; the chain service does not re-check them.
+	if !valid && slots.ToEpoch(a.GetData().Slot) >= params.BeaconConfig().GloasForkEpoch && a.GetData().CommitteeIndex != 0 {
+		return
+	}
+	// LMD/FFG consistency (target == checkpoint block of the attested block) is also a gossip check.
+	if !valid && !bb.ffgConsistent(a.GetData()) {
+		return
+	}
+	// The vector clock is whole seconds; gossip clock disparity would let attestations the spec rejects as premature slip in.
+	disparity := time.Duration(0)
 	if bb.fcr {
 		// FCR spec tests seed attestations before time advances, so allow
 		// one extra slot of disparity to avoid "slot from the future" rejections.
 		disparity = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	}
-	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, disparity))
+	err := bb.service.OnAttestation(context.TODO(), a, disparity)
+	if valid {
+		require.NoError(t, err)
+	} else {
+		d := a.GetData()
+		require.NotNil(t, err, fmt.Sprintf("expected the attestation to be rejected: tick %d slot %d index %d head %#x target %d/%#x", bb.lastTick, d.Slot, d.CommitteeIndex, d.BeaconBlockRoot[:4], d.Target.Epoch, d.Target.Root[:4]))
+	}
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
@@ -360,4 +380,19 @@ func checkPTCVotes(t testing.TB, name string, want *PTCVotes, attesters, values 
 		require.Equal(t, true, voted, fmt.Sprintf("%s: expected vote at index %d", name, i))
 		require.Equal(t, *v, values.BitAt(uint64(i)), fmt.Sprintf("%s: vote value mismatch at index %d", name, i))
 	}
+}
+
+// ffgConsistent mirrors the gossip check that the target root is the attested block's ancestor at the target epoch start.
+func (bb *Builder) ffgConsistent(d *ethpb.AttestationData) bool {
+	start, err := slots.EpochStart(d.Target.Epoch)
+	if err != nil {
+		return true
+	}
+	bb.fc.RLock()
+	defer bb.fc.RUnlock()
+	root, err := bb.fc.AncestorRoot(context.TODO(), bytesutil.ToBytes32(d.BeaconBlockRoot), start)
+	if err != nil {
+		return true // Unknown block: let the chain service reject it.
+	}
+	return root == bytesutil.ToBytes32(d.Target.Root)
 }

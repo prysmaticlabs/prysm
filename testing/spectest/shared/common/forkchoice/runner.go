@@ -194,7 +194,7 @@ func runAttestationStep(t *testing.T, step Step, fork int, folder os.DirEntry, t
 		att = &ethpb.AttestationElectra{}
 	}
 	require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
-	builder.Attestation(t, att)
+	builder.Attestation(t, att, step.Valid == nil || *step.Valid)
 }
 
 func runExecutionPayloadStep(t *testing.T, step Step, folder os.DirEntry, testsFolderPath string, builder *Builder) {
