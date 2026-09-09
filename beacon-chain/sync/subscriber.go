@@ -806,8 +806,6 @@ func (s *Service) persistentAndAggregatorSubnetIndices(currentSlot primitives.Sl
 	return mapFromSlice(persistentSubnetIndices, aggregatorSubnetIndices)
 }
 
-// wantedSubnet identifies one subnet of a specific gossip topic family that peers may be
-// needed in to maintain coverage.
 type wantedSubnet struct {
 	topicFormat string
 	subnet      uint64
@@ -835,9 +833,6 @@ func subnetTypeLabel(topicFormat string) string {
 	}
 }
 
-// wantedSubnetsForSlot returns the subnets the node currently needs peers on: attestation
-// subnets for persistent/aggregator/attester duties, active sync-committee subnets
-// post-Altair, and data-column subnets post-Fulu.
 func (s *Service) wantedSubnetsForSlot(currentSlot primitives.Slot) map[wantedSubnet]bool {
 	currentEpoch := slots.ToEpoch(currentSlot)
 
@@ -892,11 +887,6 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 		}
 	}
 
-	// Sort a copy by ascending subnet count so we try to prune peers
-	// covering fewer subnets first, preserving multi-subnet peers that are
-	// more valuable for maintaining minimums across subnets. The stable sort
-	// keeps the caller's eviction-priority order as the tie-break within
-	// equal subnet counts.
 	candidates := slices.Clone(pids)
 	slices.SortStableFunc(candidates, func(a, b peer.ID) int {
 		return len(peerSubnets[a]) - len(peerSubnets[b])
@@ -923,7 +913,6 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 		}
 	}
 
-	// Return prunable peers in the caller's original (eviction-priority) order.
 	prunable := make([]peer.ID, 0, len(pruneSet))
 	for _, pid := range pids {
 		if pruneSet[pid] {

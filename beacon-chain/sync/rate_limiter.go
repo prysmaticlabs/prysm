@@ -140,7 +140,6 @@ func (l *limiter) validateRequest(stream network.Stream, amt uint64) error {
 		amt = 1
 	}
 	if amt > uint64(remaining) {
-		// Record the topic with the reason: which protocol was hammered is the detail that matters.
 		l.p2p.PeerScoring().RecordBadResponse(remotePeer, peerscoring.SourceRateLimit, "rateLimitExceeded:"+topic)
 		writeErrorResponseToStream(responseCodeInvalidRequest, p2ptypes.ErrRateLimited.Error(), stream, l.p2p)
 		return p2ptypes.ErrRateLimited

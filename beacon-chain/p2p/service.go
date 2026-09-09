@@ -210,9 +210,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		PeerLimit:             int(s.cfg.MaxPeers),
 		IPColocationWhitelist: s.cfg.IPColocationWhitelist,
 		Scoring:               s.peerScorer,
-		// Protect trusted peers from the libp2p connection manager, whose watermark
-		// trimming (a backstop above our own limits) would otherwise close their
-		// connections indiscriminately.
 		OnTrustedPeerAdded: func(pid peer.ID) {
 			if s.host != nil {
 				s.host.ConnManager().Protect(pid, trustedPeerConnTag)
@@ -580,7 +577,6 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 	}
 
 	if err := s.IsPeerGreyListed(info.ID); err != nil {
-		GreyListRefusalCount.WithLabelValues(greyListSiteConnect, peerscoring.AspectFromError(err)).Inc()
 		return errors.Wrap(err, "grey-listed peer")
 	}
 

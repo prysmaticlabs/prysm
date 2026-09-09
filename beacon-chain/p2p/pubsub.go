@@ -148,9 +148,6 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	return topicHandle.Subscribe(opts...)
 }
 
-// peerInspector reconciles the peer scorer's gossip mirror with libp2p's periodic score
-// report. The report covers every peer libp2p tracks, including disconnected peers inside
-// its retention window; peers absent from it have been purged, so their gossip state is cleared.
 func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
 	updates := make(map[peer.ID]peerscoring.GossipScoreUpdate, len(peerMap))
 	for pid, snap := range peerMap {

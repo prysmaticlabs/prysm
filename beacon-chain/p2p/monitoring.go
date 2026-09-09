@@ -5,22 +5,11 @@ import (
 	"strings"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peerscoring"
 	prysmTime "github.com/OffchainLabs/prysm/v7/time"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-)
-
-// Enforcement sites for GreyListRefusalCount.
-const (
-	greyListSiteDialGater = "dial_gater"
-	greyListSiteHandshake = "handshake"
-	greyListSiteDiscovery = "discovery"
-	greyListSiteConnect   = "connect"
-	// GreyListSiteDisconnect marks the sync maintenance loop disconnecting a connected grey-listed peer.
-	GreyListSiteDisconnect = "disconnect"
 )
 
 var (
@@ -218,20 +207,6 @@ var (
 	},
 		[]string{"topic", "supports_partial"})
 
-	// Peer scoring / grey-listing metrics.
-	greyListedPeersCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "p2p_greylisted_peers",
-		Help: "Peers grey-listed per aspect, split by connectedness. A peer grey-listed by " +
-			"several aspects is counted under each; trusted-peer exemptions are not applied.",
-	},
-		[]string{"aspect", "state"})
-	// GreyListRefusalCount counts refusals and disconnects of grey-listed peers by
-	// enforcement site and the grey-listing aspect that caused them.
-	GreyListRefusalCount = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "p2p_greylist_refusals_total",
-		Help: "Refusals and disconnects of grey-listed peers, by enforcement site and grey-listing reason.",
-	},
-		[]string{"site", "reason"})
 	inboundPeerTenureSeconds = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "p2p_inbound_peer_tenure_seconds",
 		Help: "Connection-age percentiles of inbound-connected peers.",
@@ -260,36 +235,7 @@ func (s *Service) updateMetrics() {
 	p2pPeerCount.WithLabelValues("Connecting").Set(float64(len(s.peers.Connecting())))
 	p2pPeerCount.WithLabelValues("Disconnecting").Set(float64(len(s.peers.Disconnecting())))
 
-	// Grey-list verdicts per aspect; their union is the "Bad" count.
-	byAspect := s.peerScorer.GreyListedPeersByAspect()
-	uniqueGreyListed := make(map[peer.ID]bool)
-	for _, pids := range byAspect {
-		for _, pid := range pids {
-			uniqueGreyListed[pid] = true
-		}
-	}
-	p2pPeerCount.WithLabelValues("Bad").Set(float64(len(uniqueGreyListed)))
-
-	badIPPeers := make([]peer.ID, 0)
-	for _, pid := range s.peers.All() {
-		if s.peers.IsFromBadIP(pid) != nil {
-			badIPPeers = append(badIPPeers, pid)
-		}
-	}
-	byAspect[peerscoring.AspectBadIP] = badIPPeers
-
-	for _, aspect := range append(s.peerScorer.Aspects(), peerscoring.AspectBadIP) {
-		connected, disconnected := 0, 0
-		for _, pid := range byAspect[aspect] {
-			if state, err := s.peers.ConnectionState(pid); err == nil && state == peers.Connected {
-				connected++
-			} else {
-				disconnected++
-			}
-		}
-		greyListedPeersCount.WithLabelValues(aspect, "connected").Set(float64(connected))
-		greyListedPeersCount.WithLabelValues(aspect, "disconnected").Set(float64(disconnected))
-	}
+	p2pPeerCount.WithLabelValues("Bad").Set(float64(len(s.peerScorer.GreyListedPeers())))
 
 	// Inbound peer tenure distribution: the eviction-protection input.
 	inbound := s.peers.InboundConnected()

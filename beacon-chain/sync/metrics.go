@@ -389,7 +389,6 @@ func (s *Service) updateMetrics() {
 	s.updateSubnetCoverageMetrics(digest)
 }
 
-// updateSubnetCoverageMetrics counts wanted subnets short of --minimum-peers-per-subnet gossip peers.
 func (s *Service) updateSubnetCoverageMetrics(digest [4]byte) {
 	minimumPeersPerSubnet := flags.Get().MinimumPeersPerSubnet
 	below := map[string]float64{subnetTypeAttestation: 0, subnetTypeSyncCommittee: 0, subnetTypeDataColumn: 0}

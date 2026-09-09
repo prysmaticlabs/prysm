@@ -171,7 +171,7 @@ func TestStatusGreyListTTLExpiry(t *testing.T) {
 
 	err := s.IsPeerGreyListed(testPid)
 	require.ErrorIs(t, err, ErrPeerGreyListed)
-	require.Equal(t, AspectPeerStatus, AspectFromError(err))
+	require.ErrorIs(t, err, p2ptypes.ErrWrongForkDigestVersion)
 
 	// While grey-listed the entry survives removal: it is the memory of the misbehaviour.
 	s.RemovePeers([]peer.ID{testPid})
@@ -262,53 +262,6 @@ func TestGreyListedPeers(t *testing.T) {
 	require.Equal(t, true, listed["gossip-peer"])
 	require.Equal(t, true, listed["status-peer"])
 	require.Equal(t, false, listed["good-peer"])
-}
-
-func TestGreyListedPeersByAspect(t *testing.T) {
-	s := newTestScorer()
-	require.Equal(t, 0, len(s.GreyListedPeersByAspect()))
-
-	recordStrikes(s, 4)                                             // testPid over the strike threshold
-	s.SetGossipScore("gossip-peer", -16000.5, 0, nil)               // below the gossip threshold
-	s.SetPeerStatus("status-peer", nil, p2ptypes.ErrInvalidRequest) // terminal status error
-	s.SetGossipScore("status-peer", -16000.5, 0, nil)               // status-peer fires two aspects
-	s.SetGossipScore("good-peer", 5, 0, nil)
-
-	byAspect := s.GreyListedPeersByAspect()
-	require.Equal(t, 3, len(byAspect))
-
-	require.Equal(t, 1, len(byAspect[AspectBadResponses]))
-	require.Equal(t, testPid, byAspect[AspectBadResponses][0])
-
-	require.Equal(t, 1, len(byAspect[AspectPeerStatus]))
-	require.Equal(t, peer.ID("status-peer"), byAspect[AspectPeerStatus][0])
-
-	require.Equal(t, 2, len(byAspect[AspectGossip]))
-	gossipListed := make(map[peer.ID]bool)
-	for _, pid := range byAspect[AspectGossip] {
-		gossipListed[pid] = true
-	}
-	require.Equal(t, true, gossipListed["gossip-peer"])
-	require.Equal(t, true, gossipListed["status-peer"])
-}
-
-func TestAspectFromError(t *testing.T) {
-	s := newTestScorer()
-
-	recordStrikes(s, 4)
-	s.SetGossipScore("gossip-peer", -16000.5, 0, nil)
-	s.SetPeerStatus("status-peer", nil, p2ptypes.ErrInvalidRequest)
-
-	// Verdicts keep wrapping ErrPeerGreyListed and now carry their aspect.
-	err := s.IsPeerGreyListed(testPid)
-	require.ErrorIs(t, err, ErrPeerGreyListed)
-	require.Equal(t, AspectBadResponses, AspectFromError(err))
-	require.Equal(t, AspectGossip, AspectFromError(s.IsPeerGreyListed("gossip-peer")))
-	require.Equal(t, AspectPeerStatus, AspectFromError(s.IsPeerGreyListed("status-peer")))
-
-	// Errors without a verdict classify as unknown.
-	require.Equal(t, "unknown", AspectFromError(errors.New("plain error")))
-	require.Equal(t, "unknown", AspectFromError(nil))
 }
 
 func TestTrackedPeerCount(t *testing.T) {

@@ -400,7 +400,6 @@ func (s *Service) WaitForCompletion() error {
 	}
 }
 
-// downscorePeer adapts RecordBadResponse to the peerDownscorer callback, logging the cause.
 func (s *Service) downscorePeer(peerID peer.ID, reason string, err error) {
 	s.p2p.PeerScoring().RecordBadResponse(peerID, peerscoring.SourceBackfill, reason)
 	if err != nil {

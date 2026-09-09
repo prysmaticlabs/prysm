@@ -398,7 +398,7 @@ func (p *Status) isPeerGreyListed(pid peer.ID) error {
 		return nil
 	}
 	if err := p.isfromBadIP(pid); err != nil {
-		return &peerscoring.GreyListError{Aspect: peerscoring.AspectBadIP, Err: errors.Wrap(err, "peer is from a bad IP")}
+		return errors.Wrap(err, "peer is from a bad IP")
 	}
 	return p.scoring.IsPeerGreyListed(pid)
 }
