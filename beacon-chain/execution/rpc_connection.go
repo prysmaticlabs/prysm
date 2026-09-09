@@ -132,7 +132,7 @@ func (s *Service) dialExecutionNode(ctx context.Context, currEndpoint network.En
 	}
 	client, err := s.cfg.rpcClientDialer(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rpc client dialer: %w", err)
 	}
 	if client == nil {
 		return nil, errors.New("rpc client dialer returned a nil client")
