@@ -115,6 +115,7 @@ type mockKeymanager struct {
 	keys                [][fieldparams.BLSPubkeyLength]byte
 	fetchNoKeys         bool
 	accountsChangedFeed *event.Feed
+	lastSignReq         *validatorpb.SignRequest
 }
 
 var errMockKeyExists = errors.New("key already in mockKeymanager map")
@@ -143,6 +144,9 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldp
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	m.lock.Lock()
+	m.lastSignReq = req
+	m.lock.Unlock()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
@@ -151,6 +155,12 @@ func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (
 	}
 	sig := privKey.Sign(req.SigningRoot)
 	return sig, nil
+}
+
+func (m *mockKeymanager) lastSignRequest() *validatorpb.SignRequest {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return m.lastSignReq
 }
 
 func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
@@ -1393,17 +1403,19 @@ func TestValidator_PushSettings(t *testing.T) {
 							GasLimit: 40000000,
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: 35000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: 35000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					client.EXPECT().SubmitValidatorRegistrations(
@@ -1479,17 +1491,19 @@ func TestValidator_PushSettings(t *testing.T) {
 							GasLimit: 40000000,
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  false,
+									GasLimit: 35000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  false,
-								GasLimit: 35000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					client.EXPECT().SubmitValidatorRegistrations(
@@ -1556,13 +1570,15 @@ func TestValidator_PushSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
 							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					return &v
@@ -1594,17 +1610,19 @@ func TestValidator_PushSettings(t *testing.T) {
 					require.NoError(t, err)
 					keys, err := km.FetchValidatingPublicKeys(ctx)
 					require.NoError(t, err)
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: nil,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: nil,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					v.pubkeyToStatus[keys[0]] = &validatorStatus{
@@ -1655,17 +1673,19 @@ func TestValidator_PushSettings(t *testing.T) {
 						enableAPI:                    false,
 						km:                           genMockKeymanager(t, 1),
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: nil,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: nil,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: 40000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: 40000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					km, err := v.Keymanager()
@@ -1747,13 +1767,15 @@ func TestValidator_PushSettings(t *testing.T) {
 							FeeRecipient: common.Address{},
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
 							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					return &v
@@ -1789,13 +1811,15 @@ func TestValidator_PushSettings(t *testing.T) {
 							PublicKeys: [][]byte{keys[0][:]},
 							Indices:    []primitives.ValidatorIndex{unknownIndex},
 						}, nil)
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
 							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					return &v
@@ -1841,17 +1865,19 @@ func TestValidator_PushSettings(t *testing.T) {
 							GasLimit: 40000000,
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: 40000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: 40000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
@@ -3477,13 +3503,15 @@ func TestValidator_PushProposerSettings_SkipsBuilderRegistrationsPostGloas(t *te
 		}, nil).AnyTimes()
 
 	// Builder enabled — would normally trigger registrations pre-fork.
-	require.NoError(t, v.SetProposerSettings(ctx, &proposer.Settings{
-		DefaultConfig: &proposer.Option{
-			FeeRecipientConfig: &proposer.FeeRecipientConfig{
-				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+	require.NoError(t, v.UpdateProposerSettings(ctx, func(*proposer.Settings) (*proposer.Settings, error) {
+		return &proposer.Settings{
+			DefaultConfig: &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+				},
+				BuilderConfig: &proposer.BuilderConfig{Enabled: true, GasLimit: 40000000},
 			},
-			BuilderConfig: &proposer.BuilderConfig{Enabled: true, GasLimit: 40000000},
-		},
+		}, nil
 	}))
 
 	// slot 1 is post-Gloas (GloasForkEpoch == 0).

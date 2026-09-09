@@ -178,6 +178,10 @@ var (
 		Name:  "enable-experimental-attestation-pool",
 		Usage: "Enables an experimental attestation pool design.",
 	}
+	enableFastConfirmation = &cli.BoolFlag{
+		Name:  "enable-fast-confirmation",
+		Usage: "Enables the fast confirmation rule (FCR) for rapid block confirmation under synchrony assumptions.",
+	}
 	EnableStateDiff = &cli.BoolFlag{
 		Name:  "enable-state-diff",
 		Usage: "Enables the experimental state diff feature.",
@@ -228,9 +232,9 @@ var (
 		Name:  "ignore-unviable-attestations",
 		Usage: "Ignores attestations whose target state is not viable with respect to the current head (avoid expensive state replay from lagging attesters).",
 	}
-	trackEquivocations = &cli.BoolFlag{
-		Name:  "track-equivocations",
-		Usage: "Records proposer equivocations observed on gossip and marks the slot in forkchoice if the equivocation arrives before the configured early deadline.",
+	disableTrackEquivocations = &cli.BoolFlag{
+		Name:  "disable-track-equivocations",
+		Usage: "Disables recording proposer equivocations observed on gossip into forkchoice.",
 	}
 	// submitBlacklistedBuilderBids lets a builder broadcast its own bids even while this node's
 	// circuit breaker has it blacklisted. Testing only: peers still ignore the bid on gossip.
@@ -284,7 +288,7 @@ var BeaconChainFlags = combinedFlags([]cli.Flag{
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	ignoreUnviableAttestations,
-	trackEquivocations,
+	disableTrackEquivocations,
 	enableFullSSZDataLogging,
 	disableVerboseSigVerification,
 	enableProposerPreprocessing,
@@ -299,6 +303,7 @@ var BeaconChainFlags = combinedFlags([]cli.Flag{
 	DisableQUIC,
 	EnableDiscoveryReboot,
 	enableExperimentalAttestationPool,
+	enableFastConfirmation,
 	EnableStateDiff,
 	DisableProgressiveSSZ,
 	reorgLatePayloads,

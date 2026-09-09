@@ -47,6 +47,7 @@ type Flags struct {
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
 	EnableExperimentalAttestationPool   bool // EnableExperimentalAttestationPool enables an experimental attestation pool design.
+	EnableFastConfirmation              bool // EnableFastConfirmation enables the fast confirmation rule (FCR) for rapid block confirmation.
 	DisableDutiesV2                     bool // DisableDutiesV2 sets validator client to use the get Duties endpoint
 	EnableWeb                           bool // EnableWeb enables the webui on the validator client
 	EnableStateDiff                     bool // EnableStateDiff enables the experimental state diff feature for the beacon node.
@@ -278,6 +279,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableExperimentalAttestationPool)
 		cfg.EnableExperimentalAttestationPool = true
 	}
+	if ctx.IsSet(enableFastConfirmation.Name) {
+		logEnabled(enableFastConfirmation)
+		cfg.EnableFastConfirmation = true
+	}
 	if ctx.IsSet(forceHeadFlag.Name) {
 		logEnabled(forceHeadFlag)
 		cfg.ForceHead = ctx.String(forceHeadFlag.Name)
@@ -292,10 +297,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(ignoreUnviableAttestations)
 		cfg.IgnoreUnviableAttestations = true
 	}
-	cfg.TrackEquivocations = false
-	if ctx.IsSet(trackEquivocations.Name) && ctx.Bool(trackEquivocations.Name) {
-		logEnabled(trackEquivocations)
-		cfg.TrackEquivocations = true
+	cfg.TrackEquivocations = true
+	if ctx.IsSet(disableTrackEquivocations.Name) && ctx.Bool(disableTrackEquivocations.Name) {
+		logDisabled(disableTrackEquivocations)
+		cfg.TrackEquivocations = false
 	}
 	if ctx.IsSet(EnableStateDiff.Name) {
 		logEnabled(EnableStateDiff)
