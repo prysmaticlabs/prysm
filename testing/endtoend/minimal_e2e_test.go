@@ -14,6 +14,7 @@ import (
 //   - Participation at epoch 2
 //   - Finalization at epoch 3
 //   - Fulu fork transition at epoch 2
+//   - Heze (EIP-8333) boundary checkpoint anchoring from epoch 2
 //   - BPO 1 at epoch 3 (15 blobs)
 //   - BPO 2 at epoch 4 (21 blobs)
 //   - Exit proposed at epoch 4
@@ -25,6 +26,10 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	cfg = types.InitForkCfg(version.Electra, version.Fulu, cfg)
 	// Set Fulu fork at epoch 2 for a quick fork transition test
 	cfg.FuluForkEpoch = 2
+	// Activate EIP-8333 boundary checkpoint anchoring alongside Fulu, so epochs 0-1
+	// run under the previous anchoring and the rest of the run crosses and holds
+	// finality with boundary-anchored checkpoints.
+	cfg.HezeForkEpoch = 2
 	// Update BlobSchedule to use the new FuluForkEpoch for BPO testing
 	cfg.BlobSchedule = []params.BlobScheduleEntry{
 		{Epoch: cfg.DenebForkEpoch, MaxBlobsPerBlock: uint64(cfg.DeprecatedMaxBlobsPerBlock)},
