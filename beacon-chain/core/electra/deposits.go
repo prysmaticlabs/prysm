@@ -277,6 +277,7 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 	}
 	availableForProcessing := depBalToConsume + helpers.ActivationChurnLimitForVersion(st.Version(), activeBalance)
 
+	// Deliberately the epoch start even from Heze (EIP-8333); match consensus-specs if it moves this bound, see docs/eip-8333-design.md.
 	finalizedSlot, err := slots.EpochStart(st.FinalizedCheckpoint().Epoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized slot")
