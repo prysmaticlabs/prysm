@@ -6,11 +6,11 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
-	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/ssz/detect"
 	"github.com/OffchainLabs/prysm/v7/proto/dbval"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -99,15 +99,12 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "save origin checkpoint block root")
 	}
 
-	// rebuild the checkpoint from the block
-	// use it to mark the block as justified and finalized
-	slotEpoch, err := wblk.Block().Slot().SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
-	if err != nil {
-		return err
-	}
-
+	// Rebuild the checkpoint and use it to mark the block as justified and finalized.
+	// The epoch comes from the state, which sits at the checkpoint epoch's start slot;
+	// the block may sit before that slot (always, from Heze / EIP-8333, and today
+	// whenever the epoch's first slot is empty), so the block slot cannot name the epoch.
 	chkpt := &ethpb.Checkpoint{
-		Epoch: primitives.Epoch(slotEpoch),
+		Epoch: slots.ToEpoch(state.Slot()),
 		Root:  blockRoot[:],
 	}
 
