@@ -215,3 +215,82 @@ func TestProposerDependentRootOrGenesis(t *testing.T) {
 		assert.DeepEqual(t, expected, got)
 	})
 }
+
+func TestCheckpointRoot(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 3
+	params.OverrideBeaconConfig(cfg)
+	helpers.ClearCache()
+
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	newState := func(t *testing.T, edit func(roots [][]byte)) *ethpb.BeaconState {
+		blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+		for i := range blockRoots {
+			blockRoots[i] = []byte{byte(i)}
+		}
+		if edit != nil {
+			edit(blockRoots)
+		}
+		return &ethpb.BeaconState{
+			Slot:       primitives.Slot(5 * slotsPerEpoch),
+			BlockRoots: blockRoots,
+		}
+	}
+	root := func(b byte) []byte {
+		r := [32]byte{b}
+		return r[:]
+	}
+
+	t.Run("genesis epoch anchors at the genesis slot", func(t *testing.T) {
+		state, err := state_native.InitializeFromProtoPhase0(newState(t, nil))
+		require.NoError(t, err)
+		r, err := helpers.CheckpointRoot(state, 0)
+		require.NoError(t, err)
+		assert.DeepEqual(t, root(0), r)
+	})
+	t.Run("pre-activation epochs keep the previous anchoring", func(t *testing.T) {
+		state, err := state_native.InitializeFromProtoPhase0(newState(t, nil))
+		require.NoError(t, err)
+		r, err := helpers.CheckpointRoot(state, 2)
+		require.NoError(t, err)
+		br, err := helpers.BlockRoot(state, 2)
+		require.NoError(t, err)
+		assert.DeepEqual(t, root(byte(2*slotsPerEpoch)), r)
+		assert.DeepEqual(t, br, r)
+	})
+	t.Run("post-activation epochs anchor at the boundary block", func(t *testing.T) {
+		state, err := state_native.InitializeFromProtoPhase0(newState(t, nil))
+		require.NoError(t, err)
+		r, err := helpers.CheckpointRoot(state, 3)
+		require.NoError(t, err)
+		br, err := helpers.BlockRoot(state, 3)
+		require.NoError(t, err)
+		assert.DeepEqual(t, root(byte(3*slotsPerEpoch-1)), r)
+		assert.DeepEqual(t, root(byte(3*slotsPerEpoch)), br)
+		assert.DeepNotEqual(t, br, r)
+	})
+	t.Run("no-op when the first slot of the epoch is empty", func(t *testing.T) {
+		// An empty slot repeats the previous slot's root in state.block_roots.
+		state, err := state_native.InitializeFromProtoPhase0(newState(t, func(roots [][]byte) {
+			roots[3*slotsPerEpoch] = roots[3*slotsPerEpoch-1]
+		}))
+		require.NoError(t, err)
+		r, err := helpers.CheckpointRoot(state, 3)
+		require.NoError(t, err)
+		br, err := helpers.BlockRoot(state, 3)
+		require.NoError(t, err)
+		assert.DeepEqual(t, br, r)
+	})
+	t.Run("empty trailing slots resolve to the most recent earlier block", func(t *testing.T) {
+		state, err := state_native.InitializeFromProtoPhase0(newState(t, func(roots [][]byte) {
+			for i := 3*slotsPerEpoch - 3; i < 3*slotsPerEpoch; i++ {
+				roots[i] = []byte{200}
+			}
+		}))
+		require.NoError(t, err)
+		r, err := helpers.CheckpointRoot(state, 3)
+		require.NoError(t, err)
+		assert.DeepEqual(t, root(200), r)
+	})
+}

@@ -101,3 +101,22 @@ func BlockRoot(state state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]byte,
 	}
 	return BlockRootAtSlot(state, s)
 }
+
+// CheckpointRoot returns the block root anchoring the checkpoint for the given epoch.
+// From the EIP-8333 activation epoch onward this is the epoch boundary block, the
+// last block before the epoch; earlier epochs resolve under the previous anchoring.
+//
+// Spec pseudocode definition:
+//
+//	def get_checkpoint_root(state: BeaconState, epoch: Epoch) -> Root:
+//	  """
+//	  Return the block root anchoring the checkpoint for ``epoch``
+//	  """
+//	  return get_block_root_at_slot(state, get_checkpoint_slot(epoch))
+func CheckpointRoot(state state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]byte, error) {
+	s, err := slots.CheckpointSlot(epoch)
+	if err != nil {
+		return nil, err
+	}
+	return BlockRootAtSlot(state, s)
+}
