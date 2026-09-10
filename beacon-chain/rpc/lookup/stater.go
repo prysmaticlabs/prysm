@@ -149,11 +149,15 @@ func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.Beaco
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get start slot")
 		}
-		// We use the stategen replayer to fetch the finalized state and then
-		// replay it to the start slot of our checkpoint's epoch. The replayer
-		// only ever accesses our canonical history, so the state retrieved will
-		// always be the finalized state at that epoch.
-		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
+		cpSlot, err := slots.CheckpointSlot(checkpoint.Epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get checkpoint slot")
+		}
+		// We use the stategen replayer to fetch the finalized state: canonical
+		// blocks are applied only through the checkpoint slot (the epoch boundary
+		// from Heze / EIP-8333), then empty slots advance to the epoch start, so
+		// the state always descends from the finalized checkpoint root.
+		s, err = p.ReplayerBuilder.ReplayerForSlot(cpSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
@@ -163,11 +167,15 @@ func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.Beaco
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get start slot")
 		}
-		// We use the stategen replayer to fetch the justified state and then
-		// replay it to the start slot of our checkpoint's epoch. The replayer
-		// only ever accesses our canonical history, so the state retrieved will
-		// always be the justified state at that epoch.
-		s, err = p.ReplayerBuilder.ReplayerForSlot(targetSlot).ReplayToSlot(ctx, targetSlot)
+		cpSlot, err := slots.CheckpointSlot(checkpoint.Epoch)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get checkpoint slot")
+		}
+		// We use the stategen replayer to fetch the justified state: canonical
+		// blocks are applied only through the checkpoint slot (the epoch boundary
+		// from Heze / EIP-8333), then empty slots advance to the epoch start, so
+		// the state always descends from the justified checkpoint root.
+		s, err = p.ReplayerBuilder.ReplayerForSlot(cpSlot).ReplayToSlot(ctx, targetSlot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
 		}

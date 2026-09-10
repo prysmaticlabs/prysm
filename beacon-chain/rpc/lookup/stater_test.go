@@ -141,6 +141,42 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
+	t.Run("finalized and justified resolve through the boundary slot post-Heze", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.HezeForkEpoch = 10
+		params.OverrideBeaconConfig(cfg)
+
+		stateGen := mockstategen.NewService()
+		replayer := mockstategen.NewReplayerBuilder()
+		// The replayer mock is keyed by the requested slot: registering the state only
+		// at the checkpoint (boundary) slot asserts the resolution path moved off the
+		// epoch start slot from the Heze fork (EIP-8333).
+		replayer.SetMockStateForSlot(newBeaconState, params.BeaconConfig().SlotsPerEpoch*10-1)
+		stateGen.StatesByRoot[stateRoot] = newBeaconState
+
+		p := BeaconDbStater{
+			ChainInfoFetcher: &chainMock.ChainService{
+				FinalizedCheckPoint:        &ethpb.Checkpoint{Root: stateRoot[:], Epoch: 10},
+				CurrentJustifiedCheckPoint: &ethpb.Checkpoint{Root: stateRoot[:], Epoch: 10},
+			},
+			StateGenService: stateGen,
+			ReplayerBuilder: replayer,
+		}
+
+		s, err := p.State(ctx, []byte("finalized"))
+		require.NoError(t, err)
+		sRoot, err := s.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, stateRoot, sRoot)
+
+		s, err = p.State(ctx, []byte("justified"))
+		require.NoError(t, err)
+		sRoot, err = s.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, stateRoot, sRoot)
+	})
+
 	t.Run("hex", func(t *testing.T) {
 		hex := "0x" + strings.Repeat("0", 63) + "1"
 		root, err := hexutil.Decode(hex)
