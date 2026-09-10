@@ -41,6 +41,15 @@ func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (
 	if err != nil {
 		return nil, err
 	}
+	cpSlot, err := slots.CheckpointSlot(wsc.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	if cpSlot < startSlot {
+		// EIP-8333: the checkpoint root names the epoch boundary block, so search
+		// the epoch of slots ending at the boundary instead of the checkpoint epoch.
+		startSlot = cpSlot + 1 - params.BeaconConfig().SlotsPerEpoch
+	}
 	return &WeakSubjectivityVerifier{
 		enabled:  true,
 		verified: false,

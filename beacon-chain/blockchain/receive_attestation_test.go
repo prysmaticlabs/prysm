@@ -205,3 +205,37 @@ func TestService_UpdateHead_NoAtts(t *testing.T) {
 
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
 }
+
+func TestVerifyLMDFFGConsistent_EIP8333(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
+	f := service.cfg.ForkChoiceStore
+	fc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	// Boundary block of epoch 1 at slot 31, first block of epoch 1 at slot 32.
+	state, rBoundary, err := prepareForkchoiceState(ctx, 31, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, fc, fc)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, rBoundary))
+	state, rEpochStart, err := prepareForkchoiceState(ctx, 32, [32]byte{'b'}, rBoundary.Root(), params.BeaconConfig().ZeroHash, fc, fc)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, rEpochStart))
+
+	a := util.NewAttestation()
+	a.Data.Target.Epoch = 1
+	epochStartRoot := rEpochStart.Root()
+	a.Data.BeaconBlockRoot = epochStartRoot[:]
+
+	// The epoch's first block is no longer the checkpoint for its own epoch.
+	a.Data.Target.Root = epochStartRoot[:]
+	require.ErrorContains(t, "FFG and LMD votes are not consistent", service.VerifyLmdFfgConsistency(t.Context(), a))
+
+	// The boundary block is.
+	boundaryRoot := rBoundary.Root()
+	a.Data.Target.Root = boundaryRoot[:]
+	require.NoError(t, service.VerifyLmdFfgConsistency(t.Context(), a))
+}

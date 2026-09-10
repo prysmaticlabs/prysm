@@ -5,6 +5,7 @@ import (
 
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -102,6 +103,65 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			require.NoError(t, s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: tt.finalizedEpoch}))
 			cp := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 			err = s.wsVerifier.VerifyWeakSubjectivity(t.Context(), cp.Epoch)
+			if tt.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestService_VerifyWeakSubjectivityRoot_EIP8333(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 2
+	params.OverrideBeaconConfig(cfg)
+
+	cpEpoch := primitives.Epoch(56015)
+	epochStart, err := slots.EpochStart(cpEpoch)
+	require.NoError(t, err)
+
+	// The checkpoint root names the boundary block, the last block before the checkpoint epoch.
+	boundaryBlock := util.NewBeaconBlock()
+	boundaryBlock.Block.Slot = epochStart - 1
+	boundaryRoot, err := boundaryBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	childBlock := util.NewBeaconBlock()
+	childBlock.Block.Slot = epochStart
+	childBlock.Block.ParentRoot = boundaryRoot[:]
+	childRoot, err := childBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		checkpt *ethpb.Checkpoint
+		wantErr error
+	}{
+		{
+			name:    "boundary block passes",
+			checkpt: &ethpb.Checkpoint{Root: boundaryRoot[:], Epoch: cpEpoch},
+		},
+		{
+			name:    "epoch start block fails the shifted window",
+			checkpt: &ethpb.Checkpoint{Root: childRoot[:], Epoch: cpEpoch},
+			wantErr: errWSBlockNotFoundInEpoch,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := testServiceWithDB(t)
+			beaconDB := s.cfg.BeaconDB
+			util.SaveBlock(t, t.Context(), beaconDB, boundaryBlock)
+			util.SaveBlock(t, t.Context(), beaconDB, childBlock)
+			require.NoError(t, beaconDB.SaveGenesisBlockRoot(t.Context(), bytesutil.ToBytes32(boundaryBlock.Block.ParentRoot)))
+			require.NoError(t, beaconDB.SaveFinalizedCheckpoint(t.Context(), &ethpb.Checkpoint{Root: childRoot[:], Epoch: cpEpoch + 1}))
+			wv, err := NewWeakSubjectivityVerifier(tt.checkpt, beaconDB)
+			require.NoError(t, err)
+			s.cfg.WeakSubjectivityCheckpt = tt.checkpt
+			s.wsVerifier = wv
+			err = s.wsVerifier.VerifyWeakSubjectivity(t.Context(), cpEpoch+1)
 			if tt.wantErr == nil {
 				require.NoError(t, err)
 			} else {

@@ -378,9 +378,9 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, signed inte
 	}
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
-	// Fork choice only matters from last finalized slot.
+	// Fork choice only matters from the last finalized checkpoint slot.
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-	fSlot, err := slots.EpochStart(finalized.Epoch)
+	fSlot, err := slots.CheckpointSlot(finalized.Epoch)
 	if err != nil {
 		return err
 	}
