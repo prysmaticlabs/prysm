@@ -87,6 +87,7 @@ func TestGetSpec(t *testing.T) {
 	config.FuluForkEpoch = 109
 	config.GloasForkVersion = []byte("GloasForkVersion")
 	config.GloasForkEpoch = 110
+	config.HezeForkEpoch = 115
 	config.MinBuilderWithdrawabilityDelay = 111
 	config.MaxBuildersPerWithdrawalsSweep = 112
 	config.MaxBuilderDepositRequestsPerPayload = 113
@@ -245,7 +246,7 @@ func TestGetSpec(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	data, ok := resp.Data.(map[string]any)
 	require.Equal(t, true, ok)
-	assert.Equal(t, 218, len(data))
+	assert.Equal(t, 219, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -329,6 +330,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "0x"+hex.EncodeToString([]byte("GloasForkVersion")), v)
 			case "GLOAS_FORK_EPOCH":
 				assert.Equal(t, "110", v)
+			case "HEZE_FORK_EPOCH":
+				assert.Equal(t, "115", v)
 			case "MIN_BUILDER_WITHDRAWABILITY_DELAY":
 				assert.Equal(t, "111", v)
 			case "MAX_BUILDERS_PER_WITHDRAWALS_SWEEP":

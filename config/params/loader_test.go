@@ -41,7 +41,6 @@ var placeholderFields = []string{
 	"EPOCHS_PER_SHUFFLING_PHASE",
 	"FIELD_ELEMENTS_PER_CELL",     // Configured as a constant in config/fieldparams/mainnet.go
 	"FIELD_ELEMENTS_PER_EXT_BLOB", // Configured in proto/ssz_proto_library.bzl
-	"HEZE_FORK_EPOCH",
 	"HEZE_FORK_VERSION",
 	"INCLUSION_LIST_COMMITTEE_SIZE",
 	"INCLUSION_LIST_DUE_BPS",
@@ -170,6 +169,7 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.ElectraForkEpoch, actual.ElectraForkEpoch, "%s: ElectraForkEpoch", name)
 	assert.Equal(t, expected.FuluForkEpoch, actual.FuluForkEpoch, "%s: FuluForkEpoch", name)
 	assert.Equal(t, expected.GloasForkEpoch, actual.GloasForkEpoch, "%s: GloasForkEpoch", name)
+	assert.Equal(t, expected.HezeForkEpoch, actual.HezeForkEpoch, "%s: HezeForkEpoch", name)
 	assert.Equal(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch, "%s: SqrRootSlotsPerEpoch", name)
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)

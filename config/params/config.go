@@ -209,6 +209,7 @@ type BeaconChainConfig struct {
 	FuluForkEpoch        primitives.Epoch `yaml:"FULU_FORK_EPOCH" spec:"true"`        // FuluForkEpoch is used to represent the assigned fork epoch for fulu.
 	GloasForkVersion     []byte           `yaml:"GLOAS_FORK_VERSION" spec:"true"`     // GloasForkVersion is used to represent the fork version for gloas.
 	GloasForkEpoch       primitives.Epoch `yaml:"GLOAS_FORK_EPOCH" spec:"true"`       // GloasForkEpoch is used to represent the assigned fork epoch for gloas.
+	HezeForkEpoch        primitives.Epoch `yaml:"HEZE_FORK_EPOCH" spec:"true"`        // HezeForkEpoch is used to represent the assigned fork epoch for heze; checkpoints anchor to the epoch boundary block from it (EIP-8333).
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]primitives.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string           // Human-readable names of fork versions.

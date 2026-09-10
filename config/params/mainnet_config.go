@@ -34,6 +34,8 @@ const (
 	mainnetFuluForkEpoch = 411392 // December 3, 2025, 09:49:11pm UTC
 	// Gloas Fork Epoch for mainnet config
 	mainnetGloasForkEpoch = math.MaxUint64
+	// Heze Fork Epoch for mainnet config
+	mainnetHezeForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -252,6 +254,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	FuluForkEpoch:        mainnetFuluForkEpoch,
 	GloasForkVersion:     []byte{7, 0, 0, 0},
 	GloasForkEpoch:       mainnetGloasForkEpoch,
+	HezeForkEpoch:        mainnetHezeForkEpoch,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
