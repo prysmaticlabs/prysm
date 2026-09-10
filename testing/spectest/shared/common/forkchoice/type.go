@@ -17,17 +17,18 @@ type Step struct {
 }
 
 type Check struct {
-	Time                        *int            `json:"time"`
-	GenesisTime                 int             `json:"genesis_time"`
-	ProposerBoostRoot           *string         `json:"proposer_boost_root"`
-	Head                        *SlotRoot       `json:"head"`
-	JustifiedCheckPoint         *EpochRoot      `json:"justified_checkpoint"`
-	BestJustifiedCheckPoint     *EpochRoot      `json:"best_justified_checkpoint"`
-	FinalizedCheckPoint         *EpochRoot      `json:"finalized_checkpoint"`
-	GetProposerHead             *string         `json:"get_proposer_head"`
-	ShouldOverrideFCU           *ShouldOverride `json:"should_override_forkchoice_update"`
-	PayloadTimelinessVote       *PTCVotes       `json:"payload_timeliness_vote"`
-	PayloadDataAvailabilityVote *PTCVotes       `json:"payload_data_availability_vote"`
+	Time                         *int            `json:"time"`
+	GenesisTime                  int             `json:"genesis_time"`
+	ProposerBoostRoot            *string         `json:"proposer_boost_root"`
+	Head                         *SlotRoot       `json:"head"`
+	JustifiedCheckPoint          *EpochRoot      `json:"justified_checkpoint"`
+	BestJustifiedCheckPoint      *EpochRoot      `json:"best_justified_checkpoint"`
+	FinalizedCheckPoint          *EpochRoot      `json:"finalized_checkpoint"`
+	GetProposerHead              *string         `json:"get_proposer_head"`
+	ShouldOverrideFCU            *ShouldOverride `json:"should_override_forkchoice_update"`
+	PayloadTimelinessVote        *PTCVotes       `json:"payload_timeliness_vote"`
+	PayloadDataAvailabilityVote  *PTCVotes       `json:"payload_data_availability_vote"`
+	ViableForHeadRootsAndWeights []*RootWeight   `json:"viable_for_head_roots_and_weights"`
 
 	// Fast confirmation rule fields
 	ConfirmedRoot                             *string    `json:"confirmed_root"`
@@ -52,6 +53,13 @@ type SlotRoot struct {
 	Slot          int    `json:"slot"`
 	Root          string `json:"root"`
 	PayloadStatus *int   `json:"payload_status"` // Gloas: 0 empty, 1 full.
+}
+
+// RootWeight is a leaf of the filtered block tree and its weight; PayloadStatus is set from Gloas on.
+type RootWeight struct {
+	Root          string `json:"root"`
+	Weight        uint64 `json:"weight"`
+	PayloadStatus *int   `json:"payload_status"`
 }
 
 type EpochRoot struct {

@@ -34,6 +34,7 @@ const (
 	ConsensusSpecTestsMinimal = "consensus_spec_tests_minimal"
 	ConsensusSpecTestsMainnet = "consensus_spec_tests_mainnet"
 	ConsensusSpec             = "consensus_spec"
+	ConsensusSpecComptests    = "consensus_spec_comptests"
 	CryptographySpecTests     = "cryptography_spec_tests"
 	Mainnet                   = "mainnet"
 	HoleskyTestnet            = "holesky_testnet"
@@ -68,6 +69,8 @@ func buildManifest() []archive {
 		{ConsensusSpecTestsMinimal, specRel + "/minimal.tar.gz", specTestHash("minimal"), ".", 0, ""},
 		{ConsensusSpecTestsMainnet, specRel + "/mainnet.tar.gz", specTestHash("mainnet"), ".", 0, ""},
 		{ConsensusSpec, "https://github.com/ethereum/consensus-specs/archive/refs/tags/" + consensusSpecVersion() + ".tar.gz", archiveHash(workspaceContent(), workspaceFile, ConsensusSpec), "external/consensus_spec", 1, ""},
+		// The compliance vectors also unpack under tests/minimal, so keep them out of minimal.tar.gz's tree.
+		{ConsensusSpecComptests, specRel + "/comptests.tar.gz", archiveHash(workspaceContent(), workspaceFile, ConsensusSpecComptests), "external/consensus_spec_comptests", 0, "tests/minimal/*"},
 		{Mainnet, archiveURL(workspaceContent(), workspaceFile, Mainnet), archiveHash(workspaceContent(), workspaceFile, Mainnet), "external/mainnet", 1, ""},
 		{HoleskyTestnet, archiveURL(workspaceContent(), workspaceFile, HoleskyTestnet), archiveHash(workspaceContent(), workspaceFile, HoleskyTestnet), "external/holesky_testnet", 1, ""},
 		{SepoliaTestnet, archiveURL(workspaceContent(), workspaceFile, SepoliaTestnet), archiveHash(workspaceContent(), workspaceFile, SepoliaTestnet), "external/sepolia_testnet", 1, ""},

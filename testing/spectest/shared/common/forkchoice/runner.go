@@ -15,6 +15,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/build/externaldata"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
@@ -42,29 +43,38 @@ func init() {
 
 // Run executes "forkchoice"  and "sync" test.
 func Run(t *testing.T, config string, fork int) {
-	runTest(t, config, fork, "fork_choice", false)
+	runTest(t, "tests", config, fork, "fork_choice", false)
 	if fork >= version.Bellatrix && fork < version.Gloas {
-		runTest(t, config, fork, "sync", false)
+		runTest(t, "tests", config, fork, "sync", false)
 	}
+}
+
+// RunCompliance executes the fork-choice compliance suites (consensus-specs compliance_runners/fork_choice).
+// Opt-in: ~1500 cases per fork and known Prysm deviations, so it is not part of the default spectest pass.
+func RunCompliance(t *testing.T, config string, fork int) {
+	if os.Getenv("SPEC_TEST_FC_COMPLIANCE") == "" {
+		t.Skip("set SPEC_TEST_FC_COMPLIANCE=1 to run the fork-choice compliance suites")
+	}
+	runTest(t, path.Join("external", externaldata.ConsensusSpecComptests, "tests"), config, fork, "fork_choice_compliance", false)
 }
 
 // RunFastConfirmation executes fast confirmation rule spec tests.
 func RunFastConfirmation(t *testing.T, config string, fork int) {
-	runTest(t, config, fork, "fast_confirmation", true)
+	runTest(t, "tests", config, fork, "fast_confirmation", true)
 }
 
-func runTest(t *testing.T, config string, fork int, basePath string, fcr bool) { // nolint:gocognit
+func runTest(t *testing.T, root, config string, fork int, basePath string, fcr bool) { // nolint:gocognit
 	require.NoError(t, utils.SetConfig(t, config))
 	cfg := params.BeaconConfig()
 	params.SetGenesisFork(t, cfg, fork)
-	testFolders, _ := utils.TestFolders(t, config, version.String(fork), basePath)
+	testFolders, _ := utils.TestFoldersIn(t, root, config, version.String(fork), basePath)
 	if len(testFolders) == 0 {
 		t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), basePath)
 	}
 
 	for _, folder := range testFolders {
 		folderPath := path.Join(basePath, folder.Name(), "pyspec_tests")
-		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
+		testFolders, testsFolderPath := utils.TestFoldersIn(t, root, config, version.String(fork), folderPath)
 		if len(testFolders) == 0 {
 			t.Fatalf("No test folders found for %s/%s/%s", config, version.String(fork), folderPath)
 		}
@@ -151,7 +161,7 @@ func runTest(t *testing.T, config string, fork int, basePath string, fcr bool) {
 							builder.ValidBlock(t, beaconBlock)
 						}
 					}
-					runAttesterSlashingStep(t, step, folder, testsFolderPath, builder)
+					runAttesterSlashingStep(t, step, fork, folder, testsFolderPath, builder)
 					runAttestationStep(t, step, fork, folder, testsFolderPath, builder)
 					if step.PayloadStatus != nil {
 						require.NoError(t, builder.SetPayloadStatus(step.PayloadStatus))
@@ -166,7 +176,7 @@ func runTest(t *testing.T, config string, fork int, basePath string, fcr bool) {
 	}
 }
 
-func runAttesterSlashingStep(t *testing.T, step Step, folder os.DirEntry, testsFolderPath string, builder *Builder) {
+func runAttesterSlashingStep(t *testing.T, step Step, fork int, folder os.DirEntry, testsFolderPath string, builder *Builder) {
 	if step.AttesterSlashing == nil {
 		return
 	}
@@ -174,7 +184,10 @@ func runAttesterSlashingStep(t *testing.T, step Step, folder os.DirEntry, testsF
 	require.NoError(t, err)
 	slashingSSZ, err := snappy.Decode(nil /* dst */, slashingFile)
 	require.NoError(t, err)
-	slashing := &ethpb.AttesterSlashing{}
+	var slashing ethpb.AttSlashing = &ethpb.AttesterSlashing{}
+	if fork >= version.Electra {
+		slashing = &ethpb.AttesterSlashingElectra{}
+	}
 	require.NoError(t, slashing.UnmarshalSSZ(slashingSSZ), "Failed to unmarshal")
 	builder.AttesterSlashing(slashing)
 }
@@ -194,7 +207,7 @@ func runAttestationStep(t *testing.T, step Step, fork int, folder os.DirEntry, t
 		att = &ethpb.AttestationElectra{}
 	}
 	require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
-	builder.Attestation(t, att)
+	builder.Attestation(t, att, step.Valid == nil || *step.Valid)
 }
 
 func runExecutionPayloadStep(t *testing.T, step Step, folder os.DirEntry, testsFolderPath string, builder *Builder) {

@@ -296,6 +296,23 @@ consensus_spec_tests(
     version = consensus_spec_version,
 )
 
+# Fork-choice compliance vectors (consensus-specs tests/generators/compliance_runners/fork_choice), released with the spec tests.
+http_archive(
+    name = "consensus_spec_comptests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "tests/minimal/**/*.yaml",
+        "tests/minimal/**/*.ssz_snappy",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    integrity = "sha256-gD8DpAcZ26YgIr4LzpK32j6K5uDosNxfYnw+meF3L/k=",
+    url = "https://github.com/ethereum/consensus-specs/releases/download/%s/comptests.tar.gz" % consensus_spec_version,
+)
+
 http_archive(
     name = "consensus_spec",
     build_file_content = """

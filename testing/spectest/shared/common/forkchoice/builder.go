@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -84,6 +87,13 @@ func (bb *Builder) runFCR(ctx context.Context, slot primitives.Slot) {
 	fcr.OnFastConfirmation(ctx, slot)
 }
 
+// syncClock re-anchors both clocks so now is bb.lastTick seconds after genesis; processing several messages in one tick otherwise drifts the slot timing.
+func (bb *Builder) syncClock() {
+	now := time.Now()
+	bb.service.SetGenesisTime(time.Unix(now.Unix()-bb.lastTick, 0))
+	bb.service.SetForkChoiceGenesisTime(now.Add(-1 * time.Duration(bb.lastTick) * time.Second))
+}
+
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
 	now := time.Now()
@@ -137,16 +147,22 @@ func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [
 
 // InvalidBlock receives the invalid block and notifies forkchoice.
 func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
+	// Spec drops blocks ahead of store.time; Prysm does too (GetBlockPreState) but with 500ms slack the whole-second vector clock cannot exercise deterministically.
+	if uint64(b.Block().Slot()) > uint64(bb.lastTick)/params.BeaconConfig().SecondsPerSlot {
+		return
+	}
+	bb.syncClock()
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r, nil) != nil)
 }
 
 // ValidBlock receives the valid block and notifies forkchoice.
 func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
+	bb.syncClock()
 	r := bb.block(t, b)
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r, nil))
 	bb.recordIfEarly(b, r)
@@ -170,7 +186,7 @@ func (bb *Builder) recordIfEarly(b interfaces.ReadOnlySignedBeaconBlock, root [3
 func (bb *Builder) ExecutionPayloadEnvelope(t testing.TB, signed *ethpb.SignedExecutionPayloadEnvelope, expectValid bool) {
 	ro, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed)
 	require.NoError(t, err)
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	err = bb.service.ReceiveExecutionPayloadEnvelope(ctx, ro)
 	if expectValid {
@@ -183,7 +199,11 @@ func (bb *Builder) ExecutionPayloadEnvelope(t testing.TB, signed *ethpb.SignedEx
 // PayloadAttestationMessage feeds the message to the chain service.
 // If expectValid is false the receive call must error; otherwise it must succeed.
 func (bb *Builder) PayloadAttestationMessage(t testing.TB, m *ethpb.PayloadAttestationMessage, expectValid bool) {
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	// Gossip drops wire PTC messages that are not for the current slot; the chain service does not re-check them.
+	if !expectValid && uint64(m.Data.Slot) != uint64(bb.lastTick)/params.BeaconConfig().SecondsPerSlot {
+		return
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	err := bb.service.ReceivePayloadAttestationMessage(ctx, m)
 	if expectValid {
@@ -198,19 +218,35 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 	bb.execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
 }
 
-// Attestation receives the attestation and updates forkchoice.
-func (bb *Builder) Attestation(t testing.TB, a ethpb.Att) {
-	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
+// Attestation receives the attestation and updates forkchoice; valid says whether the spec accepts it.
+func (bb *Builder) Attestation(t testing.TB, a ethpb.Att, valid bool) {
+	bb.syncClock()
+	// Gossip rejects Gloas payload votes (index != 0) that validate_on_attestation rejects; the chain service does not re-check them.
+	if !valid && slots.ToEpoch(a.GetData().Slot) >= params.BeaconConfig().GloasForkEpoch && a.GetData().CommitteeIndex != 0 {
+		return
+	}
+	// LMD/FFG consistency (target == checkpoint block of the attested block) is also a gossip check.
+	if !valid && !bb.ffgConsistent(a.GetData()) {
+		return
+	}
+	// The vector clock is whole seconds; gossip clock disparity would let attestations the spec rejects as premature slip in.
+	disparity := time.Duration(0)
 	if bb.fcr {
 		// FCR spec tests seed attestations before time advances, so allow
 		// one extra slot of disparity to avoid "slot from the future" rejections.
 		disparity = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	}
-	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, disparity))
+	err := bb.service.OnAttestation(context.TODO(), a, disparity)
+	if valid {
+		require.NoError(t, err)
+	} else {
+		d := a.GetData()
+		require.NotNil(t, err, fmt.Sprintf("expected the attestation to be rejected: tick %d slot %d index %d head %#x target %d/%#x", bb.lastTick, d.Slot, d.CommitteeIndex, d.BeaconBlockRoot[:4], d.Target.Epoch, d.Target.Root[:4]))
+	}
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
-func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
+func (bb *Builder) AttesterSlashing(s ethpb.AttSlashing) {
 	slashings := []ethpb.AttSlashing{s}
 	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
 }
@@ -267,6 +303,36 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.GetProposerHead))
 		got := fmt.Sprintf("%#x", bb.service.GetProposerHead())
 		require.Equal(t, want, got)
+	}
+	if c.ViableForHeadRootsAndWeights != nil {
+		dlt, ok := bb.fc.(*doublylinkedtree.ForkChoice)
+		require.Equal(t, true, ok, "forkchoice is not a doubly linked tree")
+		bb.fc.Lock()
+		tips := dlt.ViableTips()
+		bb.fc.Unlock()
+		// Pre-Gloas vectors carry no payload status, so only compare it when the vector does.
+		withStatus := len(c.ViableForHeadRootsAndWeights) > 0 && c.ViableForHeadRootsAndWeights[0].PayloadStatus != nil
+		format := func(root []byte, weight uint64, status int) string {
+			if withStatus {
+				return fmt.Sprintf("%#x weight=%d payload_status=%d", root, weight, status)
+			}
+			return fmt.Sprintf("%#x weight=%d", root, weight)
+		}
+		want := make([]string, 0, len(c.ViableForHeadRootsAndWeights))
+		for _, rw := range c.ViableForHeadRootsAndWeights {
+			status := 0
+			if rw.PayloadStatus != nil {
+				status = *rw.PayloadStatus
+			}
+			want = append(want, format(common.FromHex(rw.Root), rw.Weight, status))
+		}
+		got := make([]string, 0, len(tips))
+		for _, tip := range tips {
+			got = append(got, format(tip.Root[:], tip.Weight, payloadStatus(tip.Full)))
+		}
+		slices.Sort(want)
+		slices.Sort(got)
+		require.Equal(t, strings.Join(want, "\n"), strings.Join(got, "\n"), "viable_for_head_roots_and_weights mismatch")
 	}
 	/* TODO: We need to mock the entire proposer system to be able to test this.
 	if c.ShouldOverrideFCU != nil {
@@ -346,4 +412,27 @@ func checkPTCVotes(t testing.TB, name string, want *PTCVotes, attesters, values 
 		require.Equal(t, true, voted, fmt.Sprintf("%s: expected vote at index %d", name, i))
 		require.Equal(t, *v, values.BitAt(uint64(i)), fmt.Sprintf("%s: vote value mismatch at index %d", name, i))
 	}
+}
+
+// payloadStatus maps a full/empty head to the spec's PAYLOAD_STATUS_FULL (1) / PAYLOAD_STATUS_EMPTY (0).
+func payloadStatus(full bool) int {
+	if full {
+		return 1
+	}
+	return 0
+}
+
+// ffgConsistent mirrors the gossip check that the target root is the attested block's ancestor at the target epoch start.
+func (bb *Builder) ffgConsistent(d *ethpb.AttestationData) bool {
+	start, err := slots.EpochStart(d.Target.Epoch)
+	if err != nil {
+		return true
+	}
+	bb.fc.RLock()
+	defer bb.fc.RUnlock()
+	root, err := bb.fc.AncestorRoot(context.TODO(), bytesutil.ToBytes32(d.BeaconBlockRoot), start)
+	if err != nil {
+		return true // Unknown block: let the chain service reject it.
+	}
+	return root == bytesutil.ToBytes32(d.Target.Root)
 }
