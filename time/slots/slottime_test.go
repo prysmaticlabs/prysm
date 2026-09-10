@@ -756,3 +756,52 @@ func TestMaxEpoch(t *testing.T) {
 	_, err = EpochStart(maxEpoch)
 	require.NoError(t, err)
 }
+
+func TestCheckpointSlot(t *testing.T) {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	overrideForkEpoch := func(t *testing.T, epoch primitives.Epoch) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.HezeForkEpoch = epoch
+		params.OverrideBeaconConfig(cfg)
+	}
+	t.Run("not activated", func(t *testing.T) {
+		overrideForkEpoch(t, params.BeaconConfig().FarFutureEpoch)
+		for _, epoch := range []primitives.Epoch{0, 1, 5, 1 << 30} {
+			cpSlot, err := CheckpointSlot(epoch)
+			require.NoError(t, err)
+			es, err := EpochStart(epoch)
+			require.NoError(t, err)
+			assert.Equal(t, es, cpSlot, "epoch %d", epoch)
+		}
+	})
+	t.Run("activated at epoch 3", func(t *testing.T) {
+		overrideForkEpoch(t, 3)
+		cpSlot, err := CheckpointSlot(0)
+		require.NoError(t, err)
+		assert.Equal(t, primitives.Slot(0), cpSlot, "genesis epoch anchors at the genesis slot")
+		cpSlot, err = CheckpointSlot(2)
+		require.NoError(t, err)
+		assert.Equal(t, 2*slotsPerEpoch, cpSlot, "pre-activation epochs keep the previous anchoring")
+		cpSlot, err = CheckpointSlot(3)
+		require.NoError(t, err)
+		assert.Equal(t, 3*slotsPerEpoch-1, cpSlot, "activation epoch anchors at the boundary slot")
+		cpSlot, err = CheckpointSlot(4)
+		require.NoError(t, err)
+		assert.Equal(t, 4*slotsPerEpoch-1, cpSlot)
+	})
+	t.Run("activated at genesis", func(t *testing.T) {
+		overrideForkEpoch(t, 0)
+		cpSlot, err := CheckpointSlot(0)
+		require.NoError(t, err)
+		assert.Equal(t, primitives.Slot(0), cpSlot, "genesis epoch anchors at the genesis slot")
+		cpSlot, err = CheckpointSlot(1)
+		require.NoError(t, err)
+		assert.Equal(t, slotsPerEpoch-1, cpSlot)
+	})
+	t.Run("overflow", func(t *testing.T) {
+		overrideForkEpoch(t, 3)
+		_, err := CheckpointSlot(math.MaxUint64)
+		require.ErrorContains(t, "overflow", err)
+	})
+}

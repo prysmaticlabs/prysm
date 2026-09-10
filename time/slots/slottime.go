@@ -111,6 +111,31 @@ func EpochStart(epoch primitives.Epoch) (primitives.Slot, error) {
 	return slot, nil
 }
 
+// CheckpointSlot returns the slot anchoring the checkpoint for the given epoch.
+//
+// Spec pseudocode definition:
+//
+//	def get_checkpoint_slot(epoch: Epoch) -> Slot:
+//	  """
+//	  Return the slot anchoring the checkpoint for ``epoch``
+//	  """
+//	  if epoch == GENESIS_EPOCH:
+//	      return GENESIS_SLOT
+//	  if epoch < HEZE_FORK_EPOCH:
+//	      return compute_start_slot_at_epoch(epoch)
+//	  return Slot(compute_start_slot_at_epoch(epoch) - 1)
+func CheckpointSlot(epoch primitives.Epoch) (primitives.Slot, error) {
+	slot, err := EpochStart(epoch)
+	if err != nil {
+		return slot, err
+	}
+	cfg := params.BeaconConfig()
+	if epoch == cfg.GenesisEpoch || epoch < cfg.HezeForkEpoch {
+		return slot, nil
+	}
+	return slot - 1, nil
+}
+
 // UnsafeEpochStart is a version of EpochStart that panics if there is an overflow. It can be safely used by code
 // that first guarantees epoch <= MaxSafeEpoch.
 func UnsafeEpochStart(epoch primitives.Epoch) primitives.Slot {
