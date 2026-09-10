@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/das"
-	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/pkg/errors"
@@ -117,8 +116,13 @@ func TestSortBatchDesc(t *testing.T) {
 // (resetToRetryColumns -> transitionToNext) must rebuild the batch from batchSequenced
 // rather than dereference the nil columnSync.
 func TestRetryAfterSetupFailure(t *testing.T) {
-	b := batch{state: batchSequenced, blocks: verifiedROBlocks{blocks.ROBlock{}}}
-	b = b.withRetryableError(errors.New("newColumnSync failed"))
+	expErr := errors.New("newColumnSync failed")
+	b := batch{state: batchSequenced, blocks: verifiedROBlocks{}}.withRetryableError(expErr)
+	b = resetToRetryColumns(b, das.CurrentNeeds{})
+	require.Equal(t, batchSequenced, b.state)
+
+	// Repeat for a nil blocks value
+	b = batch{state: batchSequenced, blocks: nil}.withRetryableError(expErr)
 	b = resetToRetryColumns(b, das.CurrentNeeds{})
 	require.Equal(t, batchSequenced, b.state)
 }
