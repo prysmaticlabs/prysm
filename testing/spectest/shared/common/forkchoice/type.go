@@ -26,7 +26,6 @@ type Check struct {
 	FinalizedCheckPoint         *EpochRoot      `json:"finalized_checkpoint"`
 	GetProposerHead             *string         `json:"get_proposer_head"`
 	ShouldOverrideFCU           *ShouldOverride `json:"should_override_forkchoice_update"`
-	HeadPayloadStatus           *int            `json:"head_payload_status"`
 	PayloadTimelinessVote       *PTCVotes       `json:"payload_timeliness_vote"`
 	PayloadDataAvailabilityVote *PTCVotes       `json:"payload_data_availability_vote"`
 
@@ -50,8 +49,9 @@ type PTCVotes struct {
 }
 
 type SlotRoot struct {
-	Slot int    `json:"slot"`
-	Root string `json:"root"`
+	Slot          int    `json:"slot"`
+	Root          string `json:"root"`
+	PayloadStatus *int   `json:"payload_status"` // Gloas: 0 empty, 1 full.
 }
 
 type EpochRoot struct {
