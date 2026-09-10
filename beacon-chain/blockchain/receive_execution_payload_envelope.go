@@ -38,10 +38,14 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, signed in
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveExecutionPayloadEnvelope")
 	defer span.End()
 	start := time.Now()
+
+	var consensusInvalid bool
 	defer func() {
 		beaconExecutionPayloadEnvelopeProcessingDurationSeconds.Observe(time.Since(start).Seconds())
 		if err != nil {
-			beaconExecutionPayloadEnvelopeInvalidTotal.Inc()
+			if consensusInvalid || IsInvalidBlock(err) {
+				beaconExecutionPayloadEnvelopeInvalidTotal.Inc()
+			}
 			return
 		}
 		beaconExecutionPayloadEnvelopeValidTotal.Inc()
@@ -66,44 +70,96 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, signed in
 	}
 
 	var isValidPayload bool
-	g, gCtx := errgroup.WithContext(ctx)
 
-	g.Go(func() error {
-		if err := gloas.VerifyExecutionPayloadEnvelope(gCtx, blockState, signed); err != nil {
+	// EL Validation runs separately from consensus validation in different errgroup.
+	elCtx, cancelEL := context.WithCancel(ctx)
+	defer cancelEL()
+
+	var elGroup errgroup.Group
+	elGroup.Go(func() error {
+		var elErr error
+		isValidPayload, elErr = s.validateExecutionOnEnvelope(elCtx, blockState, envelope)
+		return elErr
+	})
+
+	// Check data availability with consensus verification.
+	availGroup, availCtx := errgroup.WithContext(ctx)
+	availGroup.Go(func() error {
+		if err := gloas.VerifyExecutionPayloadEnvelope(availCtx, blockState, signed); err != nil {
+			consensusInvalid = true
 			return err
 		}
 		s.recordPayloadArrival(root, envelope.Slot(), start)
 		return nil
 	})
-
-	g.Go(func() error {
-		var elErr error
-		isValidPayload, elErr = s.validateExecutionOnEnvelope(gCtx, blockState, envelope)
-		return elErr
-	})
-
-	if err := g.Wait(); err != nil {
-		return err
-	}
-
-	// DA check: verify data columns are available before inserting payload.
-	bid, err := blockState.LatestExecutionPayloadBid()
-	if err != nil {
-		return errors.Wrap(err, "could not get latest execution payload bid")
-	}
-	if len(bid.BlobKzgCommitments()) > 0 {
-		if err := s.areDataColumnsAvailable(ctx, root, envelope.Slot()); err != nil {
+	availGroup.Go(func() error {
+		bid, err := blockState.LatestExecutionPayloadBid()
+		if err != nil {
+			return errors.Wrap(err, "could not get latest execution payload bid")
+		}
+		if bid == nil || len(bid.BlobKzgCommitments()) == 0 {
+			return nil
+		}
+		// Outside the gossip window, check availability synchronously rather than blocking; fail if missing.
+		if !s.canWaitForGossipSidecars(envelope.Slot()) {
+			available, err := s.dataColumnsAvailableNow(availCtx, root, envelope.Slot())
+			if err != nil {
+				return errors.Wrap(err, "data availability check failed for payload envelope")
+			}
+			if !available {
+				return errors.Errorf("data columns unavailable for payload envelope slot %d root %#x", envelope.Slot(), root)
+			}
+			return nil
+		}
+		if err := s.areDataColumnsAvailable(availCtx, root, envelope.Slot()); err != nil {
 			return errors.Wrap(err, "data availability check failed for payload envelope")
 		}
-	}
-	if err := s.savePostPayload(ctx, signed); err != nil {
+		return nil
+	})
+
+	if err := availGroup.Wait(); err != nil {
+		cancelEL()
+		_ = elGroup.Wait()
 		return err
 	}
+
+	// Persist the envelope before announcing its availability so that consumers of the
+	// execution_payload_available event can immediately fetch it through the beacon API.
+	if err := s.savePostPayload(ctx, signed); err != nil {
+		cancelEL()
+		_ = elGroup.Wait()
+		return err
+	}
+
+	// execution_payload_available is emitted when an execution payload
+	// and all data are available for payload attestation
+	// without verifying the execution payload itself
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.ExecutionPayloadAvailable,
+		Data: &statefeed.ExecutionPayloadAvailableData{
+			Slot:      envelope.Slot(),
+			BlockRoot: root,
+		},
+	})
+
+	// Join EL validation group after firing availability event.
+	if err := elGroup.Wait(); err != nil {
+		if dErr := s.cfg.BeaconDB.DeleteExecutionPayloadEnvelope(ctx, root); dErr != nil {
+			log.WithError(dErr).WithField("blockRoot", fmt.Sprintf("%#x", root)).Error("Could not delete execution payload envelope after failed execution validation")
+		}
+		return err
+	}
+
 	if err := s.InsertPayload(envelope); err != nil {
 		return errors.Wrap(err, "could not insert payload into forkchoice")
 	}
 
 	if features.Get().IsZkvmEnabled() {
+		bid, err := blockState.LatestExecutionPayloadBid()
+		if err != nil {
+			return errors.Wrap(err, "could not get latest execution payload bid")
+		}
+
 		newPayloadRequestRoot, err := blocks.NewPayloadRequestRoot(envelope, bid.BlobKzgCommitments())
 		if err != nil {
 			return fmt.Errorf("new payload request root: %w", err)
@@ -124,21 +180,28 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, signed in
 		s.cfg.ForkChoiceStore.Unlock()
 	}
 
-	headRootSlice, err := s.HeadRoot(ctx)
-	if err != nil {
-		log.WithError(err).Error("Could not get head root")
-		return nil
-	}
-	headRoot := bytesutil.ToBytes32(headRootSlice)
-	if err := s.postPayloadTasks(ctx, envelope, blockState, root, headRoot); err != nil {
+	// A revealed payload clears any recorded failure for this builder.
+	s.cfg.BuilderCircuitBreaker.RecordSuccess(envelope.BuilderIndex())
+
+	if err := s.postPayloadTasks(ctx, envelope, blockState); err != nil {
 		return err
 	}
 
+	// execution_payload is emitted when an execution payload is successfully imported.
+	isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
+	if err != nil {
+		log.WithError(err).Error("Could not get optimistic status of block root")
+		isOptimistic = false
+	}
+
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.PayloadProcessed,
-		Data: &statefeed.PayloadProcessedData{
-			Slot:      envelope.Slot(),
-			BlockRoot: root,
+		Type: statefeed.ExecutionPayloadProcessed,
+		Data: &statefeed.ExecutionPayloadProcessedData{
+			Slot:         envelope.Slot(),
+			BuilderIndex: envelope.BuilderIndex(),
+			BlockHash:    envelope.BlockHash(),
+			BlockRoot:    root,
+			Optimistic:   isOptimistic,
 		},
 	})
 
@@ -153,39 +216,66 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, signed in
 		"blockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
 		"blockHash":  fmt.Sprintf("%#x", bytesutil.Trunc(execution.BlockHash())),
 		"parentHash": fmt.Sprintf("%#x", bytesutil.Trunc(execution.ParentHash())),
-	}).Info("Processed execution payload envelope")
+	}).Info("Synced execution payload envelope")
 	return nil
 }
 
-func (s *Service) postPayloadTasks(ctx context.Context, envelope interfaces.ROExecutionPayloadEnvelope, st state.BeaconState, root, headRoot [32]byte) error {
-	if headRoot != root {
+func (s *Service) setHeadFull(root [32]byte) interfaces.ReadOnlySignedBeaconBlock {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+	if s.head == nil || s.head.root != root {
 		return nil
 	}
+	s.head.full = true
+	return s.head.block
+}
+
+func (s *Service) postPayloadTasks(ctx context.Context, envelope interfaces.ROExecutionPayloadEnvelope, st state.BeaconState) error {
+	if !s.inRegularSync() {
+		return nil
+	}
+	root := envelope.BeaconBlockRoot()
+	if headRoot, _ := s.HeadRootAndFull(); headRoot != root {
+		return nil
+	}
+	proposingSlot := s.CurrentSlot() + 1
+	if buildFull, reason := s.shouldBuildOnFull(st, root, proposingSlot); !buildFull {
+		bh := envelope.BlockHash()
+		log.WithFields(logrus.Fields{
+			"blockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
+			"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(bh[:])),
+			"slot":      envelope.Slot(),
+			"reason":    reason,
+		}).Debug("Not building on payload")
+		return nil
+	}
+	headBlock := s.setHeadFull(root)
+	if headBlock == nil {
+		return nil
+	}
+	if err := s.notifyNewHeadV2Event(ctx, headBlock.Block().Slot(), headBlock.Block().StateRoot(), root, headBlock.Version(), true); err != nil {
+		log.WithError(err).Error("Could not notify event feed of head_v2 payload update")
+	}
+
 	payload, err := envelope.Execution()
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload from envelope")
 	}
 	blockHash := bytesutil.ToBytes32(payload.BlockHash())
-
-	if s.head != nil {
-		s.head.full = true
-	}
-
-	attr := s.getPayloadAttribute(ctx, st, envelope.Slot()+1, headRoot[:], true)
-	if s.inRegularSync() {
-		go func() {
-			pid, err := s.notifyForkchoiceUpdateGloas(s.ctx, blockHash, attr)
-			if err != nil {
-				log.WithError(err).Error("Could not notify forkchoice update")
-				return
-			}
-			if attr != nil && !attr.IsEmpty() && pid != nil {
-				var pId [8]byte
-				copy(pId[:], pid[:])
-				s.cfg.PayloadIDCache.Set(envelope.Slot()+1, root, pId)
-			}
-		}()
-	}
+	attr := s.getPayloadAttribute(ctx, st, proposingSlot, root[:], true)
+	go func() {
+		pid, err := s.notifyForkchoiceUpdateGloas(s.ctx, blockHash, attr)
+		if err != nil {
+			log.WithError(err).Error("Could not notify forkchoice update")
+			return
+		}
+		if !attr.IsEmpty() && pid != nil {
+			var pId [8]byte
+			copy(pId[:], pid[:])
+			s.cfg.PayloadIDCache.Set(proposingSlot, root, true, pId)
+			s.firePayloadAttributesEventForHead(root, proposingSlot, attr, blockHash[:])
+		}
+	}()
 	return nil
 }
 
@@ -215,14 +305,16 @@ func (s *Service) callNewPayload(
 	payload interfaces.ExecutionData,
 	versionedHashes []common.Hash,
 	parentRoot common.Hash,
-	requests *enginev1.ExecutionRequests,
+	requests *enginev1.ExecutionRequestsGloas,
 	slot primitives.Slot,
 ) (bool, error) {
 	_, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &parentRoot, requests)
 	if err == nil {
+		newPayloadValidNodeCount.Inc()
 		return true, nil
 	}
 	if errors.Is(err, execution.ErrAcceptedSyncingPayloadStatus) {
+		newPayloadOptimisticNodeCount.Inc()
 		log.WithFields(logrus.Fields{
 			"slot":             slot,
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
@@ -230,6 +322,7 @@ func (s *Service) callNewPayload(
 		return false, nil
 	}
 	if errors.Is(err, execution.ErrInvalidPayloadStatus) {
+		newPayloadInvalidNodeCount.Inc()
 		return false, invalidBlock{error: ErrInvalidPayload}
 	}
 	return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
@@ -267,10 +360,13 @@ func (s *Service) notifyNewEnvelope(ctx context.Context, st state.BeaconState, e
 	if err != nil {
 		return false, errors.Wrap(err, "could not get latest execution payload bid")
 	}
-	commitments := latestBid.BlobKzgCommitments()
-	versionedHashes := make([]common.Hash, len(commitments))
-	for i, c := range commitments {
-		versionedHashes[i] = primitives.ConvertKzgCommitmentToVersionedHash(c)
+	var versionedHashes []common.Hash
+	if latestBid != nil {
+		commitments := latestBid.BlobKzgCommitments()
+		versionedHashes = make([]common.Hash, len(commitments))
+		for i, c := range commitments {
+			versionedHashes[i] = primitives.ConvertKzgCommitmentToVersionedHash(c)
+		}
 	}
 	return s.callNewPayload(ctx, payload, versionedHashes, common.Hash(envelope.ParentBeaconBlockRoot()), envelope.ExecutionRequests(), envelope.Slot())
 }
@@ -320,6 +416,35 @@ func (s *Service) PayloadEarly(root [32]byte) (bool, bool) {
 	return s.payloadArrivals.isEarly(root)
 }
 
+// DataAvailable reports whether all blob data committed to by the block at root is available now.
+func (s *Service) DataAvailable(ctx context.Context, root [32]byte, slot primitives.Slot) (bool, error) {
+	available, err := s.dataColumnsAvailableNow(ctx, root, slot)
+	if err != nil {
+		return false, errors.Wrap(err, "data columns available now")
+	}
+	if available {
+		return true, nil
+	}
+
+	s.headLock.RLock()
+	var b interfaces.ReadOnlySignedBeaconBlock
+	if s.head != nil && s.head.root == root {
+		b = s.head.block
+	}
+	s.headLock.RUnlock()
+	if b == nil {
+		b, err = s.getBlock(ctx, root)
+		if err != nil {
+			return false, errors.Wrap(err, "could not get block")
+		}
+	}
+	sbid, err := b.Block().Body().SignedExecutionPayloadBid()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get signed execution payload bid from block")
+	}
+	return len(sbid.GetMessage().GetBlobKzgCommitments()) == 0, nil
+}
+
 // notifyForkchoiceUpdateGloas takes the block hash directly because Gloas
 // blocks don't carry an execution payload in the body.
 func (s *Service) notifyForkchoiceUpdateGloas(ctx context.Context, blockHash [32]byte, attributes payloadattribute.Attributer) (*enginev1.PayloadIDBytes, error) {
@@ -328,11 +453,11 @@ func (s *Service) notifyForkchoiceUpdateGloas(ctx context.Context, blockHash [32
 
 	s.cfg.ForkChoiceStore.RLock()
 	finalizedHash := s.cfg.ForkChoiceStore.FinalizedPayloadBlockHash()
-	justifiedHash := s.cfg.ForkChoiceStore.UnrealizedJustifiedPayloadBlockHash()
+	safeHash := s.safeBlockHash()
 	s.cfg.ForkChoiceStore.RUnlock()
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      blockHash[:],
-		SafeBlockHash:      justifiedHash[:],
+		SafeBlockHash:      safeHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
 	if attributes == nil {
@@ -360,7 +485,6 @@ func (s *Service) notifyForkchoiceUpdateGloas(ctx context.Context, blockHash [32
 			lastValidHash: bytesutil.ToBytes32(lastValidHash),
 		}
 	default:
-		log.WithError(err).Error(ErrUndefinedExecutionEngineError)
-		return nil, nil
+		return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
 }

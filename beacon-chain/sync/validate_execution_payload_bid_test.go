@@ -3,12 +3,14 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
 	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	dbtest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
 	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
@@ -19,10 +21,12 @@ import (
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/pkg/errors"
@@ -39,24 +43,56 @@ func TestValidateExecutionPayloadBidGossip_InvalidTopic(t *testing.T) {
 	require.Equal(t, pubsub.ValidationReject, result)
 }
 
-func TestValidateExecutionPayloadBidGossip_AlreadySeenBuilder(t *testing.T) {
+func TestValidateExecutionPayloadBidGossip_BlockHashEqualsParent(t *testing.T) {
+	ctx := context.Background()
+	s, _, signedBid := setupExecutionPayloadBidService(t)
+	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{})
+
+	signedBid.Message.BlockHash = signedBid.Message.ParentBlockHash
+	msg := executionPayloadBidToPubsub(t, s, s.cfg.p2p, signedBid)
+	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
+	require.ErrorContains(t, "bid block hash equals parent block hash", err)
+	require.Equal(t, pubsub.ValidationReject, result)
+
+	// The rejected bid must not be cached as seen.
+	require.Equal(t, false, s.hasSeenExecutionPayloadBid(executionPayloadBidTupleKey(mustBid(t, signedBid))))
+}
+
+func TestValidateExecutionPayloadBidGossip_AlreadySeenTuple(t *testing.T) {
 	ctx := context.Background()
 	s, msg, signedBid := setupExecutionPayloadBidService(t)
 	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{})
 
-	key := executionPayloadBidBuilderKey(signedBid.Message.Slot, signedBid.Message.BuilderIndex)
-	s.setSeenExecutionPayloadBidBuilder(signedBid.Message.Slot, key)
+	key := executionPayloadBidTupleKey(mustBid(t, signedBid))
+	s.setSeenExecutionPayloadBid(signedBid.Message.Slot, key)
 	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
 	require.NoError(t, err)
 	require.Equal(t, pubsub.ValidationIgnore, result)
+}
+
+func TestValidateExecutionPayloadBidGossip_SameBuilderDifferentParentAccepted(t *testing.T) {
+	ctx := context.Background()
+	s, msg, signedBid := setupExecutionPayloadBidService(t)
+	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{})
+
+	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, result)
+
+	other := proto.Clone(signedBid).(*ethpb.SignedExecutionPayloadBid)
+	other.Message.ParentBlockHash = bytesutil.PadTo([]byte{0x09}, 32)
+	msg = executionPayloadBidToPubsub(t, s, s.cfg.p2p, other)
+	result, err = s.validateExecutionPayloadBidGossip(ctx, "", msg)
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, result)
 }
 
 // Dedup must short-circuit before every later check; duplicates pay only the cache lookup.
 func TestValidateExecutionPayloadBidGossip_DedupShortCircuitsAllLaterChecks(t *testing.T) {
 	ctx := context.Background()
 	s, msg, signedBid := setupExecutionPayloadBidService(t)
-	key := executionPayloadBidBuilderKey(signedBid.Message.Slot, signedBid.Message.BuilderIndex)
-	s.setSeenExecutionPayloadBidBuilder(signedBid.Message.Slot, key)
+	key := executionPayloadBidTupleKey(mustBid(t, signedBid))
+	s.setSeenExecutionPayloadBid(signedBid.Message.Slot, key)
 	// Every subsequent verifier method would Reject/Ignore if it ran; the cache hit must skip them all.
 	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{
 		errCurrentOrNextSlot:    errors.New("slot"),
@@ -120,7 +156,7 @@ func TestValidateExecutionPayloadBidGossip_ErrorPathsWithMock(t *testing.T) {
 		{
 			name:      "fee recipient mismatch",
 			verifier:  mockExecutionPayloadBidVerifier{errFeeRecipientMismatch: errors.New("wrong fee recipient")},
-			result:    pubsub.ValidationReject,
+			result:    pubsub.ValidationIgnore,
 			wantError: true,
 		},
 		{
@@ -130,14 +166,38 @@ func TestValidateExecutionPayloadBidGossip_ErrorPathsWithMock(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "parent root unknown",
-			verifier:  mockExecutionPayloadBidVerifier{errParentBlockRootSeen: errors.New("unknown root")},
+			name:      "bid not compatible with head",
+			verifier:  mockExecutionPayloadBidVerifier{errBidCompatibleWithHead: errors.New("incompatible branch")},
 			result:    pubsub.ValidationIgnore,
 			wantError: true,
 		},
 		{
 			name:      "inactive builder",
 			verifier:  mockExecutionPayloadBidVerifier{errBuilderActive: errors.New("inactive builder")},
+			result:    pubsub.ValidationReject,
+			wantError: true,
+		},
+		{
+			name:      "builder wrong version",
+			verifier:  mockExecutionPayloadBidVerifier{errBuilderVersion: errors.New("not a payload builder")},
+			result:    pubsub.ValidationReject,
+			wantError: true,
+		},
+		{
+			name:      "too many blob commitments",
+			verifier:  mockExecutionPayloadBidVerifier{errBlobKzgCommitments: errors.New("too many commitments")},
+			result:    pubsub.ValidationReject,
+			wantError: true,
+		},
+		{
+			name:      "wrong prev randao",
+			verifier:  mockExecutionPayloadBidVerifier{errPrevRandao: errors.New("wrong prev randao")},
+			result:    pubsub.ValidationReject,
+			wantError: true,
+		},
+		{
+			name:      "slot not higher than parent",
+			verifier:  mockExecutionPayloadBidVerifier{errSlotHigherThanParent: errors.New("slot not higher than parent")},
 			result:    pubsub.ValidationReject,
 			wantError: true,
 		},
@@ -186,11 +246,10 @@ func TestValidateExecutionPayloadBidGossip_LowerOrEqualBidIgnored(t *testing.T) 
 	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
 	require.NoError(t, err)
 	require.Equal(t, pubsub.ValidationIgnore, result)
-	builderKey := executionPayloadBidBuilderKey(signedBid.Message.Slot, signedBid.Message.BuilderIndex)
-	require.Equal(t, true, s.hasSeenExecutionPayloadBidBuilder(builderKey))
+	require.Equal(t, true, s.hasSeenExecutionPayloadBid(executionPayloadBidTupleKey(mustBid(t, signedBid))))
 }
 
-func TestValidateExecutionPayloadBidGossip_LowerBidIgnoredStillMarksBuilderSeen(t *testing.T) {
+func TestValidateExecutionPayloadBidGossip_LowerBidIgnoredStillMarksTupleSeen(t *testing.T) {
 	ctx := context.Background()
 	s, msg, signedBid := setupExecutionPayloadBidService(t)
 	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{})
@@ -203,7 +262,7 @@ func TestValidateExecutionPayloadBidGossip_LowerBidIgnoredStillMarksBuilderSeen(
 	require.NoError(t, err)
 	require.Equal(t, pubsub.ValidationIgnore, result)
 
-	// If the lower valid bid did not mark the builder as seen, the same bid would
+	// If the lower valid bid did not mark the tuple as seen, the same bid would
 	// be accepted once the highest-bid cache is cleared.
 	s.highestExecutionPayloadBidCache = cache.NewHighestExecutionPayloadBidCache()
 	msg = executionPayloadBidToPubsub(t, s, s.cfg.p2p, signedBid)
@@ -240,11 +299,67 @@ func TestValidateExecutionPayloadBidGossip_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, pubsub.ValidationAccept, result)
 
-	builderKey := executionPayloadBidBuilderKey(signedBid.Message.Slot, signedBid.Message.BuilderIndex)
-	require.Equal(t, true, s.hasSeenExecutionPayloadBidBuilder(builderKey))
+	require.Equal(t, true, s.hasSeenExecutionPayloadBid(executionPayloadBidTupleKey(mustBid(t, signedBid))))
 	got, ok := msg.ValidatorData.(*ethpb.SignedExecutionPayloadBid)
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, signedBid, got)
+}
+
+// A blacklisted builder must be ignored before any verification runs, and must not be cached.
+func TestValidateExecutionPayloadBidGossip_BlacklistedBuilderIgnored(t *testing.T) {
+	ctx := context.Background()
+	s, msg, signedBid := setupExecutionPayloadBidService(t)
+	s.builderCircuitBreaker = cache.NewBuilderCircuitBreaker()
+	// The bid is at slot 1, so the failure has to be charged in epoch 0.
+	require.Equal(t, true, s.builderCircuitBreaker.RecordFailure(signedBid.Message.BuilderIndex, [32]byte{0xff}, 0))
+	// Every verifier method would reject if reached.
+	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{
+		errCurrentOrNextSlot: errors.New("slot"),
+		errBuilderActive:     errors.New("builder"),
+		errSignature:         errors.New("sig"),
+	})
+
+	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationIgnore, result)
+
+	require.Equal(t, false, s.hasSeenExecutionPayloadBid(executionPayloadBidTupleKey(mustBid(t, signedBid))))
+	_, cached := s.highestExecutionPayloadBidCache.Get(
+		signedBid.Message.Slot,
+		bytesutil.ToBytes32(signedBid.Message.ParentBlockHash),
+		bytesutil.ToBytes32(signedBid.Message.ParentBlockRoot))
+	require.Equal(t, false, cached)
+}
+
+// A bid from a builder that is not blacklisted is unaffected by the circuit breaker.
+func TestValidateExecutionPayloadBidGossip_OtherBuilderNotBlacklisted(t *testing.T) {
+	ctx := context.Background()
+	s, msg, signedBid := setupExecutionPayloadBidService(t)
+	s.builderCircuitBreaker = cache.NewBuilderCircuitBreaker()
+	require.Equal(t, true, s.builderCircuitBreaker.RecordFailure(signedBid.Message.BuilderIndex+1, [32]byte{0xff}, 0))
+	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{})
+
+	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, result)
+}
+
+func TestValidateExecutionPayloadBidGossip_NextSlotStateMissIgnored(t *testing.T) {
+	ctx := context.Background()
+	s, msg, _ := setupExecutionPayloadBidService(t)
+	// errPrevRandao would reject if reached, but a next-slot-cache miss for the bid's parent must ignore first.
+	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{
+		errPrevRandao: errors.New("wrong prev randao"),
+	})
+	// Evict the bid's parent (0x02) from the next-slot cache.
+	other, err := util.NewBeaconStateGloas()
+	require.NoError(t, err)
+	require.NoError(t, transition.UpdateNextSlotCache(ctx, bytesutil.PadTo([]byte{0x07}, 32), other))
+	require.NoError(t, transition.UpdateNextSlotCache(ctx, bytesutil.PadTo([]byte{0x08}, 32), other))
+
+	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationIgnore, result)
 }
 
 func TestValidateExecutionPayloadBidGossip_FeeRecipientMismatch(t *testing.T) {
@@ -256,7 +371,7 @@ func TestValidateExecutionPayloadBidGossip_FeeRecipientMismatch(t *testing.T) {
 
 	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
 	require.NotNil(t, err)
-	require.Equal(t, pubsub.ValidationReject, result)
+	require.Equal(t, pubsub.ValidationIgnore, result)
 	require.ErrorIs(t, err, verification.ErrBidFeeRecipientMismatch)
 }
 
@@ -281,6 +396,7 @@ func TestExecutionPayloadBidSubscriber_WrongMessage(t *testing.T) {
 
 func TestExecutionPayloadBidSubscriber_HappyPath(t *testing.T) {
 	s := &Service{
+		cfg:                             &config{operationNotifier: &mock.MockOperationNotifier{}},
 		highestExecutionPayloadBidCache: cache.NewHighestExecutionPayloadBidCache(),
 	}
 	signedBid := util.GenerateTestSignedExecutionPayloadBid(1)
@@ -292,6 +408,59 @@ func TestExecutionPayloadBidSubscriber_HappyPath(t *testing.T) {
 	require.DeepEqual(t, signedBid, got)
 }
 
+// TestProposerDependentRoot_DelegatesToForkchoice asserts that the helper
+// queries the chain's DependentRootForEpoch at epoch-1 anchored to
+// parentBlockRoot, and returns whatever root forkchoice gives back.
+func TestProposerDependentRoot_DelegatesToForkchoice(t *testing.T) {
+	parentRoot := [32]byte{0xaa}
+	expectedDepRoot := [32]byte{0xbb}
+	bidSlot := 2*params.BeaconConfig().SlotsPerEpoch + 6
+	expectedEpoch := slots.ToEpoch(bidSlot).Sub(1)
+
+	var gotRoot [32]byte
+	var gotEpoch primitives.Epoch
+	chainService := &mock.ChainService{
+		DependentRootCB: func(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+			gotRoot = root
+			gotEpoch = epoch
+			return expectedDepRoot, nil
+		},
+	}
+	s := &Service{cfg: &config{chain: chainService}}
+
+	got, err := s.proposerDependentRoot(parentRoot, bidSlot)
+	require.NoError(t, err)
+	require.Equal(t, expectedDepRoot, got)
+	require.Equal(t, parentRoot, gotRoot)
+	require.Equal(t, expectedEpoch, gotEpoch)
+}
+
+// TestProposerDependentRoot_UnderflowClampsToZero asserts that proposal epochs
+// below 2 query DependentRootForEpoch at epoch 0 (which the chain maps to the
+// origin block root) rather than underflowing epoch-1.
+func TestProposerDependentRoot_UnderflowClampsToZero(t *testing.T) {
+	parentRoot := [32]byte{0xaa}
+	originRoot := [32]byte{0xcc}
+
+	for _, slot := range []primitives.Slot{0, 1, params.BeaconConfig().SlotsPerEpoch + 1} {
+		t.Run(fmt.Sprintf("slot %d", slot), func(t *testing.T) {
+			var gotEpoch primitives.Epoch
+			chainService := &mock.ChainService{
+				DependentRootCB: func(_ [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+					gotEpoch = epoch
+					return originRoot, nil
+				},
+			}
+			s := &Service{cfg: &config{chain: chainService}}
+
+			got, err := s.proposerDependentRoot(parentRoot, slot)
+			require.NoError(t, err)
+			require.Equal(t, originRoot, got)
+			require.Equal(t, primitives.Epoch(0), gotEpoch)
+		})
+	}
+}
+
 func TestExecutionPayloadBidSubscriber_NilMessage(t *testing.T) {
 	s := &Service{
 		highestExecutionPayloadBidCache: cache.NewHighestExecutionPayloadBidCache(),
@@ -301,15 +470,21 @@ func TestExecutionPayloadBidSubscriber_NilMessage(t *testing.T) {
 }
 
 type mockExecutionPayloadBidVerifier struct {
-	errCurrentOrNextSlot    error
-	errBuilderActive        error
-	errExecutionPayment     error
-	errFeeRecipientMismatch error
-	errGasLimitIncompatible error
-	errParentBlockRootSeen  error
-	errParentBlockHash      error
-	errBuilderCanCoverBid   error
-	errSignature            error
+	errCurrentOrNextSlot     error
+	errSlotMatches           error
+	errBuilderActive         error
+	errBuilderVersion        error
+	errExecutionPayment      error
+	errFeeRecipientMismatch  error
+	errBlobKzgCommitments    error
+	errPrevRandao            error
+	errGasLimitIncompatible  error
+	errParentBlockRootSeen   error
+	errBidCompatibleWithHead error
+	errSlotHigherThanParent  error
+	errParentBlockHash       error
+	errBuilderCanCoverBid    error
+	errSignature             error
 }
 
 var _ verification.ExecutionPayloadBidVerifier = &mockExecutionPayloadBidVerifier{}
@@ -318,8 +493,16 @@ func (m *mockExecutionPayloadBidVerifier) VerifyCurrentOrNextSlot() error {
 	return m.errCurrentOrNextSlot
 }
 
+func (m *mockExecutionPayloadBidVerifier) VerifyBidSlotMatches(primitives.Slot) error {
+	return m.errSlotMatches
+}
+
 func (m *mockExecutionPayloadBidVerifier) VerifyBuilderActive(state.ReadOnlyBeaconState) error {
 	return m.errBuilderActive
+}
+
+func (m *mockExecutionPayloadBidVerifier) VerifyBuilderVersion(state.ReadOnlyBeaconState) error {
+	return m.errBuilderVersion
 }
 
 func (m *mockExecutionPayloadBidVerifier) VerifyExecutionPaymentZero() error {
@@ -330,6 +513,14 @@ func (m *mockExecutionPayloadBidVerifier) VerifyFeeRecipientMatches([]byte) erro
 	return m.errFeeRecipientMismatch
 }
 
+func (m *mockExecutionPayloadBidVerifier) VerifyBlobKzgCommitmentsLimit() error {
+	return m.errBlobKzgCommitments
+}
+
+func (m *mockExecutionPayloadBidVerifier) VerifyPrevRandao(state.ReadOnlyBeaconState) error {
+	return m.errPrevRandao
+}
+
 func (m *mockExecutionPayloadBidVerifier) VerifyGasLimitTargetCompatible(uint64, uint64) error {
 	return m.errGasLimitIncompatible
 }
@@ -338,7 +529,15 @@ func (m *mockExecutionPayloadBidVerifier) VerifyParentBlockRootSeen(func([32]byt
 	return m.errParentBlockRootSeen
 }
 
-func (m *mockExecutionPayloadBidVerifier) VerifyParentBlockHash(func([32]byte) ([32]byte, error)) error {
+func (m *mockExecutionPayloadBidVerifier) VerifyBidCompatibleWithHead(func(interfaces.ROExecutionPayloadBid) bool) error {
+	return m.errBidCompatibleWithHead
+}
+
+func (m *mockExecutionPayloadBidVerifier) VerifyBidSlotHigherThanParent(primitives.Slot) error {
+	return m.errSlotHigherThanParent
+}
+
+func (m *mockExecutionPayloadBidVerifier) VerifyParentBlockHash(func([32]byte, [32]byte) bool) error {
 	return m.errParentBlockHash
 }
 
@@ -368,20 +567,12 @@ func setupExecutionPayloadBidService(t *testing.T) (*Service, *pubsub.Message, *
 	cfg.GloasForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
 
-	ctx := context.Background()
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
-	// Save a genesis block so beaconDB.GenesisBlockRoot resolves; bids at slot 1
-	// (epoch 0) hit the underflow branch in chain.DependentRootForEpoch which
-	// falls back to the genesis block root.
-	gb := util.NewBeaconBlock()
-	signedGenesis, err := blocks.NewSignedBeaconBlock(gb)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, signedGenesis))
-	genesisRoot, err := signedGenesis.Block().HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	// The bid is at slot 1 (epoch 0); the mock chain maps that to its TargetRoot
+	// via DependentRootForEpoch, so the proposer preference is keyed on it below.
+	genesisRoot := [32]byte{0x01}
 
 	state, err := util.NewBeaconStateGloas()
 	require.NoError(t, err)
@@ -391,12 +582,14 @@ func setupExecutionPayloadBidService(t *testing.T) (*Service, *pubsub.Message, *
 		Genesis:    time.Now(),
 		State:      state,
 		TargetRoot: genesisRoot,
+		Root:       bytesutil.PadTo([]byte{0x02}, 32),
 		ForkchoiceRoots: map[[32]byte]bool{
 			[32]byte{0x02}: true,
 		},
 		ForkchoiceBlockHashes: map[[32]byte][32]byte{[32]byte{0x02}: [32]byte{0x01}},
 		ForkchoiceGasLimits:   map[[32]byte]uint64{[32]byte{0x02}: 1},
 	}
+	require.NoError(t, transition.UpdateNextSlotCache(context.Background(), chainService.Root, state))
 	s := &Service{
 		seenExecutionPayloadBidCache:    newSlotAwareCache(10),
 		highestExecutionPayloadBidCache: cache.NewHighestExecutionPayloadBidCache(),
@@ -429,8 +622,7 @@ func executionPayloadBidToPubsub(t *testing.T, s *Service, p p2p.P2P, bid *ethpb
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.SignedExecutionPayloadBid]()]
-	digest, err := s.currentForkDigest()
-	require.NoError(t, err)
+	digest := s.currentForkDigest()
 	topic = s.addDigestToTopic(topic, digest)
 
 	return &pubsub.Message{

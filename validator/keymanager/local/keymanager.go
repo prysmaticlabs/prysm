@@ -14,7 +14,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
-	"github.com/OffchainLabs/prysm/v7/runtime/interop"
 	"github.com/OffchainLabs/prysm/v7/validator/accounts/iface"
 	"github.com/OffchainLabs/prysm/v7/validator/accounts/petnames"
 	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
@@ -42,6 +41,7 @@ const (
 // Keymanager implementation for local keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
+	mu                  sync.Mutex // serializes accountsStore mutations
 	accountsStore       *accountStore
 	accountsChangedFeed *event.Feed
 }
@@ -102,38 +102,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		// all-accounts.keystore.json file in the wallet directory.
 		go k.listenForAccountChanges(ctx)
 	}
-	return k, nil
-}
-
-// InteropKeymanagerConfig is used on validator launch to initialize the keymanager.
-// InteropKeys are used for testing purposes.
-type InteropKeymanagerConfig struct {
-	Offset           uint64
-	NumValidatorKeys uint64
-}
-
-// NewInteropKeymanager instantiates a new imported keymanager with the deterministically generated interop keys.
-// InteropKeys are used for testing purposes.
-func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
-	k := &Keymanager{
-		accountsChangedFeed: new(event.Feed),
-	}
-	if numValidatorKeys == 0 {
-		return k, nil
-	}
-	secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(offset, numValidatorKeys)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate interop keys")
-	}
-	lock.Lock()
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidatorKeys)
-	for i := range numValidatorKeys {
-		publicKey := bytesutil.ToBytes48(publicKeys[i].Marshal())
-		pubKeys[i] = publicKey
-		secretKeysCache[publicKey] = secretKeys[i]
-	}
-	orderedPublicKeys = pubKeys
-	lock.Unlock()
 	return k, nil
 }
 
@@ -266,7 +234,9 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 
 // CreateAccountsKeystore creates a new keystore holding the provided keys.
 func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, privateKeys [][]byte, publicKeys [][]byte) (*AccountsKeystoreRepresentation, error) {
-	if err := km.CreateOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys); err != nil {
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	if err := km.createOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys); err != nil {
 		return nil, err
 	}
 	return CreateAccountsKeystoreRepresentation(ctx, km.accountsStore, km.wallet.Password())
@@ -274,6 +244,12 @@ func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, privateKeys []
 
 // SaveStoreAndReInitialize saves the store to disk and re-initializes the account keystore from file
 func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accountStore) error {
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	return km.saveStoreAndReInitialize(ctx, store)
+}
+
+func (km *Keymanager) saveStoreAndReInitialize(ctx context.Context, store *accountStore) error {
 	// Save the copy to disk
 	accountsKeystore, err := CreateAccountsKeystoreRepresentation(ctx, store, km.wallet.Password())
 	if err != nil {
@@ -302,7 +278,7 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	}
 
 	// manually reload the account from the keystore the first time
-	km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
+	km.reloadAccountsFromKeystoreFileLocked(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
 	// listen to account changes of the new file
 	go km.listenForAccountChanges(ctx)
 	return nil
@@ -344,7 +320,13 @@ func CreateEmptyKeyStoreRepresentationForNewWallet(ctx context.Context, walletPa
 
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
 // This function DOES NOT save the accounts store to disk.
-func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys, publicKeys [][]byte) error {
+func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(ctx context.Context, privateKeys, publicKeys [][]byte) error {
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	return km.createOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys)
+}
+
+func (km *Keymanager) createOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys, publicKeys [][]byte) error {
 	if len(privateKeys) != len(publicKeys) {
 		return fmt.Errorf(
 			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),

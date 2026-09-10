@@ -44,14 +44,14 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
-	if err != nil {
-		httputil.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	if err != nil {
+		httputil.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	blockRewards, httpError := s.BlockRewardFetcher.GetBlockRewardsData(ctx, blk.Block())
@@ -70,6 +70,9 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 // AttestationRewards retrieves attestation reward info for validators specified by array of public keys or validator index.
 // If no array is provided, return reward info for every validator.
 func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.AttestationRewards")
+	defer span.End()
+
 	st, ok := s.attRewardsState(w, r)
 	if !ok {
 		return
@@ -87,15 +90,29 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
+	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		httputil.HandleError(w, "Could not get head root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blkRoot, err := s.ForkchoiceFetcher.Ancestor(ctx, headRoot, st.Slot())
+	if err != nil {
+		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	blkRoot, err := st.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
-		return
+
+	if optimistic {
+		optimistic, err = s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(blkRoot))
+		if err != nil {
+			httputil.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	resp := &structs.AttestationRewardsResponse{
@@ -104,7 +121,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 			TotalRewards: totalRewards,
 		},
 		ExecutionOptimistic: optimistic,
-		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
+		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), bytesutil.ToBytes32(blkRoot)),
 	}
 	httputil.WriteJson(w, resp)
 }
@@ -169,14 +186,14 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
-	if err != nil {
-		httputil.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	if err != nil {
+		httputil.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -234,7 +251,7 @@ func attRewardsBalancesAndVals(
 	w http.ResponseWriter,
 	r *http.Request,
 	st state.BeaconState,
-) (*precompute.Balance, []*precompute.Validator, []primitives.ValidatorIndex, bool) {
+) (*precompute.Balance, []precompute.Validator, []primitives.ValidatorIndex, bool) {
 	allVals, bal, err := altair.InitializePrecomputeValidators(r.Context(), st)
 	if err != nil {
 		httputil.HandleError(w, "Could not initialize precompute validators: "+err.Error(), http.StatusBadRequest)
@@ -252,7 +269,7 @@ func attRewardsBalancesAndVals(
 	if len(valIndices) == len(allVals) {
 		return bal, allVals, valIndices, true
 	} else {
-		filteredVals := make([]*precompute.Validator, len(valIndices))
+		filteredVals := make([]precompute.Validator, len(valIndices))
 		for i, valIx := range valIndices {
 			filteredVals[i] = allVals[valIx]
 		}
@@ -266,33 +283,41 @@ func idealAttRewards(
 	w http.ResponseWriter,
 	st state.BeaconState,
 	bal *precompute.Balance,
-	vals []*precompute.Validator,
+	vals []precompute.Validator,
 ) ([]structs.IdealAttestationReward, bool) {
-	idealValsCount := uint64(16)
-	minIdealBalance := uint64(17)
-	maxIdealBalance := minIdealBalance + idealValsCount - 1
-	idealRewards := make([]structs.IdealAttestationReward, 0, idealValsCount)
-	idealVals := make([]*precompute.Validator, 0, idealValsCount)
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	for i := minIdealBalance; i <= maxIdealBalance; i++ {
-		for _, v := range vals {
-			if v.CurrentEpochEffectiveBalance/1e9 == i {
-				effectiveBalance := i * increment
-				idealVals = append(idealVals, &precompute.Validator{
-					IsActivePrevEpoch:            true,
-					IsSlashed:                    false,
-					CurrentEpochEffectiveBalance: effectiveBalance,
-					IsPrevEpochSourceAttester:    true,
-					IsPrevEpochTargetAttester:    true,
-					IsPrevEpochHeadAttester:      true,
-				})
-				idealRewards = append(idealRewards, structs.IdealAttestationReward{
-					EffectiveBalance: strconv.FormatUint(effectiveBalance, 10),
-					Inactivity:       strconv.FormatUint(0, 10),
-				})
-				break
-			}
+	maxIdealRewards := int((params.BeaconConfig().MaxEffectiveBalanceElectra - params.BeaconConfig().EjectionBalance) / increment)
+	capacity := min(len(vals), maxIdealRewards)
+	effectiveBalances := make([]uint64, 0, capacity)
+	seen := make(map[uint64]struct{}, capacity)
+	for _, v := range vals {
+		effectiveBalance := v.CurrentEpochEffectiveBalance
+		if effectiveBalance <= params.BeaconConfig().EjectionBalance || effectiveBalance%increment != 0 {
+			continue
 		}
+		if _, ok := seen[effectiveBalance]; ok {
+			continue
+		}
+		seen[effectiveBalance] = struct{}{}
+		effectiveBalances = append(effectiveBalances, effectiveBalance)
+	}
+	slices.Sort(effectiveBalances)
+
+	idealRewards := make([]structs.IdealAttestationReward, 0, len(effectiveBalances))
+	idealVals := make([]precompute.Validator, 0, len(effectiveBalances))
+	for _, effectiveBalance := range effectiveBalances {
+		idealVals = append(idealVals, precompute.Validator{
+			IsActivePrevEpoch:            true,
+			IsSlashed:                    false,
+			CurrentEpochEffectiveBalance: effectiveBalance,
+			IsPrevEpochSourceAttester:    true,
+			IsPrevEpochTargetAttester:    true,
+			IsPrevEpochHeadAttester:      true,
+		})
+		idealRewards = append(idealRewards, structs.IdealAttestationReward{
+			EffectiveBalance: strconv.FormatUint(effectiveBalance, 10),
+			Inactivity:       strconv.FormatUint(0, 10),
+		})
 	}
 	deltas, err := altair.AttestationsDelta(st, bal, idealVals)
 	if err != nil {
@@ -324,7 +349,7 @@ func totalAttRewards(
 	w http.ResponseWriter,
 	st state.BeaconState,
 	bal *precompute.Balance,
-	vals []*precompute.Validator,
+	vals []precompute.Validator,
 	valIndices []primitives.ValidatorIndex,
 ) ([]structs.TotalAttestationReward, bool) {
 	totalRewards := make([]structs.TotalAttestationReward, len(valIndices))
@@ -361,7 +386,7 @@ func syncRewardsVals(
 	w http.ResponseWriter,
 	r *http.Request,
 	st state.BeaconState,
-) ([]*precompute.Validator, []primitives.ValidatorIndex, bool) {
+) ([]precompute.Validator, []primitives.ValidatorIndex, bool) {
 	allVals, _, err := altair.InitializePrecomputeValidators(r.Context(), st)
 	if err != nil {
 		httputil.HandleError(w, "Could not initialize precompute validators: "+err.Error(), http.StatusBadRequest)
@@ -388,7 +413,7 @@ func syncRewardsVals(
 	}
 
 	scIndices := make([]primitives.ValidatorIndex, 0, len(allScIndices))
-	scVals := make([]*precompute.Validator, 0, len(allScIndices))
+	scVals := make([]precompute.Validator, 0, len(allScIndices))
 	for _, valIdx := range valIndices {
 		if slices.Contains(allScIndices, valIdx) {
 			scVals = append(scVals, allVals[valIdx])
@@ -399,7 +424,7 @@ func syncRewardsVals(
 	return scVals, scIndices, true
 }
 
-func requestedValIndices(w http.ResponseWriter, r *http.Request, st state.BeaconState, allVals []*precompute.Validator) ([]primitives.ValidatorIndex, bool) {
+func requestedValIndices(w http.ResponseWriter, r *http.Request, st state.BeaconState, allVals []precompute.Validator) ([]primitives.ValidatorIndex, bool) {
 	var rawValIds []string
 	if r.Body != http.NoBody {
 		if err := json.NewDecoder(r.Body).Decode(&rawValIds); err != nil {

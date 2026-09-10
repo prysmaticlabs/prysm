@@ -17,7 +17,7 @@ type payloadData struct {
 	ParentBeaconBlockRoot string
 	ExecutionPayload      *structs.ExecutionPayloadGloas
 	BlobKzgCommitments    []string
-	ExecutionRequests     *structs.ExecutionRequests
+	ExecutionRequests     *structs.ExecutionRequestsGloas
 }
 
 // kzgCommitmentsToVersionedHashes converts KZG commitments (hex strings) to versioned hashes.

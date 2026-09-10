@@ -17,7 +17,7 @@ import (
 
 // UpgradeToGloas updates inputs a generic state to return the version Gloas state.
 //
-//	<spec fn="upgrade_to_gloas" fork="gloas" hash="d9a22a92">
+//	<spec fn="upgrade_to_gloas" fork="gloas" hash="6c7b259e">
 //	def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
 //	    epoch = fulu.get_current_epoch(pre)
 //
@@ -27,7 +27,7 @@ import (
 //	        slot=pre.slot,
 //	        fork=Fork(
 //	            previous_version=pre.fork.current_version,
-//	            # [Modified in Gloas:EIP7732]
+//	            # [Modified in Gloas]
 //	            current_version=GLOAS_FORK_VERSION,
 //	            epoch=epoch,
 //	        ),
@@ -38,17 +38,22 @@ import (
 //	        eth1_data=pre.eth1_data,
 //	        eth1_data_votes=pre.eth1_data_votes,
 //	        eth1_deposit_index=pre.eth1_deposit_index,
-//	        validators=pre.validators,
-//	        balances=pre.balances,
+//	        # [Modified in Gloas:EIP7688]
+//	        validators=Validators(data=pre.validators),
+//	        # [Modified in Gloas:EIP7688]
+//	        balances=Balances(data=pre.balances),
 //	        randao_mixes=pre.randao_mixes,
 //	        slashings=pre.slashings,
-//	        previous_epoch_participation=pre.previous_epoch_participation,
-//	        current_epoch_participation=pre.current_epoch_participation,
+//	        # [Modified in Gloas:EIP7688]
+//	        previous_epoch_participation=EpochParticipation(data=pre.previous_epoch_participation),
+//	        # [Modified in Gloas:EIP7688]
+//	        current_epoch_participation=EpochParticipation(data=pre.current_epoch_participation),
 //	        justification_bits=pre.justification_bits,
 //	        previous_justified_checkpoint=pre.previous_justified_checkpoint,
 //	        current_justified_checkpoint=pre.current_justified_checkpoint,
 //	        finalized_checkpoint=pre.finalized_checkpoint,
-//	        inactivity_scores=pre.inactivity_scores,
+//	        # [Modified in Gloas:EIP7688]
+//	        inactivity_scores=InactivityScores(data=pre.inactivity_scores),
 //	        current_sync_committee=pre.current_sync_committee,
 //	        next_sync_committee=pre.next_sync_committee,
 //	        # [Modified in Gloas:EIP7732]
@@ -64,86 +69,53 @@ import (
 //	        earliest_exit_epoch=pre.earliest_exit_epoch,
 //	        consolidation_balance_to_consume=pre.consolidation_balance_to_consume,
 //	        earliest_consolidation_epoch=pre.earliest_consolidation_epoch,
-//	        pending_deposits=pre.pending_deposits,
-//	        pending_partial_withdrawals=pre.pending_partial_withdrawals,
-//	        pending_consolidations=pre.pending_consolidations,
+//	        # [Modified in Gloas:EIP7688]
+//	        pending_deposits=PendingDeposits(data=pre.pending_deposits),
+//	        # [Modified in Gloas:EIP7688]
+//	        pending_partial_withdrawals=PendingPartialWithdrawals(data=pre.pending_partial_withdrawals),
+//	        # [Modified in Gloas:EIP7688]
+//	        pending_consolidations=PendingConsolidations(data=pre.pending_consolidations),
 //	        proposer_lookahead=pre.proposer_lookahead,
 //	        # [New in Gloas:EIP7732]
-//	        builders=[],
+//	        builders=Builders(),
 //	        # [New in Gloas:EIP7732]
 //	        next_withdrawal_builder_index=BuilderIndex(0),
 //	        # [New in Gloas:EIP7732]
-//	        execution_payload_availability=[0b1 for _ in range(SLOTS_PER_HISTORICAL_ROOT)],
-//	        # [New in Gloas:EIP7732]
-//	        builder_pending_payments=[BuilderPendingPayment() for _ in range(2 * SLOTS_PER_EPOCH)],
-//	        # [New in Gloas:EIP7732]
-//	        builder_pending_withdrawals=[],
-//	        # [New in Gloas:EIP7732]
-//	        latest_execution_payload_bid=ExecutionPayloadBid(
-//	            block_hash=pre.latest_execution_payload_header.block_hash,
-//	            gas_limit=pre.latest_execution_payload_header.gas_limit,
-//	            execution_requests_root=hash_tree_root(ExecutionRequests()),
+//	        execution_payload_availability=ExecutionPayloadAvailability(
+//	            data=[0b1 for _ in range(SLOTS_PER_HISTORICAL_ROOT)]
 //	        ),
 //	        # [New in Gloas:EIP7732]
-//	        payload_expected_withdrawals=[],
+//	        builder_pending_payments=BuilderPendingPayments(),
 //	        # [New in Gloas:EIP7732]
-//	        ptc_window=initialize_ptc_window(pre),
+//	        builder_pending_withdrawals=BuilderPendingWithdrawals(),
+//	        # [New in Gloas:EIP7732]
+//	        latest_execution_payload_bid=ExecutionPayloadBid(
+//	            parent_block_hash=pre.latest_execution_payload_header.parent_hash,
+//	            parent_block_root=pre.latest_block_header.parent_root,
+//	            block_hash=pre.latest_execution_payload_header.block_hash,
+//	            prev_randao=pre.latest_execution_payload_header.prev_randao,
+//	            fee_recipient=ExecutionAddress(),
+//	            gas_limit=pre.latest_execution_payload_header.gas_limit,
+//	            builder_index=BUILDER_INDEX_SELF_BUILD,
+//	            slot=pre.latest_block_header.slot,
+//	            value=Gwei(0),
+//	            execution_payment=Gwei(0),
+//	            blob_kzg_commitments=BlobKZGCommitments(),
+//	            execution_requests_root=hash_tree_root(ExecutionRequests.empty()),
+//	        ),
+//	        # [New in Gloas:EIP7732]
+//	        payload_expected_withdrawals=Withdrawals(),
+//	        # [New in Gloas:EIP7732]
+//	        ptc_window=PayloadTimelinessCommitteeWindow(),
 //	    )
+//
+//	    # [New in Gloas:EIP7732]
+//	    post.ptc_window = initialize_ptc_window(post)
 //
 //	    # [New in Gloas:EIP7732]
 //	    onboard_builders_from_pending_deposits(post)
 //
 //	    return post
-//	</spec>
-//
-//	<spec fn="process_execution_payload_bid" fork="gloas" hash="823c9f3a">
-//	def process_execution_payload_bid(state: BeaconState, block: BeaconBlock) -> None:
-//	    signed_bid = block.body.signed_execution_payload_bid
-//	    bid = signed_bid.message
-//	    builder_index = bid.builder_index
-//	    amount = bid.value
-//
-//	    # For self-builds, amount must be zero regardless of withdrawal credential prefix
-//	    if builder_index == BUILDER_INDEX_SELF_BUILD:
-//	        assert amount == 0
-//	        assert signed_bid.signature == bls.G2_POINT_AT_INFINITY
-//	    else:
-//	        # Verify that the builder is active
-//	        assert is_active_builder(state, builder_index)
-//	        # Verify that the builder has funds to cover the bid
-//	        assert can_builder_cover_bid(state, builder_index, amount)
-//	        # Verify that the bid signature is valid
-//	        assert verify_execution_payload_bid_signature(state, signed_bid)
-//
-//	    # Verify commitments are under limit
-//	    assert (
-//	        len(bid.blob_kzg_commitments)
-//	        <= get_blob_parameters(get_current_epoch(state)).max_blobs_per_block
-//	    )
-//
-//	    # Verify that the bid is for the current slot
-//	    assert bid.slot == block.slot
-//	    # Verify that the bid is for the right parent block
-//	    assert bid.parent_block_hash == state.latest_block_hash
-//	    assert bid.parent_block_root == block.parent_root
-//	    assert bid.prev_randao == get_randao_mix(state, get_current_epoch(state))
-//
-//	    # Record the pending payment if there is some payment
-//	    if amount > 0:
-//	        pending_payment = BuilderPendingPayment(
-//	            weight=0,
-//	            withdrawal=BuilderPendingWithdrawal(
-//	                fee_recipient=bid.fee_recipient,
-//	                amount=amount,
-//	                builder_index=builder_index,
-//	            ),
-//	        )
-//	        state.builder_pending_payments[SLOTS_PER_EPOCH + bid.slot % SLOTS_PER_EPOCH] = (
-//	            pending_payment
-//	        )
-//
-//	    # Cache the signed execution payload bid
-//	    state.latest_execution_payload_bid = bid
 //	</spec>
 func UpgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
 	s, err := upgradeToGloas(beaconState)
@@ -165,27 +137,27 @@ func UpgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
 
 // initializePTCWindow builds the initial PTC window for the Gloas fork upgrade.
 //
-//	<spec fn="initialize_ptc_window" fork="gloas" hash="3764b7f5">
+//	<spec fn="initialize_ptc_window" fork="gloas" hash="88530cbd">
 //	def initialize_ptc_window(
 //	    state: BeaconState,
-//	) -> Vector[Vector[ValidatorIndex, PTC_SIZE], (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]:
+//	) -> PayloadTimelinessCommitteeWindow:
 //	    """
 //	    Return the cached PTC window starting from the current epoch.
 //	    Used to initialize the ``ptc_window`` field in the beacon state at genesis and after forks.
 //	    """
 //	    empty_previous_epoch = [
-//	        Vector[ValidatorIndex, PTC_SIZE]([ValidatorIndex(0) for _ in range(PTC_SIZE)])
+//	        PayloadTimelinessCommittee(data=[ValidatorIndex(0) for _ in range(PTC_SIZE)])
 //	        for _ in range(SLOTS_PER_EPOCH)
 //	    ]
 //
 //	    ptcs = []
 //	    current_epoch = get_current_epoch(state)
 //	    for e in range(1 + MIN_SEED_LOOKAHEAD):
-//	        epoch = Epoch(current_epoch + e)
+//	        epoch = current_epoch + e
 //	        start_slot = compute_start_slot_at_epoch(epoch)
-//	        ptcs += [compute_ptc(state, Slot(start_slot + i)) for i in range(SLOTS_PER_EPOCH)]
+//	        ptcs += [compute_ptc(state, start_slot + i) for i in range(SLOTS_PER_EPOCH)]
 //
-//	    return empty_previous_epoch + ptcs
+//	    return PayloadTimelinessCommitteeWindow(data=empty_previous_epoch + ptcs)
 //	</spec>
 func initializePTCWindow(ctx context.Context, st state.ReadOnlyBeaconState) ([]*ethpb.PTCs, error) {
 	currentEpoch := slots.ToEpoch(st.Slot())
@@ -314,6 +286,8 @@ func upgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
 		return nil, errors.Wrap(err, "could not compute empty execution requests root")
 	}
 
+	latestBlockHeader := beaconState.LatestBlockHeader()
+
 	s := &ethpb.BeaconStateGloas{
 		GenesisTime:           uint64(beaconState.GenesisTime().Unix()),
 		GenesisValidatorsRoot: beaconState.GenesisValidatorsRoot(),
@@ -323,7 +297,7 @@ func upgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
 			CurrentVersion:  params.BeaconConfig().GloasForkVersion,
 			Epoch:           time.CurrentEpoch(beaconState),
 		},
-		LatestBlockHeader:           beaconState.LatestBlockHeader(),
+		LatestBlockHeader:           latestBlockHeader,
 		BlockRoots:                  beaconState.BlockRoots(),
 		StateRoots:                  beaconState.StateRoots(),
 		HistoricalRoots:             beaconState.HistoricalRoots(),
@@ -344,12 +318,14 @@ func upgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
 		CurrentSyncCommittee:        currentSyncCommittee,
 		NextSyncCommittee:           nextSyncCommittee,
 		LatestExecutionPayloadBid: &ethpb.ExecutionPayloadBid{
+			ParentBlockHash:       payloadHeader.ParentHash(),
+			ParentBlockRoot:       latestBlockHeader.ParentRoot,
 			BlockHash:             payloadHeader.BlockHash(),
-			GasLimit:              payloadHeader.GasLimit(),
+			PrevRandao:            payloadHeader.PrevRandao(),
 			FeeRecipient:          make([]byte, fieldparams.FeeRecipientLength),
-			ParentBlockHash:       make([]byte, fieldparams.RootLength),
-			ParentBlockRoot:       make([]byte, fieldparams.RootLength),
-			PrevRandao:            make([]byte, fieldparams.RootLength),
+			GasLimit:              payloadHeader.GasLimit(),
+			BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
+			Slot:                  latestBlockHeader.Slot,
 			ExecutionRequestsRoot: emptyExecutionRequestsRoot[:],
 		},
 		NextWithdrawalIndex:           wi,

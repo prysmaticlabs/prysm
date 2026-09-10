@@ -50,8 +50,18 @@ const (
 	// PayloadAttestationMessageReceived is sent after a payload attestation message is received from gossip or rpc.
 	PayloadAttestationMessageReceived = 13
 
+	// ExecutionPayloadGossipReceived is sent after an execution payload envelope has been received from
+	// gossip or API that passes validation rules.
+	ExecutionPayloadGossipReceived = 14
+
+	// ProposerPreferencesReceived is sent after signed proposer preferences are received from gossip or rpc.
+	ProposerPreferencesReceived = 15
+
+	// ExecutionPayloadBidReceived is sent after a signed execution payload bid is received from gossip or rpc.
+	ExecutionPayloadBidReceived = 16
+
 	// ExecutionProofReceived is sent after a execution proof object has been received from gossip or rpc.
-	ExecutionProofReceived = 14
+	ExecutionProofReceived = 17
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -124,6 +134,24 @@ type DataColumnReceivedData struct {
 // PayloadAttestationMessageReceivedData is the data sent with PayloadAttestationMessageReceived events.
 type PayloadAttestationMessageReceivedData struct {
 	Message *ethpb.PayloadAttestationMessage
+}
+
+// ExecutionPayloadGossipReceivedData is the data sent with ExecutionPayloadGossipReceived events.
+type ExecutionPayloadGossipReceivedData struct {
+	Slot         primitives.Slot
+	BuilderIndex primitives.BuilderIndex
+	BlockHash    [32]byte
+	BlockRoot    [32]byte
+}
+
+// ProposerPreferencesReceivedData is the data sent with ProposerPreferencesReceived events.
+type ProposerPreferencesReceivedData struct {
+	Data *ethpb.SignedProposerPreferences
+}
+
+// ExecutionPayloadBidReceivedData is the data sent with ExecutionPayloadBidReceived events.
+type ExecutionPayloadBidReceivedData struct {
+	Bid *ethpb.SignedExecutionPayloadBid
 }
 
 // ExecutionProofReceivedData is the data sent with ExecutionProofReceived events.

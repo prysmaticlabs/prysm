@@ -208,14 +208,6 @@ func WithAvailableBlocker(avb coverage.AvailableBlocker) Option {
 	}
 }
 
-// WithTrackedValidatorsCache for tracked validators cache.
-func WithTrackedValidatorsCache(c *cache.TrackedValidatorsCache) Option {
-	return func(s *Service) error {
-		s.trackedValidatorsCache = c
-		return nil
-	}
-}
-
 func WithPayloadAttestationCache(c *cache.PayloadAttestationCache) Option {
 	return func(s *Service) error {
 		s.payloadAttestationCache = c
@@ -226,6 +218,21 @@ func WithPayloadAttestationCache(c *cache.PayloadAttestationCache) Option {
 func WithProposerPreferencesCache(c *cache.ProposerPreferencesCache) Option {
 	return func(s *Service) error {
 		s.proposerPreferencesCache = c
+		return nil
+	}
+}
+
+// WithBuilderCircuitBreaker sets the tracker used to ignore bids from blacklisted builders.
+func WithBuilderCircuitBreaker(c *cache.BuilderCircuitBreaker) Option {
+	return func(s *Service) error {
+		s.builderCircuitBreaker = c
+		return nil
+	}
+}
+
+func WithSubscribedValidatorsCache(c *cache.SubscribedValidatorsCache) Option {
+	return func(s *Service) error {
+		s.subscribedValidatorsCache = c
 		return nil
 	}
 }

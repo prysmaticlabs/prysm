@@ -37,13 +37,15 @@ func (s *Service) ReceivePayloadAttestationMessage(ctx context.Context, a *ethpb
 	if st == nil {
 		return errors.New("unable to find state for payload attestation")
 	}
-	idx, err := gloas.PayloadCommitteeIndex(ctx, st, a.Data.Slot, a.ValidatorIndex)
+	indices, err := gloas.PayloadCommitteeIndices(ctx, st, a.Data.Slot, a.ValidatorIndex)
 	if err != nil {
 		return err
 	}
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	s.cfg.ForkChoiceStore.SetPTCVote(root, idx, a.Data.PayloadPresent, a.Data.BlobDataAvailable)
+	for _, idx := range indices {
+		s.cfg.ForkChoiceStore.SetPTCVote(root, idx, a.Data.PayloadPresent, a.Data.BlobDataAvailable)
+	}
 	return nil
 }
 
@@ -72,12 +74,12 @@ func (s *Service) PtcLookupState(ctx context.Context, blockRoot [32]byte, blockS
 		}
 	}
 	if bytes.Equal(blockDependent[:], headRoot) {
-		headState, err := s.HeadState(ctx)
+		headState, err := s.HeadStateReadOnly(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		return transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, blockSlot)
+		return transition.ProcessSlotsIfNeeded(ctx, headState, headRoot, blockSlot)
 	}
 	if st := s.cfg.StateGen.StateByRootIfCachedNoCopy(blockRoot); st != nil && slots.ToEpoch(st.Slot()) == blockEpoch {
 		return st, nil

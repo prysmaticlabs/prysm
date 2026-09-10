@@ -115,7 +115,7 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	topicMap[addEncoding(p2p.RPCExecutionProofStatusTopicV1)] = executionProofs
 
 	// General topic for all rpc requests.
-	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(5, defaultBurstLimit*2, leakyBucketPeriod, false /* deleteEmptyBuckets */)
+	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(10, defaultBurstLimit*4, leakyBucketPeriod, false /* deleteEmptyBuckets */)
 
 	return &limiter{limiterMap: topicMap, p2p: p2pProvider}
 }
@@ -227,6 +227,17 @@ func (l *limiter) free() {
 		// Remove from map
 		delete(l.limiterMap, t)
 		tempMap[ptr] = true
+	}
+}
+
+// removePeer reclaims the per-peer leaky buckets on disconnect
+func (l *limiter) removePeer(pid peer.ID) {
+	l.Lock()
+	defer l.Unlock()
+
+	key := pid.String()
+	for _, collector := range l.limiterMap {
+		collector.Remove(key)
 	}
 }
 

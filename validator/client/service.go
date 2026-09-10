@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v7/api"
 	eventClient "github.com/OffchainLabs/prysm/v7/api/client/event"
 	grpcutil "github.com/OffchainLabs/prysm/v7/api/grpc"
 	"github.com/OffchainLabs/prysm/v7/api/rest"
@@ -13,16 +14,11 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/validator/accounts/wallet"
-	beaconApi "github.com/OffchainLabs/prysm/v7/validator/client/beacon-api"
-	beaconChainClientFactory "github.com/OffchainLabs/prysm/v7/validator/client/beacon-chain-client-factory"
 	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
-	nodeclientfactory "github.com/OffchainLabs/prysm/v7/validator/client/node-client-factory"
-	validatorclientfactory "github.com/OffchainLabs/prysm/v7/validator/client/validator-client-factory"
 	"github.com/OffchainLabs/prysm/v7/validator/db"
 	"github.com/OffchainLabs/prysm/v7/validator/graffiti"
 	validatorHelpers "github.com/OffchainLabs/prysm/v7/validator/helpers"
 	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
-	"github.com/OffchainLabs/prysm/v7/validator/keymanager/local"
 	remoteweb3signer "github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer"
 	"github.com/dgraph-io/ristretto/v2"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -41,14 +37,13 @@ import (
 type ValidatorService struct {
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	validator               iface.Validator
+	validator               *validator
 	db                      db.Database
-	conn                    validatorHelpers.NodeConnection
+	conn                    *validatorHelpers.NodeConnection
 	wallet                  *wallet.Wallet
 	walletInitializedFeed   *event.Feed
 	graffiti                []byte
 	graffitiStruct          *graffiti.Graffiti
-	interopKeysConfig       *local.InteropKeymanagerConfig
 	web3SignerConfig        *remoteweb3signer.SetupConfig
 	proposerSettings        *proposer.Settings
 	maxHealthChecks         int
@@ -64,11 +59,10 @@ type ValidatorService struct {
 
 // Config for the validator service.
 type Config struct {
-	Validator               iface.Validator
 	DB                      db.Database
 	Wallet                  *wallet.Wallet
 	WalletInitializedFeed   *event.Feed
-	Conn                    validatorHelpers.NodeConnection // Optional: pre-built connection (if nil, built from endpoint configs)
+	Conn                    *validatorHelpers.NodeConnection // Optional: pre-built connection (if nil, built from endpoint configs)
 	MaxHealthChecks         int
 	GRPCMaxCallRecvMsgSize  int
 	GRPCRetries             uint
@@ -81,7 +75,6 @@ type Config struct {
 	BeaconApiTimeout        time.Duration
 	Graffiti                string
 	GraffitiStruct          *graffiti.Graffiti
-	InteropKmConfig         *local.InteropKeymanagerConfig
 	Web3SignerConfig        *remoteweb3signer.SetupConfig
 	ProposerSettings        *proposer.Settings
 	ValidatorsRegBatchSize  int
@@ -101,13 +94,11 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	s := &ValidatorService{
 		ctx:                     ctx,
 		cancel:                  cancel,
-		validator:               cfg.Validator,
 		db:                      cfg.DB,
 		wallet:                  cfg.Wallet,
 		walletInitializedFeed:   cfg.WalletInitializedFeed,
 		graffiti:                []byte(cfg.Graffiti),
 		graffitiStruct:          cfg.GraffitiStruct,
-		interopKeysConfig:       cfg.InteropKmConfig,
 		web3SignerConfig:        cfg.Web3SignerConfig,
 		proposerSettings:        cfg.ProposerSettings,
 		validatorsRegBatchSize:  cfg.ValidatorsRegBatchSize,
@@ -192,12 +183,15 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	validatorClient := validatorclientfactory.NewValidatorClient(v.conn, beaconApi.WithStateless(v.stateless))
+	validatorClient := NewValidatorClient(v.conn, iface.WithStateless(v.stateless))
+	hm := newHealthMonitor(v.ctx, v.cancel, v.maxHealthChecks, validatorClient)
 
 	v.validator = &validator{
+		healthMonitor:                hm,
 		slotFeed:                     new(event.Feed),
 		startBalances:                make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevEpochBalances:            make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
+		attestedSlotsByKeyByEpoch:    make(map[primitives.Epoch]map[[fieldparams.BLSPubkeyLength]byte]primitives.Slot),
 		blacklistedPubkeys:           slashablePublicKeys,
 		pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 		wallet:                       v.wallet,
@@ -208,45 +202,44 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:         graffitiOrderedIndex,
 		conn:                         v.conn,
 		validatorClient:              validatorClient,
-		chainClient:                  beaconChainClientFactory.NewChainClient(v.conn),
-		nodeClient:                   nodeclientfactory.NewNodeClient(v.conn),
-		prysmChainClient:             beaconChainClientFactory.NewPrysmChainClient(v.conn),
+		chainClient:                  NewChainClient(v.conn),
+		nodeClient:                   NewNodeClient(v.conn),
 		db:                           v.db,
 		km:                           nil,
 		web3SignerConfig:             v.web3SignerConfig,
 		proposerSettings:             v.proposerSettings,
 		signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 		validatorsRegBatchSize:       v.validatorsRegBatchSize,
-		interopKeysConfig:            v.interopKeysConfig,
 		domainDataCache:              cache,
 		voteStats:                    voteStats{startEpoch: primitives.Epoch(^uint64(0))},
-		syncCommitteeStats:           syncCommitteeStats{},
 		submittedAtts:                make(map[submittedAttKey]*submittedAtt),
 		submittedAggregates:          make(map[submittedAttKey]*submittedAtt),
+		submittedSyncMessages:        make(map[slotRootKey][]uint64),
+		submittedSyncContributions:   make(map[slotRootKey]*submittedSyncContribution),
+		submittedPayloadAtts:         make(map[submittedPayloadAttKey][]uint64),
 		logValidatorPerformance:      v.logValidatorPerformance,
 		emitAccountMetrics:           v.emitAccountMetrics,
 		enableAPI:                    v.enableAPI,
 		duties:                       &dutyStore{},
-		submittedPrefSlots:           make(map[primitives.Slot]bool),
 		distributed:                  v.distributed,
 		disableDutiesPolling:         v.disableDutiesPolling,
 		accountsChangedChannel:       make(chan [][fieldparams.BLSPubkeyLength]byte, 1),
 		eventsChannel:                make(chan *eventClient.Event, 1),
+		payloadAvailability:          newPayloadAvailability(),
+		head:                         newHeadTracker(),
 	}
 
-	val := v.validator.(*validator)
 	if v.distributed {
-		val.aggSelector = newDistributedSelector(val)
+		v.validator.aggSelector = newDistributedSelector(v.validator)
 	} else {
-		selector, err := newLocalSelector(val)
+		selector, err := newLocalSelector(v.validator)
 		if err != nil {
 			log.WithError(err).Error("Could not create aggregator selector")
 			return
 		}
-		val.aggSelector = selector
+		v.validator.aggSelector = selector
 	}
 
-	hm := newHealthMonitor(v.ctx, v.cancel, v.maxHealthChecks, v.validator)
 	hm.Start()
 	defer v.closeClientFunc()
 
@@ -258,21 +251,21 @@ func (v *ValidatorService) Start() {
 		case isHealthy := <-hm.HealthyChan():
 			if !isHealthy {
 				// wait until the next health tracker update
-				log.WithField("url", v.validator.Host()).Warn("Validator service health check failed, waiting for healthy beacon node...")
+				log.WithField("url", api.RedactEndpointList(v.validator.Host())).Warning("Validator service health check failed, waiting for healthy beacon node...")
 				continue
 			}
 
 			log.Info("Starting validator runner")
 			runnerCtx, runnerCancel := context.WithCancel(v.ctx)
 
-			runner, err := newRunner(runnerCtx, v.validator, hm)
+			runner, err := newRunner(runnerCtx, v.validator)
 			if err != nil {
 				log.WithError(err).Error("Could not create validator runner")
 				runnerCancel() // Ensure context is cancelled
 				return
 			}
 
-			go v.validator.StartEventStream(runnerCtx, eventClient.DefaultEventTopics)
+			v.validator.EnsureEventStream(runnerCtx, eventClient.DefaultEventTopics)
 
 			runner.run(runnerCtx)
 			// run is finished if we get to this point
@@ -296,11 +289,6 @@ func (v *ValidatorService) Status() error {
 	return nil
 }
 
-// InteropKeysConfig returns the useInteropKeys flag.
-func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
-	return v.interopKeysConfig
-}
-
 // Keymanager returns the underlying keymanager in the validator
 func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 	return v.validator.Keymanager()
@@ -320,15 +308,10 @@ func (v *ValidatorService) ProposerSettings() *proposer.Settings {
 	return nil
 }
 
-// SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
-func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *proposer.Settings) error {
-	// validator service proposer settings is only used for pass through from node -> validator service -> validator.
-	// in memory use of proposer settings happens on validator.
-	v.proposerSettings = settings
-
-	// passes settings down to be updated in database and saved in memory.
-	// updates to validator proposer settings will be in the validator object and not validator service.
-	return v.validator.SetProposerSettings(ctx, settings)
+// UpdateProposerSettings atomically mutates the proposer settings on the
+// underlying validator; see iface.Validator.UpdateProposerSettings.
+func (v *ValidatorService) UpdateProposerSettings(ctx context.Context, mutate func(*proposer.Settings) (*proposer.Settings, error)) error {
+	return v.validator.UpdateProposerSettings(ctx, mutate)
 }
 
 // ConstructDialOptions constructs a list of grpc dial options

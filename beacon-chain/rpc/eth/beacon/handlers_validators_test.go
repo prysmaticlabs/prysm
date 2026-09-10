@@ -13,6 +13,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/lookup"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
@@ -254,7 +255,7 @@ func TestGetValidators(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 	t.Run("finalized", func(t *testing.T) {
-		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -807,7 +808,7 @@ func TestGetValidator(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 	t.Run("finalized", func(t *testing.T) {
-		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -1060,7 +1061,7 @@ func TestGetValidatorBalances(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 	t.Run("finalized", func(t *testing.T) {
-		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -1126,7 +1127,7 @@ func TestGetValidatorBalances(t *testing.T) {
 		assert.Equal(t, "0", resp.Data[0].Index)
 		assert.Equal(t, "1", resp.Data[1].Index)
 	})
-	t.Run("POST empty", func(t *testing.T) {
+	t.Run("POST empty body returns all", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &testutil.MockStater{
@@ -1147,11 +1148,39 @@ func TestGetValidatorBalances(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		s.GetValidatorBalances(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultJsonError{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.StringContains(t, "No data submitted", e.Message)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 4, len(resp.Data))
+	})
+	t.Run("POST empty array returns all", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances",
+			&body,
+		)
+		request.SetPathValue("state_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 4, len(resp.Data))
 	})
 	t.Run("POST invalid", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
@@ -1182,6 +1211,76 @@ func TestGetValidatorBalances(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "Could not decode request body", e.Message)
+	})
+	t.Run("ssz", func(t *testing.T) {
+		size := uint64((&eth.ValidatorBalance{}).SizeSSZ())
+		newServer := func() Server {
+			chainService := &chainMock.ChainService{}
+			return Server{
+				Stater: &testutil.MockStater{
+					BeaconState: st,
+				},
+				HeadFetcher:           chainService,
+				OptimisticModeFetcher: chainService,
+				FinalizationFetcher:   chainService,
+			}
+		}
+
+		t.Run("get all", func(t *testing.T) {
+			s := newServer()
+			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validator_balances", nil)
+			request.Header.Set("Accept", api.OctetStreamMediaType)
+			request.SetPathValue("state_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetValidatorBalances(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			require.Equal(t, size*count, uint64(len(writer.Body.Bytes())))
+			vb := &eth.ValidatorBalance{}
+			require.NoError(t, vb.UnmarshalSSZ(writer.Body.Bytes()[3*size:4*size]))
+			assert.Equal(t, primitives.ValidatorIndex(3), vb.Index)
+			assert.Equal(t, uint64(3), vb.Balance)
+		})
+		t.Run("get by index", func(t *testing.T) {
+			s := newServer()
+			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validator_balances?id=0&id=1", nil)
+			request.Header.Set("Accept", api.OctetStreamMediaType)
+			request.SetPathValue("state_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetValidatorBalances(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			assert.Equal(t, size*2, uint64(len(writer.Body.Bytes())))
+		})
+		t.Run("POST", func(t *testing.T) {
+			s := newServer()
+			body := bytes.Buffer{}
+			_, err := body.WriteString("[\"0\",\"1\"]")
+			require.NoError(t, err)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/beacon/states/{state_id}/validator_balances", &body)
+			request.Header.Set("Accept", api.OctetStreamMediaType)
+			request.SetPathValue("state_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetValidatorBalances(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			assert.Equal(t, size*2, uint64(len(writer.Body.Bytes())))
+		})
+		t.Run("all unknown IDs return empty", func(t *testing.T) {
+			s := newServer()
+			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validator_balances?id=99999", nil)
+			request.Header.Set("Accept", api.OctetStreamMediaType)
+			request.SetPathValue("state_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetValidatorBalances(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			assert.Equal(t, 0, len(writer.Body.Bytes()))
+		})
 	})
 }
 
@@ -1399,7 +1498,7 @@ func TestGetValidatorIdentities(t *testing.T) {
 			assert.Equal(t, true, resp.ExecutionOptimistic)
 		})
 		t.Run("finalized", func(t *testing.T) {
-			headerRoot, err := genesisState.LatestBlockHeader().HashTreeRoot()
+			headerRoot, err := helpers.BlockRootFromState(t.Context(), genesisState)
 			require.NoError(t, err)
 			chainService := &chainMock.ChainService{
 				FinalizedRoots: map[[32]byte]bool{
@@ -1611,7 +1710,29 @@ func TestGetValidatorIdentities(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, e.Code)
 			assert.StringContains(t, "state_id is required in URL params", e.Message)
 		})
-		t.Run("empty body", func(t *testing.T) {
+		t.Run("empty body returns all", func(t *testing.T) {
+			chainService := &chainMock.ChainService{}
+			s := Server{
+				Stater: &testutil.MockStater{
+					BeaconState: genesisState,
+				},
+				HeadFetcher:           chainService,
+				OptimisticModeFetcher: chainService,
+				FinalizationFetcher:   chainService,
+			}
+
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/beacon/states/{state_id}/validator_identities", nil)
+			request.SetPathValue("state_id", "head")
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetValidatorIdentities(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			resp := &structs.GetValidatorIdentitiesResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.Equal(t, 4, len(resp.Data))
+		})
+		t.Run("empty array returns all", func(t *testing.T) {
 			chainService := &chainMock.ChainService{}
 			s := Server{
 				Stater: &testutil.MockStater{
@@ -1623,19 +1744,18 @@ func TestGetValidatorIdentities(t *testing.T) {
 			}
 
 			body := bytes.Buffer{}
-			_, err := body.WriteString("")
+			_, err := body.WriteString("[]")
 			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/beacon/states/{state_id}/validator_identities", nil)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/beacon/states/{state_id}/validator_identities", &body)
 			request.SetPathValue("state_id", "head")
 			writer := httptest.NewRecorder()
 			writer.Body = &bytes.Buffer{}
 
 			s.GetValidatorIdentities(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.StringContains(t, "No data submitted", e.Message)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			resp := &structs.GetValidatorIdentitiesResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.Equal(t, 4, len(resp.Data))
 		})
 		t.Run("invalid body", func(t *testing.T) {
 			chainService := &chainMock.ChainService{}

@@ -23,7 +23,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
-	ethpbv1 "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
@@ -526,13 +525,8 @@ func (s *Service) markIncludedBlockBLSToExecChanges(headBlock interfaces.ReadOnl
 // This checks whether it's time to start saving hot state to DB.
 // It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
 //
-//	If state-diff is enabled, we will not save hot states to DB regardless of finality status.
-//
 // Requires a read lock on forkchoice
 func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
-	if features.Get().EnableStateDiff {
-		return s.cfg.StateGen.DisableSaveHotStateToDB(ctx)
-	}
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality primitives.Epoch
@@ -583,7 +577,13 @@ func (s *Service) validateStateTransition(ctx context.Context, preState state.Be
 		return nil, ErrNotDescendantOfFinalized
 	}
 	stateTransitionStartTime := time.Now()
-	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
+	var postState state.BeaconState
+	var err error
+	if s.skipBlockSignaturesForTesting {
+		_, postState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, signed)
+	} else {
+		postState, err = transition.ExecuteStateTransition(ctx, preState, signed)
+	}
 	if err != nil {
 		if ctx.Err() != nil || electra.IsExecutionRequestError(err) {
 			return nil, err
@@ -592,6 +592,11 @@ func (s *Service) validateStateTransition(ctx context.Context, preState state.Be
 	}
 	stateTransitionProcessingTime.Observe(float64(time.Since(stateTransitionStartTime).Milliseconds()))
 	return postState, nil
+}
+
+// DisableBlockSignatureVerificationForTesting supports spectest vectors generated with bls_setting 2, their blocks are unsigned.
+func (s *Service) DisableBlockSignatureVerificationForTesting() {
+	s.skipBlockSignaturesForTesting = true
 }
 
 // updateJustificationOnBlock updates the justified checkpoint on DB if the
@@ -648,10 +653,10 @@ func (s *Service) sendNewFinalizedEvent(ctx context.Context, postState state.Bea
 	// Send an event regarding the new finalized checkpoint over a common event feed.
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.FinalizedCheckpoint,
-		Data: &ethpbv1.EventFinalizedCheckpoint{
+		Data: &statefeed.FinalizedCheckpointData{
 			Epoch:               postState.FinalizedCheckpoint().Epoch,
-			Block:               postState.FinalizedCheckpoint().Root,
-			State:               stateRoot[:],
+			Block:               bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root),
+			State:               stateRoot,
 			ExecutionOptimistic: isValidPayload,
 		},
 	})

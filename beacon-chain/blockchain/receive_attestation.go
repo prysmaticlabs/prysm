@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/features"
@@ -37,7 +39,7 @@ type AttestationReceiver interface {
 	InForkchoice([32]byte) bool
 }
 
-// AttestationTargetState returns the pre state of attestation.
+// AttestationTargetState returns a state valid for the target epoch's committees and signature domains, its slot may be one epoch behind the target.
 func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	ss, err := slots.EpochStart(target.Epoch)
 	if err != nil {
@@ -89,7 +91,7 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			return
 		}
 
-		reorgInterval := time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot) - reorgLateBlockCountAttestations
+		reorgInterval := params.BeaconConfig().SlotDuration() - reorgLateBlockCountAttestations
 		ticker := slots.NewSlotTickerWithIntervals(s.genesisTime, []time.Duration{0, reorgInterval})
 		for {
 			select {
@@ -109,10 +111,41 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 					s.cfg.ForkChoiceStore.Unlock()
 
 					s.UpdateHead(s.ctx, slotInterval.Slot)
+
+					// The spec requires running FCR at slot start, after attestations are applied.
+					if s.fcr != nil {
+						s.fcr.OnFastConfirmation(s.ctx, slotInterval.Slot)
+						s.notifyFastConfirmation(slotInterval.Slot)
+					}
 				}
 			}
 		}
 	}()
+}
+
+// notifyFastConfirmation emits a fast_confirmation event after every run of the fast
+// confirmation rule regardless of whether the confirmed block changed.
+func (s *Service) notifyFastConfirmation(currentSlot primitives.Slot) {
+	if s.fcr == nil {
+		return
+	}
+	root := s.fcr.ConfirmedRoot()
+
+	s.cfg.ForkChoiceStore.RLock()
+	slot, err := s.cfg.ForkChoiceStore.Slot(root)
+	s.cfg.ForkChoiceStore.RUnlock()
+	if err != nil {
+		return
+	}
+
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.FastConfirmation,
+		Data: &statefeed.FastConfirmationData{
+			Slot:        slot,
+			BlockRoot:   root,
+			CurrentSlot: currentSlot,
+		},
+	})
 }
 
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
@@ -120,7 +153,9 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.UpdateHead")
 	defer span.End()
-
+	if !s.inRegularSync() {
+		return
+	}
 	start := time.Now()
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
@@ -133,58 +168,50 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	start = time.Now()
-	newHeadRoot, _, full, err := s.cfg.ForkChoiceStore.FullHead(ctx)
+	newHeadRoot, headHash, full, err := s.cfg.ForkChoiceStore.FullHead(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
 		return
 	}
-	if !s.isNewHead(newHeadRoot, full) {
-		return
-	}
-	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
-	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot, newHeadRoot)
+	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get head block and state")
 		return
 	}
-	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-	if s.inRegularSync() {
-		attr := s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:], full)
-		if attr != nil && s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
-			return
+
+	var reason string
+	if full {
+		if buildFull, r := s.shouldBuildOnFullLocked(newHeadRoot, proposingSlot, s.proposingAt(headState, proposingSlot)); !buildFull {
+			full = false
+			headHash = s.cfg.ForkChoiceStore.ParentHash(newHeadRoot)
+			reason = r
 		}
-		postGloas := slots.ToEpoch(proposingSlot) >= params.BeaconConfig().GloasForkEpoch
-		if postGloas {
-			blockHash, hashErr := s.cfg.ForkChoiceStore.BlockHash(newHeadRoot)
-			if hashErr != nil {
-				log.WithError(hashErr).Error("Could not get block hash from forkchoice for FCU")
-			} else {
-				go func() {
-					pid, err := s.notifyForkchoiceUpdateGloas(s.ctx, blockHash, attr)
-					if err != nil {
-						log.WithError(err).Error("Could not update forkchoice with engine")
-					}
-					if pid == nil {
-						if attr != nil {
-							log.Warn("Engine did not return a payload ID for the fork choice update with attributes")
-						}
-						return
-					}
-					var pId [8]byte
-					copy(pId[:], pid[:])
-					s.cfg.PayloadIDCache.Set(proposingSlot, newHeadRoot, pId)
-				}()
-			}
-		} else {
-			fcuArgs := &fcuConfig{
-				headState:     headState,
-				headRoot:      newHeadRoot,
-				headBlock:     headBlock,
-				proposingSlot: proposingSlot,
-				attributes:    attr,
-			}
-			go s.forkchoiceUpdateWithExecution(s.ctx, fcuArgs)
+	}
+	if !s.isNewHead(newHeadRoot, full) {
+		return
+	}
+	attr := s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:], full)
+	if !attr.IsEmpty() && s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+		return
+	}
+	fields := logrus.Fields{"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot), "full": full}
+	if reason != "" {
+		fields["reason"] = reason
+	}
+	log.WithFields(fields).Debug("Head changed late in slot")
+	postGloas := slots.ToEpoch(proposingSlot) >= params.BeaconConfig().GloasForkEpoch
+	if postGloas {
+		go s.fcuFromReorgData(headBlock, newHeadRoot, headHash, full, attr, proposingSlot)
+	} else {
+		fcuArgs := &fcuConfig{
+			headState:     headState,
+			headRoot:      newHeadRoot,
+			headBlock:     headBlock,
+			proposingSlot: proposingSlot,
+			attributes:    attr,
 		}
+		go s.forkchoiceUpdateWithExecution(s.ctx, fcuArgs)
 	}
 	if err := s.saveHead(s.ctx, newHeadRoot, headBlock, headState, full); err != nil {
 		log.WithError(err).Error("Could not save head")

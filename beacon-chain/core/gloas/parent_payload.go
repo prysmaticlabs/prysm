@@ -6,6 +6,7 @@ import (
 
 	requests "github.com/OffchainLabs/prysm/v7/beacon-chain/core/requests"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
@@ -63,17 +64,25 @@ func ProcessParentExecutionPayload(ctx context.Context, st state.BeaconState, bl
 // and mutates st. Called by ProcessParentExecutionPayload and by the validator during
 // block production before computing withdrawals.
 //
-//	<spec fn="apply_parent_execution_payload" fork="gloas" hash="defer_payload">
+//	<spec fn="apply_parent_execution_payload" fork="gloas" hash="bd6df5afe2">
+//	    assert len(requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
+//	    assert len(requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+//	    assert len(requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
+//	    assert len(requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
 func ApplyParentExecutionPayload(
 	ctx context.Context,
 	st state.BeaconState,
-	reqs *enginev1.ExecutionRequests,
+	reqs *enginev1.ExecutionRequestsGloas,
 ) error {
 	parentBid, err := st.LatestExecutionPayloadBid()
 	if err != nil {
 		return errors.Wrap(err, "could not get latest execution payload bid")
 	}
 	parentSlot := parentBid.Slot()
+
+	if err := validateExecutionRequestLengths(reqs); err != nil {
+		return err
+	}
 
 	if err := processExecutionRequests(ctx, st, reqs); err != nil {
 		return errors.Wrap(err, "could not process parent execution requests")
@@ -95,7 +104,26 @@ func ApplyParentExecutionPayload(
 	return nil
 }
 
-func processExecutionRequests(ctx context.Context, st state.BeaconState, rqs *enginev1.ExecutionRequests) error {
+// validateExecutionRequestLengths enforces the per-payload maxima that remain
+// consensus-layer checks now that EIP-7688 uses ProgressiveList SSZ types.
+func validateExecutionRequestLengths(reqs *enginev1.ExecutionRequestsGloas) error {
+	cfg := params.BeaconConfig()
+	if uint64(len(reqs.GetWithdrawals())) > cfg.MaxWithdrawalRequestsPerPayload {
+		return errors.Errorf("too many withdrawal requests: %d > %d", len(reqs.GetWithdrawals()), cfg.MaxWithdrawalRequestsPerPayload)
+	}
+	if uint64(len(reqs.GetConsolidations())) > cfg.MaxConsolidationsRequestsPerPayload {
+		return errors.Errorf("too many consolidation requests: %d > %d", len(reqs.GetConsolidations()), cfg.MaxConsolidationsRequestsPerPayload)
+	}
+	if uint64(len(reqs.GetBuilderDeposits())) > cfg.MaxBuilderDepositRequestsPerPayload {
+		return errors.Errorf("too many builder deposit requests: %d > %d", len(reqs.GetBuilderDeposits()), cfg.MaxBuilderDepositRequestsPerPayload)
+	}
+	if uint64(len(reqs.GetBuilderExits())) > cfg.MaxBuilderExitRequestsPerPayload {
+		return errors.Errorf("too many builder exit requests: %d > %d", len(reqs.GetBuilderExits()), cfg.MaxBuilderExitRequestsPerPayload)
+	}
+	return nil
+}
+
+func processExecutionRequests(ctx context.Context, st state.BeaconState, rqs *enginev1.ExecutionRequestsGloas) error {
 	if err := ProcessDepositRequests(ctx, st, rqs.Deposits); err != nil {
 		return errors.Wrap(err, "could not process deposit requests")
 	}
@@ -104,13 +132,20 @@ func processExecutionRequests(ctx context.Context, st state.BeaconState, rqs *en
 	if err != nil {
 		return errors.Wrap(err, "could not process withdrawal requests")
 	}
-	return requests.ProcessConsolidationRequests(ctx, st, rqs.Consolidations)
+	if err := requests.ProcessConsolidationRequests(ctx, st, rqs.Consolidations); err != nil {
+		return errors.Wrap(err, "could not process consolidation requests")
+	}
+	if err := ProcessBuilderDepositRequests(ctx, st, rqs.BuilderDeposits); err != nil {
+		return errors.Wrap(err, "could not process builder deposit requests")
+	}
+	return ProcessBuilderExitRequests(ctx, st, rqs.BuilderExits)
 }
 
 // IsEmptyExecutionRequests returns true if the execution requests contain no entries.
-func IsEmptyExecutionRequests(r *enginev1.ExecutionRequests) bool {
+func IsEmptyExecutionRequests(r *enginev1.ExecutionRequestsGloas) bool {
 	if r == nil {
 		return true
 	}
-	return len(r.Deposits) == 0 && len(r.Withdrawals) == 0 && len(r.Consolidations) == 0
+	return len(r.Deposits) == 0 && len(r.Withdrawals) == 0 && len(r.Consolidations) == 0 &&
+		len(r.BuilderDeposits) == 0 && len(r.BuilderExits) == 0
 }

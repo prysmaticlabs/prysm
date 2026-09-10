@@ -11,30 +11,28 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
-	"github.com/pkg/errors"
 )
 
 // New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, error) {
+func New(ctx context.Context, s state.BeaconState) ([]Validator, *Balance, error) {
 	_, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 
-	pValidators := make([]*Validator, s.NumValidators())
+	pValidators := make([]Validator, s.NumValidators())
 	pBal := &Balance{}
 
 	currentEpoch := time.CurrentEpoch(s)
 	prevEpoch := time.PrevEpoch(s)
 
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for idx, val := range s.ValidatorsReadOnlySeq() {
 		// Was validator withdrawable or slashed
 		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
-		pVal := &Validator{
-			IsSlashed:                    val.Slashed(),
-			IsWithdrawableCurrentEpoch:   withdrawable,
-			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
-		}
+		pVal := &pValidators[idx]
+		pVal.IsSlashed = val.Slashed()
+		pVal.IsWithdrawableCurrentEpoch = withdrawable
+		pVal.CurrentEpochEffectiveBalance = val.EffectiveBalance()
 		// Was validator active current epoch
 		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			pVal.IsActiveCurrentEpoch = true
@@ -49,11 +47,6 @@ func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, erro
 		// with the lower values
 		pVal.InclusionSlot = params.BeaconConfig().FarFutureSlot
 		pVal.InclusionDistance = params.BeaconConfig().FarFutureSlot
-
-		pValidators[idx] = pVal
-		return nil
-	}); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to initialize precompute")
 	}
 	return pValidators, pBal, nil
 }

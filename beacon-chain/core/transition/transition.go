@@ -21,6 +21,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/features"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
@@ -144,10 +145,10 @@ func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconStat
 		return nil, err
 	}
 
-	// <spec fn="process_slot" fork="gloas" lines="11-13" hash="62b28839">
+	// <spec fn="process_slot" fork="gloas" lines="11-13" hash="2b894194">
+	// state.block_roots[slot_index] = previous_block_root
 	// # [New in Gloas:EIP7732]
 	// # Unset the next payload availability
-	// state.execution_payload_availability[(state.slot + 1) % SLOTS_PER_HISTORICAL_ROOT] = 0b0
 	// </spec>
 	if state.Version() >= version.Gloas {
 		index := uint64((state.Slot() + 1) % params.BeaconConfig().SlotsPerHistoricalRoot)
@@ -164,11 +165,11 @@ func ProcessSlotsIfNeeded(ctx context.Context, st state.ReadOnlyBeaconState, par
 	if slot <= st.Slot() {
 		return st, nil
 	}
-	if cached := NextSlotState(parentRoot, slot); cached != nil {
+	if cached := NextSlotStateReadOnly(parentRoot, slot); cached != nil {
 		if cached.Slot() >= slot {
 			return cached, nil
 		}
-		return ProcessSlots(ctx, cached, slot)
+		return ProcessSlots(ctx, cached.Copy(), slot)
 	}
 	return ProcessSlots(ctx, st.Copy(), slot)
 }
@@ -329,6 +330,9 @@ func ProcessSlotsCore(ctx context.Context, span trace.Span, state state.BeaconSt
 
 // ProcessEpoch is a wrapper on fork specific epoch processing
 func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+	ctx, span := prysmTrace.StartSpan(ctx, "core.state.ProcessEpoch")
+	defer span.End()
+
 	var err error
 	if time.CanProcessEpoch(state) {
 		if state.Version() >= version.Gloas {
@@ -483,6 +487,35 @@ func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interf
 			params.BeaconConfig().MaxVoluntaryExits,
 		)
 	}
+
+	if body.Version() >= version.Capella {
+		changes, err := body.BLSToExecutionChanges()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get BLS to execution changes")
+		}
+		if uint64(len(changes)) > params.BeaconConfig().MaxBlsToExecutionChanges {
+			return nil, fmt.Errorf(
+				"number of BLS to execution changes (%d) in block body exceeds allowed threshold of %d",
+				len(changes),
+				params.BeaconConfig().MaxBlsToExecutionChanges,
+			)
+		}
+	}
+
+	if body.Version() >= version.Gloas {
+		payloadAtts, err := body.PayloadAttestations()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get payload attestations")
+		}
+		if len(payloadAtts) > fieldparams.MaxPayloadAttestations {
+			return nil, fmt.Errorf(
+				"number of payload attestations (%d) in block body exceeds allowed threshold of %d",
+				len(payloadAtts),
+				fieldparams.MaxPayloadAttestations,
+			)
+		}
+	}
+
 	eth1Data := state.Eth1Data()
 	if eth1Data == nil {
 		return nil, errors.New("nil eth1data in state")

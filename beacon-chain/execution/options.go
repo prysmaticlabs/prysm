@@ -22,6 +22,13 @@ func WithHttpEndpoint(endpointString string) Option {
 	}
 }
 
+func WithPartialColumnsSupported() Option {
+	return func(s *Service) error {
+		s.partialColumnsSupported = true
+		return nil
+	}
+}
+
 // WithHttpEndpointAndJWTSecret for authenticating the execution node JSON-RPC endpoint.
 func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 	return func(s *Service) error {
@@ -34,6 +41,16 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 		hEndpoint.Auth.Value = string(secret)
 
 		s.cfg.currHttpEndpoint = hEndpoint
+		return nil
+	}
+}
+
+// WithRPCClientDialer supplies a dialer used to create the execution node RPC
+// client (e.g. one from go-ethereum's rpc.DialInProc), taking precedence over
+// any configured endpoint, JWT secret, and headers.
+func WithRPCClientDialer(dialer RPCClientDialer) Option {
+	return func(s *Service) error {
+		s.cfg.rpcClientDialer = dialer
 		return nil
 	}
 }

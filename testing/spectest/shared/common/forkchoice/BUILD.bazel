@@ -33,6 +33,7 @@ go_library(
         "//beacon-chain/state/state-native:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/verification:go_default_library",
+        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
@@ -50,6 +51,7 @@ go_library(
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
 

@@ -68,8 +68,8 @@ func (s *Service) validateExecutionPayloadBidParentValid(_ context.Context, blk 
 	if blk.Version() < version.Gloas {
 		return pubsub.ValidationAccept, nil
 	}
-	if s.hasBadPayload(blk.ParentRoot()) {
-		return pubsub.ValidationReject, errors.New("parent payload is invalid")
+	if s.hasBadPayload(blk.ParentRoot()) && s.cfg.chain.BuiltOnFullParent(blk) {
+		return pubsub.ValidationReject, errors.New("block builds on invalid parent payload")
 	}
 	return pubsub.ValidationAccept, nil
 }
@@ -85,9 +85,37 @@ func (s *Service) requestPayloadEnvelope(root [32]byte) {
 	})
 }
 
+// requestDataColumnsForEnvelope fetches and stores the data column sidecars needed to
+// validate the envelope for root, if the block carries commitments and we are missing them.
+func (s *Service) requestDataColumnsForEnvelope(root [32]byte) {
+	if !s.cfg.chain.HasNode(root) {
+		return
+	}
+	blk, err := s.cfg.beaconDB.Block(s.ctx, root)
+	if err != nil {
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", root)).Error("Could not fetch block for payload envelope data columns")
+		return
+	}
+	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
+		return
+	}
+	roBlock, err := consensusblocks.NewROBlockWithRoot(blk, root)
+	if err != nil {
+		log.WithError(err).Debug("Could not wrap block for payload envelope data columns")
+		return
+	}
+	s.processPendingGloasColumns(s.ctx, root, blk)
+	if err := s.fetchAndSaveDataColumnSidecars([]consensusblocks.ROBlock{roBlock}); err != nil {
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", root)).Debug("Could not fetch data column sidecars for payload envelope")
+	}
+}
+
 const maxPayloadEnvelopeFetchAttempts = 3
 
 func (s *Service) fetchPayloadEnvelope(root [32]byte) {
+	// Fetch missing columns before the envelope so envelope processing does not wait on columns that were never requested.
+	s.requestDataColumnsForEnvelope(root)
+
 	bestPeers := s.getBestPeers()
 	if len(bestPeers) == 0 {
 		return
@@ -115,7 +143,10 @@ func (s *Service) fetchPayloadEnvelope(root [32]byte) {
 			log.WithError(err).Debug("Could not wrap requested payload envelope")
 			continue
 		}
-		if err := s.cfg.chain.ReceiveExecutionPayloadEnvelope(s.ctx, wrapped); err != nil {
+		ctx, cancel := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDuration())
+		err = s.cfg.chain.ReceiveExecutionPayloadEnvelope(ctx, wrapped)
+		cancel()
+		if err != nil {
 			if blockchain.IsInvalidBlock(err) {
 				s.setBadPayload(s.ctx, root)
 				return

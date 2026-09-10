@@ -119,6 +119,12 @@ func (RPCClientEmpty) CallContext(context.Context, any, string, ...any) error {
 	return errors.New("rpc client is not initialized")
 }
 
+// RPCClientDialer creates the RPC client used to communicate with the execution
+// node. It is re-invoked on every reconnection attempt and must return a new,
+// ready-to-use client on each call. Returned clients are owned and eventually
+// closed by the service.
+type RPCClientDialer func(ctx context.Context) (*gethRPC.Client, error)
+
 // config defines a config struct for dependencies into the service.
 type config struct {
 	depositContractAddr     common.Address
@@ -129,6 +135,7 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	currHttpEndpoint        network.Endpoint
+	rpcClientDialer         RPCClientDialer
 	headers                 []string
 	finalizedStateAtStartup state.BeaconState
 	jwtId                   string
@@ -141,6 +148,7 @@ type config struct {
 // Validator Registration Contract on the eth1 chain to kick off the beacon
 // chain's validator registration process.
 type Service struct {
+	partialColumnsSupported bool
 	connectedETH1           bool
 	isRunning               bool
 	depositRequestsStarted  bool
@@ -232,7 +240,7 @@ func (s *Service) Start() {
 	}
 	// If the chain has not started already and we don't have access to eth1 nodes, we will not be
 	// able to generate the genesis state.
-	if !s.chainStartData.Chainstarted && s.cfg.currHttpEndpoint.Url == "" {
+	if !s.chainStartData.Chainstarted && s.cfg.currHttpEndpoint.Url == "" && s.cfg.rpcClientDialer == nil {
 		// check for genesis state before shutting down the node,
 		// if a genesis state exists, we can continue on.
 		genState, err := s.cfg.beaconDB.GenesisState(s.ctx)
@@ -337,7 +345,7 @@ func (s *Service) updateGraffitiInfo() {
 	}
 	ctx, cancel := context.WithTimeout(s.ctx, time.Second)
 	defer cancel()
-	versions, err := s.GetClientVersion(ctx)
+	versions, err := s.GetClientVersionV1(ctx)
 	if err != nil {
 		log.WithError(err).Debug("Could not get execution client version for graffiti")
 		return
@@ -898,19 +906,6 @@ func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, 
 		}
 	}
 	return eth1Data, nil
-}
-
-func dedupEndpoints(endpoints []string) []string {
-	selectionMap := make(map[string]bool)
-	newEndpoints := make([]string, 0, len(endpoints))
-	for _, point := range endpoints {
-		if selectionMap[point] {
-			continue
-		}
-		newEndpoints = append(newEndpoints, point)
-		selectionMap[point] = true
-	}
-	return newEndpoints
 }
 
 func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error {

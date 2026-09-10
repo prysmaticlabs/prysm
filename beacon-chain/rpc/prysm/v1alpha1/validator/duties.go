@@ -5,7 +5,6 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	coreTime "github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
@@ -36,25 +35,10 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Unavailable, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
-	s, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
-	// Advance state with empty transitions up to the requested epoch start slot.
-	epochStartSlot, err := slots.EpochStart(req.Epoch)
+	// Load a read only head state advanced with empty transitions up to the requested epoch start slot.
+	s, err := vs.stateForEpoch(ctx, req.Epoch)
 	if err != nil {
 		return nil, err
-	}
-	if s.Slot() < epochStartSlot {
-		headRoot, err := vs.HeadFetcher.HeadRoot(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
-		}
-		s, err = transition.ProcessSlotsUsingNextSlotCache(ctx, s, headRoot, epochStartSlot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
-		}
 	}
 
 	requestIndices := make([]primitives.ValidatorIndex, 0, len(req.PublicKeys))
@@ -123,8 +107,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			}
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
-			// We don't need the lastActiveValidatorFn because we don't use the response in this.
-			vStatus, _ := vs.validatorStatus(ctx, s, pubKey, nil)
+			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)
 			assignment.Status = vStatus.Status
 		}
 

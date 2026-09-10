@@ -1,0 +1,22 @@
+package: "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+types:
+  - name: "BeaconBlocksByRangeRequest"
+  - name: "BlobSidecarsByRangeRequest"
+  - name: "BuilderBid"
+  - name: "DataColumnSidecarsByRangeRequest"
+  - name: "DepositSnapshot"
+  # EIP-8025 optional execution proofs. ExecutionProof and PublicInput are nested
+  # inside SignedExecutionProof and must be listed explicitly: methodical only
+  # generates the types named here.
+  - name: "ExecutionProof"
+  - name: "ExecutionPayloadEnvelopesByRangeRequest"
+  - name: "MetaDataV0"
+  - name: "MetaDataV1"
+  - name: "MetaDataV2"
+  - name: "ProofByRootIdentifier"
+  - name: "PublicInput"
+  - name: "SignedBuilderBid"
+  - name: "SignedExecutionProof"
+  - name: "SignedValidatorRegistrationV1"
+  - name: "ValidatorRegistrationV1"
+  - name: "ValidatorIdentity"

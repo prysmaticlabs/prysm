@@ -18,6 +18,7 @@ import (
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
@@ -305,7 +306,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		fakeState, err := util.NewBeaconStateBellatrix()
 		require.NoError(t, err)
-		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), fakeState)
 		require.NoError(t, err)
 		chainService := &blockchainmock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -621,6 +622,24 @@ func TestGetForkChoice(t *testing.T) {
 	s.GetForkChoice(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
 	resp := &structs.GetForkChoiceDumpResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.Equal(t, "2", resp.FinalizedCheckpoint.Epoch)
+}
+
+func TestGetForkChoiceV2(t *testing.T) {
+	store := doublylinkedtree.New()
+	fRoot := [32]byte{'a'}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
+	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
+	s := &Server{ForkchoiceFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/fork_choice", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetForkChoiceV2(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp := &structs.GetForkChoiceDumpV2Response{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "2", resp.FinalizedCheckpoint.Epoch)
 }

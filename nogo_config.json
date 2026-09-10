@@ -210,12 +210,6 @@
       "rules_go_work-.*": "Third party code"
     }
   },
-  "loopclosure": {
-    "exclude_files": {
-      "external/com_github_ethereum_go_ethereum/.*": "Unsafe third party code",
-      "rules_go_work-.*": "Third party code"
-    }
-  },
   "buildtag": {
     "exclude_files": {
       "external/.*": "Third party code"
@@ -228,6 +222,7 @@
   },
   "appendclipped": {
     "exclude_files": {
+      ".*\\.ssz\\.go": "Generated code is ok",
       "external/.*": "Third party code"
     }
   },
@@ -263,7 +258,8 @@
   },
   "rangeint": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      ".*\\.ssz\\.go": "Generated code is ok"
     }
   },
   "reflecttypefor": {

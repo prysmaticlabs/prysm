@@ -109,8 +109,8 @@ func (c *beaconApiValidatorClient) dutiesForEpoch(
 	var wg errgroup.Group
 
 	var attesterDutiesContainer *structs.GetAttesterDutiesResponse
-	var err error
 	wg.Go(func() error {
+		var err error
 		attesterDutiesContainer, err = c.dutiesProvider.AttesterDuties(ctx, epoch, indices)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get attester duties for epoch `%d`", epoch)
@@ -171,6 +171,7 @@ func (c *beaconApiValidatorClient) dutiesForEpoch(
 
 	var proposerDutiesContainer *structs.GetProposerDutiesResponse
 	wg.Go(func() error {
+		var err error
 		proposerDutiesContainer, err = c.dutiesProvider.ProposerDuties(ctx, epoch)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
@@ -217,6 +218,8 @@ func (c *beaconApiValidatorClient) dutiesForEpoch(
 	}
 
 	dutiesContainer.CurrentEpochDuties = duties
+
+	var err error
 	dutiesContainer.CurrDependentRoot, err = hexutil.Decode(proposerDutiesContainer.DependentRoot)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode current dependent root")
@@ -228,7 +231,7 @@ func (c *beaconApiValidatorClient) dutiesForEpoch(
 	return nil
 }
 
-func (c *beaconApiValidatorClient) AttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.AttesterDutiesResponse, error) {
+func (c *beaconApiValidatorClient) attesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.AttesterDutiesResponse, error) {
 	resp, err := c.dutiesProvider.AttesterDuties(ctx, epoch, validatorIndices)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get attester duties")
@@ -284,7 +287,7 @@ func (c *beaconApiValidatorClient) AttesterDuties(ctx context.Context, epoch pri
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) ProposerDuties(ctx context.Context, epoch primitives.Epoch) (*ethpb.ProposerDutiesResponse, error) {
+func (c *beaconApiValidatorClient) proposerDuties(ctx context.Context, epoch primitives.Epoch) (*ethpb.ProposerDutiesResponse, error) {
 	resp, err := c.dutiesProvider.ProposerDuties(ctx, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get proposer duties")
@@ -320,7 +323,7 @@ func (c *beaconApiValidatorClient) ProposerDuties(ctx context.Context, epoch pri
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) SyncCommitteeDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.SyncCommitteeDutiesResponse, error) {
+func (c *beaconApiValidatorClient) syncCommitteeDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.SyncCommitteeDutiesResponse, error) {
 	syncDuties, err := c.dutiesProvider.SyncDuties(ctx, epoch, validatorIndices)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get sync committee duties")
@@ -454,10 +457,14 @@ func (c beaconApiDutiesProvider) AttesterDuties(ctx context.Context, epoch primi
 	return attesterDuties, nil
 }
 
-// ProposerDuties retrieves the proposer duties for the given epoch
+// ProposerDuties retrieves the proposer duties for the given epoch.
 func (c beaconApiDutiesProvider) ProposerDuties(ctx context.Context, epoch primitives.Epoch) (*structs.GetProposerDutiesResponse, error) {
+	apiVersion := "v1"
+	if epoch >= params.BeaconConfig().GloasForkEpoch {
+		apiVersion = "v2"
+	}
 	proposerDuties := &structs.GetProposerDutiesResponse{}
-	if err := c.handler.Get(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), proposerDuties); err != nil {
+	if err := c.handler.Get(ctx, fmt.Sprintf("/eth/%s/validator/duties/proposer/%d", apiVersion, epoch), proposerDuties); err != nil {
 		return nil, err
 	}
 
@@ -535,7 +542,7 @@ func (c beaconApiDutiesProvider) PTCDuties(ctx context.Context, epoch primitives
 	return &ptcDuties, nil
 }
 
-func (c *beaconApiValidatorClient) PTCDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.PTCDutiesResponse, error) {
+func (c *beaconApiValidatorClient) ptcDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.PTCDutiesResponse, error) {
 	resp, err := c.dutiesProvider.PTCDuties(ctx, epoch, validatorIndices)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get PTC duties")

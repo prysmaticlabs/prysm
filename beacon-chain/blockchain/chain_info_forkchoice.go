@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/confirmation"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	consensus_blocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/forkchoice"
@@ -56,11 +57,26 @@ func (s *Service) BlockHash(root [32]byte) ([32]byte, error) {
 	return s.cfg.ForkChoiceStore.BlockHash(root)
 }
 
-// GasLimit returns the gas limit of the latest full payload at or before the given beacon block root from forkchoice.
-func (s *Service) GasLimit(root [32]byte) (uint64, error) {
+// HasPayloadBlockHash reports whether blockHash is an available payload parent at root.
+func (s *Service) HasPayloadBlockHash(root, blockHash [32]byte) bool {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.GasLimit(root)
+	return s.cfg.ForkChoiceStore.HasPayloadBlockHash(root, blockHash)
+}
+
+// GasLimit returns the gas limit of the payload with the given block hash as seen from the given beacon block root:
+// the block's own payload or the parent payload it builds on.
+func (s *Service) GasLimit(root, blockHash [32]byte) (uint64, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.GasLimit(root, blockHash)
+}
+
+// HasNode returns the corresponding value from forkchoice
+func (s *Service) HasNode(root [32]byte) bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HasNode(root)
 }
 
 // HasFullNode returns the corresponding value from forkchoice
@@ -105,6 +121,13 @@ func (s *Service) ForkChoiceDump(ctx context.Context) (*forkchoice.Dump, error) 
 	return s.cfg.ForkChoiceStore.ForkChoiceDump(ctx)
 }
 
+// ForkChoiceDumpV2 returns the corresponding value from forkchoice
+func (s *Service) ForkChoiceDumpV2(ctx context.Context) (*forkchoice.DumpV2, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ForkChoiceDumpV2(ctx)
+}
+
 // NewSlot returns the corresponding value from forkchoice
 func (s *Service) NewSlot(ctx context.Context, slot primitives.Slot) error {
 	s.cfg.ForkChoiceStore.Lock()
@@ -117,6 +140,11 @@ func (s *Service) ProposerBoost() [32]byte {
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	return s.cfg.ForkChoiceStore.ProposerBoost()
+}
+
+// FCR returns the fast confirmation rule instance, or nil if FCR is not enabled.
+func (s *Service) FCR() *confirmation.FastConfirmationRule {
+	return s.fcr
 }
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).

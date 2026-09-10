@@ -29,7 +29,7 @@ var knownExecutionProofTypes = []uint8{
 // asking every zkvm-enabled peer for the proof types missing from unfinalized
 // blocks.
 func (s *Service) executionProofsFetcherLoop() {
-	slotTicker := slots.NewSlotTicker(s.cfg.clock.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
+	slotTicker := slots.NewSlotTicker(s.cfg.clock.GenesisTime(), params.BeaconConfig().SlotDuration())
 	defer slotTicker.Done()
 
 	for {

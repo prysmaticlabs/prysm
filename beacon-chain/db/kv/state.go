@@ -31,7 +31,16 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 
 	// If state diff is enabled, we get the state from the state-diff db.
 	if features.Get().EnableStateDiff {
-		st, err := s.getStateUsingStateDiff(ctx, blockRoot)
+		st, err := s.HotStateSnapshot(ctx, blockRoot)
+		if err == nil {
+			stateReadingTime.Observe(float64(time.Since(startTime).Milliseconds()))
+			return st, nil
+		}
+		if !errors.Is(err, ErrNotFoundState) {
+			return nil, err
+		}
+
+		st, err = s.getStateUsingStateDiff(ctx, blockRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -277,6 +286,10 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			if err := s.processFulu(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
 				return err
 			}
+		case *ethpb.BeaconStateGloas:
+			if err := s.processGloas(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
+				return err
+			}
 		default:
 			return errors.New("invalid state type")
 		}
@@ -410,6 +423,24 @@ func (s *Store) processFulu(ctx context.Context, pbState *ethpb.BeaconStateFulu,
 	return nil
 }
 
+func (s *Store) processGloas(ctx context.Context, pbState *ethpb.BeaconStateGloas, rootHash []byte, bucket, valIdxBkt *bolt.Bucket, validatorKey []byte) error {
+	valEntries := pbState.Validators
+	pbState.Validators = make([]*ethpb.Validator, 0)
+	rawObj, err := pbState.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	encodedState := snappy.Encode(nil, append(gloasKey, rawObj...))
+	if err := bucket.Put(rootHash, encodedState); err != nil {
+		return err
+	}
+	pbState.Validators = valEntries
+	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Store) storeValidatorEntriesSeparately(ctx context.Context, tx *bolt.Tx, validatorsEntries map[string]*ethpb.Validator) error {
 	valBkt := tx.Bucket(stateValidatorsBucket)
 	for hashStr, validatorEntry := range validatorsEntries {
@@ -441,6 +472,9 @@ func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	defer span.End()
 
 	if features.Get().EnableStateDiff {
+		if s.HasHotStateSnapshot(ctx, blockRoot) {
+			return true
+		}
 		hasState, err := s.hasStateUsingStateDiff(ctx, blockRoot)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("error checking state existence using state-diff"))

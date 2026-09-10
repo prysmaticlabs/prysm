@@ -3,24 +3,28 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"math"
-	"os"
-	"path/filepath"
+	"net/http"
+	"net/http/httptest"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v7/api"
+	eventClient "github.com/OffchainLabs/prysm/v7/api/client/event"
 	grpcutil "github.com/OffchainLabs/prysm/v7/api/grpc"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/async/event"
-	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
-	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/config/proposer"
@@ -34,20 +38,21 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	validatormock "github.com/OffchainLabs/prysm/v7/testing/validator-mock"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/OffchainLabs/prysm/v7/validator/accounts/wallet"
-	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
 	dbTest "github.com/OffchainLabs/prysm/v7/validator/db/testing"
 	validatorHelpers "github.com/OffchainLabs/prysm/v7/validator/helpers"
 	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager/derived"
 	"github.com/OffchainLabs/prysm/v7/validator/keymanager/local"
 	remoteweb3signer "github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer"
+	constant "github.com/OffchainLabs/prysm/v7/validator/testing"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli/v2"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -58,11 +63,23 @@ func init() {
 	logrus.SetOutput(io.Discard)
 }
 
-var _ iface.Validator = (*validator)(nil)
-
 const cancelledCtx = "context has been canceled"
 
 var unknownIndex = primitives.ValidatorIndex(^uint64(0))
+
+func generateMultipleValidatorStatusResponse(pubkeys [][]byte) *ethpb.MultipleValidatorStatusResponse {
+	resp := &ethpb.MultipleValidatorStatusResponse{
+		PublicKeys: make([][]byte, len(pubkeys)),
+		Statuses:   make([]*ethpb.ValidatorStatusResponse, len(pubkeys)),
+		Indices:    make([]primitives.ValidatorIndex, len(pubkeys)),
+	}
+	for i, key := range pubkeys {
+		resp.PublicKeys[i] = key
+		resp.Statuses[i] = &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_UNKNOWN_STATUS}
+		resp.Indices[i] = primitives.ValidatorIndex(i)
+	}
+	return resp
+}
 
 func genMockKeymanager(t *testing.T, numKeys int) *mockKeymanager {
 	pairs := make([]keypair, numKeys)
@@ -98,11 +115,14 @@ type mockKeymanager struct {
 	keys                [][fieldparams.BLSPubkeyLength]byte
 	fetchNoKeys         bool
 	accountsChangedFeed *event.Feed
+	lastSignReq         *validatorpb.SignRequest
 }
 
 var errMockKeyExists = errors.New("key already in mockKeymanager map")
 
 func (m *mockKeymanager) add(pairs ...keypair) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	for _, kp := range pairs {
 		if _, exists := m.keysMap[kp.pub]; exists {
 			return errMockKeyExists
@@ -124,6 +144,9 @@ func (m *mockKeymanager) FetchValidatingPublicKeys(_ context.Context) ([][fieldp
 }
 
 func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+	m.lock.Lock()
+	m.lastSignReq = req
+	m.lock.Unlock()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], req.PublicKey)
 	privKey, ok := m.keysMap[pubKey]
@@ -132,6 +155,12 @@ func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (
 	}
 	sig := privKey.Sign(req.SigningRoot)
 	return sig, nil
+}
+
+func (m *mockKeymanager) lastSignRequest() *validatorpb.SignRequest {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+	return m.lastSignReq
 }
 
 func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
@@ -159,6 +188,160 @@ func (*mockKeymanager) ListKeymanagerAccounts(
 func (*mockKeymanager) DeleteKeystores(context.Context, [][]byte,
 ) ([]*keymanager.KeyStatus, error) {
 	return nil, nil
+}
+
+type proposedPublicKeysLister interface {
+	ProposedPublicKeys(context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
+}
+
+func waitForProposedKeys(t *testing.T, valDB proposedPublicKeysLister, want ...[fieldparams.BLSPubkeyLength]byte) {
+	t.Helper()
+	var got [][fieldparams.BLSPubkeyLength]byte
+	var err error
+	for range 50 {
+		got, err = valDB.ProposedPublicKeys(context.Background())
+		require.NoError(t, err)
+		if slices.Equal(sortedKeys(got), sortedKeys(want)) {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("proposal buckets never matched: want %d keys, got %d", len(want), len(got))
+}
+
+func sortedKeys(keys [][fieldparams.BLSPubkeyLength]byte) [][fieldparams.BLSPubkeyLength]byte {
+	s := slices.Clone(keys)
+	sort.Slice(s, func(i, j int) bool { return bytes.Compare(s[i][:], s[j][:]) < 0 })
+	return s
+}
+
+func newLocalKeymanager(t *testing.T, ctx context.Context) *local.Keymanager {
+	local.ResetCaches()
+	w := wallet.New(&wallet.Config{
+		WalletDir:      t.TempDir(),
+		KeymanagerKind: keymanager.Local,
+		WalletPassword: "TestWalletPassword123!",
+	})
+	require.NoError(t, w.SaveWallet())
+	km, err := local.NewKeymanager(ctx, &local.SetupConfig{Wallet: w})
+	require.NoError(t, err)
+	return km
+}
+
+func TestRecheckKeys(t *testing.T) {
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			t.Run("startup keys get buckets synchronously", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				km := newLocalKeymanager(t, ctx)
+				kp := randKeypair(t)
+				require.NoError(t, km.ImportKeypairs(ctx, [][]byte{kp.pri.Marshal()}, [][]byte{kp.pub[:]}))
+				valDB := dbTest.SetupDB(t, t.TempDir(), nil, isSlashingProtectionMinimal)
+
+				recheckKeys(ctx, valDB, km)
+				keys, err := valDB.ProposedPublicKeys(ctx)
+				require.NoError(t, err)
+				require.DeepEqual(t, [][fieldparams.BLSPubkeyLength]byte{kp.pub}, keys)
+			})
+
+			t.Run("runtime imports get buckets", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				km := newLocalKeymanager(t, ctx)
+				valDB := dbTest.SetupDB(t, t.TempDir(), nil, isSlashingProtectionMinimal)
+
+				recheckKeys(ctx, valDB, km)
+				keys, err := valDB.ProposedPublicKeys(ctx)
+				require.NoError(t, err)
+				require.Equal(t, 0, len(keys))
+
+				// The subscription is live once recheckKeys returns, so one import must be caught.
+				kp := randKeypair(t)
+				require.NoError(t, km.ImportKeypairs(ctx, [][]byte{kp.pri.Marshal()}, [][]byte{kp.pub[:]}))
+				waitForProposedKeys(t, valDB, kp.pub)
+			})
+
+			t.Run("derived keymanager gets runtime buckets", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				local.ResetCaches()
+				w := wallet.New(&wallet.Config{
+					WalletDir:      t.TempDir(),
+					KeymanagerKind: keymanager.Derived,
+					WalletPassword: "TestWalletPassword123!",
+				})
+				require.NoError(t, w.SaveWallet())
+				km, err := derived.NewKeymanager(ctx, &derived.SetupConfig{Wallet: w})
+				require.NoError(t, err)
+				valDB := dbTest.SetupDB(t, t.TempDir(), nil, isSlashingProtectionMinimal)
+
+				recheckKeys(ctx, valDB, km)
+				keys, err := valDB.ProposedPublicKeys(ctx)
+				require.NoError(t, err)
+				require.Equal(t, 0, len(keys))
+
+				require.NoError(t, km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", 1))
+				recovered, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				require.Equal(t, 1, len(recovered))
+				waitForProposedKeys(t, valDB, recovered...)
+			})
+
+			t.Run("non-local keymanager gets startup and runtime buckets", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				km := genMockKeymanager(t, 2)
+				valDB := dbTest.SetupDB(t, t.TempDir(), nil, isSlashingProtectionMinimal)
+
+				recheckKeys(ctx, valDB, km)
+				keys, err := valDB.ProposedPublicKeys(ctx)
+				require.NoError(t, err)
+				require.DeepEqual(t, sortedKeys(km.keys), sortedKeys(keys))
+
+				kp := randKeypair(t)
+				newKeys := append(slices.Clone(km.keys), kp.pub)
+				km.SimulateAccountChanges(newKeys)
+				waitForProposedKeys(t, valDB, newKeys...)
+			})
+		})
+	}
+}
+
+func TestRecheckValidatingKeysBucket(t *testing.T) {
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			valDB := dbTest.SetupDB(t, t.TempDir(), nil, isSlashingProtectionMinimal)
+
+			feed := new(event.Feed)
+			pubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
+			sub := feed.Subscribe(pubKeysChan)
+			done := make(chan struct{})
+			go func() {
+				recheckValidatingKeysBucket(ctx, valDB, sub, pubKeysChan)
+				close(done)
+			}()
+
+			kpA, kpB := randKeypair(t), randKeypair(t)
+			require.Equal(t, 1, feed.Send([][fieldparams.BLSPubkeyLength]byte{kpA.pub}))
+			waitForProposedKeys(t, valDB, kpA.pub)
+			require.Equal(t, 1, feed.Send([][fieldparams.BLSPubkeyLength]byte{kpA.pub, kpB.pub}))
+			waitForProposedKeys(t, valDB, kpA.pub, kpB.pub)
+
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(5 * time.Second):
+				t.Fatal("goroutine did not exit on context cancellation")
+			}
+			// Cancellation must unsubscribe and close the channel.
+			require.Equal(t, 0, feed.Send([][fieldparams.BLSPubkeyLength]byte{randKeypair(t).pub}))
+			_, open := <-pubKeysChan
+			require.Equal(t, false, open)
+		})
+	}
 }
 
 func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
@@ -370,13 +553,13 @@ func TestRolesAt_OK(t *testing.T) {
 				PtcSlots:        []primitives.Slot{1},
 			})
 			nextPk := bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())
-			v.duties.nextDuties[nextPk] = &ethpb.ValidatorDuty{
+			v.duties.data.nextDuties[nextPk] = &ethpb.ValidatorDuty{
 				CommitteeIndex:  1,
 				AttesterSlot:    1,
 				PublicKey:       validatorKey.PublicKey().Marshal(),
 				IsSyncCommittee: true,
 			}
-			v.duties.syncNextMap[v.duties.nextDuties[nextPk].ValidatorIndex] = true
+			v.duties.data.syncNextMap[v.duties.data.nextDuties[nextPk].ValidatorIndex] = true
 
 			m.validatorClient.EXPECT().DomainData(
 				gomock.Any(), // ctx
@@ -395,10 +578,10 @@ func TestRolesAt_OK(t *testing.T) {
 			require.NoError(t, err)
 
 			pk := bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())
-			assert.Equal(t, iface.RoleAttester, roleMap[pk][0])
-			assert.Equal(t, iface.RoleAggregator, roleMap[pk][1])
-			assert.Equal(t, iface.RoleSyncCommittee, roleMap[pk][2])
-			assert.Equal(t, iface.RolePTCMember, roleMap[pk][3])
+			assert.Equal(t, roleAttester, roleMap[pk][0])
+			assert.Equal(t, roleAggregator, roleMap[pk][1])
+			assert.Equal(t, roleSyncCommittee, roleMap[pk][2])
+			assert.Equal(t, rolePTCMember, roleMap[pk][3])
 
 			// Test sync committee role at epoch boundary.
 			v.duties = testDutyStore(&ethpb.ValidatorDuty{
@@ -407,13 +590,13 @@ func TestRolesAt_OK(t *testing.T) {
 				PublicKey:       validatorKey.PublicKey().Marshal(),
 				IsSyncCommittee: false,
 			})
-			v.duties.nextDuties[nextPk] = &ethpb.ValidatorDuty{
+			v.duties.data.nextDuties[nextPk] = &ethpb.ValidatorDuty{
 				CommitteeIndex:  1,
 				AttesterSlot:    1,
 				PublicKey:       validatorKey.PublicKey().Marshal(),
 				IsSyncCommittee: true,
 			}
-			v.duties.syncNextMap[v.duties.nextDuties[nextPk].ValidatorIndex] = true
+			v.duties.data.syncNextMap[v.duties.data.nextDuties[nextPk].ValidatorIndex] = true
 
 			m.validatorClient.EXPECT().SyncSubcommitteeIndex(
 				gomock.Any(), // ctx
@@ -425,7 +608,7 @@ func TestRolesAt_OK(t *testing.T) {
 
 			roleMap, err = v.RolesAt(t.Context(), params.BeaconConfig().SlotsPerEpoch-1)
 			require.NoError(t, err)
-			assert.Equal(t, iface.RoleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+			assert.Equal(t, roleSyncCommittee, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 		})
 	}
 }
@@ -451,7 +634,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 			roleMap, err := v.RolesAt(t.Context(), 0)
 			require.NoError(t, err)
 
-			assert.Equal(t, iface.RoleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
+			assert.Equal(t, roleAttester, roleMap[bytesutil.ToBytes48(validatorKey.PublicKey().Marshal())][0])
 		})
 	}
 }
@@ -484,8 +667,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				publicKey: pubKeys[0],
 				index:     30,
 				status: &ethpb.ValidatorStatusResponse{
-					Status:                    ethpb.ValidatorStatus_DEPOSITED,
-					PositionInActivationQueue: 30,
+					Status: ethpb.ValidatorStatus_DEPOSITED,
 				},
 			},
 			log:    "Validator deposited, entering activation queue after finalization\" package=validator/client pubkey=0x000000000000 status=DEPOSITED validatorIndex=30",
@@ -497,9 +679,8 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				publicKey: pubKeys[0],
 				index:     50,
 				status: &ethpb.ValidatorStatusResponse{
-					Status:                    ethpb.ValidatorStatus_PENDING,
-					ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
-					PositionInActivationQueue: 6,
+					Status:          ethpb.ValidatorStatus_PENDING,
+					ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 				},
 			},
 			log:    "Waiting for activation... Check validator queue status in a block explorer\" package=validator/client pubkey=0x000000000000 status=PENDING validatorIndex=50",
@@ -584,10 +765,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		flgs := features.Get()
-		flgs.EnableDoppelGanger = true
-		reset := features.InitWithReset(flgs)
-		defer reset()
+		enableDoppelGanger(t)
 		tests := []struct {
 			name            string
 			validatorSetter func(t *testing.T) *validator
@@ -784,7 +962,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("%s/isSlashingProtectionMinimal:%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
 				v := tt.validatorSetter(t)
-				if err := v.CheckDoppelGanger(t.Context()); tt.err != "" {
+				if err := v.CheckDoppelGangerAtStartup(t.Context()); tt.err != "" {
 					assert.ErrorContains(t, tt.err, err)
 				}
 			})
@@ -935,16 +1113,9 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 			copy(root[2:], "a")
 			err := db.SaveGenesisValidatorsRoot(ctx, root)
 			require.NoError(t, err)
-			app := cli.App{}
-			set := flag.NewFlagSet("test", 0)
-			newDir := filepath.Join(t.TempDir(), "new")
-			require.NoError(t, os.MkdirAll(newDir, 0700))
-			set.String(flags.WalletDirFlag.Name, newDir, "")
-			w := wallet.NewWalletForWeb3Signer(cli.NewContext(&app, set, nil))
 			v := validator{
 				db:        db,
 				enableAPI: false,
-				wallet:    w,
 				web3SignerConfig: &remoteweb3signer.SetupConfig{
 					BaseEndpoint:       "http://localhost:8545",
 					ProvidedPublicKeys: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
@@ -957,6 +1128,130 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 			require.NotNil(t, km)
 		})
 	}
+}
+
+func settledPollerCount() int {
+	// countURLPollerInStack counts the number of pollRemoteKeysFromURL goroutines in the stack trace.
+	countURLPollerInStack := func() int {
+		buf := make([]byte, 1<<20)
+		for {
+			n := runtime.Stack(buf, true)
+			if n < len(buf) {
+				return strings.Count(string(buf[:n]), "pollRemoteKeysFromURL")
+			}
+			buf = make([]byte, 2*len(buf))
+		}
+	}
+
+	count := 0
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		count = countURLPollerInStack()
+		if count == 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return count
+}
+
+func TestInitialize_Keymanager(t *testing.T) {
+	gvr := func() []byte {
+		root := make([]byte, 32)
+		copy(root[2:], "a")
+		return root
+	}()
+
+	newWeb3SignerTestValidator := func(t *testing.T, keysURL string, pollInterval time.Duration) *validator {
+		ctx := t.Context()
+		db := dbTest.SetupDB(t, t.TempDir(), [][fieldparams.BLSPubkeyLength]byte{}, false)
+		require.NoError(t, db.SaveGenesisValidatorsRoot(ctx, gvr))
+		return &validator{
+			db: db,
+			web3SignerConfig: &remoteweb3signer.SetupConfig{
+				BaseEndpoint:  "http://localhost:8545",
+				PublicKeysURL: keysURL,
+				PollInterval:  pollInterval,
+			},
+			accountsChangedChannel: make(chan [][fieldparams.BLSPubkeyLength]byte, 2),
+		}
+	}
+
+	setupInitTest := func(t *testing.T) (*validator, *validatormock.MockValidatorClient, *validatormock.MockNodeClient, *atomic.Value) {
+		var resp atomic.Value
+		resp.Store(`["0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(resp.Load().(string)))
+		}))
+		t.Cleanup(srv.Close)
+
+		v := newWeb3SignerTestValidator(t, srv.URL, 20*time.Millisecond)
+		ctrl := gomock.NewController(t)
+		validatorClient := validatormock.NewMockValidatorClient(ctrl)
+		nodeClient := validatormock.NewMockNodeClient(ctrl)
+		v.validatorClient = validatorClient
+		v.nodeClient = nodeClient
+		return v, validatorClient, nodeClient, &resp
+	}
+	chainStarted := func() *ethpb.ChainStartResponse {
+		return &ethpb.ChainStartResponse{
+			Started:               true,
+			GenesisTime:           uint64(time.Now().Unix()),
+			GenesisValidatorsRoot: gvr,
+		}
+	}
+
+	oldBackOff := backOffPeriod
+	backOffPeriod = 5 * time.Millisecond
+	defer func() { backOffPeriod = oldBackOff }()
+
+	t.Run("initialized once per runner", func(t *testing.T) {
+		v, validatorClient, nodeClient, resp := setupInitTest(t)
+		validatorClient.EXPECT().WaitForChainStart(gomock.Any(), gomock.Any()).Return(chainStarted(), nil).Times(3)
+
+		// Two connection errors followed by a successful sync status check.
+		gomock.InOrder(
+			nodeClient.EXPECT().SyncStatus(gomock.Any(), gomock.Any()).Return(nil, errors.New("connection refused")),
+			nodeClient.EXPECT().SyncStatus(gomock.Any(), gomock.Any()).Return(nil, errors.New("connection refused")),
+			nodeClient.EXPECT().SyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{Syncing: false}, nil),
+		)
+		validatorClient.EXPECT().MultipleValidatorStatus(gomock.Any(), gomock.Any()).DoAndReturn(allActiveStatuses)
+
+		require.NoError(t, initialize(t.Context(), v))
+		require.Equal(t, 1, settledPollerCount(), "expected exactly one key poller goroutine")
+
+		// Test that subscription delivers exactly one event.
+		resp.Store(`["0xb2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`)
+		select {
+		case <-v.accountsChangedChannel:
+		case <-time.After(5 * time.Second):
+			t.Fatal("timed out waiting for accounts changed event")
+		}
+		select {
+		case <-v.accountsChangedChannel:
+			t.Fatal("duplicate accounts changed delivery from a leaked keymanager")
+		case <-time.After(500 * time.Millisecond):
+		}
+	})
+
+	t.Run("rebuilt by a runner restart", func(t *testing.T) {
+		v, validatorClient, nodeClient, _ := setupInitTest(t)
+		validatorClient.EXPECT().WaitForChainStart(gomock.Any(), gomock.Any()).Return(chainStarted(), nil).Times(2)
+		nodeClient.EXPECT().SyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{Syncing: false}, nil).Times(2)
+		validatorClient.EXPECT().MultipleValidatorStatus(gomock.Any(), gomock.Any()).DoAndReturn(allActiveStatuses).Times(2)
+
+		runnerCtx, cancel := context.WithCancel(t.Context())
+		require.NoError(t, initialize(runnerCtx, v))
+		km := v.km
+
+		// Simulate a health-monitor runner restart.
+		cancel()
+		v.Done()
+		require.NoError(t, initialize(t.Context(), v))
+		require.Equal(t, false, km == v.km, "restart must rebuild the keymanager")
+		require.Equal(t, 1, settledPollerCount(), "expected exactly one key poller goroutine after restart")
+	})
 }
 
 func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
@@ -989,32 +1284,6 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 				KeymanagerKind: keymanager.Local,
 			})
 			<-wait
-		})
-	}
-}
-
-func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			ctx := t.Context()
-			db := dbTest.SetupDB(t, t.TempDir(), [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
-			root := make([]byte, 32)
-			copy(root[2:], "a")
-			err := db.SaveGenesisValidatorsRoot(ctx, root)
-			require.NoError(t, err)
-			v := validator{
-				db:        db,
-				enableAPI: false,
-				interopKeysConfig: &local.InteropKeymanagerConfig{
-					NumValidatorKeys: 2,
-					Offset:           1,
-				},
-			}
-			err = v.WaitForKeymanagerInitialization(ctx)
-			require.NoError(t, err)
-			km, err := v.Keymanager()
-			require.NoError(t, err)
-			require.NotNil(t, km)
 		})
 	}
 }
@@ -1060,6 +1329,7 @@ func TestValidator_PushSettings(t *testing.T) {
 		db := dbTest.SetupDB(t, t.TempDir(), [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 		client := validatormock.NewMockValidatorClient(ctrl)
 		client.EXPECT().SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).Return(&empty.Empty{}, nil).AnyTimes()
+		client.EXPECT().ConnectionGeneration().Return(uint64(0)).AnyTimes()
 		nodeClient := validatormock.NewMockNodeClient(ctrl)
 		defaultFeeHex := "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"
 		byteValueAddress, err := hexutil.Decode("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9")
@@ -1093,13 +1363,8 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 2,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 2),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
@@ -1138,17 +1403,19 @@ func TestValidator_PushSettings(t *testing.T) {
 							GasLimit: 40000000,
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: 35000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: 35000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					client.EXPECT().SubmitValidatorRegistrations(
@@ -1184,13 +1451,8 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 2,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 2),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
@@ -1229,17 +1491,19 @@ func TestValidator_PushSettings(t *testing.T) {
 							GasLimit: 40000000,
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  false,
+									GasLimit: 35000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  false,
-								GasLimit: 35000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					client.EXPECT().SubmitValidatorRegistrations(
@@ -1270,13 +1534,8 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 2,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 2),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
@@ -1311,13 +1570,15 @@ func TestValidator_PushSettings(t *testing.T) {
 							FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
 							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					return &v
@@ -1340,31 +1601,28 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 1,
-							Offset:           1,
-						},
-						genesisTime: time.Unix(0, 0),
+						km:                           genMockKeymanager(t, 1),
+						genesisTime:                  time.Unix(0, 0),
 					}
 					// set bellatrix as current epoch
 					params.BeaconConfig().BellatrixForkEpoch = 0
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
 					keys, err := km.FetchValidatingPublicKeys(ctx)
 					require.NoError(t, err)
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: nil,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: nil,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					v.pubkeyToStatus[keys[0]] = &validatorStatus{
@@ -1413,24 +1671,21 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 1,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 1),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: nil,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: nil,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: 40000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: 40000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					km, err := v.Keymanager()
@@ -1482,13 +1737,8 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 1,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 1),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
@@ -1517,13 +1767,15 @@ func TestValidator_PushSettings(t *testing.T) {
 							FeeRecipient: common.Address{},
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
 							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					return &v
@@ -1539,13 +1791,8 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 1,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 1),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
@@ -1564,13 +1811,15 @@ func TestValidator_PushSettings(t *testing.T) {
 							PublicKeys: [][]byte{keys[0][:]},
 							Indices:    []primitives.ValidatorIndex{unknownIndex},
 						}, nil)
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
 							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					return &v
@@ -1586,13 +1835,8 @@ func TestValidator_PushSettings(t *testing.T) {
 						pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
 						signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 						enableAPI:                    false,
-						interopKeysConfig: &local.InteropKeymanagerConfig{
-							NumValidatorKeys: 1,
-							Offset:           1,
-						},
+						km:                           genMockKeymanager(t, 1),
 					}
-					err := v.WaitForKeymanagerInitialization(ctx)
-					require.NoError(t, err)
 					config := make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option)
 					km, err := v.Keymanager()
 					require.NoError(t, err)
@@ -1621,17 +1865,19 @@ func TestValidator_PushSettings(t *testing.T) {
 							GasLimit: 40000000,
 						},
 					}
-					err = v.SetProposerSettings(t.Context(), &proposer.Settings{
-						ProposeConfig: config,
-						DefaultConfig: &proposer.Option{
-							FeeRecipientConfig: &proposer.FeeRecipientConfig{
-								FeeRecipient: common.HexToAddress(defaultFeeHex),
+					err = v.UpdateProposerSettings(t.Context(), func(*proposer.Settings) (*proposer.Settings, error) {
+						return &proposer.Settings{
+							ProposeConfig: config,
+							DefaultConfig: &proposer.Option{
+								FeeRecipientConfig: &proposer.FeeRecipientConfig{
+									FeeRecipient: common.HexToAddress(defaultFeeHex),
+								},
+								BuilderConfig: &proposer.BuilderConfig{
+									Enabled:  true,
+									GasLimit: 40000000,
+								},
 							},
-							BuilderConfig: &proposer.BuilderConfig{
-								Enabled:  true,
-								GasLimit: 40000000,
-							},
-						},
+						}, nil
 					})
 					require.NoError(t, err)
 					client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
@@ -1807,16 +2053,15 @@ func TestValidator_buildProposerSettingsRequests_WithoutDefaultConfig(t *testing
 			FeeRecipient:   feeRecipient4[:],
 		},
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
-	require.NoError(t, err)
-	actual := v.buildProposerSettingsRequests(filteredKeys)
+	require.NoError(t, v.refreshStatusCache(ctx, pubkeys, 0))
+	actual := v.buildProposerSettingsRequests(v.activeKeysFromCache(0))
 	sort.Slice(actual, func(i, j int) bool {
 		return actual[i].ValidatorIndex < actual[j].ValidatorIndex
 	})
 	assert.DeepEqual(t, expected, actual)
 }
 
-func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
+func TestValidator_refreshStatusCache(t *testing.T) {
 	// Public keys
 	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
 	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
@@ -1842,10 +2087,9 @@ func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
 			validatorClient: client,
 			pubkeyToStatus:  make(map[[48]byte]*validatorStatus),
 		}
-		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 0)
-		require.NoError(t, err)
+		require.NoError(t, v.refreshStatusCache(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 0))
 		// one key is unknown status
-		require.Equal(t, 3, len(keys))
+		require.Equal(t, 3, len(v.activeKeysFromCache(0)))
 	})
 	t.Run("refetch all keys at start of epoch, even with cache", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -1887,10 +2131,9 @@ func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
 				},
 			},
 		}
-		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 0)
-		require.NoError(t, err)
+		require.NoError(t, v.refreshStatusCache(ctx, [][48]byte{pubkey1, pubkey2, pubkey3, pubkey4}, 0))
 		// one key is unknown status
-		require.Equal(t, 3, len(keys))
+		require.Equal(t, 3, len(v.activeKeysFromCache(0)))
 	})
 	t.Run("cache used mid epoch, no new keys added", func(t *testing.T) {
 		ctx := t.Context()
@@ -1908,10 +2151,8 @@ func TestValidator_filterAndCacheActiveKeys(t *testing.T) {
 				},
 			},
 		}
-		keys, err := v.filterAndCacheActiveKeys(ctx, [][48]byte{pubkey1, pubkey4}, 5)
-		require.NoError(t, err)
-		// one key is unknown status
-		require.Equal(t, 2, len(keys))
+		require.NoError(t, v.refreshStatusCache(ctx, [][48]byte{pubkey1, pubkey4}, 5))
+		require.Equal(t, 2, len(v.activeKeysFromCache(5)))
 	})
 
 }
@@ -2108,9 +2349,8 @@ func TestValidator_buildProposerSettingsRequests_WithDefaultConfig(t *testing.T)
 			FeeRecipient:   feeRecipient8[:],
 		},
 	}
-	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 640)
-	require.NoError(t, err)
-	actual := v.buildProposerSettingsRequests(filteredKeys)
+	require.NoError(t, v.refreshStatusCache(ctx, pubkeys, 640))
+	actual := v.buildProposerSettingsRequests(v.activeKeysFromCache(640))
 	sort.Slice(actual, func(i, j int) bool {
 		return actual[i].ValidatorIndex < actual[j].ValidatorIndex
 	})
@@ -2142,14 +2382,12 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		validatorClient: client,
 		domainDataCache: cache,
 		proposerSettings: &proposer.Settings{
+			Version: proposer.SchemaV2,
 			DefaultConfig: &proposer.Option{
 				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: feeRecipient,
 				},
-				BuilderConfig: &proposer.BuilderConfig{
-					Enabled:  true,
-					GasLimit: 42000000,
-				},
+				GasLimit: 42000000,
 			},
 		},
 		pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
@@ -2159,8 +2397,7 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 				index:     1,
 			},
 		},
-		duties:             &dutyStore{},
-		submittedPrefSlots: make(map[primitives.Slot]bool),
+		duties: &dutyStore{},
 	}
 
 	t.Run("pre-gloas returns nil", func(t *testing.T) {
@@ -2188,25 +2425,29 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
 		require.Equal(t, 0, len(prefs))
@@ -2218,26 +2459,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// DomainData is cached after the first call, so subsequent subtests
 		// using the same epoch will hit the cache. Use AnyTimes() here.
@@ -2261,26 +2506,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// Slot 0 is start of epoch 0 (before mid-epoch), should not build yet.
 		prefs := v.buildProposerPreferences(t.Context(), km, 0, false)
@@ -2293,26 +2542,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		midSlot := params.BeaconConfig().SlotsPerEpoch / 2
 		prefs := v.buildProposerPreferences(t.Context(), km, midSlot, false)
@@ -2329,26 +2582,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		slot2 := params.BeaconConfig().SlotsPerEpoch + 5
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{slot1, slot2},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{slot1, slot2},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// DomainData calls served from cache (populated in prior subtest).
 		prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
@@ -2366,81 +2623,84 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_EXITED,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_EXITED,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_EXITED,
-					ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_EXITED,
+						ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
 		require.Equal(t, 0, len(prefs))
 	})
 
-	t.Run("per-validator config overrides defaults", func(t *testing.T) {
+	t.Run("per-validator fee recipient and gas limit override default", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
 		cfg.GloasForkEpoch = 0
 		params.OverrideBeaconConfig(cfg)
 
 		customFeeRecipient := feeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
 		v.proposerSettings = &proposer.Settings{
+			Version: proposer.SchemaV2,
 			DefaultConfig: &proposer.Option{
 				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: feeRecipient,
 				},
-				BuilderConfig: &proposer.BuilderConfig{
-					Enabled:  true,
-					GasLimit: 42000000,
-				},
+				GasLimit: 42000000,
 			},
 			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
 				kp.pub: {
 					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: customFeeRecipient,
 					},
-					BuilderConfig: &proposer.BuilderConfig{
-						Enabled:  true,
-						GasLimit: 99000000,
-					},
+					GasLimit: 99000000,
 				},
 			},
 		}
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// DomainData calls served from cache (populated in prior subtest).
 		prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
@@ -2470,26 +2730,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		currentEpochSlot := primitives.Slot(3)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{currentEpochSlot},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{currentEpochSlot},
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// Slot 1 (past epoch start) allows current-epoch preferences.
 		prefs := v.buildProposerPreferences(t.Context(), km, 1, false)
@@ -2507,27 +2771,31 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		nextEpochSlot := params.BeaconConfig().SlotsPerEpoch + 2
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{currentEpochSlot},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{currentEpochSlot},
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{nextEpochSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{nextEpochSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// At mid-epoch, both current and next epoch preferences are eligible.
 		prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
@@ -2545,26 +2813,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{3},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{3},
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// Slot 0 (epoch start) skips current-epoch preferences.
 		prefs := v.buildProposerPreferences(t.Context(), km, 0, false)
@@ -2577,26 +2849,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{5},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{5},
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		prefs := v.buildProposerPreferences(t.Context(), km, 1, false)
 		require.Equal(t, 1, len(prefs))
@@ -2615,26 +2891,30 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		require.NoError(t, km.add(kp2))
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{5},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{5},
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		prefs := v.buildProposerPreferences(t.Context(), km, 1, false)
 		require.Equal(t, 1, len(prefs))
@@ -2646,25 +2926,29 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 			index:     2,
 		}
 		v.duties = &dutyStore{}
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{5},
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{5},
+					},
+					{
+						PublicKey:      kp2.pub[:],
+						ValidatorIndex: 2,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{7},
+					},
 				},
-				{
-					PublicKey:      kp2.pub[:],
-					ValidatorIndex: 2,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{7},
-				},
-			},
-			NextEpochDuties:   []*ethpb.ValidatorDuty{},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				NextEpochDuties:   []*ethpb.ValidatorDuty{},
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// Only the new validator's slot is submitted.
 		prefs = v.buildProposerPreferences(t.Context(), km, 2, false)
@@ -2675,32 +2959,80 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		delete(km.keysMap, kp2.pub)
 	})
 
+	t.Run("force re-pushes already-submitted slots after reconnect", func(t *testing.T) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		v.duties = &dutyStore{}
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{5},
+					},
+				},
+				NextEpochDuties:   []*ethpb.ValidatorDuty{},
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
+
+		// Initial push submits slot 5; the dedup cache suppresses the next push.
+		require.Equal(t, 1, len(v.buildProposerPreferences(t.Context(), km, 1, false)))
+		require.Equal(t, 0, len(v.buildProposerPreferences(t.Context(), km, 2, false)))
+
+		// A reconnect (newRunner → force=true) clears the cache and re-pushes so
+		// the freshly connected beacon node receives the preference again.
+		prefs := v.buildProposerPreferences(t.Context(), km, 2, true)
+		require.Equal(t, 1, len(prefs))
+		require.Equal(t, primitives.Slot(5), prefs[0].Message.ProposalSlot)
+
+		// A failed submission releases the batch's reservations so the next
+		// non-forced build retries; a successful one stays suppressed.
+		v.releasePrefSlots(prefs)
+		prefs = v.buildProposerPreferences(t.Context(), km, 2, false)
+		require.Equal(t, 1, len(prefs))
+		require.Equal(t, primitives.Slot(5), prefs[0].Message.ProposalSlot)
+		require.Equal(t, 0, len(v.buildProposerPreferences(t.Context(), km, 2, false)))
+	})
+
 	t.Run("next epoch before mid-epoch returns nil", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
 		cfg.GloasForkEpoch = 0
 		params.OverrideBeaconConfig(cfg)
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+					},
 				},
-			},
-			NextEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+				NextEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+					},
 				},
-			},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// Slot 1 is before mid-epoch, next-epoch prefs should not be sent.
 		prefs := v.buildProposerPreferences(t.Context(), km, 1, false)
@@ -2718,20 +3050,24 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 			AnyTimes()
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{midEpochSlot + 2},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{midEpochSlot + 2},
+					},
 				},
-			},
-			NextEpochDuties:   []*ethpb.ValidatorDuty{},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				NextEpochDuties:   []*ethpb.ValidatorDuty{},
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// Normal submission at mid-epoch so the slot is in the future.
 		prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
@@ -2758,20 +3094,24 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 			AnyTimes()
 
 		v.duties = &dutyStore{}
-		v.submittedPrefSlots = make(map[primitives.Slot]bool)
-		v.duties.SetFromCombinedDutiesResponse(&ethpb.ValidatorDutiesContainer{
-			CurrentEpochDuties: []*ethpb.ValidatorDuty{
-				{
-					PublicKey:      kp.pub[:],
-					ValidatorIndex: 1,
-					Status:         ethpb.ValidatorStatus_ACTIVE,
-					ProposerSlots:  []primitives.Slot{5},
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  []primitives.Slot{5},
+					},
 				},
-			},
-			NextEpochDuties:   []*ethpb.ValidatorDuty{},
-			PrevDependentRoot: testProposerPrefDependentRoot,
-			CurrDependentRoot: testProposerPrefDependentRoot,
-		})
+				NextEpochDuties:   []*ethpb.ValidatorDuty{},
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
 
 		// slot == epochStart (0) with force=false — gate blocks current-epoch duties.
 		prefs := v.buildProposerPreferences(t.Context(), km, 0, false)
@@ -2781,6 +3121,658 @@ func TestValidator_buildProposerPreferences(t *testing.T) {
 		prefs = v.buildProposerPreferences(t.Context(), km, 0, true)
 		require.Equal(t, 1, len(prefs))
 		require.Equal(t, primitives.Slot(5), prefs[0].Message.ProposalSlot)
+	})
+
+	t.Run("concurrent builds never double-submit a slot", func(t *testing.T) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		client.EXPECT().
+			DomainData(gomock.Any(), gomock.Any()).
+			Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).
+			AnyTimes()
+
+		proposalSlots := []primitives.Slot{
+			midEpochSlot + 2, midEpochSlot + 3, midEpochSlot + 4,
+			midEpochSlot + 5, midEpochSlot + 6, midEpochSlot + 7,
+		}
+		v.duties = &dutyStore{}
+		v.submittedPrefSlots.prune(true, 0)
+		{
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{
+					{
+						PublicKey:      kp.pub[:],
+						ValidatorIndex: 1,
+						Status:         ethpb.ValidatorStatus_ACTIVE,
+						ProposerSlots:  proposalSlots,
+					},
+				},
+				NextEpochDuties:   []*ethpb.ValidatorDuty{},
+				PrevDependentRoot: testProposerPrefDependentRoot,
+				CurrDependentRoot: testProposerPrefDependentRoot,
+			})
+			v.duties.write(data)
+		}
+
+		ctx := t.Context()
+		const builders = 8
+		var wg sync.WaitGroup
+		results := make([][]*ethpb.SignedProposerPreferences, builders)
+		for i := range builders {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				results[i] = v.buildProposerPreferences(ctx, km, midEpochSlot, false)
+			}(i)
+		}
+		wg.Wait()
+
+		submitted := make(map[primitives.Slot]int)
+		for _, prefs := range results {
+			for _, p := range prefs {
+				submitted[p.Message.ProposalSlot]++
+			}
+		}
+		for _, s := range proposalSlots {
+			require.Equal(t, 1, submitted[s], "slot must be submitted exactly once")
+		}
+		require.Equal(t, len(proposalSlots), len(submitted))
+		require.Equal(t, len(proposalSlots), v.submittedPrefSlots.count())
+	})
+}
+
+func TestValidator_buildProposerPreferences_LogsSignFailureCause(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	kp := randKeypair(t)
+	// Keymanager without the proposer's key: signing fails with "not found".
+	km := newMockKeymanager(t)
+	feeRecipient := feeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+
+	ctrl := gomock.NewController(t)
+	client := validatormock.NewMockValidatorClient(ctrl)
+	domainCache, err := ristretto.NewCache(&ristretto.Config[string, proto.Message]{
+		NumCounters: 1920,
+		MaxCost:     192,
+		BufferItems: 64,
+	})
+	require.NoError(t, err)
+	client.EXPECT().DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).AnyTimes()
+
+	v := validator{
+		validatorClient: client,
+		domainDataCache: domainCache,
+		proposerSettings: &proposer.Settings{
+			Version: proposer.SchemaV2,
+			DefaultConfig: &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{FeeRecipient: feeRecipient},
+				GasLimit:           42000000,
+			},
+		},
+		pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+			kp.pub: {publicKey: kp.pub[:], status: &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, index: 1},
+		},
+		duties: &dutyStore{},
+	}
+
+	nextEpochProposerSlot := params.BeaconConfig().SlotsPerEpoch + 3
+	var data dutyStoreData
+	data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+		CurrentEpochDuties: []*ethpb.ValidatorDuty{
+			{PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE},
+		},
+		NextEpochDuties: []*ethpb.ValidatorDuty{
+			{PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE, ProposerSlots: []primitives.Slot{nextEpochProposerSlot}},
+		},
+		PrevDependentRoot: testProposerPrefDependentRoot,
+		CurrDependentRoot: testProposerPrefDependentRoot,
+	})
+	v.duties.write(data)
+
+	hook := logTest.NewGlobal()
+	prefs := v.buildProposerPreferences(t.Context(), km, params.BeaconConfig().SlotsPerEpoch/2, false)
+
+	require.Equal(t, 0, len(prefs))
+	require.LogsContain(t, hook, "Failed to sign proposer preferences")
+	// The warn carries the underlying signing error, not just a count.
+	require.LogsContain(t, hook, "could not sign proposer preferences")
+}
+
+func TestValidator_buildProposerPreferences_GasLimitSources(t *testing.T) {
+	feeRecipient := feeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+
+	chainDefault := params.BeaconConfig().DefaultBuilderGasLimit
+	tests := []struct {
+		name           string
+		gloasForkEpoch primitives.Epoch
+		settings       *proposer.Settings
+		wantGasLimit   uint64
+		needsDB        bool
+		// asserts the cutover ran and persisted v2 with builder content dropped.
+		wantMigrated bool
+	}{
+		{
+			name:           "v2 top-level GasLimit wins over legacy BuilderConfig.GasLimit",
+			gloasForkEpoch: 0,
+			settings: &proposer.Settings{
+				Version: 2,
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{FeeRecipient: feeRecipient},
+					GasLimit:           55555555,
+					BuilderConfig:      &proposer.BuilderConfig{GasLimit: 12345678},
+				},
+			},
+			wantGasLimit: 55555555,
+		},
+		{
+			name:           "gloas active: v1 settings cut over; builder gas limit dropped, chain default used",
+			gloasForkEpoch: 0,
+			settings: &proposer.Settings{
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{FeeRecipient: feeRecipient},
+					BuilderConfig:      &proposer.BuilderConfig{Enabled: true, GasLimit: 42000000},
+				},
+			},
+			needsDB:      true,
+			wantGasLimit: chainDefault,
+			wantMigrated: true,
+		},
+		{
+			// Migration must not fire while pre-gloas registration path still
+			// reads BuilderConfig; preferences read the top level only, so the
+			// not-yet-promoted builder gas limit yields the chain default.
+			name:           "gloasEpoch-1: preferences submitted with chain default, v1 shape preserved (no migration)",
+			gloasForkEpoch: 1,
+			settings: &proposer.Settings{
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{FeeRecipient: feeRecipient},
+					BuilderConfig:      &proposer.BuilderConfig{Enabled: true, GasLimit: 42000000},
+				},
+			},
+			needsDB:      true,
+			wantGasLimit: chainDefault,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.GloasForkEpoch = tt.gloasForkEpoch
+			params.OverrideBeaconConfig(cfg)
+
+			kp := randKeypair(t)
+			km := newMockKeymanager(t, kp)
+			ctrl := gomock.NewController(t)
+			client := validatormock.NewMockValidatorClient(ctrl)
+			domainCache, err := ristretto.NewCache(&ristretto.Config[string, proto.Message]{
+				NumCounters: 1920,
+				MaxCost:     192,
+				BufferItems: 64,
+			})
+			require.NoError(t, err)
+			client.EXPECT().
+				DomainData(gomock.Any(), gomock.Any()).
+				Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).
+				AnyTimes()
+
+			nextEpochProposerSlot := params.BeaconConfig().SlotsPerEpoch + 3
+			midEpochSlot := primitives.Slot(params.BeaconConfig().SlotsPerEpoch / 2)
+
+			v := validator{
+				validatorClient:  client,
+				domainDataCache:  domainCache,
+				proposerSettings: tt.settings,
+				pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+					kp.pub: {
+						publicKey: kp.pub[:],
+						status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+						index:     1,
+					},
+				},
+				duties: &dutyStore{},
+			}
+			if tt.needsDB {
+				v.db = dbTest.SetupDB(t, t.TempDir(), [][fieldparams.BLSPubkeyLength]byte{}, false)
+			}
+			root := make([]byte, fieldparams.RootLength)
+			root[0] = 1
+			var data dutyStoreData
+			data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+				PrevDependentRoot: root,
+				CurrDependentRoot: root,
+				CurrentEpochDuties: []*ethpb.ValidatorDuty{{
+					PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE,
+				}},
+				NextEpochDuties: []*ethpb.ValidatorDuty{{
+					PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE,
+					ProposerSlots: []primitives.Slot{nextEpochProposerSlot},
+				}},
+			})
+			v.duties.write(data)
+
+			if slots.ToEpoch(midEpochSlot) >= params.BeaconConfig().GloasForkEpoch {
+				v.upgradeProposerSettingsToV2(t.Context())
+			}
+			prefs := v.buildProposerPreferences(t.Context(), km, midEpochSlot, false)
+			require.Equal(t, 1, len(prefs))
+			require.Equal(t, tt.wantGasLimit, prefs[0].Message.TargetGasLimit)
+
+			ps := v.ProposerSettings()
+			if !tt.wantMigrated {
+				require.Equal(t, tt.settings.Version, ps.Version)
+				if tt.settings.DefaultConfig != nil && tt.settings.DefaultConfig.BuilderConfig != nil {
+					require.NotNil(t, ps.DefaultConfig.BuilderConfig)
+				}
+				return
+			}
+			require.Equal(t, proposer.SchemaV2, ps.Version)
+			// The cutover drops v1 builder content including its gas limit.
+			require.Equal(t, validatorType.Uint64(0), ps.DefaultConfig.GasLimit)
+			require.IsNil(t, ps.DefaultConfig.BuilderConfig)
+
+			dbps, err := v.db.ProposerSettings(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, proposer.SchemaV2, dbps.Version)
+			require.Equal(t, validatorType.Uint64(0), dbps.DefaultConfig.GasLimit)
+		})
+	}
+}
+
+// In the last slot of an epoch the duty store already holds next-epoch duties
+// as current, so the schedule must be resolved per proposal slot, not from the
+// wall-clock slot.
+func TestValidator_buildProposerPreferences_ScheduleUsesProposalSlotEpoch(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	cfg.GasLimitSchedule = []params.GasLimitScheduleEntry{
+		{Epoch: 0, GasLimit: 60_000_000},
+		{Epoch: 1, GasLimit: 90_000_000},
+	}
+	params.OverrideBeaconConfig(cfg)
+
+	feeRecipient := feeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+	kp := randKeypair(t)
+	km := newMockKeymanager(t, kp)
+	ctrl := gomock.NewController(t)
+	client := validatormock.NewMockValidatorClient(ctrl)
+	domainCache, err := ristretto.NewCache(&ristretto.Config[string, proto.Message]{
+		NumCounters: 1920,
+		MaxCost:     192,
+		BufferItems: 64,
+	})
+	require.NoError(t, err)
+	client.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).
+		AnyTimes()
+
+	lastSlotOfEpoch0 := primitives.Slot(params.BeaconConfig().SlotsPerEpoch) - 1
+	epoch1ProposerSlot := params.BeaconConfig().SlotsPerEpoch + 3
+
+	v := validator{
+		validatorClient: client,
+		domainDataCache: domainCache,
+		proposerSettings: &proposer.Settings{
+			Version: 2,
+			DefaultConfig: &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{FeeRecipient: feeRecipient},
+			},
+		},
+		pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+			kp.pub: {
+				publicKey: kp.pub[:],
+				status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+				index:     1,
+			},
+		},
+		duties: &dutyStore{},
+	}
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	var data dutyStoreData
+	data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+		PrevDependentRoot: root,
+		CurrDependentRoot: root,
+		CurrentEpochDuties: []*ethpb.ValidatorDuty{{
+			PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE,
+			ProposerSlots: []primitives.Slot{epoch1ProposerSlot},
+		}},
+	})
+	v.duties.write(data)
+
+	prefs := v.buildProposerPreferences(t.Context(), km, lastSlotOfEpoch0, true)
+	require.Equal(t, 1, len(prefs))
+	require.Equal(t, epoch1ProposerSlot, prefs[0].Message.ProposalSlot)
+	require.Equal(t, uint64(90_000_000), prefs[0].Message.TargetGasLimit)
+}
+
+// Post-fork, PushProposerSettings must not call SubmitValidatorRegistrations
+// (builder API path is pre-Gloas only).
+func TestValidator_PushProposerSettings_SkipsBuilderRegistrationsPostGloas(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	ctrl := gomock.NewController(t)
+	ctx := t.Context()
+	db := dbTest.SetupDB(t, t.TempDir(), [][fieldparams.BLSPubkeyLength]byte{}, false)
+	client := validatormock.NewMockValidatorClient(ctrl)
+	nodeClient := validatormock.NewMockNodeClient(ctrl)
+
+	// Pre-fork code path calls SubmitValidatorRegistrations; post-fork must not.
+	client.EXPECT().SubmitValidatorRegistrations(gomock.Any(), gomock.Any()).Times(0)
+	// Everything else is allowed any number of times — we're not asserting on those.
+	client.EXPECT().SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).Return(&empty.Empty{}, nil).AnyTimes()
+	client.EXPECT().DomainData(gomock.Any(), gomock.Any()).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).AnyTimes()
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	client.EXPECT().ConnectionGeneration().Return(uint64(0)).AnyTimes()
+
+	v := validator{
+		validatorClient:              client,
+		nodeClient:                   nodeClient,
+		db:                           db,
+		pubkeyToStatus:               make(map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus),
+		signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+		km:                           genMockKeymanager(t, 1),
+		duties:                       &dutyStore{},
+	}
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	keys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	v.pubkeyToStatus[keys[0]] = &validatorStatus{
+		publicKey: keys[0][:],
+		status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+		index:     primitives.ValidatorIndex(1),
+	}
+	client.EXPECT().MultipleValidatorStatus(gomock.Any(), gomock.Any()).Return(
+		&ethpb.MultipleValidatorStatusResponse{
+			Statuses:   []*ethpb.ValidatorStatusResponse{{Status: ethpb.ValidatorStatus_ACTIVE}},
+			PublicKeys: [][]byte{keys[0][:]},
+			Indices:    []primitives.ValidatorIndex{1},
+		}, nil).AnyTimes()
+
+	// Builder enabled — would normally trigger registrations pre-fork.
+	require.NoError(t, v.UpdateProposerSettings(ctx, func(*proposer.Settings) (*proposer.Settings, error) {
+		return &proposer.Settings{
+			DefaultConfig: &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+				},
+				BuilderConfig: &proposer.BuilderConfig{Enabled: true, GasLimit: 40000000},
+			},
+		}, nil
+	}))
+
+	// slot 1 is post-Gloas (GloasForkEpoch == 0).
+	require.NoError(t, v.PushProposerSettings(ctx, 1, false))
+}
+
+// After a fallback host switch, a failed preference submission must keep the
+// switch signal and release its reservations so the next slot retries; the
+// retry's success consumes the signal.
+func TestValidator_PushProposerSettings_RetriesAfterFailedRepush(t *testing.T) {
+	domainCache, err := ristretto.NewCache(&ristretto.Config[string, proto.Message]{
+		NumCounters: 1920,
+		MaxCost:     192,
+		BufferItems: 64,
+	})
+	require.NoError(t, err)
+	t.Cleanup(domainCache.Close)
+
+	synctest.Test(t, func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		kp := randKeypair(t)
+		km := newMockKeymanager(t, kp)
+
+		ctrl := gomock.NewController(t)
+		client := validatormock.NewMockValidatorClient(ctrl)
+		client.EXPECT().DomainData(gomock.Any(), gomock.Any()).
+			Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).AnyTimes()
+		// The push to the freshly switched host fails once; the retry succeeds.
+		gomock.InOrder(
+			client.EXPECT().SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).
+				Return(nil, errors.New("new host not ready")),
+			client.EXPECT().SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).
+				Return(&empty.Empty{}, nil),
+		)
+
+		// The client reports its provider's connection generation; the test drives it.
+		var connGen atomic.Uint64
+		client.EXPECT().ConnectionGeneration().DoAndReturn(connGen.Load).AnyTimes()
+
+		v := validator{
+			km:              km,
+			validatorClient: client,
+			domainDataCache: domainCache,
+			proposerSettings: &proposer.Settings{
+				Version: proposer.SchemaV2,
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
+						FeeRecipient: feeRecipientFromString(t, "0x1111111111111111111111111111111111111111"),
+					},
+					GasLimit: 42000000,
+				},
+			},
+			pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+				kp.pub: {publicKey: kp.pub[:], status: &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, index: 1},
+			},
+			duties: &dutyStore{},
+		}
+		var data dutyStoreData
+		data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+			CurrentEpochDuties: []*ethpb.ValidatorDuty{
+				{PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE, ProposerSlots: []primitives.Slot{5}},
+			},
+			NextEpochDuties:   []*ethpb.ValidatorDuty{},
+			PrevDependentRoot: testProposerPrefDependentRoot,
+			CurrDependentRoot: testProposerPrefDependentRoot,
+		})
+		v.duties.write(data)
+
+		// The mid-slot submit runs on a goroutine after half a slot; advance fake
+		// time past it and let the bubble settle before asserting.
+		advanceSubmitTimer := func() {
+			time.Sleep(params.BeaconConfig().SlotDuration() / 2)
+			synctest.Wait()
+		}
+
+		// A fallback host switch bumps the connection generation.
+		connGen.Store(1)
+		gen := v.connGeneration()
+
+		// Slot 1: the switch forces a push; its submission fails, so the reservation
+		// is released and the switch signal is kept for the next slot.
+		require.NoError(t, v.PushProposerSettings(t.Context(), 1, false))
+		advanceSubmitTimer()
+		require.Equal(t, 0, v.submittedPrefSlots.count())
+		require.Equal(t, true, v.connTracker.changed(proposerPrefsPush, gen))
+
+		// Slot 2: the kept signal forces another push; it succeeds, consuming the
+		// signal and keeping the reservation.
+		require.NoError(t, v.PushProposerSettings(t.Context(), 2, false))
+		advanceSubmitTimer()
+		require.Equal(t, false, v.connTracker.changed(proposerPrefsPush, gen))
+		require.Equal(t, 1, v.submittedPrefSlots.count())
+	})
+}
+
+// A failed builder preference submission must keep the switch signal and
+// release its reservations so the next slot retries.
+func TestValidator_PushProposerSettings_RetriesAfterFailedBuilderRepush(t *testing.T) {
+	domainCache, err := ristretto.NewCache(&ristretto.Config[string, proto.Message]{
+		NumCounters: 1920,
+		MaxCost:     192,
+		BufferItems: 64,
+	})
+	require.NoError(t, err)
+	t.Cleanup(domainCache.Close)
+
+	synctest.Test(t, func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		kp := randKeypair(t)
+		km := newMockKeymanager(t, kp)
+
+		ctrl := gomock.NewController(t)
+		client := validatormock.NewMockValidatorClient(ctrl)
+		client.EXPECT().DomainData(gomock.Any(), gomock.Any()).
+			Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).AnyTimes()
+		client.EXPECT().SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).
+			Return(&empty.Empty{}, nil).AnyTimes()
+		gomock.InOrder(
+			client.EXPECT().SubmitBuilderPreferences(gomock.Any(), gomock.Any()).
+				Return(nil, errors.New("new host not ready")),
+			client.EXPECT().SubmitBuilderPreferences(gomock.Any(), gomock.Any()).
+				Return(&empty.Empty{}, nil),
+		)
+
+		var connGen atomic.Uint64
+		client.EXPECT().ConnectionGeneration().DoAndReturn(connGen.Load).AnyTimes()
+
+		v := validator{
+			km:              km,
+			validatorClient: client,
+			domainDataCache: domainCache,
+			proposerSettings: &proposer.Settings{
+				Version: proposer.SchemaV2,
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
+						FeeRecipient: feeRecipientFromString(t, "0x1111111111111111111111111111111111111111"),
+					},
+				},
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+					kp.pub: {BuilderConfig: &proposer.BuilderConfig{
+						Enabled:  true,
+						Builders: []*proposer.BuilderEntry{{URL: "https://a.example"}},
+					}},
+				},
+			},
+			pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+				kp.pub: {publicKey: kp.pub[:], status: &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, index: 1},
+			},
+			duties: &dutyStore{},
+		}
+		var data dutyStoreData
+		data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+			CurrentEpochDuties: []*ethpb.ValidatorDuty{
+				{PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE, ProposerSlots: []primitives.Slot{5}},
+			},
+			NextEpochDuties:   []*ethpb.ValidatorDuty{},
+			PrevDependentRoot: testProposerPrefDependentRoot,
+			CurrDependentRoot: testProposerPrefDependentRoot,
+		})
+		v.duties.write(data)
+
+		advanceSubmitTimer := func() {
+			time.Sleep(params.BeaconConfig().SlotDuration() / 2)
+			synctest.Wait()
+		}
+
+		connGen.Store(1)
+		gen := v.connGeneration()
+
+		require.NoError(t, v.PushProposerSettings(t.Context(), 1, false))
+		advanceSubmitTimer()
+		require.Equal(t, 0, v.submittedBuilderPrefSlots.count())
+		require.Equal(t, true, v.connTracker.changed(builderPrefsPush, gen))
+
+		require.NoError(t, v.PushProposerSettings(t.Context(), 2, false))
+		advanceSubmitTimer()
+		require.Equal(t, false, v.connTracker.changed(builderPrefsPush, gen))
+		require.Equal(t, 1, v.submittedBuilderPrefSlots.count())
+	})
+}
+
+// A duty change must force re-push both proposer and builder preferences,
+// bypassing the dedup caches.
+func TestValidator_resubmitPreferences(t *testing.T) {
+	domainCache, err := ristretto.NewCache(&ristretto.Config[string, proto.Message]{
+		NumCounters: 1920,
+		MaxCost:     192,
+		BufferItems: 64,
+	})
+	require.NoError(t, err)
+	t.Cleanup(domainCache.Close)
+
+	synctest.Test(t, func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		kp := randKeypair(t)
+		km := newMockKeymanager(t, kp)
+
+		ctrl := gomock.NewController(t)
+		client := validatormock.NewMockValidatorClient(ctrl)
+		client.EXPECT().DomainData(gomock.Any(), gomock.Any()).
+			Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).AnyTimes()
+		// Both kinds re-push on each duty change despite already-reserved slots.
+		client.EXPECT().SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).
+			Return(&empty.Empty{}, nil).Times(2)
+		client.EXPECT().SubmitBuilderPreferences(gomock.Any(), gomock.Any()).
+			Return(&empty.Empty{}, nil).Times(2)
+
+		v := validator{
+			km:              km,
+			validatorClient: client,
+			domainDataCache: domainCache,
+			genesisTime:     time.Now(),
+			proposerSettings: &proposer.Settings{
+				Version: proposer.SchemaV2,
+				DefaultConfig: &proposer.Option{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
+						FeeRecipient: feeRecipientFromString(t, "0x1111111111111111111111111111111111111111"),
+					},
+				},
+				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+					kp.pub: {BuilderConfig: &proposer.BuilderConfig{
+						Enabled:  true,
+						Builders: []*proposer.BuilderEntry{{URL: "https://a.example"}},
+					}},
+				},
+			},
+			pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+				kp.pub: {publicKey: kp.pub[:], status: &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}, index: 1},
+			},
+			duties: &dutyStore{},
+		}
+		var data dutyStoreData
+		data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+			CurrentEpochDuties: []*ethpb.ValidatorDuty{
+				{PublicKey: kp.pub[:], ValidatorIndex: 1, Status: ethpb.ValidatorStatus_ACTIVE, ProposerSlots: []primitives.Slot{5}},
+			},
+			NextEpochDuties:   []*ethpb.ValidatorDuty{},
+			PrevDependentRoot: testProposerPrefDependentRoot,
+			CurrDependentRoot: testProposerPrefDependentRoot,
+		})
+		v.duties.write(data)
+
+		for range 2 {
+			v.resubmitPreferences(t.Context())
+			time.Sleep(params.BeaconConfig().SlotDuration() / 2)
+			synctest.Wait()
+		}
+		require.Equal(t, 1, v.submittedPrefSlots.count())
+		require.Equal(t, 1, v.submittedBuilderPrefSlots.count())
 	})
 }
 
@@ -2807,7 +3799,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	client := validatormock.NewMockValidatorClient(ctrl)
 
 	signature := blsmock.NewMockSignature(ctrl)
-	signature.EXPECT().Marshal().Return([]byte{})
+	signature.EXPECT().Marshal().Return([]byte{}).AnyTimes()
 
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
@@ -2875,11 +3867,61 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	}
 	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)
 
-	assert.Equal(t, 1, len(actual))
+	assert.Equal(t, 2, len(actual))
 	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
 	assert.Equal(t, uint64(1111), actual[0].Message.GasLimit)
 	assert.DeepEqual(t, pubkey1[:], actual[0].Message.Pubkey)
+	// Fee recipient and participation resolve independently: an explicitly
+	// enabled key without its own fee recipient registers with the default's.
+	assert.DeepEqual(t, defaultFeeRecipient[:], actual[1].Message.FeeRecipient)
+	assert.Equal(t, uint64(3333), actual[1].Message.GasLimit)
+	assert.DeepEqual(t, pubkey3[:], actual[1].Message.Pubkey)
+}
 
+// Semantics are fork-keyed, not version-keyed: the same settings shape registers
+// identically whatever the stored schema version says.
+func TestValidator_buildSignedRegReqs_VersionGatesInheritance(t *testing.T) {
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ctx := t.Context()
+
+	signature := blsmock.NewMockSignature(ctrl)
+	signature.EXPECT().Marshal().Return([]byte{}).AnyTimes()
+	signer := func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
+		return signature, nil
+	}
+
+	newSettings := func(version uint32) *proposer.Settings {
+		return &proposer.Settings{
+			Version: version,
+			DefaultConfig: &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{FeeRecipient: defaultFeeRecipient},
+				BuilderConfig:      &proposer.BuilderConfig{Enabled: true, GasLimit: 9999},
+			},
+			ProposeConfig: map[[48]byte]*proposer.Option{
+				// Per-key disable without a per-key fee recipient.
+				pubkey1: {BuilderConfig: &proposer.BuilderConfig{Enabled: false}},
+			},
+		}
+	}
+	v := validator{
+		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
+		pubkeyToStatus: map[[48]byte]*validatorStatus{
+			pubkey1: {publicKey: pubkey1[:], status: &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE}},
+		},
+	}
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1}
+
+	// The per-key disable is honored regardless of the stored version stamp.
+	v.proposerSettings = newSettings(0)
+	assert.Equal(t, 0, len(v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)))
+
+	v.proposerSettings = newSettings(proposer.SchemaV2)
+	v.signedValidatorRegistrations = map[[48]byte]*ethpb.SignedValidatorRegistrationV1{}
+	assert.Equal(t, 0, len(v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)))
 }
 
 func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
@@ -2981,7 +4023,8 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	assert.DeepEqual(t, pubkey1[:], actual[0].Message.Pubkey)
 
 	assert.DeepEqual(t, defaultFeeRecipient[:], actual[1].Message.FeeRecipient)
-	assert.Equal(t, uint64(9999), actual[1].Message.GasLimit)
+	// The per-key builder gas limit outranks the default's builder value.
+	assert.Equal(t, uint64(3333), actual[1].Message.GasLimit)
 	assert.DeepEqual(t, pubkey3[:], actual[1].Message.Pubkey)
 
 	t.Run("mid epoch only pushes newly added key", func(t *testing.T) {
@@ -3003,6 +4046,89 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 		actual = v.buildSignedRegReqs(ctx, pubkeys, signer, 5, true)
 		assert.Equal(t, 3, len(actual))
 	})
+}
+
+// A v2 file migrated before gloas keeps the builder section intact:
+// registrations still read builder.gas_limit, while the top-level gas limit
+// is reserved for proposer preferences and must not leak into registrations.
+func TestValidator_buildSignedRegReqs_V2Settings(t *testing.T) {
+	pubkey1 := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	pubkey2 := pubkeyFromString(t, "0x222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+	pubkey3 := pubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+
+	feeRecipient1 := feeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
+	feeRecipient2 := feeRecipientFromString(t, "0x2222222222222222222222222222222222222222")
+	defaultFeeRecipient := feeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := t.Context()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	signature := blsmock.NewMockSignature(ctrl)
+	signature.EXPECT().Marshal().Return([]byte{}).AnyTimes()
+	v := validator{
+		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
+		validatorClient:              client,
+		proposerSettings: &proposer.Settings{
+			Version: proposer.SchemaV2,
+			DefaultConfig: &proposer.Option{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
+					FeeRecipient: defaultFeeRecipient,
+				},
+				GasLimit:      8888,
+				BuilderConfig: &proposer.BuilderConfig{GasLimit: 9999, Builders: []*proposer.BuilderEntry{{URL: "https://default.example"}}},
+			},
+			ProposeConfig: map[[48]byte]*proposer.Option{
+				pubkey1: {
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
+						FeeRecipient: feeRecipient1,
+					},
+					GasLimit:      1111,
+					BuilderConfig: &proposer.BuilderConfig{GasLimit: 7777, Builders: []*proposer.BuilderEntry{{URL: "https://b.example"}}},
+				},
+				pubkey2: {
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
+						FeeRecipient: feeRecipient2,
+					},
+					GasLimit: 2222,
+				},
+				pubkey3: {
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
+						FeeRecipient: feeRecipient2,
+					},
+					BuilderConfig: &proposer.BuilderConfig{Builders: []*proposer.BuilderEntry{}},
+				},
+			},
+		},
+		pubkeyToStatus: make(map[[48]byte]*validatorStatus),
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3}
+
+	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
+		return signature, nil
+	}
+	for i, pk := range pubkeys {
+		v.pubkeyToStatus[pk] = &validatorStatus{
+			publicKey: pk[:],
+			status:    &ethpb.ValidatorStatusResponse{Status: ethpb.ValidatorStatus_ACTIVE},
+			index:     primitives.ValidatorIndex(i + 1),
+		}
+	}
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer, 0, false)
+
+	assert.Equal(t, 2, len(actual))
+
+	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
+	// v2 gas limits live on the option, where UpgradeToV2 and the gas-limit API write them.
+	assert.Equal(t, uint64(1111), actual[0].Message.GasLimit, "per-key option gas limit wins")
+	assert.DeepEqual(t, pubkey1[:], actual[0].Message.Pubkey)
+
+	assert.DeepEqual(t, feeRecipient2[:], actual[1].Message.FeeRecipient)
+	assert.Equal(t, uint64(2222), actual[1].Message.GasLimit, "per-key option gas limit wins over default builder")
+	assert.DeepEqual(t, pubkey2[:], actual[1].Message.Pubkey)
 }
 
 func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
@@ -3373,12 +4499,10 @@ func TestGetAttestationData_PostElectraConcurrentAccess(t *testing.T) {
 	results := make([]*ethpb.AttestationData, numGoroutines)
 	errs := make([]error, numGoroutines)
 
-	for i := range numGoroutines {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
+	for idx := range numGoroutines {
+		wg.Go(func() {
 			results[idx], errs[idx] = v.getAttestationData(context.Background(), postElectraSlot, primitives.CommitteeIndex(idx))
-		}(i)
+		})
 	}
 
 	wg.Wait()
@@ -3387,4 +4511,439 @@ func TestGetAttestationData_PostElectraConcurrentAccess(t *testing.T) {
 		require.NoError(t, errs[i])
 		require.DeepEqual(t, expectedData, results[i])
 	}
+}
+
+func TestBuilderTargetsForKey(t *testing.T) {
+	pk := pubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+	u64 := func(v uint64) *validatorType.Uint64 { u := validatorType.Uint64(v); return &u }
+	proposeConfig := map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+		pk: {BuilderConfig: &proposer.BuilderConfig{
+			Enabled:             true,
+			MaxExecutionPayment: u64(500),
+			Builders: []*proposer.BuilderEntry{
+				{URL: "https://a.example", MaxExecutionPayment: u64(100)},
+				{URL: "https://b.example"},
+			},
+		}},
+	}
+
+	t.Run("targets resolve regardless of the stored version stamp", func(t *testing.T) {
+		v := &validator{proposerSettings: &proposer.Settings{Version: proposer.SchemaV1, ProposeConfig: proposeConfig}}
+		require.Equal(t, 2, len(builderTargets(v.ProposerSettings().EffectiveBuilderConfig(pk))))
+	})
+
+	t.Run("explicit empty builders list produces no targets", func(t *testing.T) {
+		optedOut := map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+			pk: {BuilderConfig: &proposer.BuilderConfig{Builders: []*proposer.BuilderEntry{}}},
+		}
+		v := &validator{proposerSettings: &proposer.Settings{Version: proposer.SchemaV2, ProposeConfig: optedOut}}
+		require.Equal(t, 0, len(builderTargets(v.ProposerSettings().EffectiveBuilderConfig(pk))))
+	})
+
+	t.Run("entries resolve with config-level fallbacks", func(t *testing.T) {
+		v := &validator{proposerSettings: &proposer.Settings{Version: proposer.SchemaV2, ProposeConfig: proposeConfig}}
+		targets := builderTargets(v.ProposerSettings().EffectiveBuilderConfig(pk))
+		require.Equal(t, 2, len(targets))
+		require.Equal(t, uint64(100), targets[0].maxPayment)
+		require.Equal(t, uint64(500), targets[1].maxPayment)
+	})
+}
+
+func TestBuilderConfigForSlot_TopLevelWithoutEntries(t *testing.T) {
+	v, _, validatorKey, finish := setup(t, false)
+	defer finish()
+	var pk [fieldparams.BLSPubkeyLength]byte
+	copy(pk[:], validatorKey.PublicKey().Marshal())
+	u64 := func(val uint64) *validatorType.Uint64 { u := validatorType.Uint64(val); return &u }
+
+	neutral := v.builderConfigForSlot(t.Context(), pk, 10)
+	require.NotNil(t, neutral)
+	require.Equal(t, primitives.Gwei(0), neutral.MinBid)
+	require.Equal(t, uint64(proposer.NeutralBuilderBoostFactor), neutral.BuilderBoostFactor)
+	require.Equal(t, 0, len(neutral.Builders))
+
+	v.proposerSettings = &proposer.Settings{
+		Version: proposer.SchemaV2,
+		ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+			pk: {BuilderConfig: &proposer.BuilderConfig{MinBid: u64(5), BuilderBoostFactor: u64(0)}},
+		},
+	}
+	cfg := v.builderConfigForSlot(t.Context(), pk, 10)
+	require.NotNil(t, cfg)
+	require.Equal(t, primitives.Gwei(5), cfg.MinBid)
+	require.Equal(t, uint64(0), cfg.BuilderBoostFactor)
+	require.Equal(t, 0, len(cfg.Builders))
+}
+
+func TestWarmBuilderRequestAuthsForDuties_CollapsesSameURL(t *testing.T) {
+	v, _, validatorKey, finish := setup(t, false)
+	defer finish()
+	var pk [fieldparams.BLSPubkeyLength]byte
+	copy(pk[:], validatorKey.PublicKey().Marshal())
+	u64 := func(val uint64) *validatorType.Uint64 { u := validatorType.Uint64(val); return &u }
+	v.proposerSettings = &proposer.Settings{
+		Version: proposer.SchemaV2,
+		ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+			pk: {BuilderConfig: &proposer.BuilderConfig{
+				Enabled: true,
+				Builders: []*proposer.BuilderEntry{
+					{URL: "https://a.example", AuthData: []byte{1}, MaxExecutionPayment: u64(200)},
+					{URL: "https://a.example", AuthData: []byte{2}, MaxExecutionPayment: u64(100)},
+				},
+			}},
+		},
+	}
+	km, err := v.Keymanager()
+	require.NoError(t, err)
+	duties := func(yield func(pubkey, *ethpb.ValidatorDuty) bool) {
+		yield(pk, &ethpb.ValidatorDuty{PublicKey: pk[:], ProposerSlots: []primitives.Slot{10}})
+	}
+	reqs := v.warmBuilderRequestAuthsForDuties(t.Context(), km, 5, duties)
+	// Same-url entries with distinct auth data each submit their own request and cap.
+	require.Equal(t, 2, len(reqs))
+	for _, r := range reqs {
+		require.Equal(t, "https://a.example", string(r.Url))
+	}
+	require.DeepEqual(t, []byte{1}, reqs[0].Auth.Message.Data)
+	require.Equal(t, primitives.Gwei(200), reqs[0].MaxExecutionPayment)
+	require.DeepEqual(t, []byte{2}, reqs[1].Auth.Message.Data)
+	require.Equal(t, primitives.Gwei(100), reqs[1].MaxExecutionPayment)
+
+	t.Run("distinct urls all submit the lowest max_execution_payment", func(t *testing.T) {
+		// The beacon node holds one max_execution_payment per validator, so every
+		// url's submission carries the lowest entry until per-builder enforcement lands.
+		v.submittedBuilderPrefSlots.prune(true, 0)
+		v.proposerSettings = &proposer.Settings{
+			Version: proposer.SchemaV2,
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+				pk: {BuilderConfig: &proposer.BuilderConfig{
+					Builders: []*proposer.BuilderEntry{
+						{URL: "https://a.example", MaxExecutionPayment: u64(0)},
+						{URL: "https://b.example", MaxExecutionPayment: u64(250)},
+					},
+				}},
+			},
+		}
+		reqs := v.warmBuilderRequestAuthsForDuties(t.Context(), km, 5, duties)
+		require.Equal(t, 2, len(reqs))
+		byURL := map[string]primitives.Gwei{}
+		for _, r := range reqs {
+			byURL[string(r.Url)] = r.MaxExecutionPayment
+		}
+		require.Equal(t, primitives.Gwei(0), byURL["https://a.example"])
+		require.Equal(t, primitives.Gwei(250), byURL["https://b.example"])
+	})
+
+	t.Run("signing failure for every target releases the slot reservation", func(t *testing.T) {
+		unknownPk := pubkeyFromString(t, "0x999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999")
+		v.proposerSettings = &proposer.Settings{
+			Version: proposer.SchemaV2,
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+				unknownPk: {BuilderConfig: &proposer.BuilderConfig{
+					Enabled:  true,
+					Builders: []*proposer.BuilderEntry{{URL: "https://a.example"}},
+				}},
+			},
+		}
+		failingDuties := func(yield func(pubkey, *ethpb.ValidatorDuty) bool) {
+			yield(unknownPk, &ethpb.ValidatorDuty{PublicKey: unknownPk[:], ProposerSlots: []primitives.Slot{11}})
+		}
+		require.Equal(t, 0, len(v.warmBuilderRequestAuthsForDuties(t.Context(), km, 5, failingDuties)))
+		require.Equal(t, true, v.submittedBuilderPrefSlots.reserve(11))
+	})
+}
+
+func TestValidator_warmBuilderRequestAuths(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	kp := randKeypair(t)
+	km := newMockKeymanager(t, kp)
+	u64 := func(val uint64) *validatorType.Uint64 { u := validatorType.Uint64(val); return &u }
+
+	settings := &proposer.Settings{
+		Version: proposer.SchemaV2,
+		ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{
+			kp.pub: {BuilderConfig: &proposer.BuilderConfig{
+				Enabled:  true,
+				Builders: []*proposer.BuilderEntry{{URL: "https://a.example", MaxExecutionPayment: u64(100)}},
+			}},
+		},
+	}
+
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	midEpoch := primitives.Slot(slotsPerEpoch / 2)
+	currentEpochProposerSlot := primitives.Slot(slotsPerEpoch - 2)
+	nextEpochProposerSlot := slotsPerEpoch + 3
+
+	newWarmValidator := func(t *testing.T) *validator {
+		v := &validator{
+			proposerSettings: settings,
+			duties:           &dutyStore{},
+		}
+		var data dutyStoreData
+		data.setFromContainer(&ethpb.ValidatorDutiesContainer{
+			CurrentEpochDuties: []*ethpb.ValidatorDuty{{
+				PublicKey:      kp.pub[:],
+				ValidatorIndex: 1,
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+				ProposerSlots:  []primitives.Slot{currentEpochProposerSlot},
+			}},
+			NextEpochDuties: []*ethpb.ValidatorDuty{{
+				PublicKey:      kp.pub[:],
+				ValidatorIndex: 1,
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+				ProposerSlots:  []primitives.Slot{nextEpochProposerSlot},
+			}},
+			PrevDependentRoot: testProposerPrefDependentRoot,
+			CurrDependentRoot: testProposerPrefDependentRoot,
+		})
+		v.duties.write(data)
+		return v
+	}
+
+	setGloasEpoch := func(t *testing.T, epoch primitives.Epoch) {
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = epoch
+		params.OverrideBeaconConfig(cfg)
+	}
+
+	t.Run("pre-gloas returns nil", func(t *testing.T) {
+		setGloasEpoch(t, 5)
+		v := newWarmValidator(t)
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, 0, false)))
+	})
+
+	t.Run("first slot of the epoch submits nothing", func(t *testing.T) {
+		setGloasEpoch(t, 0)
+		v := newWarmValidator(t)
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, 0, false)))
+	})
+
+	t.Run("current-epoch slots submit once after the epoch's first slot", func(t *testing.T) {
+		setGloasEpoch(t, 0)
+		v := newWarmValidator(t)
+		entries := v.warmBuilderRequestAuths(t.Context(), km, 1, false)
+		require.Equal(t, 1, len(entries))
+		require.Equal(t, currentEpochProposerSlot, entries[0].Auth.Message.Slot)
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, 2, false)))
+	})
+
+	t.Run("next-epoch slots submit from mid-epoch", func(t *testing.T) {
+		setGloasEpoch(t, 0)
+		v := newWarmValidator(t)
+		v.submittedBuilderPrefSlots.reserve(currentEpochProposerSlot)
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, midEpoch-1, false)))
+		entries := v.warmBuilderRequestAuths(t.Context(), km, midEpoch, false)
+		require.Equal(t, 1, len(entries))
+		require.Equal(t, nextEpochProposerSlot, entries[0].Auth.Message.Slot)
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, midEpoch+1, false)))
+	})
+
+	t.Run("epoch before the fork warms only fork-epoch slots", func(t *testing.T) {
+		setGloasEpoch(t, 1)
+		v := newWarmValidator(t)
+		// Pre-fork current-epoch slots never submit, even when forced.
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, 1, false)))
+		require.Equal(t, 0, len(v.warmBuilderRequestAuths(t.Context(), km, 1, true)))
+		entries := v.warmBuilderRequestAuths(t.Context(), km, midEpoch, false)
+		require.Equal(t, 1, len(entries))
+		require.Equal(t, nextEpochProposerSlot, entries[0].Auth.Message.Slot)
+	})
+
+	t.Run("force clears the dedup cache and resubmits", func(t *testing.T) {
+		setGloasEpoch(t, 0)
+		v := newWarmValidator(t)
+		require.Equal(t, 1, len(v.warmBuilderRequestAuths(t.Context(), km, 1, false)))
+		require.Equal(t, 1, len(v.warmBuilderRequestAuths(t.Context(), km, 1, true)))
+	})
+
+	t.Run("failed batch releases its slots for retry", func(t *testing.T) {
+		setGloasEpoch(t, 0)
+		v := newWarmValidator(t)
+		entries := v.warmBuilderRequestAuths(t.Context(), km, 1, false)
+		require.Equal(t, 1, len(entries))
+		v.releaseBuilderPrefSlots(entries)
+		require.Equal(t, 1, len(v.warmBuilderRequestAuths(t.Context(), km, 2, false)))
+	})
+}
+
+func TestShouldPushGloasPreferences(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 5
+	params.OverrideBeaconConfig(cfg)
+
+	require.Equal(t, false, shouldPushGloasPreferences(3))
+	require.Equal(t, true, shouldPushGloasPreferences(4), "the window opens one epoch before the fork")
+	require.Equal(t, true, shouldPushGloasPreferences(5))
+	require.Equal(t, true, shouldPushGloasPreferences(6))
+}
+
+func TestPrefEpochBounds(t *testing.T) {
+	spe := params.BeaconConfig().SlotsPerEpoch
+	epochStart, midEpoch, err := prefEpochBounds(2)
+	require.NoError(t, err)
+	require.Equal(t, 2*spe, epochStart)
+	require.Equal(t, 2*spe+spe/2, midEpoch)
+}
+
+func TestSubmitAfterDelay(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		called := make(chan struct{})
+		var hasDeadline bool
+		submitAfterDelay(func(ctx context.Context) {
+			_, hasDeadline = ctx.Deadline()
+			close(called)
+		})
+
+		halfSlot := params.BeaconConfig().SlotDuration() / 2
+		time.Sleep(halfSlot - time.Millisecond)
+		synctest.Wait()
+		select {
+		case <-called:
+			t.Fatal("submit fired before half a slot elapsed")
+		default:
+		}
+
+		time.Sleep(time.Millisecond)
+		synctest.Wait()
+		<-called
+		require.Equal(t, true, hasDeadline, "submit context must be bounded, not the caller's")
+	})
+}
+
+func headValidator() *validator {
+	return &validator{
+		head:                 newHeadTracker(),
+		slotFeed:             &event.Feed{},
+		disableDutiesPolling: true, // skip checkDependentRoots (needs duties/clients)
+	}
+}
+
+func TestProcessEvent_Head(t *testing.T) {
+	t.Run("records the head root and slot", func(t *testing.T) {
+		v := headValidator()
+		root := "0x" + strings.Repeat("ab", 32)
+		data, err := json.Marshal(&structs.HeadEvent{Slot: "42", Block: root})
+		require.NoError(t, err)
+
+		v.ProcessEvent(t.Context(), &eventClient.Event{Type: eventClient.EventHead, Data: data})
+
+		got, ok := latestHead(v.head)
+		require.Equal(t, true, ok)
+		require.Equal(t, uint64(42), uint64(got.Slot))
+		require.Equal(t, byte(0xab), got.Root[0])
+		// The v1 head event announces no payload status.
+		require.Equal(t, api.PayloadStatusUnknown, got.PayloadStatus)
+	})
+
+	t.Run("empty root (gRPC head event) updates the slot without error", func(t *testing.T) {
+		v := headValidator()
+		// The gRPC StreamSlots event carries no block root.
+		data, err := json.Marshal(&structs.HeadEvent{Slot: "42", Block: ""})
+		require.NoError(t, err)
+
+		v.ProcessEvent(t.Context(), &eventClient.Event{Type: eventClient.EventHead, Data: data})
+
+		// Head root not recorded because there is no block root to record...
+		_, ok := latestHead(v.head)
+		require.Equal(t, false, ok)
+		// ...but the highest slot update must not have been dropped.
+		require.Equal(t, uint64(42), uint64(v.highestSlot()))
+	})
+
+	t.Run("malformed root still updates the slot", func(t *testing.T) {
+		v := headValidator()
+		data, err := json.Marshal(&structs.HeadEvent{Slot: "42", Block: "0xnothex"})
+		require.NoError(t, err)
+
+		v.ProcessEvent(t.Context(), &eventClient.Event{Type: eventClient.EventHead, Data: data})
+
+		// Head root not recorded because the block root failed to decode...
+		_, ok := latestHead(v.head)
+		require.Equal(t, false, ok)
+		// ...but the highest slot update must not have been dropped.
+		require.Equal(t, uint64(42), uint64(v.highestSlot()))
+	})
+}
+
+func TestProcessEvent_HeadV2_PayloadStatus(t *testing.T) {
+	// Post-Gloas an attestation's index encodes the payload status of the attested
+	// head, so the status the event announces is part of the expected head.
+	for _, tt := range []struct {
+		announced string
+		want      api.PayloadStatus
+	}{
+		{announced: "full", want: api.PayloadStatusFull},
+		{announced: "empty", want: api.PayloadStatusEmpty},
+		{announced: "", want: api.PayloadStatusUnknown},
+	} {
+		t.Run("records payload status "+tt.announced, func(t *testing.T) {
+			v := headValidator()
+			root := "0x" + strings.Repeat("ab", 32)
+			data, err := json.Marshal(&structs.HeadEventV2{
+				Data: &structs.HeadEventV2Data{Slot: "42", Block: root, PayloadStatus: tt.announced},
+			})
+			require.NoError(t, err)
+
+			v.ProcessEvent(t.Context(), &eventClient.Event{Type: eventClient.EventHeadV2, Data: data})
+
+			got, ok := latestHead(v.head)
+			require.Equal(t, true, ok)
+			require.Equal(t, uint64(42), uint64(got.Slot))
+			require.Equal(t, byte(0xab), got.Root[0])
+			require.Equal(t, tt.want, got.PayloadStatus)
+		})
+	}
+}
+
+// The post-fork settings cleanup runs concurrently with keymanager writes; the
+// transactional update must serialize them so no write is ever lost.
+func TestValidator_UpdateProposerSettings_Concurrency(t *testing.T) {
+	ctx := t.Context()
+	db := dbTest.SetupDB(t, t.TempDir(), [][fieldparams.BLSPubkeyLength]byte{}, false)
+	v := &validator{
+		db: db,
+		proposerSettings: &proposer.Settings{
+			Version: proposer.SchemaV1,
+			DefaultConfig: &proposer.Option{
+				BuilderConfig: &proposer.BuilderConfig{Enabled: true, GasLimit: 30_000_000},
+			},
+		},
+	}
+
+	const writers = 16
+	errs := make(chan error, writers)
+	var wg sync.WaitGroup
+	for i := range writers {
+		key := [fieldparams.BLSPubkeyLength]byte{byte(i + 1)}
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			errs <- v.UpdateProposerSettings(ctx, func(ps *proposer.Settings) (*proposer.Settings, error) {
+				if ps == nil {
+					ps = &proposer.Settings{Version: proposer.SchemaV2}
+				}
+				ps.UpsertProposeOption(key).GasLimit = 1
+				return ps, nil
+			})
+		}()
+		go func() {
+			defer wg.Done()
+			v.upgradeProposerSettingsToV2(ctx)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
+
+	ps := v.ProposerSettings()
+	require.NotNil(t, ps)
+	// Every keymanager write survived the concurrent cleanup passes.
+	require.Equal(t, writers, len(ps.ProposeConfig))
+	require.Equal(t, proposer.SchemaV2, ps.Version)
+	// A final cleanup pass leaves nothing to scrub.
+	require.Equal(t, false, v.ProposerSettings().Clone().UpgradeToV2())
 }

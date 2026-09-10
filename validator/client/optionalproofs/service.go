@@ -67,7 +67,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		ctx:             ctx,
 		cancel:          cancel,
 		cfg:             cfg,
-		nodeClient:      beaconApi.NewNodeClientWithFallback(restProvider.Handler(), nil),
+		nodeClient:      beaconApi.NewNodeClientWithFallback(restProvider, nil),
 		validatorClient: beaconApi.NewBeaconApiValidatorClient(restProvider),
 	}, nil
 }
@@ -101,7 +101,11 @@ func (s *Service) listenToPayloadEnvelopeEvents() {
 		return
 	}
 
-	go eventStream.Subscribe(eventsChannel)
+	go func() {
+		if err := eventStream.Subscribe(eventsChannel); err != nil {
+			log.WithError(err).Error("Failed to subscribe to execution_payload_available event stream")
+		}
+	}()
 
 	for {
 		select {
@@ -114,7 +118,7 @@ func (s *Service) listenToPayloadEnvelopeEvents() {
 }
 
 func (s *Service) processPayloadEnvelopeEvent(ev *event.Event) {
-	switch ev.EventType {
+	switch ev.Type {
 	case event.EventExecutionPayloadAvailable:
 		if err := s.handlePayloadEnvelopeEvent(ev.Data); err != nil {
 			log.WithError(err).Error("Failed to handle execution_payload_available event")
@@ -132,7 +136,7 @@ func (s *Service) handlePayloadEnvelopeEvent(data []byte) error {
 		fetchRetryDelay = 200 * time.Millisecond
 	)
 
-	payloadEvent := &structs.PayloadEvent{}
+	payloadEvent := &structs.ExecutionPayloadAvailableEvent{}
 	if err := json.Unmarshal(data, payloadEvent); err != nil {
 		return fmt.Errorf("unmarshal payload event: %w", err)
 	}
@@ -323,7 +327,7 @@ func buildNewPayloadRequest(data *payloadData) (*enginev1.NewPayloadRequest, err
 		return nil, fmt.Errorf("convert execution payload: %w", err)
 	}
 
-	var execRequests *enginev1.ExecutionRequests
+	var execRequests *enginev1.ExecutionRequestsGloas
 	if data.ExecutionRequests != nil {
 		execRequests, err = data.ExecutionRequests.ToConsensus()
 		if err != nil {

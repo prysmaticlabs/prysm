@@ -5,6 +5,7 @@ package ethereum.engine.v1;
 import "proto/eth/ext/options.proto";
 import "proto/engine/v1/execution_engine.proto";
 import "proto/engine/v1/electra.proto";
+import "proto/engine/v1/gloas.proto";
 
 option csharp_namespace = "Ethereum.Engine.V1";
 option go_package = "github.com/OffchainLabs/prysm/v7/proto/engine/v1;enginev1";
@@ -30,7 +31,7 @@ message NewPayloadRequest {
   ];
 
   bytes parent_block_root = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
-  ExecutionRequests execution_requests = 4;
+  ExecutionRequestsGloas execution_requests = 4;
 }
 
 message ExecutionBundleGloas {
