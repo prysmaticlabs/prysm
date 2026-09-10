@@ -141,12 +141,13 @@ func (bv *ROBlobVerifier) NotFromFutureSlot() (err error) {
 // SlotAboveFinalized represents the spec verification:
 // [IGNORE] The sidecar is from a slot greater than the latest finalized slot
 // -- i.e. validate that block_header.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
+// From the Heze fork (EIP-8333) the finalized checkpoint anchors at the epoch boundary slot.
 func (bv *ROBlobVerifier) SlotAboveFinalized() (err error) {
 	defer bv.recordResult(RequireSlotAboveFinalized, &err)
 	fcp := bv.fc.FinalizedCheckpoint()
-	fSlot, err := slots.EpochStart(fcp.Epoch)
+	fSlot, err := slots.CheckpointSlot(fcp.Epoch)
 	if err != nil {
-		return errors.Wrapf(errSlotNotAfterFinalized, "error computing epoch start slot for finalized checkpoint (%d) %s", fcp.Epoch, err.Error())
+		return errors.Wrapf(errSlotNotAfterFinalized, "error computing checkpoint slot for finalized checkpoint (%d) %s", fcp.Epoch, err.Error())
 	}
 	if bv.blob.Slot() <= fSlot {
 		log.WithFields(logging.BlobFields(bv.blob)).Debug("Sidecar slot is not after finalized checkpoint")

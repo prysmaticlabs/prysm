@@ -1271,3 +1271,27 @@ func (h *headStateCallTracker) HeadSlot() primitives.Slot {
 func (h *headStateCallTracker) HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error) {
 	return h.mockHeadStateProvider.HeadStateReadOnly(ctx)
 }
+
+func TestColumnSlotAboveFinalized_Heze(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 2
+	params.OverrideBeaconConfig(cfg)
+
+	initializer := &Initializer{shared: &sharedResources{
+		fc: &mockForkchoicer{FinalizedCheckpointCB: func() *forkchoicetypes.Checkpoint {
+			return &forkchoicetypes.Checkpoint{Epoch: 2, Root: [fieldparams.RootLength]byte{}}
+		}},
+	}}
+	spe := params.BeaconConfig().SlotsPerEpoch
+
+	// A column at the finalized epoch's first slot is no longer reverted by finality.
+	columns := GenerateTestDataColumns(t, [fieldparams.RootLength]byte{}, 2*spe, 1)
+	v := initializer.NewDataColumnsVerifier(columns, GossipDataColumnSidecarRequirements)
+	require.NoError(t, v.SlotAboveFinalized())
+
+	// A column at the boundary slot anchoring the finalized checkpoint is final.
+	columns = GenerateTestDataColumns(t, [fieldparams.RootLength]byte{}, 2*spe-1, 1)
+	v = initializer.NewDataColumnsVerifier(columns, GossipDataColumnSidecarRequirements)
+	require.ErrorIs(t, v.SlotAboveFinalized(), errSlotNotAfterFinalized)
+}

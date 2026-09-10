@@ -1179,3 +1179,56 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.R
 	}
 	return ifaceBlocks
 }
+
+func TestValidateStatusMessage_HezeBoundaryFinalizedRoot(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 5
+	params.OverrideBeaconConfig(cfg)
+	ctx := t.Context()
+
+	db := dbTest.SetupDB(t)
+	spe := params.BeaconConfig().SlotsPerEpoch
+
+	// The boundary block anchoring the finalized checkpoint for epoch 5.
+	boundary := util.NewBeaconBlock()
+	boundary.Block.Slot = 5*spe - 1
+	boundaryRoot, err := boundary.Block.HashTreeRoot()
+	require.NoError(t, err)
+	// Its finalized child at the first slot of epoch 5.
+	child := util.NewBeaconBlock()
+	child.Block.Slot = 5 * spe
+	child.Block.ParentRoot = boundaryRoot[:]
+	childRoot, err := child.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, db, boundary)
+	util.SaveBlock(t, ctx, db, child)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(boundary.Block.ParentRoot)))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: childRoot[:], Epoch: 6}))
+
+	chain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 6, Root: childRoot[:]},
+		FinalizedRoots:      map[[32]byte]bool{boundaryRoot: true, childRoot: true},
+		Genesis:             time.Now().Add(-time.Duration(uint64(10*spe)*params.BeaconConfig().SecondsPerSlot) * time.Second),
+		ValidatorsRoot:      [32]byte{'A'},
+	}
+	r := &Service{
+		cfg: &config{chain: chain, beaconDB: db, clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot)},
+		ctx: ctx,
+	}
+	digest := r.currentForkDigest()
+
+	// The boundary block is the checkpoint for epoch 5 even with a finalized child at the epoch start.
+	require.NoError(t, r.validateStatusMessage(ctx, &ethpb.StatusV2{
+		ForkDigest:     digest[:],
+		FinalizedRoot:  boundaryRoot[:],
+		FinalizedEpoch: 5,
+	}))
+
+	// The epoch's first block is no longer a valid checkpoint root for epoch 5.
+	require.ErrorIs(t, r.validateStatusMessage(ctx, &ethpb.StatusV2{
+		ForkDigest:     digest[:],
+		FinalizedRoot:  childRoot[:],
+		FinalizedEpoch: 5,
+	}), p2ptypes.ErrInvalidEpoch)
+}

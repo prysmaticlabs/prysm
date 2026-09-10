@@ -153,13 +153,13 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	cp := s.cfg.chain.FinalizedCheckpt()
-	startSlot, err := slots.EpochStart(cp.Epoch)
+	finalizedSlot, err := slots.CheckpointSlot(cp.Epoch)
 	if err != nil {
-		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate epoch start slot")
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate finalized checkpoint slot")
 		return pubsub.ValidationIgnore, nil
 	}
-	if startSlot >= blk.Block().Slot() {
-		err := fmt.Errorf("finalized slot %d greater or equal to block slot %d", startSlot, blk.Block().Slot())
+	if finalizedSlot >= blk.Block().Slot() {
+		err := fmt.Errorf("finalized slot %d greater or equal to block slot %d", finalizedSlot, blk.Block().Slot())
 		log.WithFields(getBlockFields(blk)).Debug(err)
 		return pubsub.ValidationIgnore, err
 	}

@@ -262,3 +262,28 @@ func signEnvelope(t *testing.T, sk bls.SecretKey, env *ethpb.ExecutionPayloadEnv
 	copy(out[:], sig)
 	return out
 }
+
+func TestEnvelopeVerifier_VerifySlotAboveFinalized_Heze(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
+	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
+	spe := params.BeaconConfig().SlotsPerEpoch
+
+	// The envelope of the boundary block anchoring the finalized checkpoint remains acceptable.
+	env := testSignedExecutionPayloadEnvelope(t, spe-1, 1, root, blockHash)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	require.NoError(t, err)
+	verifier := &EnvelopeVerifier{results: newResults(RequireEnvelopeSlotAboveFinalized), e: wrapped}
+	require.NoError(t, verifier.VerifySlotAboveFinalized(1))
+
+	// Envelopes before the boundary slot are final.
+	env = testSignedExecutionPayloadEnvelope(t, spe-2, 1, root, blockHash)
+	wrapped, err = blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	require.NoError(t, err)
+	verifier = &EnvelopeVerifier{results: newResults(RequireEnvelopeSlotAboveFinalized), e: wrapped}
+	require.ErrorIs(t, verifier.VerifySlotAboveFinalized(1), ErrEnvelopeSlotBeforeFinalized)
+}

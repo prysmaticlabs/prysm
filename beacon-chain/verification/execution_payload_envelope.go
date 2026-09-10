@@ -106,12 +106,12 @@ func (v *EnvelopeVerifier) VerifySlotAboveFinalized(finalizedEpoch primitives.Ep
 	if err != nil {
 		return errors.Wrap(err, "failed to get envelope")
 	}
-	startSlot, err := slots.EpochStart(finalizedEpoch)
+	finalizedSlot, err := slots.CheckpointSlot(finalizedEpoch)
 	if err != nil {
-		return errors.Wrapf(ErrEnvelopeSlotBeforeFinalized, "error computing epoch start slot for finalized checkpoint (%d) %s", finalizedEpoch, err.Error())
+		return errors.Wrapf(ErrEnvelopeSlotBeforeFinalized, "error computing checkpoint slot for finalized checkpoint (%d) %s", finalizedEpoch, err.Error())
 	}
-	if env.Slot() < startSlot {
-		return fmt.Errorf("%w: slot=%d start=%d", ErrEnvelopeSlotBeforeFinalized, env.Slot(), startSlot)
+	if env.Slot() < finalizedSlot {
+		return fmt.Errorf("%w: slot=%d start=%d", ErrEnvelopeSlotBeforeFinalized, env.Slot(), finalizedSlot)
 	}
 	return nil
 }

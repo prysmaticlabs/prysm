@@ -850,3 +850,30 @@ func (p *mockProposerCache) ComputeProposer(ctx context.Context, slot primitives
 }
 
 var _ proposerCache = &mockProposerCache{}
+
+func TestSlotAboveFinalized_Heze(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 2
+	params.OverrideBeaconConfig(cfg)
+
+	ini := &Initializer{shared: &sharedResources{}}
+	ini.shared.fc = &mockForkchoicer{FinalizedCheckpointCB: func() *forkchoicetypes.Checkpoint {
+		return &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{}}
+	}}
+	spe := params.BeaconConfig().SlotsPerEpoch
+
+	// A blob at the finalized epoch's first slot is no longer reverted by finality.
+	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
+	b := blobs[0]
+	b.SignedBlockHeader.Header.Slot = 2 * spe
+	v := ini.NewBlobVerifier(b, GossipBlobSidecarRequirements)
+	require.NoError(t, v.SlotAboveFinalized())
+
+	// A blob at the boundary slot anchoring the finalized checkpoint is final.
+	_, blobs = util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
+	b = blobs[0]
+	b.SignedBlockHeader.Header.Slot = 2*spe - 1
+	v = ini.NewBlobVerifier(b, GossipBlobSidecarRequirements)
+	require.ErrorIs(t, v.SlotAboveFinalized(), errSlotNotAfterFinalized)
+}

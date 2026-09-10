@@ -465,15 +465,17 @@ func (s *Service) validateStatusMessage(ctx context.Context, genericMsg any) err
 	if blk == nil || blk.IsNil() {
 		return p2ptypes.ErrGeneric
 	}
-	if slots.ToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
+	// Before Heze a checkpoint root may name a block inside the checkpoint epoch
+	// (at its first slot); from Heze (EIP-8333) it always names an earlier block.
+	if msg.FinalizedEpoch < params.BeaconConfig().HezeForkEpoch && slots.ToEpoch(blk.Block().Slot()) == msg.FinalizedEpoch {
 		return nil
 	}
 
-	startSlot, err := slots.EpochStart(msg.FinalizedEpoch)
+	checkpointSlot, err := slots.CheckpointSlot(msg.FinalizedEpoch)
 	if err != nil {
 		return p2ptypes.ErrGeneric
 	}
-	if startSlot > blk.Block().Slot() {
+	if checkpointSlot >= blk.Block().Slot() {
 		childBlock, err := s.cfg.beaconDB.FinalizedChildBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 		if err != nil {
 			return p2ptypes.ErrGeneric
@@ -483,9 +485,9 @@ func (s *Service) validateStatusMessage(ctx context.Context, genericMsg any) err
 		if childBlock == nil || childBlock.IsNil() {
 			return nil
 		}
-		// If child finalized block also has a smaller or
-		// equal slot number we return an error.
-		if startSlot >= childBlock.Block().Slot() {
+		// If the child finalized block is also at or before the
+		// checkpoint slot we return an error.
+		if checkpointSlot >= childBlock.Block().Slot() {
 			return p2ptypes.ErrInvalidEpoch
 		}
 		return nil

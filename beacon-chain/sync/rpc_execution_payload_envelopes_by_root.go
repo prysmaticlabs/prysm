@@ -57,11 +57,11 @@ func (s *Service) executionPayloadEnvelopesByRootRPCHandler(ctx context.Context,
 		return err
 	}
 
-	// Compute the oldest slot we'll allow a peer to request, based on the finalized epoch.
+	// Compute the oldest slot we'll allow a peer to request, based on the finalized checkpoint slot.
 	finalized := s.cfg.chain.FinalizedCheckpt()
-	minReqSlot, err := slots.EpochStart(finalized.Epoch)
+	minReqSlot, err := slots.CheckpointSlot(finalized.Epoch)
 	if err != nil {
-		return errors.Wrapf(err, "could not compute start slot for finalized epoch %d", finalized.Epoch)
+		return errors.Wrapf(err, "could not compute checkpoint slot for finalized epoch %d", finalized.Epoch)
 	}
 
 	batchSize := flags.Get().BlockBatchLimit

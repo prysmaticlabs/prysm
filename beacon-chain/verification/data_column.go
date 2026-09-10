@@ -264,15 +264,15 @@ func (dv *RODataColumnsVerifier) SlotAboveFinalized() (err error) {
 	// Retrieve the finalized checkpoint.
 	finalizedCheckpoint := dv.fc.FinalizedCheckpoint()
 
-	// Compute the first slot of the finalized checkpoint epoch.
-	startSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
+	// Compute the slot anchoring the finalized checkpoint (the epoch boundary slot from Heze / EIP-8333).
+	finalizedSlot, err := slots.CheckpointSlot(finalizedCheckpoint.Epoch)
 	if err != nil {
-		return columnErrBuilder(errors.Wrap(err, "epoch start"))
+		return columnErrBuilder(errors.Wrap(err, "checkpoint slot"))
 	}
 
 	for _, dataColumn := range dv.dataColumns {
-		// Check if the data column slot is after first slot of the epoch corresponding to the finalized checkpoint.
-		if dataColumn.Slot() <= startSlot {
+		// Check if the data column slot is after the finalized checkpoint slot.
+		if dataColumn.Slot() <= finalizedSlot {
 			return columnErrBuilder(errSlotNotAfterFinalized)
 		}
 	}
