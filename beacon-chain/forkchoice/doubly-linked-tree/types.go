@@ -40,6 +40,7 @@ type Store struct {
 	weakHeadCommitteeWeight       uint64                                        // includes slashed active validators for the weak-head threshold.
 	justifiedEffectiveBalances    []uint64                                      // unfiltered effective balances for equivocation accounting.
 	treeRootNode                  *Node                                         // the root node of the store tree.
+	treeRootParentHash            [fieldparams.RootLength]byte                  // payload hash the tree root's bid builds on (Gloas). Answers the full-parent walk when it falls off the tree.
 	headNode                      *Node                                         // last head Node
 	emptyNodeByRoot               map[[fieldparams.RootLength]byte]*PayloadNode // nodes indexed by roots.
 	fullNodeByRoot                map[[fieldparams.RootLength]byte]*PayloadNode // full nodes (the payload was present) indexed by beacon block root.
@@ -64,7 +65,7 @@ type Node struct {
 	target                      *Node                        // target checkpoint for
 	bestDescendant              *Node                        // bestDescendant node of this node.
 	justifiedEpoch              primitives.Epoch             // justifiedEpoch of this node.
-	unrealizedJustifiedEpoch    primitives.Epoch             // the epoch that would be justified if the block would be advanced to the next epoch.
+	unrealizedJustified         forkchoicetypes.Checkpoint   // the checkpoint that would be justified if the block would be advanced to the next epoch.
 	finalizedEpoch              primitives.Epoch             // finalizedEpoch of this node.
 	unrealizedFinalizedEpoch    primitives.Epoch             // the epoch that would be finalized if the block would be advanced to the next epoch.
 	balance                     uint64                       // the balance that voted for this node directly

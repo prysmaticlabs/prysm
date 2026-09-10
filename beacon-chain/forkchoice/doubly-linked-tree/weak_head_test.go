@@ -368,12 +368,12 @@ func TestForkChoice_CacheWeakHeadCommittees(t *testing.T) {
 		_, blk, err := prepareGloasForkchoiceState(ctx, 9, parentRoot, [32]byte{}, [32]byte{'P'}, [32]byte{}, 0, 0)
 		require.NoError(t, err)
 		// InsertChain adds nodes without post-states or eager committee snapshots.
-		_, err = f.store.insert(ctx, blk, 0, 0)
+		_, err = f.store.insert(ctx, blk, 0, [32]byte{}, 0)
 		require.NoError(t, err)
 		for _, root := range [][32]byte{headRoot, alternateRoot} {
 			_, blk, err = prepareGloasForkchoiceState(ctx, 10, root, parentRoot, root, [32]byte{}, 0, 0)
 			require.NoError(t, err)
-			_, err = f.store.insert(ctx, blk, 0, 0)
+			_, err = f.store.insert(ctx, blk, 0, [32]byte{}, 0)
 			require.NoError(t, err)
 		}
 		f.ProcessAttestation(ctx, []uint64{0}, headRoot, 10, false)
