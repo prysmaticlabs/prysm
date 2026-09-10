@@ -127,11 +127,16 @@ func (s *Store) insert(ctx context.Context,
 		payloadDataAvailabilityVote: bitfield.NewBitvector512(),
 		payloadAttesters:            bitfield.NewBitvector512(),
 	}
-	// Set the node's target checkpoint
-	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+	// Set the node's target checkpoint.
+	// From the EIP-8333 activation epoch checkpoints anchor to the epoch boundary
+	// block, so an epoch-start block is no longer its own target.
+	nodeEpoch := slots.ToEpoch(slot)
+	ownTarget := slot%params.BeaconConfig().SlotsPerEpoch == 0 &&
+		(nodeEpoch < params.BeaconConfig().HezeForkEpoch || nodeEpoch == params.BeaconConfig().GenesisEpoch)
+	if ownTarget {
 		n.target = n
 	} else if parent != nil {
-		if slots.ToEpoch(slot) == slots.ToEpoch(parent.node.slot) {
+		if nodeEpoch == slots.ToEpoch(parent.node.slot) {
 			n.target = parent.node.target
 		} else {
 			n.target = parent.node
@@ -301,9 +306,9 @@ func (s *Store) prune(ctx context.Context) error {
 
 	prunedCount.Inc()
 	// Prune all children of the finalized checkpoint block that are incompatible with it
-	checkpointMaxSlot, err := slots.EpochStart(finalizedEpoch)
+	checkpointMaxSlot, err := slots.CheckpointSlot(finalizedEpoch)
 	if err != nil {
-		return errors.Wrap(err, "could not compute epoch start")
+		return errors.Wrap(err, "could not compute checkpoint slot")
 	}
 	if fn.slot == checkpointMaxSlot {
 		return nil

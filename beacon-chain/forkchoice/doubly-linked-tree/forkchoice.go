@@ -260,16 +260,16 @@ func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool
 		return false, nil
 	}
 	node := pn.node
-	epochStart, err := slots.EpochStart(cp.Epoch)
+	checkpointSlot, err := slots.CheckpointSlot(cp.Epoch)
 	if err != nil {
 		return false, err
 	}
-	if node.slot > epochStart {
+	if node.slot > checkpointSlot {
 		return false, nil
 	}
 
-	// If it's the start of the epoch, it is a checkpoint
-	if node.slot == epochStart {
+	// If it's at the checkpoint slot, it is a checkpoint
+	if node.slot == checkpointSlot {
 		return true, nil
 	}
 	// If there are no descendants of this beacon block, it is is viable as a checkpoint
@@ -284,9 +284,9 @@ func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool
 			return true, nil
 		}
 	}
-	// If some child is after the start of the epoch, the checkpoint is viable.
+	// If some child is after the checkpoint slot, the checkpoint is viable.
 	for _, child := range children {
-		if child.slot > epochStart {
+		if child.slot > checkpointSlot {
 			return true, nil
 		}
 	}
@@ -486,7 +486,7 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 	}
 	f.store.finalizedCheckpoint = fc
 	f.store.finalizedPayloadBlockHash = f.store.checkpointPayloadHashForRoot(fc.Root)
-	finalizedSlot, err := slots.EpochStart(fc.Epoch)
+	finalizedSlot, err := slots.CheckpointSlot(fc.Epoch)
 	if err == nil {
 		for key := range f.store.blockRootsBySlotProposer {
 			if key.slot <= finalizedSlot {
