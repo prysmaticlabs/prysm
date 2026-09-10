@@ -129,11 +129,11 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 //	state.justification_bits[0] = 0b0
 //	if previous_epoch_target_balance * 3 >= total_active_balance * 2:
 //	    state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
-//	                                                    root=get_block_root(state, previous_epoch))
+//	                                                    root=get_checkpoint_root(state, previous_epoch))
 //	    state.justification_bits[1] = 0b1
 //	if current_epoch_target_balance * 3 >= total_active_balance * 2:
 //	    state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
-//	                                                    root=get_block_root(state, current_epoch))
+//	                                                    root=get_checkpoint_root(state, current_epoch))
 //	    state.justification_bits[0] = 0b1
 //
 //	# Process finalizations
@@ -161,17 +161,17 @@ func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 
 	// If 2/3 or more of the total balance attested in the current epoch.
 	if newBits.BitAt(0) && currentEpoch >= justifiedCheckpoint.Epoch {
-		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
+		blockRoot, err := helpers.CheckpointRoot(state, currentEpoch)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", currentEpoch)
+			return nil, nil, errors.Wrapf(err, "could not get checkpoint root for current epoch %d", currentEpoch)
 		}
 		justifiedCheckpoint.Epoch = currentEpoch
 		justifiedCheckpoint.Root = blockRoot
 	} else if newBits.BitAt(1) && prevEpoch >= justifiedCheckpoint.Epoch {
 		// If 2/3 or more of total balance attested in the previous epoch.
-		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
+		blockRoot, err := helpers.CheckpointRoot(state, prevEpoch)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
+			return nil, nil, errors.Wrapf(err, "could not get checkpoint root for previous epoch %d", prevEpoch)
 		}
 		justifiedCheckpoint.Epoch = prevEpoch
 		justifiedCheckpoint.Root = blockRoot

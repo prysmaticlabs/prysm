@@ -263,3 +263,43 @@ func Test_ComputeCheckpoints_CantUpdateToLower(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, primitives.Epoch(2), cp.Epoch)
 }
+
+func TestProcessJustificationAndFinalizationPreCompute_EIP8333(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 2
+	params.OverrideBeaconConfig(cfg)
+
+	e := params.BeaconConfig().FarFutureEpoch
+	a := params.BeaconConfig().MaxEffectiveBalance
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerEpoch*2+1)
+	for i := range blockRoots {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	base := &ethpb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch*2 + 1,
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		JustificationBits:   bitfield.Bitvector4{0x0F}, // 0b1111
+		Validators:          []*ethpb.Validator{{ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}, {ExitEpoch: e}},
+		Balances:            []uint64{a, a, a, a},
+		BlockRoots:          blockRoots,
+	}
+	state, err := state_native.InitializeFromProtoPhase0(base)
+	require.NoError(t, err)
+	attestedBalance := 4 * uint64(e) * 3 / 2
+	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
+	require.NoError(t, err)
+	// The justified checkpoint for epoch 2 anchors at the boundary slot 63, not the epoch start slot 64.
+	rt := [32]byte{byte(2*params.BeaconConfig().SlotsPerEpoch - 1)}
+	assert.DeepEqual(t, rt[:], newState.CurrentJustifiedCheckpoint().Root, "Unexpected justified root")
+	assert.Equal(t, primitives.Epoch(2), newState.CurrentJustifiedCheckpoint().Epoch, "Unexpected justified epoch")
+}

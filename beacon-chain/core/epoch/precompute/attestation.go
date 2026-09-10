@@ -118,7 +118,7 @@ func AttestedPrevEpoch(s state.ReadOnlyBeaconState, a *ethpb.PendingAttestation)
 
 // SameTarget returns true if attestation `a` attested to the same target block in state.
 func SameTarget(state state.ReadOnlyBeaconState, a *ethpb.PendingAttestation, e primitives.Epoch) (bool, error) {
-	r, err := helpers.BlockRoot(state, e)
+	r, err := helpers.CheckpointRoot(state, e)
 	if err != nil {
 		return false, err
 	}

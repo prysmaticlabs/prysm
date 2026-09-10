@@ -974,3 +974,58 @@ func buildGloasStateForFlags(t *testing.T, stateSlot, slot primitives.Slot, targ
 	require.NoError(t, err)
 	return beaconState
 }
+
+func TestMatchingStatus_EIP8333(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 3
+	params.OverrideBeaconConfig(cfg)
+	helpers.ClearCache()
+
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := range blockRoots {
+		blockRoots[i] = []byte{byte(i)}
+	}
+	st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
+		Slot:       primitives.Slot(3*slotsPerEpoch + 2),
+		BlockRoots: blockRoots,
+	})
+	require.NoError(t, err)
+
+	root := func(b byte) []byte {
+		r := [32]byte{b}
+		return r[:]
+	}
+	source := &ethpb.Checkpoint{Epoch: 2, Root: root(1)}
+	boundaryRoot := root(byte(3*slotsPerEpoch - 1))
+	epochStartRoot := root(byte(3 * slotsPerEpoch))
+
+	data := &ethpb.AttestationData{
+		Slot:            primitives.Slot(3*slotsPerEpoch + 1),
+		BeaconBlockRoot: root(byte(3*slotsPerEpoch + 1)),
+		Source:          source,
+		Target:          &ethpb.Checkpoint{Epoch: 3, Root: boundaryRoot},
+	}
+	matchedSrc, matchedTgt, matchedHead, err := altair.MatchingStatus(st, data, source)
+	require.NoError(t, err)
+	require.Equal(t, true, matchedSrc)
+	require.Equal(t, true, matchedTgt, "boundary block must match the post-activation target")
+	require.Equal(t, true, matchedHead)
+
+	data.Target = &ethpb.Checkpoint{Epoch: 3, Root: epochStartRoot}
+	_, matchedTgt, _, err = altair.MatchingStatus(st, data, source)
+	require.NoError(t, err)
+	require.Equal(t, false, matchedTgt, "the epoch's first block must not match the post-activation target")
+
+	// Pre-activation epochs keep the previous anchoring.
+	data = &ethpb.AttestationData{
+		Slot:            primitives.Slot(2*slotsPerEpoch + 1),
+		BeaconBlockRoot: root(byte(2*slotsPerEpoch + 1)),
+		Source:          source,
+		Target:          &ethpb.Checkpoint{Epoch: 2, Root: root(byte(2 * slotsPerEpoch))},
+	}
+	_, matchedTgt, _, err = altair.MatchingStatus(st, data, source)
+	require.NoError(t, err)
+	require.Equal(t, true, matchedTgt)
+}
