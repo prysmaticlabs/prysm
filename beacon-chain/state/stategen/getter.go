@@ -7,6 +7,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/params"
@@ -15,6 +16,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -97,9 +99,9 @@ func (s *State) StateByRootNoCopy(ctx context.Context, blockRoot [32]byte) (stat
 	return state, nil
 }
 
-// ActiveNonSlashedBalancesByRoot retrieves the effective balances of all active and non-slashed validators at the
-// state with a given root
-func (s *State) ActiveNonSlashedBalancesByRoot(ctx context.Context, blockRoot [32]byte) ([]uint64, error) {
+// ActiveNonSlashedBalancesByRoot retrieves the effective balances of all active and non-slashed
+// validators in the checkpoint state for the given block root and checkpoint epoch.
+func (s *State) ActiveNonSlashedBalancesByRoot(ctx context.Context, blockRoot [32]byte, epoch primitives.Epoch) ([]uint64, error) {
 	st, err := s.StateByRootNoCopy(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -107,11 +109,23 @@ func (s *State) ActiveNonSlashedBalancesByRoot(ctx context.Context, blockRoot [3
 	if st == nil || st.IsNil() {
 		return nil, errNilState
 	}
-	epoch := time.CurrentEpoch(st)
+	if time.CurrentEpoch(st) < epoch {
+		// The checkpoint block precedes its epoch (EIP-8333 boundary anchoring or an
+		// empty epoch-start slot): advance a copy to the checkpoint state.
+		epochStart, err := slots.EpochStart(epoch)
+		if err != nil {
+			return nil, err
+		}
+		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st.Copy(), blockRoot[:], epochStart)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not advance state to the checkpoint epoch")
+		}
+	}
+	activeEpoch := time.CurrentEpoch(st)
 
 	balances := make([]uint64, st.NumValidators())
 	for idx, val := range st.ValidatorsReadOnlySeq() {
-		if helpers.IsActiveNonSlashedValidatorUsingTrie(val, epoch) {
+		if helpers.IsActiveNonSlashedValidatorUsingTrie(val, activeEpoch) {
 			balances[idx] = val.EffectiveBalance()
 		} else {
 			balances[idx] = 0

@@ -61,7 +61,7 @@ func (m *StateManager) StateByRootNoCopy(_ context.Context, blockRoot [32]byte) 
 }
 
 // ActiveNonSlashedBalancesByRoot --
-func (*StateManager) ActiveNonSlashedBalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
+func (*StateManager) ActiveNonSlashedBalancesByRoot(_ context.Context, _ [32]byte, _ primitives.Epoch) ([]uint64, error) {
 	return []uint64{}, nil
 }
 

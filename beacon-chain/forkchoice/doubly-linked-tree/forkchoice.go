@@ -156,7 +156,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 		jcRoot := bytesutil.ToBytes32(jc.Root)
 		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
-		if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
+		if err := f.updateJustifiedBalances(ctx, jcRoot, jc.Epoch); err != nil {
 			return errors.Wrap(err, "could not update justified balances")
 		}
 	}
@@ -473,7 +473,7 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoi
 	}
 	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
-	if err := f.updateJustifiedBalances(ctx, jc.Root); err != nil {
+	if err := f.updateJustifiedBalances(ctx, jc.Root, jc.Epoch); err != nil {
 		return errors.Wrap(err, "could not update justified balances")
 	}
 	return nil
@@ -765,8 +765,8 @@ func (f *ForkChoice) PayloadWeights(root [32]byte) (emptyWeight, fullWeight uint
 }
 
 // updateJustifiedBalances updates the validators balances on the justified checkpoint pointed by root.
-func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte) error {
-	balances, err := f.balancesByRoot(ctx, root)
+func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte, epoch primitives.Epoch) error {
+	balances, err := f.balancesByRoot(ctx, root, epoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get justified balances")
 	}

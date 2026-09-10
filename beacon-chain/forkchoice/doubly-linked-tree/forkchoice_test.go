@@ -798,10 +798,10 @@ func TestWeight(t *testing.T) {
 func TestForkchoice_UpdateJustifiedBalances(t *testing.T) {
 	f := setup(0, 0)
 	balances := []uint64{10, 0, 0, 40, 50, 60, 0, 80, 90, 100}
-	f.balancesByRoot = func(context.Context, [32]byte) ([]uint64, error) {
+	f.balancesByRoot = func(context.Context, [32]byte, primitives.Epoch) ([]uint64, error) {
 		return balances, nil
 	}
-	require.NoError(t, f.updateJustifiedBalances(t.Context(), [32]byte{}))
+	require.NoError(t, f.updateJustifiedBalances(t.Context(), [32]byte{}, 0))
 	require.Equal(t, uint64(430)/32, f.store.committeeWeight)
 	require.DeepEqual(t, balances, f.justifiedBalances)
 }

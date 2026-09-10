@@ -13,9 +13,9 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 )
 
-// BalancesByRooter is a handler to obtain the effective balances of the state
-// with the given block root
-type BalancesByRooter func(context.Context, [32]byte) ([]uint64, error)
+// BalancesByRooter is a handler to obtain the effective balances of the
+// checkpoint state for the given block root and checkpoint epoch
+type BalancesByRooter func(context.Context, [32]byte, primitives.Epoch) ([]uint64, error)
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {

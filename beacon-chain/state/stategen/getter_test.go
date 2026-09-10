@@ -66,7 +66,7 @@ func TestStateByRoot_ColdState(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, loadedState.ToProtoUnsafe(), beaconState.ToProtoUnsafe())
 
-	bal, err := service.ActiveNonSlashedBalancesByRoot(ctx, bRoot)
+	bal, err := service.ActiveNonSlashedBalancesByRoot(ctx, bRoot, 0)
 	require.NoError(t, err)
 	require.Equal(t, 32, len(bal))
 	for _, balance := range bal[1:] {
@@ -728,4 +728,34 @@ func TestState_HasStateInCache(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, tc.want, got)
 	}
+}
+
+func TestActiveNonSlashedBalancesByRoot_AdvancesToCheckpointEpoch(t *testing.T) {
+	ctx := t.Context()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+
+	// The checkpoint block sits at the last slot of epoch 0 while the checkpoint epoch is 1,
+	// as with EIP-8333 boundary anchoring or an empty epoch start slot.
+	b := util.NewBeaconBlock()
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch - 1
+	util.SaveBlock(t, ctx, beaconDB, b)
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch-1))
+	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, service.beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
+
+	bal, err := service.ActiveNonSlashedBalancesByRoot(ctx, bRoot, 1)
+	require.NoError(t, err)
+	require.Equal(t, 32, len(bal))
+	for _, balance := range bal {
+		require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, balance)
+	}
+
+	// The state cached for the root must remain at its own slot.
+	st, err := service.StateByRootNoCopy(ctx, bRoot)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().SlotsPerEpoch-1, st.Slot())
 }

@@ -224,7 +224,9 @@ func setup(justifiedEpoch, finalizedEpoch primitives.Epoch) *ForkChoice {
 	if err != nil {
 		return nil
 	}
-	f.SetBalancesByRooter(func(_ context.Context, _ [32]byte) ([]uint64, error) { return f.justifiedBalances, nil })
+	f.SetBalancesByRooter(func(_ context.Context, _ [32]byte, _ primitives.Epoch) ([]uint64, error) {
+		return f.justifiedBalances, nil
+	})
 	err = f.InsertNode(ctx, state, blkRoot)
 	if err != nil {
 		return nil

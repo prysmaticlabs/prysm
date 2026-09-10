@@ -88,7 +88,7 @@ func setupBuilderFailureTest(
 	service, tr := setupGloasService(t, &mockExecution.EngineClient{})
 	require.NoError(t, WithBuilderCircuitBreaker(cb)(service))
 	service.cfg.ForkChoiceStore.SetBalancesByRooter(
-		func(context.Context, [32]byte) ([]uint64, error) { return balances, nil })
+		func(context.Context, [32]byte, primitives.Epoch) ([]uint64, error) { return balances, nil })
 
 	parentHash := bytesutil.ToBytes32([]byte("parenthash"))
 	parentRoot := bytesutil.ToBytes32([]byte("parentroot"))
