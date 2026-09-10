@@ -39,8 +39,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -276,29 +274,31 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 	defer cancel()
 	checkClient := eth.NewBeaconChainClient(check)
 	refClient := eth.NewBeaconChainClient(ref)
+	var lastErr error
 	for {
 		select {
 		case <-dctx.Done():
 			// deadline ensures that the test eventually exits when beacon node fails to sync in a reasonable timeframe
 			elapsed := time.Since(start)
-			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
-		default:
+			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node, last error: %v", elapsed, lastErr)
+		case <-time.After(500 * time.Millisecond):
 			cResp, err := checkClient.GetChainHead(ctx, &emptypb.Empty{})
 			if err != nil {
-				errStatus, ok := status.FromError(err)
-				// in the happy path we expect NotFound results until the node has synced
-				if ok && errStatus.Code() == codes.NotFound {
-					continue
-				}
-				return fmt.Errorf("error requesting head from 'check' beacon node")
+				// Errors are expected until the node has synced (NotFound in the happy
+				// path, transient Unavailable while gRPC boots or under load), so keep
+				// retrying until the deadline decides.
+				lastErr = errors.Wrap(err, "error requesting head from 'check' beacon node")
+				continue
 			}
 			rResp, err := refClient.GetChainHead(ctx, &emptypb.Empty{})
 			if err != nil {
-				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
+				lastErr = errors.Wrap(err, "error requesting head block root from 'ref' beacon node")
+				continue
 			}
 			if bytesutil.ToBytes32(cResp.HeadBlockRoot) == bytesutil.ToBytes32(rResp.HeadBlockRoot) {
 				return nil
 			}
+			lastErr = fmt.Errorf("checkpoint-synced node head %#x does not match reference head %#x yet", cResp.HeadBlockRoot, rResp.HeadBlockRoot)
 		}
 	}
 }
