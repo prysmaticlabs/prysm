@@ -268,11 +268,6 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := fmt.Sprintf("%#x", bb.service.GetProposerHead())
 		require.Equal(t, want, got)
 	}
-	/* TODO: We need to mock the entire proposer system to be able to test this.
-	if c.ShouldOverrideFCU != nil {
-		require.DeepEqual(t, c.ShouldOverrideFCU.Result, bb.service.ShouldOverrideFCU())
-	}
-	*/
 	if c.PayloadTimelinessVote != nil || c.PayloadDataAvailabilityVote != nil {
 		dlt, ok := bb.fc.(*doublylinkedtree.ForkChoice)
 		require.Equal(t, true, ok, "forkchoice is not a doubly linked tree")
