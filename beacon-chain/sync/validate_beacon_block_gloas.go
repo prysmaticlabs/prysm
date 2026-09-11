@@ -14,6 +14,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 // validateExecutionPayloadBid validates execution payload bid gossip rules.
@@ -129,19 +130,19 @@ func (s *Service) fetchPayloadEnvelope(root [32]byte) {
 	}
 
 	fetchCtx, cancelFetch := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDuration())
-	columnsDone := make(chan struct{})
-	var columnsErr error
-	go func() {
-		defer close(columnsDone)
-		columnsErr = s.requestDataColumnsForEnvelope(fetchCtx, root)
-		if columnsErr != nil {
-			log.WithError(columnsErr).WithField("root", fmt.Sprintf("%#x", root)).Debug("Could not fetch data column sidecars for payload envelope")
+	var columns errgroup.Group
+	columns.Go(func() error {
+		err := s.requestDataColumnsForEnvelope(fetchCtx, root)
+		if err != nil {
 			cancelFetch()
 		}
-	}()
+		return err
+	})
 	defer func() {
 		cancelFetch()
-		<-columnsDone
+		if err := columns.Wait(); err != nil {
+			log.WithError(err).WithField("root", fmt.Sprintf("%#x", root)).Debug("Could not fetch data column sidecars for payload envelope")
+		}
 	}()
 
 	req := p2ptypes.ExecutionPayloadEnvelopesByRootReq{root}
@@ -163,8 +164,7 @@ func (s *Service) fetchPayloadEnvelope(root [32]byte) {
 			continue
 		}
 		// Download in parallel, but persist columns before starting the import deadline.
-		<-columnsDone
-		if columnsErr != nil || fetchCtx.Err() != nil || s.cfg.chain.HasFullNode(root) {
+		if columns.Wait() != nil || fetchCtx.Err() != nil || s.cfg.chain.HasFullNode(root) {
 			return
 		}
 		ctx, cancel := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDuration())
