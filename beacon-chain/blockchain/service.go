@@ -68,7 +68,6 @@ type Service struct {
 	blobStorage                    *filesystem.BlobStorage
 	dataColumnStorage              *filesystem.DataColumnStorage
 	slasherEnabled                 bool
-	skipBlockSignaturesForTesting  bool
 	lcStore                        *lightClient.Store
 	startWaitingDataColumnSidecars chan bool // for testing purposes only
 	syncCommitteeHeadState         *cache.SyncCommitteeHeadStateCache
@@ -467,11 +466,9 @@ func (s *Service) SafeBlockHash() [32]byte {
 func (s *Service) safeBlockHash() [32]byte {
 	if s.fcr != nil {
 		root := s.fcr.ConfirmedRoot()
-		if root != ([32]byte{}) {
-			// The lookup can miss, for example on a pruned node, fall back to unrealized justified.
-			if hash := s.cfg.ForkChoiceStore.ConfirmedPayloadBlockHash(root); hash != ([32]byte{}) {
-				return hash
-			}
+		// A pruned confirmed root falls back to unrealized justified.
+		if root != ([32]byte{}) && s.cfg.ForkChoiceStore.HasNode(root) {
+			return s.cfg.ForkChoiceStore.ConfirmedPayloadBlockHash(root)
 		}
 	}
 	return s.cfg.ForkChoiceStore.UnrealizedJustifiedPayloadBlockHash()
