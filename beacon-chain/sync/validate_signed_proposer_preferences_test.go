@@ -186,6 +186,18 @@ func TestValidateSignedProposerPreferencesGossip_EpochPlus2DependentRootMismatch
 	require.Equal(t, primitives.Epoch(1), gotEpoch)
 }
 
+func TestValidateSignedProposerPreferencesGossip_DependentBlockAfterShufflingSlot(t *testing.T) {
+	ctx := context.Background()
+	s, msg, _ := setupSignedProposerPreferencesService(t)
+
+	// The proposal slot is in epoch 1, whose shuffling dependent slot is the genesis slot.
+	s.cfg.chain.(*mock.ChainService).BlockSlot = 1
+
+	result, err := s.validateSignedProposerPreferencesGossip(ctx, "", msg)
+	require.ErrorContains(t, "after shuffling dependent slot", err)
+	require.Equal(t, pubsub.ValidationReject, result)
+}
+
 func TestValidateSignedProposerPreferencesGossip_HappyPath(t *testing.T) {
 	ctx := context.Background()
 	s, msg, signedPreferences := setupSignedProposerPreferencesService(t)
