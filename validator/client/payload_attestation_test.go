@@ -2,13 +2,19 @@ package client
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
+	"net/http"
 	"testing"
+	"time"
+
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/pkg/errors"
@@ -70,6 +76,303 @@ func TestSubmitPayloadAttestation_NoHeadBlockForSlot(t *testing.T) {
 			require.LogsDoNotContain(t, hook, "Could not request payload attestation data")
 		})
 	}
+}
+
+// ptcRetrySetup configures a validator whose payload attestation deadline for slot 1 is
+// shortly ahead, with the availability event already delivered so the duty issues its
+// first request straight away. It returns the deadline lead time.
+func ptcRetrySetup(t *testing.T, validator *validator, validatorKey bls.SecretKey) time.Duration {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	// PayloadAttestationDueBPS is 7500, so the deadline sits 150ms into the slot.
+	cfg.SlotDurationMilliseconds = 200
+	params.OverrideBeaconConfig(cfg)
+
+	lead := cfg.SlotComponentDuration(cfg.PayloadAttestationDueBPS)
+	// Place genesis so that slot 1 starts now and its deadline is lead away.
+	validator.genesisTime = time.Now().Add(-time.Duration(cfg.SlotDurationMilliseconds) * time.Millisecond)
+
+	// Release the per-slot waiter as the execution_payload_available event would.
+	root := bytesutil.ToBytes32(bytesutil.PadTo([]byte{'b'}, 32))
+	validator.payloadAvailability.notify(1, &root)
+
+	validatorIndex := primitives.ValidatorIndex(7)
+	validator.duties = &dutyStore{}
+	var data dutyStoreData
+	data.setFromContainer(&ethpb.ValidatorDutiesContainer{CurrentEpochDuties: []*ethpb.ValidatorDuty{
+		{
+			PublicKey:      validatorKey.PublicKey().Marshal(),
+			ValidatorIndex: validatorIndex,
+		},
+	}})
+	validator.duties.write(data)
+
+	return lead
+}
+
+// unavailableErr mirrors the error the gRPC client returns for a beacon node that is
+// withholding non-final payload attestation data.
+func unavailableErr() error {
+	return errors.Wrap(
+		status.Error(codes.Unavailable, "payload attestation data not yet final for slot 1"),
+		"PayloadAttestationData",
+	)
+}
+
+// This is the regression test for issue #17464: when the payload envelope lands between
+// PAYLOAD_DUE_BPS and PAYLOAD_ATTESTATION_DUE_BPS the event releases the waiter early,
+// the beacon node withholds the data, and the validator has to ask again at the deadline
+// rather than abstaining.
+func TestSubmitPayloadAttestation_RetriesAtDeadlineAfterUnavailable(t *testing.T) {
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			hook := logTest.NewGlobal()
+			validator, m, validatorKey, finish := setup(t, isSlashingProtectionMinimal)
+			defer finish()
+			lead := ptcRetrySetup(t, validator, validatorKey)
+
+			blockRoot := bytesutil.PadTo([]byte{'b'}, 32)
+			gomock.InOrder(
+				m.validatorClient.EXPECT().
+					PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+					Return(nil, unavailableErr()).
+					Times(1),
+				m.validatorClient.EXPECT().
+					PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+					Return(&ethpb.PayloadAttestationData{
+						BeaconBlockRoot:   blockRoot,
+						Slot:              1,
+						PayloadPresent:    false,
+						BlobDataAvailable: true,
+					}, nil).
+					Times(1),
+			)
+
+			m.validatorClient.EXPECT().
+				DomainData(gomock.Any(), gomock.Any()).
+				Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+
+			var generatedMsg *ethpb.PayloadAttestationMessage
+			m.validatorClient.EXPECT().
+				SubmitPayloadAttestation(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.PayloadAttestationMessage{})).
+				Do(func(_ context.Context, msg *ethpb.PayloadAttestationMessage) {
+					generatedMsg = msg
+				}).
+				Return(&emptypb.Empty{}, nil)
+
+			var pubKey [fieldparams.BLSPubkeyLength]byte
+			copy(pubKey[:], validatorKey.PublicKey().Marshal())
+			start := time.Now()
+			validator.SubmitPayloadAttestation(t.Context(), 1, pubKey)
+			elapsed := time.Since(start)
+
+			require.LogsContain(t, hook, "Submitted new payload attestation")
+			require.LogsDoNotContain(t, hook, "Skipping payload attestation")
+			require.NotNil(t, generatedMsg)
+			// The honest late vote is cast instead of abstaining.
+			require.Equal(t, false, generatedMsg.Data.PayloadPresent)
+			require.Equal(t, true, generatedMsg.Data.BlobDataAvailable)
+			// The second request really waited for the deadline.
+			require.Equal(t, true, elapsed >= lead-10*time.Millisecond,
+				fmt.Sprintf("expected to wait about %s for the deadline, waited %s", lead, elapsed))
+		})
+	}
+}
+
+// After the deadline there is nothing left to wait for, so the request must not be
+// repeated and the slot is skipped as before.
+func TestSubmitPayloadAttestation_NoRetryAfterDeadline(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	hook := logTest.NewGlobal()
+	// setup leaves genesisTime at the zero value, so the deadline is long past.
+	validator, m, validatorKey, finish := setup(t, false)
+	defer finish()
+
+	m.validatorClient.EXPECT().
+		PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+		Return(nil, unavailableErr()).
+		Times(1)
+
+	var pubKey [fieldparams.BLSPubkeyLength]byte
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitPayloadAttestation(t.Context(), 1, pubKey)
+
+	require.LogsContain(t, hook, "Skipping payload attestation: data unavailable")
+	require.LogsDoNotContain(t, hook, "Could not request payload attestation data")
+}
+
+// When the node is still withholding at the deadline the slot is skipped, but only after
+// a second attempt.
+func TestSubmitPayloadAttestation_RetryStillUnavailable(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t, false)
+	defer finish()
+	ptcRetrySetup(t, validator, validatorKey)
+
+	// No DomainData or SubmitPayloadAttestation expectations: gomock fails the test on an
+	// unexpected call, which asserts that nothing is signed or submitted.
+	m.validatorClient.EXPECT().
+		PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+		Return(nil, unavailableErr()).
+		Times(2)
+
+	var pubKey [fieldparams.BLSPubkeyLength]byte
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitPayloadAttestation(t.Context(), 1, pubKey)
+
+	require.LogsContain(t, hook, "Skipping payload attestation: data unavailable")
+	require.LogsDoNotContain(t, hook, "Submitted new payload attestation")
+}
+
+// A block that only reaches the queried node after the event was relayed by another one
+// still yields a vote.
+func TestSubmitPayloadAttestation_RetryOnNoBlockThenBlockArrives(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t, false)
+	defer finish()
+	ptcRetrySetup(t, validator, validatorKey)
+
+	blockRoot := bytesutil.PadTo([]byte{'b'}, 32)
+	gomock.InOrder(
+		m.validatorClient.EXPECT().
+			PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+			Return(nil, errors.Wrap(status.Error(codes.NotFound, "no block found at slot=1"), "PayloadAttestationData")).
+			Times(1),
+		m.validatorClient.EXPECT().
+			PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+			Return(&ethpb.PayloadAttestationData{
+				BeaconBlockRoot:   blockRoot,
+				Slot:              1,
+				PayloadPresent:    true,
+				BlobDataAvailable: true,
+			}, nil).
+			Times(1),
+	)
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), gomock.Any()).
+		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
+	m.validatorClient.EXPECT().
+		SubmitPayloadAttestation(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.PayloadAttestationMessage{})).
+		Return(&emptypb.Empty{}, nil)
+
+	var pubKey [fieldparams.BLSPubkeyLength]byte
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	validator.SubmitPayloadAttestation(t.Context(), 1, pubKey)
+
+	require.LogsContain(t, hook, "Submitted new payload attestation")
+	require.LogsDoNotContain(t, hook, "Skipping payload attestation")
+}
+
+// waitUntilSlotComponent returns silently on cancellation, so the retry must not fire a
+// request on a dead context.
+func TestSubmitPayloadAttestation_RetryAbortsOnContextCancel(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, validatorKey, finish := setup(t, false)
+	defer finish()
+	lead := ptcRetrySetup(t, validator, validatorKey)
+
+	m.validatorClient.EXPECT().
+		PayloadAttestationData(gomock.Any(), primitives.Slot(1)).
+		Return(nil, unavailableErr()).
+		Times(1)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() {
+		time.Sleep(lead / 4)
+		cancel()
+	}()
+
+	var pubKey [fieldparams.BLSPubkeyLength]byte
+	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	start := time.Now()
+	validator.SubmitPayloadAttestation(ctx, 1, pubKey)
+
+	require.Equal(t, true, time.Since(start) < lead,
+		"cancellation should cut the wait short instead of running to the deadline")
+	require.LogsContain(t, hook, "Skipping payload attestation: data unavailable")
+	require.LogsDoNotContain(t, hook, "Submitted new payload attestation")
+}
+
+func TestPayloadAttestationDataFailure(t *testing.T) {
+	// The wrap chain a beacon API multi-node read actually produces.
+	restErr := func(code int) error {
+		return errors.Wrap(
+			fmt.Errorf("read until: %w",
+				stderrors.Join(fmt.Errorf("get ssz: %w", &httputil.DefaultJsonError{Code: code}))),
+			"could not get execution payload attestation data",
+		)
+	}
+
+	tests := []struct {
+		name     string
+		err      error
+		expected string
+	}{
+		{
+			name:     "grpc unavailable",
+			err:      status.Error(codes.Unavailable, "not yet final"),
+			expected: payloadAttestationSkippedUnavailable,
+		},
+		{
+			name:     "wrapped grpc not found",
+			err:      errors.Wrap(status.Error(codes.NotFound, "no block"), "PayloadAttestationData"),
+			expected: payloadAttestationSkippedNoBlock,
+		},
+		{
+			name:     "beacon api 503",
+			err:      restErr(http.StatusServiceUnavailable),
+			expected: payloadAttestationSkippedUnavailable,
+		},
+		{
+			name:     "beacon api 204",
+			err:      restErr(http.StatusNoContent),
+			expected: payloadAttestationSkippedNoBlock,
+		},
+		{
+			name:     "beacon api 404",
+			err:      restErr(http.StatusNotFound),
+			expected: payloadAttestationSkippedNoBlock,
+		},
+		{
+			name: "joined 503 and 204 prefers unavailable",
+			err: stderrors.Join(
+				&httputil.DefaultJsonError{Code: http.StatusNoContent},
+				&httputil.DefaultJsonError{Code: http.StatusServiceUnavailable},
+			),
+			expected: payloadAttestationSkippedUnavailable,
+		},
+		{
+			name:     "grpc invalid argument",
+			err:      status.Error(codes.InvalidArgument, "wrong slot"),
+			expected: payloadAttestationFailed,
+		},
+		{
+			name:     "unclassified",
+			err:      errors.New("boom"),
+			expected: payloadAttestationFailed,
+		},
+		{
+			name:     "context cancelled",
+			err:      context.Canceled,
+			expected: payloadAttestationFailed,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, payloadAttestationDataFailure(tt.err))
+		})
+	}
+}
+
+func TestPayloadAttestationRetryOutcome(t *testing.T) {
+	require.Equal(t, payloadAttestationRecovered, payloadAttestationRetryOutcome(nil))
+	require.Equal(t, payloadAttestationSkippedUnavailable, payloadAttestationRetryOutcome(unavailableErr()))
+	require.Equal(t, payloadAttestationFailed, payloadAttestationRetryOutcome(errors.New("boom")))
 }
 
 func TestSubmitPayloadAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
