@@ -295,7 +295,9 @@ func (s *Service) GetExecutionPayloadBid(ctx context.Context, slot primitives.Sl
 				log.WithError(err).WithField("builder", logs.MaskCredentialsLogging(url)).Warn("Could not get builder client")
 				return
 			}
+			start := time.Now()
 			bid, err := c.GetExecutionPayloadBid(ctx, slot, parentHash, parentRoot, proposerPubkey, e.GetAuth())
+			log.WithField("builder", logs.MaskCredentialsLogging(url)).WithField("slot", slot).WithField("roundTrip", time.Since(start)).WithField("gotBid", err == nil && bid != nil).Info("Builder bid round trip")
 			if err != nil {
 				log.WithError(err).WithField("builder", logs.MaskCredentialsLogging(url)).Warn("Could not get builder execution payload bid")
 				return

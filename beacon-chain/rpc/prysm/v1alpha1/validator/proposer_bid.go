@@ -31,7 +31,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const builderBidTimeout = 300 * time.Millisecond
+const builderBidTimeout = 500 * time.Millisecond
 
 // bidSource indicates where the winning execution payload bid came from.
 type bidSource int
