@@ -291,4 +291,5 @@ type BeaconStateGloas struct {
 	LatestExecutionPayloadBid     *ExecutionPayloadBid
 	PayloadExpectedWithdrawals    []*enginev1.Withdrawal `ssz-max:"4"`
 	PtcWindow                     []*PTCs                `ssz-size:"24"`
+	ValidatorSweepThresholds      []uint64               `ssz-max:"1099511627776"` // [New in EIP8148]
 }
