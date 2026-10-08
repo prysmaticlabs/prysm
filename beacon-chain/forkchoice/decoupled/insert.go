@@ -56,24 +56,10 @@ func (st *Store) updateFinality(n *Node) {
 		st.justified, st.hJ = j, n.FG.Justified.Height
 	}
 	f := st.nodes[n.FG.Finalized.Root]
-	if f != nil && f != st.finalized && isAncestor(st.finalized, f) && isAncestor(f, st.justified) && st.viableInFullTree(f) {
+	if f != nil && f != st.finalized && isAncestor(st.finalized, f) && isAncestor(f, st.justified) && st.viable(f, everyNode) {
 		st.finalized = f
 		st.prune()
 	}
-}
-
-// Spec: viable with the witness ranging over the whole processed tree. Replaced by the view-scoped version with the FG filter.
-func (st *Store) viableInFullTree(b *Node) bool {
-	stack := []*Node{b}
-	for len(stack) > 0 {
-		n := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		if n.FG.Target.Height+1 >= st.hMax {
-			return true
-		}
-		stack = append(stack, n.Children...)
-	}
-	return false
 }
 
 func (st *Store) prune() {}
