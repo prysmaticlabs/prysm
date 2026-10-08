@@ -5,8 +5,10 @@ go_library(
     srcs = [
         "filter.go",
         "ghost.go",
+        "head.go",
         "insert.go",
         "schedule.go",
+        "stabilization.go",
         "tree.go",
         "types.go",
         "views.go",
@@ -26,6 +28,7 @@ go_test(
     srcs = [
         "filter_test.go",
         "ghost_test.go",
+        "head_test.go",
         "insert_test.go",
         "schedule_test.go",
         "tree_test.go",
