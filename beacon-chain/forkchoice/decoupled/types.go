@@ -44,17 +44,15 @@ type poolEntry struct {
 
 // Spec: Store Σ without the SG fields. TODO: stabilization, the walk anchor is the FG root and the stable record is F until the committee-lock design lands.
 type Store struct {
-	genesis          time.Time
-	now              func() time.Time
-	root             *Node
-	nodes            map[[32]byte]*Node
-	pool             map[primitives.Slot][]poolEntry
-	finalized        *Node
-	justified        *Node
-	hJ               primitives.Height
-	hMax             primitives.Height
-	liveConfirmed    *Node
-	latestConfirmed  *Node
-	confirmedThrough primitives.Slot
-	hasConfirmed     bool
+	genesis         time.Time
+	now             func() time.Time
+	root            *Node
+	nodes           map[[32]byte]*Node
+	pool            map[primitives.Slot][]poolEntry
+	finalized       *Node
+	justified       *Node
+	hJ              primitives.Height
+	hMax            primitives.Height
+	liveConfirmed   *Node
+	latestConfirmed *Node
 }
