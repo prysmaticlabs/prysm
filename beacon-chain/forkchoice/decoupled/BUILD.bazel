@@ -3,6 +3,8 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "filter.go",
+        "ghost.go",
         "insert.go",
         "schedule.go",
         "tree.go",
@@ -22,6 +24,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "filter_test.go",
+        "ghost_test.go",
         "insert_test.go",
         "schedule_test.go",
         "tree_test.go",
