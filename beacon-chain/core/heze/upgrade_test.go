@@ -25,14 +25,14 @@ func TestUpgradeToHeze(t *testing.T) {
 			return nil
 		})
 		require.NoError(t, err)
-		preProto, err := state_native.ContainerFrom[*ethpb.BeaconStateGloas](pre.ToProto())
+		preProto, err := state_native.ContainerFrom[*ethpb.BeaconStateGloas](pre.ToContainer())
 		require.NoError(t, err)
 
 		post, err := heze.UpgradeToHeze(pre)
 		require.NoError(t, err)
 		require.Equal(t, version.Heze, post.Version())
 
-		got, err := state_native.ContainerFrom[*ethpb.BeaconStateHeze](post.ToProto())
+		got, err := state_native.ContainerFrom[*ethpb.BeaconStateHeze](post.ToContainer())
 		require.NoError(t, err)
 		require.DeepEqual(t, &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GloasForkVersion,
