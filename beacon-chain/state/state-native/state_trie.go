@@ -1376,8 +1376,7 @@ func recordGloasStateMetrics(b *BeaconState) {
 	gloasActiveBuildersBalanceGwei.Set(float64(activeBuildersBalanceGwei))
 }
 
-// IsNil checks if the state and the underlying proto
-// object are nil.
+// IsNil checks if the state is nil.
 func (b *BeaconState) IsNil() bool {
 	return b == nil
 }
