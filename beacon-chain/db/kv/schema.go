@@ -24,6 +24,10 @@ var (
 	lightClientBootstrapBucket     = []byte("light-client-bootstrap")
 	lightClientSyncCommitteeBucket = []byte("light-client-sync-committee")
 
+	// Light client Backfill Bucket
+	lightClientEpochDataBucket           = []byte("light-client-epoch-data")
+	lightClientPeriodSyncCommitteeBucket = []byte("light-client-period-sync-committee")
+
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.
 	slotsHasObjectBucket = []byte("slots-has-objects")
 	// Deprecated: This bucket was migrated in PR 6461. Do not use, except for migrations.

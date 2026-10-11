@@ -12,6 +12,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	light_client "github.com/OffchainLabs/prysm/v7/consensus-types/light-client"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/monitoring/backup"
 	"github.com/OffchainLabs/prysm/v7/proto/dbval"
@@ -60,6 +61,8 @@ type ReadOnlyDatabase interface {
 	LightClientUpdates(ctx context.Context, startPeriod, endPeriod uint64) (map[uint64]interfaces.LightClientUpdate, error)
 	LightClientUpdate(ctx context.Context, period uint64) (interfaces.LightClientUpdate, error)
 	LightClientBootstrap(ctx context.Context, blockRoot []byte) (interfaces.LightClientBootstrap, error)
+	LightClientEpochData(ctx context.Context, epoch primitives.Epoch) (light_client.EpochData, error)
+	LightClientPeriodSyncCommittee(ctx context.Context, period uint64) (*ethpb.SyncCommittee, error)
 	// Origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
@@ -114,6 +117,10 @@ type NoHeadAccessDatabase interface {
 	// light client operations
 	SaveLightClientUpdate(ctx context.Context, period uint64, update interfaces.LightClientUpdate) error
 	SaveLightClientBootstrap(ctx context.Context, blockRoot []byte, bootstrap interfaces.LightClientBootstrap) error
+	// Light client backfill operations. Records are insert-if-absent: saving identical
+	// content again is a no-op, saving different content fails with a conflict error.
+	SaveLightClientEpochData(ctx context.Context, records []light_client.EpochData) error
+	SaveLightClientPeriodSyncCommittee(ctx context.Context, period uint64, committee *ethpb.SyncCommittee) error
 
 	// Execution payload envelope operations (Gloas+).
 	SaveExecutionPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedExecutionPayloadEnvelope) error

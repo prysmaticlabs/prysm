@@ -140,6 +140,8 @@ var Buckets = [][]byte{
 	lightClientUpdatesBucket,
 	lightClientBootstrapBucket,
 	lightClientSyncCommitteeBucket,
+	lightClientEpochDataBucket,
+	lightClientPeriodSyncCommitteeBucket,
 	stateDiffBucket,
 	hotStateSnapshotsBucket,
 	// Indices buckets.
