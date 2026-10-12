@@ -668,3 +668,104 @@ func TestApplyPendingDeposit_InvalidSignature(t *testing.T) {
 	// no topup either
 	require.Equal(t, 0, len(st.Balances()))
 }
+
+func TestApplyPendingDeposit_HezeDisallowsNewBLSCredentialValidator(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	st := stateWithActiveBalanceETH(t, 0)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	wc := make([]byte, 32)
+	wc[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+	wc[31] = byte(0)
+	// The signature is valid, so the deposit can only be skipped by the EIP-8365 guard.
+	dep := stateTesting.GeneratePendingDeposit(t, sk, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(wc), 0)
+	require.Equal(t, 0, len(st.Validators()))
+	require.NoError(t, electra.ApplyPendingDeposit(t.Context(), st, dep))
+	// no validator added
+	require.Equal(t, 0, len(st.Validators()))
+	// no balance credited either
+	require.Equal(t, 0, len(st.Balances()))
+}
+
+func TestApplyPendingDeposit_HezeAllowsBLSCredentialTopUp(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	excessBalance := uint64(100)
+	st := stateWithActiveBalanceETH(t, 32)
+	validators := st.Validators()
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	wc := make([]byte, 32)
+	wc[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+	wc[31] = byte(0)
+	validators[0].PublicKey = sk.PublicKey().Marshal()
+	validators[0].WithdrawalCredentials = wc
+	dep := stateTesting.GeneratePendingDeposit(t, sk, excessBalance, bytesutil.ToBytes32(wc), 0)
+	require.NoError(t, st.SetValidators(validators))
+
+	// Top-ups to existing validators with BLS credentials are still applied.
+	require.NoError(t, electra.ApplyPendingDeposit(t.Context(), st, dep))
+
+	b, err := st.BalanceAtIndex(0)
+	require.NoError(t, err)
+	require.Equal(t, params.BeaconConfig().MinActivationBalance+excessBalance, b)
+}
+
+func TestApplyPendingDeposit_PreHezeAllowsNewBLSCredentialValidator(t *testing.T) {
+	st := stateWithActiveBalanceETH(t, 0)
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	wc := make([]byte, 32)
+	wc[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+	wc[31] = byte(0)
+	dep := stateTesting.GeneratePendingDeposit(t, sk, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(wc), 0)
+	require.Equal(t, 0, len(st.Validators()))
+	require.NoError(t, electra.ApplyPendingDeposit(t.Context(), st, dep))
+	// before the Heze fork the new validator is still created
+	require.Equal(t, 1, len(st.Validators()))
+}
+
+func TestProcessPendingDeposits_HezeDisallowsNewBLSCredentialValidators(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	st := stateWithActiveBalanceETH(t, 0)
+
+	// A deposit with BLS withdrawal credentials and a valid signature must not create a validator.
+	blsKey, err := bls.RandKey()
+	require.NoError(t, err)
+	blsCreds := make([]byte, 32)
+	blsCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+	blsDep := stateTesting.GeneratePendingDeposit(t, blsKey, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(blsCreds), 0)
+
+	// A deposit with execution withdrawal credentials is still applied.
+	eth1Key, err := bls.RandKey()
+	require.NoError(t, err)
+	eth1Creds := make([]byte, 32)
+	eth1Creds[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	eth1Dep := stateTesting.GeneratePendingDeposit(t, eth1Key, params.BeaconConfig().MinActivationBalance, bytesutil.ToBytes32(eth1Creds), 0)
+
+	require.NoError(t, st.SetPendingDeposits([]*eth.PendingDeposit{blsDep, eth1Dep}))
+
+	tab, err := helpers.TotalActiveBalance(t.Context(), st)
+	require.NoError(t, err)
+	require.NoError(t, electra.ProcessPendingDeposits(t.Context(), st, primitives.Gwei(tab)))
+
+	// Only the execution credential validator was added.
+	require.Equal(t, 1, len(st.Validators()))
+	require.DeepEqual(t, eth1Key.PublicKey().Marshal(), st.Validators()[0].PublicKey)
+
+	// Both deposits left the queue.
+	remaining, err := st.PendingDeposits()
+	require.NoError(t, err)
+	require.Equal(t, 0, len(remaining))
+}

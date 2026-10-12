@@ -346,8 +346,13 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 					return errors.Wrap(err, "could not increase balance")
 				}
 			} else {
-				// Collect deposit for batch signature verification
-				pendingDepositsToBatchVerify = append(pendingDepositsToBatchVerify, pendingDeposit)
+				// Do not create validators with BLS withdrawal credentials. The skipped
+				// deposit still consumes churn and leaves the queue. [New in Heze:EIP8365]
+				skipNewValidator := disallowsNewBLSValidators(st) && hasBLSWithdrawalPrefix(pendingDeposit.WithdrawalCredentials)
+				if !skipNewValidator {
+					// Collect deposit for batch signature verification
+					pendingDepositsToBatchVerify = append(pendingDepositsToBatchVerify, pendingDeposit)
+				}
 			}
 		}
 
@@ -429,6 +434,10 @@ func batchProcessNewPendingDeposits(ctx context.Context, state state.BeaconState
 //	"""
 //	validator_pubkeys = [v.pubkey for v in state.validators]
 //	if deposit.pubkey not in validator_pubkeys:
+//	    # [New in Heze:EIP8365]
+//	    # Do not create validators with BLS withdrawal credentials
+//	    if deposit.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX:
+//	        return
 //	    # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
 //	    if is_valid_deposit_signature(
 //	        deposit.pubkey,
@@ -446,6 +455,10 @@ func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *eth
 	defer span.End()
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(deposit.PublicKey))
 	if !ok {
+		// Do not create validators with BLS withdrawal credentials. [New in Heze:EIP8365]
+		if disallowsNewBLSValidators(st) && hasBLSWithdrawalPrefix(deposit.WithdrawalCredentials) {
+			return nil
+		}
 		verified, err := helpers.IsValidDepositSignature(&ethpb.Deposit_Data{
 			PublicKey:             bytesutil.SafeCopyBytes(deposit.PublicKey),
 			WithdrawalCredentials: bytesutil.SafeCopyBytes(deposit.WithdrawalCredentials),
@@ -464,6 +477,20 @@ func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *eth
 		return nil
 	}
 	return helpers.IncreaseBalance(st, index, deposit.Amount)
+}
+
+// disallowsNewBLSValidators reports whether the EIP-8365 rule is in effect for the
+// state's current epoch: from the Heze fork on, pending deposits must not create new
+// validators with BLS (0x00) withdrawal credentials. The check is gated on
+// HezeForkEpoch because the Heze state version does not exist yet.
+func disallowsNewBLSValidators(st state.ReadOnlyBeaconState) bool {
+	return slots.ToEpoch(st.Slot()) >= params.BeaconConfig().HezeForkEpoch
+}
+
+// hasBLSWithdrawalPrefix reports whether the withdrawal credentials carry the BLS
+// (0x00) withdrawal prefix.
+func hasBLSWithdrawalPrefix(withdrawalCredentials []byte) bool {
+	return len(withdrawalCredentials) > 0 && withdrawalCredentials[0] == params.BeaconConfig().BLSWithdrawalPrefixByte
 }
 
 // AddValidatorToRegistry updates the beacon state with validator information
