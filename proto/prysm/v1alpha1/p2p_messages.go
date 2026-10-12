@@ -31,5 +31,6 @@ func (c *ExecutionPayloadEnvelopesByRangeRequest) MaxSizeSSZ() int {
 
 // MaxSizeSSZ includes the maximum number of column indices.
 func (c *DataColumnSidecarsByRangeRequest) MaxSizeSSZ() int {
-	return 20 + fieldparams.NumberOfColumns*8
+	fixedSize := (&DataColumnSidecarsByRangeRequest{}).SizeSSZ()
+	return fixedSize + fieldparams.NumberOfColumns*8
 }

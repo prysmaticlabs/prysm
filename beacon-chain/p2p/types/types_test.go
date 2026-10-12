@@ -93,7 +93,7 @@ func TestBlobSidecarsByRootReq_MarshalSSZ(t *testing.T) {
 
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	fixedRoots := make([][32]byte, 0)
-	for i := uint64(0); i < params.BeaconConfig().MaxRequestBlocks+100; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxRequestBlocksDeneb+100; i++ {
 		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
 	}
 	req := BeaconBlockByRootsReq(fixedRoots)
@@ -127,7 +127,7 @@ func TestRoundTripSerialization(t *testing.T) {
 
 func roundTripTestBlocksByRootReq(t *testing.T) {
 	fixedRoots := make([][32]byte, 0)
-	for i := range 200 {
+	for i := range int(params.BeaconConfig().MaxRequestBlocksDeneb) {
 		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
 	}
 	req := BeaconBlockByRootsReq(fixedRoots)
@@ -398,7 +398,7 @@ func TestMaxSizeSSZMatchesMaxMarshaledSize(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
 
-	blockRoots := make(BeaconBlockByRootsReq, cfg.MaxRequestBlocks)
+	blockRoots := make(BeaconBlockByRootsReq, cfg.MaxRequestBlocksDeneb)
 	b, err := blockRoots.MarshalSSZ()
 	require.NoError(t, err)
 	require.Equal(t, len(b), blockRoots.MaxSizeSSZ())
