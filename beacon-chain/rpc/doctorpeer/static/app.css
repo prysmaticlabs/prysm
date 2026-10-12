@@ -291,7 +291,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .hero-side { font-size: 13.5px; }
 .hero-side .row { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .hero-side .row:last-child { border-bottom: 0; }
-.hero-side .k { color: var(--ink-3); width: 122px; flex: none; font-size: 12.5px; }
+.hero-side .k { color: var(--ink-3); width: 96px; flex: none; font-size: 12.5px; }
 .hero-side .v { font-variant-numeric: tabular-nums; }
 
 /* peer strip: one tick per connected peer, grouped by client */
