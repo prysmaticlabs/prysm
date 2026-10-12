@@ -67,7 +67,6 @@ func TestNewScorer(t *testing.T) {
 		strikeHistorySize:       defaultStrikeHistorySize,
 		gossipGreyListThreshold: defaultGossipGreyListThreshold,
 		statusGreyListTTL:       defaultStatusGreyListTTL,
-		memoryUsageInterval:     defaultMemoryUsageInterval,
 	}
 	require.Equal(t, want, *s.params)
 	require.NotNil(t, s.info)
@@ -93,7 +92,6 @@ func TestNewScorerOptions(t *testing.T) {
 		{"strike greylist threshold", WithStrikeGreyListThreshold(9), func(p *scoringParams) { p.strikeGreyListThreshold = 9 }},
 		{"strike history size", WithStrikeHistorySize(7), func(p *scoringParams) { p.strikeHistorySize = 7 }},
 		{"decay interval", WithDecayInterval(time.Minute), func(p *scoringParams) { p.decayInterval = time.Minute }},
-		{"memory usage interval", WithMemoryUsageInterval(time.Minute), func(p *scoringParams) { p.memoryUsageInterval = time.Minute }},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

@@ -202,7 +202,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	go s.peerScorer.Start(ctx)
 
 	s.gossipRejections = peerscoring.NewGossipRejectionsStore()
-	go s.peerScorer.TrackMemoryUsage(ctx, s.gossipRejections)
 
 	s.peers = peers.NewStatus(ctx, &peers.StatusConfig{
 		PeerLimit:             int(s.cfg.MaxPeers),

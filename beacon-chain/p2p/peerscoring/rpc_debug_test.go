@@ -187,16 +187,17 @@ func TestBuildPeerDebugBadIPAndTrustedExemption(t *testing.T) {
 
 func TestBuildPeerDebugRecovery(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		strikes bool
-		status  bool
-		gossip  bool
-		badIP   bool
+		name          string
+		strikes       bool
+		status        bool
+		gossip        bool
+		badIP         bool
+		badIPRecovery time.Duration
 	}{
 		{name: "strikes", strikes: true},
 		{name: "status", status: true},
 		{name: "gossip", gossip: true},
-		{name: "bad IP", badIP: true},
+		{name: "bad IP", badIP: true, badIPRecovery: 36 * time.Hour},
 		{name: "mixed", strikes: true, status: true, gossip: true, badIP: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -218,7 +219,11 @@ func TestBuildPeerDebugRecovery(t *testing.T) {
 			}
 			if tc.badIP {
 				opts.BadIPError = errors.New("colocation limit exceeded")
+				opts.BadIPRecovery = tc.badIPRecovery
 				want[AspectBadIP] = "unknown"
+				if tc.badIPRecovery > 0 {
+					want[AspectBadIP] = tc.badIPRecovery.String()
+				}
 			}
 
 			d := BuildPeerDebug(pid, opts, s, nil)

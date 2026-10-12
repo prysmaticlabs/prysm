@@ -64,6 +64,10 @@ const (
 const (
 	// CollocationLimit restricts how many peer identities we can see from a single ip or ipv6 subnet.
 	CollocationLimit = 5
+	// ColocationGreyListTTL bounds how long an IP over the colocation limit is refused. Once it
+	// expires the IP's disconnected peer records are forgotten, so its count restarts from the
+	// peers still connected and the limit can trip again.
+	ColocationGreyListTTL = 7 * 24 * time.Hour
 
 	// Additional buffer beyond current peer limit, from which we can store the relevant peer statuses.
 	maxLimitBuffer = 150
@@ -101,8 +105,13 @@ type (
 		scoring *peerscoring.Scorer
 		store   *peerdata.Store
 		// rand is not concurrency-safe; every use must hold the store write lock.
-		rand                  *rand.Rand
-		ipTracker             map[string]uint64
+		rand *rand.Rand
+		// now is the clock, overridable for tests.
+		now       func() time.Time
+		ipTracker map[string]uint64
+		// ipBadSince is when each IP over the colocation limit crossed it; its refusal expires
+		// ColocationGreyListTTL later.
+		ipBadSince            map[string]time.Time
 		ipColocationWhitelist []*net.IPNet
 		trustedPeersMu        sync.Mutex
 		onTrustedPeerAdded    func(peer.ID)
@@ -119,6 +128,8 @@ type (
 		Scoring *peerscoring.Scorer
 		// Rand overrides the internal random generator.
 		Rand *rand.Rand
+		// Now overrides the clock, for tests.
+		Now func() time.Time
 		// IPColocationWhitelist contains CIDR ranges that are exempt from IP colocation limits.
 		IPColocationWhitelist []*net.IPNet
 		// OnTrustedPeerAdded, if set, is called for every peer added to the trusted set.
@@ -144,13 +155,19 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 	if randGen == nil {
 		randGen = rand.NewGenerator()
 	}
+	now := config.Now
+	if now == nil {
+		now = time.Now
+	}
 
 	return &Status{
 		ctx:                   ctx,
 		store:                 store,
 		scorers:               scorers.NewService(ctx, store, config.ScorerParams),
 		scoring:               scoring,
+		now:                   now,
 		ipTracker:             map[string]uint64{},
+		ipBadSince:            map[string]time.Time{},
 		ipColocationWhitelist: config.IPColocationWhitelist,
 		onTrustedPeerAdded:    config.OnTrustedPeerAdded,
 		onTrustedPeerRemoved:  config.OnTrustedPeerRemoved,
@@ -645,9 +662,11 @@ func (p *Status) Prune() []peer.ID {
 	}
 	p.scoring.RemovePeers(orphaned)
 
+	forgotten := p.expireIPGreyLists()
+
 	// Exit early if there is nothing to prune.
 	if len(p.store.Peers()) <= p.store.Config().MaxPeers {
-		return nil
+		return forgotten
 	}
 	// Grey-listed and colocated-IP peers are never pruned: the store is the node's only memory
 	// of who misbehaved. Trusted peers pass the composite verdict but are kept by the trusted check.
@@ -685,14 +704,58 @@ func (p *Status) Prune() []peer.ID {
 	peersToPrune = peersToPrune[:limitDiff]
 
 	// Delete peers from the store and drop their scoring state.
-	prunedPIDs := make([]peer.ID, 0, len(peersToPrune))
+	prunedPIDs := make([]peer.ID, 0, len(forgotten)+len(peersToPrune))
+	prunedPIDs = append(prunedPIDs, forgotten...)
 	for _, peerData := range peersToPrune {
 		p.store.DeletePeerData(peerData.pid)
 		prunedPIDs = append(prunedPIDs, peerData.pid)
 	}
-	p.scoring.RemovePeers(prunedPIDs)
+	p.scoring.RemovePeers(prunedPIDs[len(forgotten):])
 	p.tallyIPTracker()
 	return prunedPIDs
+}
+
+// expireIPGreyLists forgets the disconnected, untrusted peer records of every IP whose colocation
+// refusal has expired, so the IP's count restarts from the peers still connected. It returns the
+// forgotten peers and assumes the store write lock is held.
+func (p *Status) expireIPGreyLists() []peer.ID {
+	var forgotten []peer.ID
+	for ip, since := range p.ipBadSince {
+		if p.now().Before(since.Add(ColocationGreyListTTL)) {
+			continue
+		}
+		for pid, data := range p.store.Peers() {
+			if data.ConnState != Disconnected || p.isTrustedPeers(pid) || ipString(data.Address) != ip {
+				continue
+			}
+			p.store.DeletePeerData(pid)
+			forgotten = append(forgotten, pid)
+		}
+		// Re-tallying below starts a new refusal if the connected peers alone exceed the limit.
+		delete(p.ipBadSince, ip)
+	}
+	if len(forgotten) > 0 {
+		p.scoring.RemovePeers(forgotten)
+	}
+	p.tallyIPTracker()
+	return forgotten
+}
+
+// IPGreyListRecovery is how long until the peer's IP-colocation refusal expires; 0 when the
+// peer is not refused for its IP.
+func (p *Status) IPGreyListRecovery(pid peer.ID) time.Duration {
+	p.store.RLock()
+	defer p.store.RUnlock()
+
+	if p.isfromBadIP(pid) == nil {
+		return 0
+	}
+	data, _ := p.store.PeerData(pid)
+	since, ok := p.ipBadSince[ipString(data.Address)]
+	if !ok {
+		return 0
+	}
+	return max(since.Add(ColocationGreyListTTL).Sub(p.now()), 0).Truncate(time.Second)
 }
 
 // BestFinalized groups all peers by their last known finalized epoch
@@ -957,6 +1020,11 @@ func (p *Status) isfromBadIP(pid peer.ID) error {
 					return nil
 				}
 			}
+			// The refusal is bounded: once ColocationGreyListTTL has passed the IP is forgiven
+			// until the next prune re-tallies it.
+			if since, ok := p.ipBadSince[ip.String()]; ok && !p.now().Before(since.Add(ColocationGreyListTTL)) {
+				return nil
+			}
 			return errors.Errorf(
 				"colocation limit exceeded: got %d - limit %d for peer %v with IP %v",
 				val, CollocationLimit, pid, ip.String(),
@@ -988,6 +1056,31 @@ func (p *Status) addIpToTracker(pid peer.ID) {
 	}
 	stringIP := ip.String()
 	p.ipTracker[stringIP] += 1
+	p.noteIPCount(stringIP)
+}
+
+// noteIPCount starts the refusal clock for an IP that just crossed the colocation limit and
+// clears it for one that dropped back under.
+func (p *Status) noteIPCount(ip string) {
+	if p.ipTracker[ip] <= CollocationLimit {
+		delete(p.ipBadSince, ip)
+		return
+	}
+	if _, ok := p.ipBadSince[ip]; !ok {
+		p.ipBadSince[ip] = p.now()
+	}
+}
+
+// ipString is the IP of a peer address as tracked, or "" when it has none.
+func ipString(addr ma.Multiaddr) string {
+	if addr == nil {
+		return ""
+	}
+	ip, err := manet.ToIP(addr)
+	if err != nil {
+		return ""
+	}
+	return ip.String()
 }
 
 func (p *Status) tallyIPTracker() {
@@ -1008,6 +1101,12 @@ func (p *Status) tallyIPTracker() {
 		tracker[stringIP] += 1
 	}
 	p.ipTracker = tracker
+	for ip := range p.ipBadSince {
+		p.noteIPCount(ip)
+	}
+	for ip := range tracker {
+		p.noteIPCount(ip)
+	}
 }
 
 func sameIP(firstAddr, secondAddr ma.Multiaddr) bool {

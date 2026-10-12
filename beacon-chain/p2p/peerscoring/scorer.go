@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -131,8 +130,6 @@ const (
 	// every wrong-network peer would be retained forever; it mirrors the
 	// GoodbyeCodeWrongNetwork dial backoff (sync/rpc_goodbye.go).
 	defaultStatusGreyListTTL = 24 * time.Hour
-	// defaultMemoryUsageInterval is how often the scoring state's memory is measured and logged.
-	defaultMemoryUsageInterval = 15 * time.Minute
 )
 
 // maxStandingStrikesFactor caps standing strikes at this multiple of the grey-list threshold, so
@@ -177,20 +174,12 @@ func WithStatusGreyListTTL(ttl time.Duration) Option {
 	}
 }
 
-// WithMemoryUsageInterval sets how often TrackMemoryUsage measures the scoring state.
-func WithMemoryUsageInterval(interval time.Duration) Option {
-	return func(s *Scorer) {
-		s.params.memoryUsageInterval = interval
-	}
-}
-
 type scoringParams struct {
 	decayInterval           time.Duration
 	strikeGreyListThreshold int
 	strikeHistorySize       int
 	gossipGreyListThreshold int
 	statusGreyListTTL       time.Duration
-	memoryUsageInterval     time.Duration
 }
 
 // maxStandingStrikes is the cap on a peer's standing strike count.
@@ -207,9 +196,6 @@ type Scorer struct {
 	ourHeadSlot          primitives.Slot
 	highestKnownHeadSlot primitives.Slot
 	info                 map[peer.ID]*PeerScoringInfo
-
-	// memoryUsage is the latest TrackMemoryUsage measurement; nil before the first one.
-	memoryUsage atomic.Pointer[MemoryUsage]
 }
 
 // NewScorer creates a Scorer with production defaults, overridable via opts.
@@ -221,7 +207,6 @@ func NewScorer(opts ...Option) *Scorer {
 			strikeHistorySize:       defaultStrikeHistorySize,
 			gossipGreyListThreshold: defaultGossipGreyListThreshold,
 			statusGreyListTTL:       defaultStatusGreyListTTL,
-			memoryUsageInterval:     defaultMemoryUsageInterval,
 		},
 		greyListers: []GreyLister{strikesScorer{}, rpcStatusScorer{}, gossipScorer{}},
 		info:        make(map[peer.ID]*PeerScoringInfo),

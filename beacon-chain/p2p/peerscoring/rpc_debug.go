@@ -190,8 +190,10 @@ type ScoringConfigDebug struct {
 	HighestKnownHeadSlot       string `json:"highest_known_head_slot"`
 	TrackedPeerCount           int    `json:"tracked_peer_count"`
 	PeersWithGossipRejections  int    `json:"peers_with_gossip_rejections"`
-	// MemoryUsage is the latest periodic estimate of the scoring state's memory; nil before the first.
-	MemoryUsage *MemoryUsage `json:"memory_usage,omitempty"`
+	// IPColocationLimit and IPColocationGreyListTTL describe the p2p layer's IP-colocation refusal,
+	// which is judged outside the scorer; the node layer fills them in.
+	IPColocationLimit       int    `json:"ip_colocation_limit"`
+	IPColocationGreyListTTL string `json:"ip_colocation_grey_list_ttl"`
 }
 
 // PeerDebugOptions carries the caller-supplied context BuildPeerDebug cannot derive itself:
@@ -210,6 +212,8 @@ type PeerDebugOptions struct {
 	Agent           string
 	// BadIPError is the IP-colocation verdict (peers.Status.IsFromBadIP); nil means clean.
 	BadIPError error
+	// BadIPRecovery is how long until the IP-colocation refusal expires; 0 when unknown.
+	BadIPRecovery time.Duration
 	// ConnectedAt is when the peer last transitioned to Connected; zero when unknown.
 	ConnectedAt time.Time
 }
@@ -244,6 +248,9 @@ func BuildPeerDebug(pid peer.ID, opts PeerDebugOptions, scorer *Scorer, rejectio
 			d.GreyListRecovery = make(map[string]string)
 		}
 		d.GreyListRecovery[AspectBadIP] = "unknown"
+		if opts.BadIPRecovery > 0 {
+			d.GreyListRecovery[AspectBadIP] = opts.BadIPRecovery.String()
+		}
 	}
 	d.GreyListed = opts.GreyListed
 	if !d.GreyListed {
@@ -271,7 +278,6 @@ func BuildScoringConfig(scorer *Scorer, rejections *GossipRejectionsStore) *Scor
 		OurHeadSlot:             strconv.FormatUint(uint64(scorer.ourHeadSlot), 10),
 		HighestKnownHeadSlot:    strconv.FormatUint(uint64(scorer.highestKnownHeadSlot), 10),
 		TrackedPeerCount:        len(scorer.info),
-		MemoryUsage:             scorer.memoryUsage.Load(),
 	}
 	scorer.mu.RUnlock()
 

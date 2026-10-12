@@ -519,11 +519,66 @@ func TestPeerIPTracker(t *testing.T) {
 	pruned := p.Prune()
 	require.NotEqual(t, 0, len(pruned))
 
-	// Colocated-IP peers survive pruning: forgetting them would reset the IP's colocation budget.
+	// Within the refusal TTL colocated-IP peers survive pruning: forgetting them would reset the IP's budget.
 	for _, pr := range badPeers {
 		assert.Equal(t, false, slices.Contains(pruned, pr), "colocated peer must not be pruned")
 		assert.NotNil(t, p.IsFromBadIP(pr), "colocated peer must still be refused after pruning")
 	}
+}
+
+func TestPeerIPTrackerGreyListExpiry(t *testing.T) {
+	now := time.Now()
+	scoring := peerscoring.NewScorer()
+	p := peers.NewStatus(t.Context(), &peers.StatusConfig{
+		PeerLimit: 30,
+		Scoring:   scoring,
+		Now:       func() time.Time { return now },
+	})
+
+	badIP := "211.227.218.116"
+	onBadIP := func(port int, state ethpb.ConnectionState) peer.ID {
+		addr, err := ma.NewMultiaddr("/ip4/" + badIP + "/tcp/" + strconv.Itoa(port))
+		require.NoError(t, err)
+		return createPeer(t, p, addr, network.DirUnknown, peerdata.ConnectionState(state))
+	}
+	connected := onBadIP(2999, ethpb.ConnectionState_CONNECTED)
+	var disconnected []peer.ID
+	for i := range peers.CollocationLimit + 1 {
+		disconnected = append(disconnected, onBadIP(3000+i, ethpb.ConnectionState_DISCONNECTED))
+	}
+	for _, pr := range append(disconnected, connected) {
+		require.NotNil(t, p.IsFromBadIP(pr), "peer on a colocated IP must be refused")
+	}
+	recovery := p.IPGreyListRecovery(connected)
+	require.Equal(t, true, recovery > 0 && recovery <= peers.ColocationGreyListTTL, "recovery counts down from the TTL")
+
+	// Just before the TTL nothing changes, even across a prune.
+	now = now.Add(peers.ColocationGreyListTTL - time.Minute)
+	require.Equal(t, 0, len(p.Prune()))
+	require.NotNil(t, p.IsFromBadIP(connected))
+
+	// Once the TTL passes the IP is forgiven and the next prune forgets its disconnected records.
+	now = now.Add(2 * time.Minute)
+	require.NoError(t, p.IsFromBadIP(connected))
+	require.Equal(t, time.Duration(0), p.IPGreyListRecovery(connected))
+	forgotten := p.Prune()
+	require.Equal(t, len(disconnected), len(forgotten))
+	for _, pr := range disconnected {
+		require.Equal(t, true, slices.Contains(forgotten, pr))
+		_, err := p.ConnectionState(pr)
+		require.NotNil(t, err, "forgotten peer must leave the store")
+	}
+	_, err := p.ConnectionState(connected)
+	require.NoError(t, err, "connected peer must survive")
+	require.NoError(t, p.IsFromBadIP(connected))
+
+	// The limit can trip again and starts a fresh refusal.
+	for i := range peers.CollocationLimit {
+		onBadIP(4000+i, ethpb.ConnectionState_DISCONNECTED)
+	}
+	require.NotNil(t, p.IsFromBadIP(connected))
+	recovery = p.IPGreyListRecovery(connected)
+	require.Equal(t, true, recovery > peers.ColocationGreyListTTL-time.Minute, "a new refusal restarts the clock")
 }
 
 func TestTrimmedOrderedPeers(t *testing.T) {

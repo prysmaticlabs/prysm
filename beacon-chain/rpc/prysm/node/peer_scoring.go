@@ -185,13 +185,15 @@ func (s *Server) ListScoringAgents(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPeerScoringConfig returns the scoring configuration (thresholds, decay, history size)
-// plus the node-side scoring context (our head slot, highest known head slot, peer counts,
-// latest memory usage estimate).
+// plus the node-side scoring context (our head slot, highest known head slot, peer counts)
+// and the p2p layer's IP-colocation limit and refusal TTL.
 func (s *Server) GetPeerScoringConfig(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "node.GetPeerScoringConfig")
 	defer span.End()
 
 	data := peerscoring.BuildScoringConfig(s.PeerScoringFetcher.PeerScoring(), s.GossipRejectionsFetcher.GossipRejections())
+	data.IPColocationLimit = peers.CollocationLimit
+	data.IPColocationGreyListTTL = peers.ColocationGreyListTTL.String()
 	httputil.WriteJson(w, &peerscoring.ScoringConfigResponse{Data: data})
 }
 
@@ -360,6 +362,7 @@ func (s *Server) peerDebugOptions(pid peer.ID, topicScores bool) peerscoring.Pee
 	opts := peerscoring.PeerDebugOptions{
 		GreyListed:         s.PeerGreyLister.IsPeerGreyListed(pid) != nil,
 		BadIPError:         peerStatus.IsFromBadIP(pid),
+		BadIPRecovery:      peerStatus.IPGreyListRecovery(pid),
 		Trusted:            peerStatus.IsTrustedPeers(pid),
 		Agent:              s.peerAgent(pid),
 		ConnectionState:    eth.ConnectionState(corenet.NotConnected).String(),
