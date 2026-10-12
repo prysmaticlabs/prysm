@@ -151,10 +151,9 @@ func TestSetBuilderPendingPayment(t *testing.T) {
 }
 
 func TestClearBuilderPendingPaymentsForProposer(t *testing.T) {
-	t.Run("previous fork returns expected error", func(t *testing.T) {
+	t.Run("previous fork is a no-op", func(t *testing.T) {
 		st := &BeaconState{version: version.Fulu}
-		err := st.ClearBuilderPendingPaymentsForProposer(0)
-		require.ErrorContains(t, "is not supported", err)
+		require.NoError(t, st.ClearBuilderPendingPaymentsForProposer(0))
 	})
 
 	payment := func(proposer primitives.ValidatorIndex) *ethpb.BuilderPendingPayment {

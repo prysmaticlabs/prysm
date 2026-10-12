@@ -297,10 +297,8 @@ func SlashValidator(
 	if err := helpers.IncreaseBalance(s, whistleBlowerIdx, whistleblowerReward-proposerReward); err != nil {
 		return nil, err
 	}
-	if s.Version() >= version.Gloas {
-		if err := s.ClearBuilderPendingPaymentsForProposer(slashedIdx); err != nil {
-			return nil, errors.Wrap(err, "could not clear builder pending payments")
-		}
+	if err := s.ClearBuilderPendingPaymentsForProposer(slashedIdx); err != nil {
+		return nil, errors.Wrap(err, "could not clear builder pending payments")
 	}
 	return s, nil
 }

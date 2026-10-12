@@ -130,7 +130,7 @@ func (b *BeaconState) SetExecutionPayloadBid(h interfaces.ROExecutionPayloadBid)
 // ClearBuilderPendingPaymentsForProposer empties every pending payment recorded for proposerIdx.
 func (b *BeaconState) ClearBuilderPendingPaymentsForProposer(proposerIdx primitives.ValidatorIndex) error {
 	if b.version < version.Gloas {
-		return errNotSupported("ClearBuilderPendingPaymentsForProposer", b.version)
+		return nil
 	}
 
 	b.lock.Lock()
