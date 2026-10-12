@@ -46,7 +46,7 @@ func (cfg *workerCfg) envelopeSyncCfg() *envelopeSyncCfg {
 	return &envelopeSyncCfg{
 		verifier:      cfg.envVerifier,
 		hasEnvelope:   cfg.store.hasEnvelope,
-		boundaryChild: cfg.store.boundaryChild,
+		boundaryChild: cfg.store.backfilledChild,
 		currentNeeds:  cfg.currentNeeds,
 		downscore:     cfg.downscore,
 	}

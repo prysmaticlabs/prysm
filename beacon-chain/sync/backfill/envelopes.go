@@ -220,7 +220,7 @@ type envelopeSync struct {
 type envelopeSyncCfg struct {
 	verifier      *envelopeVerifier
 	hasEnvelope   func(ctx context.Context, root [32]byte) bool
-	boundaryChild func(ctx context.Context, tailRoot [32]byte) (interfaces.ReadOnlyBeaconBlock, error)
+	boundaryChild childLookup
 	currentNeeds  func() das.CurrentNeeds
 	downscore     peerDownscorer
 	maxAttempts   int

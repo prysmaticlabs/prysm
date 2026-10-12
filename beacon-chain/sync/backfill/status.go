@@ -207,20 +207,6 @@ func (s *Store) hasEnvelope(ctx context.Context, blockRoot [32]byte) bool {
 	return s.store.HasExecutionPayloadEnvelope(ctx, blockRoot)
 }
 
-// boundaryChild returns the already-imported child of the given batch-tail root, resolved via the
-// backfill status low root. It returns nil when the neighboring higher batch has not been imported
-// yet, i.e. the block behind LowRoot does not link to the tail.
-func (s *Store) boundaryChild(ctx context.Context, tailRoot [32]byte) (interfaces.ReadOnlyBeaconBlock, error) {
-	child, err := s.store.Block(ctx, bytesutil.ToBytes32(s.status().LowRoot))
-	if err != nil {
-		return nil, err
-	}
-	if child == nil || child.Block() == nil || child.Block().ParentRoot() != tailRoot {
-		return nil, nil
-	}
-	return child.Block(), nil
-}
-
 // BeaconDB describes the set of DB methods that the StatusUpdater type needs to function.
 type BeaconDB interface {
 	SaveBackfillStatus(context.Context, *dbval.BackfillStatus) error
