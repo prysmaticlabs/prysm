@@ -15,24 +15,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ensureParentPayload prepends the parent's envelope to envelopes if the batch's first block needs it, and it's not in the DB
+// or envelopes, e.g. a peer omitted it and the slot before the batch was empty. It also fetches the parent's data columns.
 func (s *Service) ensureParentPayload(ctx context.Context, child blocks.ROBlock, envelopes []interfaces.ROSignedExecutionPayloadEnvelope, preferred peer.ID) ([]interfaces.ROSignedExecutionPayloadEnvelope, error) {
+	if child.Version() < version.Gloas {
+		return envelopes, nil
+	}
 	root := child.Block().ParentRoot()
-	if child.Version() < version.Gloas || s.cfg.DB.HasExecutionPayloadEnvelope(ctx, root) {
+	if s.cfg.DB.HasExecutionPayloadEnvelope(ctx, root) {
 		return envelopes, nil
 	}
 	signed, err := s.cfg.DB.Block(ctx, root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get parent block")
 	}
 	if signed == nil {
 		// A failed batch save can leave the previous head only in memory.
 		signed, err = s.cfg.Chain.HeadBlock(ctx)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not get head block")
 		}
 		head, err := blocks.NewROBlock(signed)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not wrap head block")
 		}
 		if head.Root() != root {
 			return nil, errors.Errorf("parent block %#x unavailable", root)
@@ -40,20 +45,23 @@ func (s *Service) ensureParentPayload(ctx context.Context, child blocks.ROBlock,
 	}
 	parent, err := blocks.NewROBlockWithRoot(signed, root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not wrap parent block")
 	}
 	if parent.Version() < version.Gloas || parent.Block().Slot() == 0 {
 		return envelopes, nil
 	}
 	full, err := blocks.BlockBuiltOnParentPayload(parent.Block(), child.Block())
-	if err != nil || !full {
-		return envelopes, err
+	if err != nil {
+		return nil, errors.Wrap(err, "could not check if block builds on parent payload")
+	}
+	if !full {
+		return envelopes, nil
 	}
 	supplied := false
 	if len(envelopes) > 0 {
 		supplied, err = blocks.BlockBuiltOnParentEnvelope(envelopes[0], child)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not check if block builds on supplied envelope")
 		}
 	}
 	if !supplied {
@@ -82,7 +90,7 @@ func (s *Service) fetchParentPayload(ctx context.Context, parent, child blocks.R
 	request := p2ptypes.ExecutionPayloadEnvelopesByRootReq{parent.Root()}
 	for _, pid := range peers {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not fetch parent payload")
 		}
 		requestCtx, cancel := context.WithTimeout(ctx, params.BeaconConfig().RespTimeoutDuration())
 		response, err := prysmsync.SendExecutionPayloadEnvelopesByRootRequest(requestCtx, s.clock, s.cfg.P2P, pid, s.ctxMap, &request)
@@ -106,18 +114,18 @@ func (s *Service) fetchParentPayload(ctx context.Context, parent, child blocks.R
 func (s *Service) fetchParentColumns(ctx context.Context, parent blocks.ROBlock) error {
 	commitments, err := parent.Block().Body().BlobKzgCommitments()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get blob kzg commitments")
 	}
 	if len(commitments) == 0 || !params.WithinDAPeriod(slots.ToEpoch(parent.Block().Slot()), slots.ToEpoch(s.clock.CurrentSlot())) {
 		return nil
 	}
 	custodyGroupCount, err := s.cfg.P2P.CustodyGroupCount(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get custody group count")
 	}
 	info, _, err := peerdas.Info(s.cfg.P2P.NodeID(), max(custodyGroupCount, params.BeaconConfig().SamplesPerSlot))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get peerdas info")
 	}
 	columns, missing, err := prysmsync.FetchDataColumnSidecars(prysmsync.DataColumnSidecarsParams{
 		Ctx: ctx, Tor: s.clock, P2P: s.cfg.P2P, CtxMap: s.ctxMap,
@@ -130,5 +138,8 @@ func (s *Service) fetchParentColumns(ctx context.Context, parent blocks.ROBlock)
 	if len(missing) != 0 {
 		return errors.Errorf("data columns unavailable for parent %#x", parent.Root())
 	}
-	return s.cfg.DataColumnStorage.Save(columns[parent.Root()])
+	if err := s.cfg.DataColumnStorage.Save(columns[parent.Root()]); err != nil {
+		return errors.Wrap(err, "could not save data column sidecars")
+	}
+	return nil
 }

@@ -187,7 +187,7 @@ func (s *Service) processFetchedDataRegSync(ctx context.Context, data *blocksQue
 	}
 	envelopes, err = s.ensureParentPayload(ctx, bwb[0].Block, envelopes, data.blocksFrom)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "could not ensure parent payload")
 	}
 
 	// Separate blocks with blobs from blocks with data columns.
@@ -489,7 +489,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, bwb []blocks.BlockWi
 	}
 	envelopes, err = s.ensureParentPayload(ctx, firstBlock, envelopes, pid)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "could not ensure parent payload")
 	}
 
 	firstFuluIndex, err := findFirstForkIndex(bwb, version.Fulu)

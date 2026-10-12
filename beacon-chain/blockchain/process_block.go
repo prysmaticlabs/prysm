@@ -219,12 +219,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		eidx = 1
 		envSigSet, err := gloas.VerifyExecutionPayloadEnvelopeWithDeferredSig(ctx, preState, envelopes[0])
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not verify parent execution payload envelope")
 		}
 		sigSet.Join(envSigSet)
 		parentBid, err := preState.LatestExecutionPayloadBid()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not get latest execution payload bid")
 		}
 		if len(parentBid.BlobKzgCommitments()) > 0 {
 			available, err := s.dataColumnsAvailableNow(ctx, parentRoot, parentBid.Slot())
