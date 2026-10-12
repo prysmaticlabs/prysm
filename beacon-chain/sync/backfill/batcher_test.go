@@ -870,6 +870,23 @@ func TestAllEnded(t *testing.T) {
 		sequenceOnce(t, seq)
 		require.Equal(t, true, seq.allEnded())
 	})
+
+	t.Run("floor moves past waiting batch before import", func(t *testing.T) {
+		seq, a, b := start(t)
+
+		// b downloads first and waits for a.
+		seq.update(b.withState(batchImportable))
+		seq.update(a.withState(batchImportable))
+
+		// While b waits, the floor moves past it, so b is expired.
+		needs := mockCurrentNeedsFunc(floor+size, floor+100*size)
+		seq.currentNeeds = needs
+		seq.batcher.currentNeeds = needs
+
+		importAll(seq)
+		sequenceOnce(t, seq)
+		require.Equal(t, true, seq.allEnded())
+	})
 }
 
 // TestBatcherRemaining tests the remaining() calculation logic
