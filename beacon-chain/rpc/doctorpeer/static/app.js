@@ -15,6 +15,10 @@
   const KNOWN_AGENT_ORDER = ['erigon/caplin', 'grandine', 'js-libp2p', 'lighthouse', 'lodestar', 'nimbus', 'prysm', 'teku', 'rust-libp2p'];
   const SOURCES = ['dial', 'rpc-status', 'rpc-ping', 'rpc-metadata', 'rpc-request', 'rpc-response', 'rate-limit', 'gossip', 'sync', 'backfill', 'das', 'unknown'];
   const ASPECTS = [['strikes', 'Strikes'], ['peer_status', 'Peer status'], ['gossip', 'Gossip score'], ['bad_ip', 'IP colocation']];
+  // Backend constants the config RPC does not expose: peers.CollocationLimit and gossip_scoring_params.go.
+  const COLOCATION_LIMIT = 5, GOSSIP_INVALID_DECAY_EPOCHS = 50, GOSSIP_RETAIN_EPOCHS = 100, GOSSIP_TOPIC_SCORE_CAP = 32.72;
+  const MEMORY_PARTS = [['peer_records_bytes', 'peer records'], ['strikes_bytes', 'strikes'], ['statuses_bytes', 'statuses'], ['gossip_scores_bytes', 'gossip scores'], ['gossip_rejections_bytes', 'gossip rejections']];
+  const MEMORY_INFO = 'Estimated heap held by peer scoring: peer records, strike histories, statuses, mirrored gossip scores and gossip rejections. The node re-measures it every 15 minutes by default. 1 KB = 1,024 bytes.';
   const ASPECT_NAME = Object.fromEntries(ASPECTS);
   const ASPECT_CLS = { strikes: 'bad', peer_status: 'warn', gossip: 'info', bad_ip: '' };
   const WINDOWS = [['15m', 9e5], ['1h', 36e5], ['6h', 216e5], ['24h', 864e5], ['all', 0]];
@@ -65,7 +69,15 @@
     if (sec < 86400) return Math.floor(sec / 3600) + 'h ' + Math.floor((sec % 3600) / 60) + 'm';
     return Math.floor(sec / 86400) + 'd ' + Math.floor((sec % 86400) / 3600) + 'h';
   }
+  function fmtSpan(sec) {
+    if (sec == null || !Number.isFinite(sec)) return '–';
+    sec = Math.max(0, Math.round(sec));
+    const d = sec >= 172800 ? Math.floor(sec / 86400) : 0;
+    const parts = [[d, 'd'], [Math.floor((sec - d * 86400) / 3600), 'h'], [Math.floor(sec % 3600 / 60), 'm'], [sec % 60, 's']];
+    return parts.filter(x => x[0]).map(x => x[0] + x[1]).join(' ') || '0s';
+  }
   const ago = ts => ts ? fmtDur((Date.now() - ts) / 1000) + ' ago' : '–';
+  const fmtKB = b => (b == null || !Number.isFinite(+b)) ? '–' : (+b / 1024).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' KB';
   const fmtTime = ts => ts ? new Date(ts).toLocaleString(undefined, { hour12: false }) : '–';
   const fmtClock = ts => ts ? new Date(ts).toLocaleTimeString(undefined, { hour12: false }) : '–';
   const fmtScore = s => (s == null) ? '–' : (Math.abs(s) >= 100 ? Math.round(s).toLocaleString() : (Math.round(s * 10) / 10).toString());
@@ -102,7 +114,7 @@
     },
     sort: {
       peers: { key: 'rank', dir: 'asc' }, agents: { key: 'connected', dir: 'desc' }, chain: { key: 'headSlot', dir: 'desc' },
-      grey: { key: 'recovery', dir: 'asc' }, near: { key: 'strikes', dir: 'desc' },
+      grey: { key: 'recovery', dir: 'asc' },
     },
     detail: { id: '', data: null, eth: null, error: null, loading: false },
     dd: { open: false, q: '', cursor: 0 },
@@ -198,15 +210,18 @@
     state.cfg = {
       threshold: toInt(cfg.strike_grey_list_threshold) == null ? 5 : toInt(cfg.strike_grey_list_threshold),
       historySize: toInt(cfg.strike_history_size),
-      decay: cfg.decay_interval || '',
+      maxStrikes: toInt(cfg.max_standing_strikes),
+      decay: parseGoDuration(cfg.decay_interval) != null ? fmtSpan(parseGoDuration(cfg.decay_interval)) : (cfg.decay_interval || ''),
       decaySec: parseGoDuration(cfg.decay_interval),
       gossipThreshold: toInt(cfg.gossip_grey_list_threshold) == null ? -16000 : toInt(cfg.gossip_grey_list_threshold),
-      statusTTL: cfg.status_grey_list_ttl || '',
+      statusTTL: parseGoDuration(cfg.status_grey_list_ttl) != null ? fmtSpan(parseGoDuration(cfg.status_grey_list_ttl)) : (cfg.status_grey_list_ttl || ''),
+      statusTTLSec: parseGoDuration(cfg.status_grey_list_ttl),
       maxRejections: toInt(cfg.max_gossip_rejections_per_peer),
       ourHeadSlot: toInt(cfg.our_head_slot),
       highestKnownHeadSlot: toInt(cfg.highest_known_head_slot),
       trackedPeers: toInt(cfg.tracked_peer_count),
       peersWithRejections: toInt(cfg.peers_with_gossip_rejections),
+      memory: cfg.memory_usage || null,
     };
     const sync = (r.syncing && r.syncing.data) || {};
     const fin = (r.finality && r.finality.data && r.finality.data.finalized) || {};
@@ -281,12 +296,16 @@
     const standing = strikes.standing_count || 0;
     const threshold = strikes.grey_list_threshold || state.cfg.threshold || 5;
     const greyListed = !!p.grey_listed;
+    const onRestart = aspects.includes('bad_ip');
+    const gossipUntimed = !onRestart && recovery.gossip != null && recoverySec.gossip == null;
     return {
       id, short: short(id), agent: p.agent || '', agentType: p.agent_type || agentTypeOf(p.agent),
       state: p.connection_state || 'DISCONNECTED', direction: p.direction || 'UNKNOWN', connected, connectedAt,
       tenureSec: connected && connectedAt ? (ctx.now - connectedAt) / 1000 : null,
       greyListed, details, aspects, exemption: p.grey_list_exemption || '',
-      recovery, recoverySec, recoveryMax, recoveryUnknown, recoveryEnd: recoveryMax == null ? null : ctx.now + recoveryMax * 1000,
+      recovery, recoverySec, recoveryMax, recoveryUnknown, onRestart, gossipUntimed,
+      recoveryEnd: recoveryMax == null || onRestart ? null : ctx.now + recoveryMax * 1000,
+      recoverySort: onRestart ? Infinity : gossipUntimed ? Math.max(recoveryMax || 0, gossipRetainSec()) : recoveryMax,
       standing, threshold, nearThreshold: !greyListed && standing > 0 && standing >= threshold - 1,
       history, lastStrike: history.length ? history[history.length - 1] : null,
       status: st, chain: cs, headSlot,
@@ -359,7 +378,8 @@
   function meter(p) {
     const ratio = p.threshold ? p.standing / p.threshold : 0;
     const cls = ratio >= 1 ? 'bad' : ratio >= 0.6 ? 'warn' : '';
-    return '<span class="meter" data-tip="' + attr(p.standing + ' standing strikes; grey-listed at ' + p.threshold + '. One strike is forgiven every ' + (state.cfg.decay || '?') + '.') + '"><span class="meter-t"><span class="meter-f ' + cls + '" style="width:' + clamp(ratio * 100, 0, 100) + '%"></span></span><span class="meter-v">' + p.standing + '/' + p.threshold + '</span></span>';
+    const over = p.standing > p.threshold ? ' ' + (p.standing - p.threshold) + ' over the threshold, so ' + (p.standing - p.threshold + 1) + ' decays are needed.' : '';
+    return '<span class="meter" data-tip="' + attr(p.standing + ' standing strikes; grey-listed at ' + p.threshold + '.' + over + ' One strike is forgiven every ' + (state.cfg.decay || '?') + '.') + '"><span class="meter-t"><span class="meter-f ' + cls + '" style="width:' + clamp(ratio * 100, 0, 100) + '%"></span></span><span class="meter-v' + (over ? ' over' : '') + '">' + p.standing + '/' + p.threshold + '</span></span>';
   }
   // Horizontal bars. items: {label, value, color, key, tip, on}; opts: {max, total, data, wide, fmt, empty}
   function bars(items, o) {
@@ -382,6 +402,40 @@
       '<div class="col-b ' + (i.cls || '') + '" style="height:' + Math.max(2, 100 * i.value / mx) + '%"><span class="col-v">' + fmtNum(i.value) + '</span></div><div class="col-l">' + esc(i.label) + '</div></div>').join('') + '</div>';
   }
   // Stacked composition bar plus legend table. items: {label, value, color, key, on}; o.cols: [{h, get(item)}]
+  function greyListRules(counts) {
+    const cfg = state.cfg, epochSec = state.spec.slotsPerEpoch * state.spec.secondsPerSlot;
+    const b = v => '<b>' + v + '</b>';
+    const epochs = n => '<span class="nw">' + b(n + ' epochs') + ' <span class="faint">(' + fmtSpan(n * epochSec) + ')</span></span>';
+    const maxStrikes = cfg.maxStrikes || 5 * cfg.threshold;
+    const ttl = fmtSpan(cfg.statusTTLSec);
+    const rules = [
+      { aspect: 'strikes', name: 'Strikes', color: 'var(--bad)', info: 'A strike is one recorded misbehaviour: a failed dial, a bad RPC request or response, invalid gossip, a rate-limit breach…',
+        when: 'it has ' + b(cfg.threshold) + ' standing strikes',
+        forgiven: b(1) + ' strike every ' + b(fmtSpan(cfg.decaySec)) + ', for every peer',
+        cap: b(maxStrikes) + ' standing strikes → grey-listed ' + b(fmtSpan((maxStrikes - cfg.threshold + 1) * cfg.decaySec)) + ' at most · last ' + fmtNum(cfg.historySize) + ' strikes kept per peer' },
+      { aspect: 'bad_ip', name: 'IP colocation', color: 'var(--neutral-2)', info: 'Counts every peer ID the peer store knows on an IP, connected or not.',
+        when: 'more than ' + b(COLOCATION_LIMIT) + ' known peer IDs share its IP; every peer on that IP is refused',
+        forgiven: b('on node restart') + ': refused peers are never pruned from the peer store, so the IP\'s count never drops',
+        cap: 'no cap on how many peer IDs from one IP are refused · CIDRs in <span class="mono">--p2p-colocation-whitelist</span> are exempt' },
+      { aspect: 'gossip', name: 'Gossip score', color: 'var(--info)', info: 'libp2p\'s own per-peer score. Mesh under-delivery, IP colocation in the mesh and behaviour penalties (which fade over 10 epochs) also lower it.',
+        when: 'libp2p\'s score drops below ' + b(fmtNum(cfg.gossipThreshold)) + '; each rejected message adds a penalty that grows with the square of the rejected count',
+        forgiven: 'while connected, rejections decay to 1% over ' + epochs(GOSSIP_INVALID_DECAY_EPOCHS) + '. A refused peer is disconnected: its score freezes, then is forgotten ' + epochs(GOSSIP_RETAIN_EPOCHS) + ' later',
+        cap: 'no floor on the score · good behaviour banks at most ' + b('+' + GOSSIP_TOPIC_SCORE_CAP) + ' · last ' + fmtNum(cfg.maxRejections) + ' rejections kept per peer (display only)' },
+      { aspect: 'peer_status', name: 'Peer status', color: 'var(--warn)', info: 'Peers exchange chain status on connect and every half epoch. Other status failures, such as a peer being behind, do not grey-list.',
+        when: 'its chain status fails validation: wrong fork digest, unknown finalized root or a malformed request',
+        forgiven: b(ttl) + ' after the last failed exchange, or at once if a later status validates',
+        cap: b(ttl) + ': a new failure restarts the clock, it never stacks' },
+    ];
+    const now = r => {
+      const n = counts ? counts.get(r.aspect) || 0 : null;
+      if (n == null) return '';
+      return n ? '<span class="badge sm outline pick" data-aspect="' + r.aspect + '" data-tip="List them">' + fmtNum(n) + ' grey-listed now</span>' : '<span class="rule-now faint">none now</span>';
+    };
+    return '<ul class="rules">' + rules.map(r => '<li class="rule" style="--rc:' + r.color + '">' +
+      '<div class="rule-h"><span class="rule-n">' + r.name + info(r.info) + '</span>' + now(r) + '</div>' +
+      '<dl class="rule-f"><dt>Grey-listed when</dt><dd>' + r.when + '</dd><dt>Forgiven</dt><dd>' + r.forgiven + '</dd><dt>Capped at</dt><dd>' + r.cap + '</dd></dl></li>').join('') + '</ul>' +
+      '<div class="note">Trusted peers are exempt from every rule. A grey-listed peer is dropped at the next status round, refused when it dials in and never dialled out to. Its record stays in the peer store so the verdict is not forgotten.</div>';
+  }
   function stack(items, o) {
     o = o || {};
     const total = sum(items.map(i => i.value));
@@ -390,7 +444,7 @@
     return '<div class="stack">' + items.filter(i => i.value > 0).map(i =>
       '<span style="width:' + (100 * i.value / total) + '%;background:' + i.color + '" data-tip="' + attr(i.label + ': ' + i.value + ' (' + pct(i.value, total) + '%)') + '"' + (o.data ? ' data-' + o.data + '="' + attr(i.key != null ? i.key : i.label) + '"' : '') + '></span>').join('') + '</div>' +
       '<div class="legend" style="--cols:' + (extra.length + 1) + '">' +
-      '<div class="legend-row head"><span></span><span>' + esc(o.head || '') + '</span><span class="n">' + esc(o.valueHead || 'count') + '</span>' + extra.map(c => '<span class="n">' + esc(c.h) + '</span>').join('') + '</div>' +
+      '<div class="legend-row head"><span></span><span>' + esc(o.head || '') + (o.headTip ? info(o.headTip) : '') + '</span><span class="n">' + esc(o.valueHead || 'count') + (o.valueTip ? info(o.valueTip) : '') + '</span>' + extra.map(c => '<span class="n">' + esc(c.h) + (c.tip ? info(c.tip) : '') + '</span>').join('') + '</div>' +
       items.map(i => '<div class="legend-row' + (o.data ? ' pick' : '') + (i.on ? ' on' : '') + '"' + (o.data ? ' data-' + o.data + '="' + attr(i.key != null ? i.key : i.label) + '"' : '') + '>' +
         '<span class="sw" style="background:' + i.color + '"></span><span class="trunc">' + esc(i.label) + '</span><span class="n">' + fmtNum(i.value) + '</span>' +
         extra.map(c => '<span class="n' + (c.cls ? ' ' + c.cls(i) : '') + '">' + c.get(i) + '</span>').join('') + '</div>').join('') + '</div>';
@@ -411,8 +465,42 @@
   function seg(items, on, dataKey) {
     return '<div class="seg">' + items.map(i => '<button type="button" data-' + dataKey + '="' + attr(i[0]) + '" class="' + (on === i[0] ? 'on' : '') + '">' + esc(i[1]) + (i[2] != null ? '<span class="n">' + fmtNum(i[2]) + '</span>' : '') + '</button>').join('') + '</div>';
   }
-  function kv(pairs) { return '<dl class="kv">' + pairs.filter(Boolean).map(p => '<dt>' + esc(p[0]) + '</dt><dd>' + p[1] + '</dd>').join('') + '</dl>'; }
+  function kv(pairs) { return '<dl class="kv">' + pairs.filter(Boolean).map(p => '<dt>' + esc(p[0]) + (p[2] ? info(p[2]) : '') + '</dt><dd>' + p[1] + '</dd>').join('') + '</dl>'; }
   function feedRow(at, main) { return '<div class="feed-row"><span class="feed-t" title="' + attr(fmtTime(at)) + '">' + liveAgo(at) + '</span><span class="feed-m">' + main + '</span></div>'; }
+  // Recent activity: one light panel per kind of record, newest first. IP colocation has no events, so its panel lists the peers refused now, by IP.
+  const ACTIVITY_LIMIT = 8;
+  function activityGroups(s) {
+    const inWin = scope.window === 'all' ? 'all retained' : 'in the ' + winLabel();
+    const timed = rows => rows.sort((a, b) => b.at - a.at).slice(0, ACTIVITY_LIMIT).map(r => feedRow(r.at, r.html));
+    const strikes = s.strikes.map(e => ({ at: e.at, html: dot(e.peer.agentType) + peerLink(e.peer.id) + srcLabel(e.source) + '<span class="reason">' + esc(e.reason) + '</span>' }));
+    const statuses = s.peers.filter(p => p.validationError && p.statusAt >= s.since).map(p => ({ at: p.statusAt, html: dot(p.agentType) + peerLink(p.id) + stateBadge(p.state) + '<span class="reason">' + esc(p.validationError) + '</span>' }));
+    const rejections = s.rejections.map(r => ({ at: r.at, html: dot(r.agentType) + peerLink(r.peerId) + badge(r.topicShort, 'sm', r.topic) + '<span class="reason">' + esc(r.reason) + '</span>' }));
+    const byIP = new Map();
+    for (const p of s.peers) {
+      if (!p.aspects.includes('bad_ip')) continue;
+      const v = cleanVerdict(p.details.bad_ip);
+      const ip = (v.match(/with IP (\S+)/) || [])[1] || (p.addr.match(/\/ip[46]\/([^/]+)/) || [])[1] || 'unknown IP';
+      let g = byIP.get(ip);
+      if (!g) { g = { ip, known: toInt((v.match(/got (\d+)/) || [])[1]), peers: [] }; byIP.set(ip, g); }
+      g.peers.push(p);
+    }
+    const ips = Array.from(byIP.values()).sort((a, b) => b.peers.length - a.peers.length || a.ip.localeCompare(b.ip));
+    const shownIPs = ips.slice(0, ACTIVITY_LIMIT), refused = sum(ips.map(g => g.peers.length)), shownRefused = sum(shownIPs.map(g => g.peers.length));
+    const ipRow = g => '<div class="feed-row"><span class="feed-t mono">' + esc(g.ip) + '</span><span class="feed-m"><span><b>' + fmtNum(g.known || g.peers.length) + '</b> known peer IDs <span class="faint">· limit ' + COLOCATION_LIMIT + '</span></span>' +
+      g.peers.slice(0, 4).map(p => '<span class="peer-cell">' + dot(p.agentType) + peerLink(p.id) + '</span>').join('') + (g.peers.length > 4 ? '<span class="faint">+' + (g.peers.length - 4) + ' more</span>' : '') + '</span></div>';
+    const group = (name, tone, rows, total, o) => {
+      const shown = o.shown != null ? o.shown : rows.length;
+      return '<section class="feed-group" style="--rc:' + tone + '"><div class="fg-h"><span class="fg-n">' + esc(name) + '</span><span class="fg-c" style="color:' + (total ? tone : 'var(--ink-3)') + '">' + fmtNum(total) + '</span><span class="sub">' + esc(o.sub) + '</span>' +
+        (total > shown ? (o.aspect ? '<span class="more" data-aspect="' + o.aspect + '">all ' + fmtNum(total) + '</span>' : '<a class="more" href="' + attr(o.href) + '">all ' + fmtNum(total) + '</a>') : '') + '</div>' +
+        (rows.length ? '<div class="feed' + (o.cls ? ' ' + o.cls : '') + '">' + rows.join('') + '</div>' : '<div class="fg-empty">' + esc(o.empty) + '</div>') + '</section>';
+    };
+    return '<div class="feed-groups">' +
+      group('Strikes', 'var(--bad)', timed(strikes), strikes.length, { sub: inWin, empty: 'No strike recorded ' + inWin + '.', href: hashFor('greylist', '', { at: 'reasons' }) }) +
+      group('Chain status rejections', 'var(--warn)', timed(statuses), statuses.length, { sub: inWin, empty: 'Every status exchange validated ' + inWin + '.', href: hashFor('chain', '', { at: 'invalid' }) }) +
+      group('Gossip rejections', 'var(--info)', timed(rejections), rejections.length, { sub: inWin, empty: 'No gossip message rejected ' + inWin + '.', href: hashFor('gossip', '', { at: 'feed' }) }) +
+      group('IP colocation refusals', 'var(--neutral-2)', shownIPs.map(ipRow), refused, { sub: 'refused now' + (ips.length ? ' on ' + plural(ips.length, 'IP') : '') + ', no timer', empty: 'No IP has more than ' + COLOCATION_LIMIT + ' known peer IDs.', aspect: 'bad_ip', cls: 'ip', shown: shownRefused }) +
+      '</div>';
+  }
   // Statuses refresh about twice per epoch, so a peer up to half an epoch behind is current.
   function headBucket(d) {
     const spe = state.spec.slotsPerEpoch;
@@ -443,10 +531,15 @@
     if (!p.greyListed && p.exemption) html += badge('exempt: ' + p.exemption, 'accent sm', 'A refusal source fires but the peer is exempt');
     return html + '</span>';
   }
+  const gossipRetainSec = () => GOSSIP_RETAIN_EPOCHS * state.spec.slotsPerEpoch * state.spec.secondsPerSlot;
+  const RESTART_TIP = 'IP colocation verdicts have no timer: refused peers are never pruned from the peer store, so the IP stays refused until the node restarts.';
+  const gossipLeftTip = () => 'libp2p freezes a disconnected peer\'s gossip score and forgets it ' + GOSSIP_RETAIN_EPOCHS + ' epochs (' + fmtSpan(gossipRetainSec()) + ') after the peer left, which clears the verdict. While connected it recovers as the score decays.';
   function recoveryCell(p) {
     if (!p.greyListed) return '<span class="faint">—</span>';
-    if (p.recoveryEnd != null) return liveCountdown(p.recoveryEnd);
-    if (p.recoveryUnknown) return '<span class="muted" data-tip="Gossip-score and IP-colocation recovery are not time based">not timed</span>';
+    if (p.onRestart) return '<span class="muted" data-tip="' + attr(RESTART_TIP) + '">on node restart</span>';
+    const left = '<span class="muted" data-tip="' + attr(gossipLeftTip()) + '">' + fmtSpan(gossipRetainSec()) + ' after it left</span>';
+    if (p.recoveryEnd != null) return liveCountdown(p.recoveryEnd) + (p.gossipUntimed ? ' <span class="faint">·</span> ' + left : '');
+    if (p.gossipUntimed) return left;
     return '<span class="faint">—</span>';
   }
   function statusCell(p) {
@@ -466,7 +559,7 @@
   const PEER_SORT = {
     rank: p => p.rank, peer: p => p.id, agent: p => p.agent || null, state: p => STATES.indexOf(p.state) * 2 + (p.direction === 'OUTBOUND' ? 1 : 0),
     tenure: p => p.tenureSec, strikes: p => p.standing, grey: p => (p.greyListed ? 100 : 0) + p.aspects.length,
-    recovery: p => p.greyListed ? (p.recoveryMax == null ? Infinity : p.recoveryMax) : null, gossip: p => p.gossipScore,
+    recovery: p => p.greyListed ? (p.recoverySort == null ? Infinity : p.recoverySort) : null, gossip: p => p.gossipScore,
     head: p => p.headDelta, rejections: p => p.rejectionsCount, status: p => p.statusAt || null,
   };
   function peerTable(rows, sort, limit, emptyMsg) {
@@ -528,6 +621,15 @@
     applyCursor();
     applyAnchor();
   }
+  // What each rail entry opens; shown on the small "i" beside its name.
+  const NAV_TIPS = {
+    overview: 'Connection health at a glance: connected peers by client, grey-list counts, this node and its grey-listing rules, and the latest strikes and rejections.',
+    peers: 'Every peer the node remembers, connected or not. Filter, search and sort them, and open any peer for its full page.',
+    clients: 'Peers grouped by client type and agent string, with each agent\'s connections, strikes and rejections.',
+    greylist: 'Who the node refuses right now and why, the strike reasons behind it, and the peers each reason struck.',
+    gossip: 'Messages our topic validators rejected, grouped by topic, reason, client, agent or peer, and the gossip scores of connected peers.',
+    chain: 'Where peers\' chain heads and finalized epochs sit relative to ours, and whose status exchange failed validation.',
+  };
   function renderNav() {
     $$('#nav a').forEach(a => a.classList.toggle('on', a.dataset.view === state.route.view || (state.route.view === 'peer' && a.dataset.view === 'peers')));
     $$('#nav a').forEach(a => { const v = a.dataset.view; a.setAttribute('href', hashFor(v, '')); });
@@ -576,7 +678,7 @@
       overview: s ? fmtNum(s.connected.length) + ' connected · ' + fmtNum(s.peers.length) + ' known' : '',
       peers: 'Every peer the node remembers, connected or not.',
       clients: 'Client types, their agents, and the peers behind each.',
-      greylist: 'Who the node refuses, why, and who is close.',
+      greylist: 'Who the node refuses and why.',
       gossip: 'Messages our validators rejected, and the gossip scores that follow.',
       chain: 'What peers report about the chain, compared with our own view.',
     };
@@ -648,10 +750,7 @@
     const conn = s.connected, inbound = conn.filter(p => p.direction === 'INBOUND'), outbound = conn.filter(p => p.direction === 'OUTBOUND');
     const grey = s.grey, greyConn = grey.filter(p => p.connected);
     const aspectCounts = countBy(grey.flatMap(p => p.aspects));
-    const near = s.peers.filter(p => p.nearThreshold);
     const strikes = s.strikes, bySource = countBy(strikes.map(e => e.source));
-    const rej = s.rejections, rejPeers = new Set(rej.map(r => r.peerId)).size;
-    const errPeers = conn.filter(p => p.validationError);
     const withChain = conn.filter(p => p.headDelta != null);
     const hb = countBy(withChain.map(p => headBucket(p.headDelta)));
     const atHead = hb.get('current') || 0, ahead = hb.get('ahead') || 0, behind = (hb.get('behind') || 0) + (hb.get('far') || 0);
@@ -661,11 +760,7 @@
     const clientItems = CLIENTS.filter(t => knownCounts.get(t)).map(t => ({ label: t, key: t, value: typeCounts.get(t) || 0, color: clientColor(t), on: scope.client === t, known: knownCounts.get(t), grey: greyByType.get(t) || 0, tenure: medianTenure(conn.filter(p => p.agentType === t)) }))
       .sort((a, b) => b.value - a.value || b.known - a.known);
     const topReasons = topN(countBy(strikes.map(e => e.source + ' · ' + e.reason)), 8);
-    const feed = strikes.map(e => ({ at: e.at, html: dot(e.peer.agentType) + peerLink(e.peer.id) + srcLabel(e.source) + '<span class="reason">' + esc(e.reason) + '</span>' }))
-      .concat(rej.map(r => ({ at: r.at, html: dot(r.agentType) + peerLink(r.peerId) + badge('rejected', 'info sm') + badge(r.topicShort, 'sm', r.topic) + '<span class="reason">' + esc(r.reason) + '</span>' })))
-      .concat(s.peers.filter(p => p.validationError && p.statusAt >= s.since).map(p => ({ at: p.statusAt, html: dot(p.agentType) + peerLink(p.id) + badge('status invalid', 'warn sm') + '<span class="reason">' + esc(p.validationError) + '</span>' })))
-      .sort((a, b) => b.at - a.at).slice(0, 14);
-    const ident = node.identity || {}, md = ident.metadata || {};
+    const ident = node.identity || {}, md = ident.metadata || {}, mem = cfg.memory;
     const listen = ((ident.p2p_addresses || []).filter(a => !/\/ip4\/(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(a))[0]) || (ident.p2p_addresses || [])[0] || '';
 
     el.innerHTML =
@@ -680,27 +775,29 @@
       '<div class="row"><span class="k">Head</span><span class="v">slot ' + fmtNum(node.headSlot) + ' <span class="muted">· epoch ' + fmtNum(node.headSlot != null ? Math.floor(node.headSlot / spe) : null) + '</span></span></div>' +
       '<div class="row"><span class="k">Finalized</span><span class="v">epoch ' + fmtNum(node.finalizedEpoch) + '</span></div>' +
       '<div class="row"><span class="k">Peers vs us' + info('Where peers\' heads sit relative to ours, from their last status exchange. Within one epoch counts as current because statuses refresh only every half epoch.') + '</span><span class="v">' + atHead + ' current · ' + ahead + ' ahead · ' + behind + ' behind <span class="muted">of ' + withChain.length + ' with status</span></span></div>' +
+      '<div class="row"><span class="k">Scoring memory' + info(MEMORY_INFO) + '</span><span class="v">' + (mem ? fmtKB(mem.total_bytes) + ' <span class="muted">· measured ' + liveAgo(Date.parse(mem.measured_at) || 0) + '</span>' : '<span class="muted">not measured yet</span>') + '</span></div>' +
       '<div class="row"><span class="k">Node</span><span class="v">' + esc(node.version || '–') + '</span></div>' +
       '</div></div>' +
 
       '<div class="tiles">' +
       tile({ label: 'Grey-listed', info: 'Peers the node refuses: it drops them and will not dial them until the verdict clears. A verdict comes from strikes, an invalid status, a low gossip score or IP colocation.', value: fmtNum(grey.length), cls: grey.length ? 'bad' : 'good', href: hashFor('greylist', '', { at: 'grey' }), inert: !grey.length, sub: ASPECTS.filter(a => aspectCounts.get(a[0])).map(a => aspectCounts.get(a[0]) + ' ' + a[1].toLowerCase()).concat(grey.length ? [] : ['no peer refused']) }) +
       tile({ label: 'Strikes, ' + winLabel(), info: 'A strike is one recorded misbehaviour: a failed dial, a bad RPC request or response, invalid gossip, a rate-limit breach… ' + cfg.threshold + ' standing strikes grey-list a peer and one is forgiven every ' + (cfg.decay || '?') + '.', value: fmtNum(strikes.length), cls: strikes.length ? 'warn' : '', href: hashFor('greylist', '', { at: 'reasons' }), inert: !strikes.length, sub: [topN(bySource, 1).map(([k, v]) => 'mostly ' + k + ' (' + v + ')')[0], strikes.length ? plural(new Set(strikes.map(e => e.peer.id)).size, 'peer') : 'nothing recorded'] }) +
-      tile({ label: 'One strike from grey-listing', info: 'Peers whose standing strikes are one below the threshold. Their next strike before a decay tick refuses them.', value: fmtNum(near.length), cls: near.length ? 'warn' : '', href: hashFor('greylist', '', { at: 'near' }), inert: !near.length, sub: [near.length ? near.filter(p => p.connected).length + ' connected' : 'nobody is close'] }) +
-      tile({ label: 'Gossip rejections, ' + winLabel(), info: 'Gossip messages from peers that our topic validators rejected. Each one lowers the sender\'s libp2p gossip score, and that score grey-lists below ' + fmtNum(cfg.gossipThreshold) + '.', value: fmtNum(rej.length), cls: rej.length ? 'info' : '', href: hashFor('gossip', '', { at: 'feed' }), inert: !rej.length, sub: [rej.length ? plural(rejPeers, 'peer') : 'nothing rejected', topN(countBy(rej.map(r => r.topicShort)), 1).map(([k, v]) => k + ' (' + v + ')')[0]] }) +
-      tile({ label: 'Invalid status, connected', info: 'Connected peers whose last status exchange failed validation, for example a wrong fork digest or an unknown finalized root. An invalid status grey-lists the peer for ' + (cfg.statusTTL || '?') + '.', value: fmtNum(errPeers.length), cls: errPeers.length ? 'warn' : '', href: hashFor('chain', '', { at: 'invalid' }), inert: !errPeers.length, sub: [topN(countBy(errPeers.map(p => p.validationError)), 1).map(([k]) => k)[0] || 'every status validated'] }) +
       '</div>' +
 
       '<div class="grid-2"><div class="colstack">' +
-      sec('Connected peers by client', stack(clientItems, { data: 'client', head: 'client', valueHead: 'connected', cols: [{ h: 'known', get: i => fmtNum(i.known) }, { h: 'grey-listed', get: i => i.grey ? fmtNum(i.grey) : '<span class="faint">0</span>', cls: i => i.grey ? 'bad' : '' }, { h: 'median tenure', get: i => fmtDur(i.tenure) }] }), { sub: 'click a client to scope every view to it', info: 'Client type is derived from the agent string, so several versions and builds of one client count together. Known includes disconnected peers.' }) +
+      sec('Connected peers by client', stack(clientItems, { data: 'client', head: 'client', headTip: 'The client implementation, read from each peer\'s agent string. Click one to scope every view to it.', valueHead: 'connected', valueTip: 'Peers of this client connected right now, inbound and outbound.',
+        cols: [{ h: 'known', tip: 'Every peer of this client the node remembers, connected or not. Disconnected peers stay in the store so their strikes and verdicts are not forgotten.', get: i => fmtNum(i.known) },
+          { h: 'grey-listed', tip: 'Known peers of this client the node refuses right now, for any reason: strikes, peer status, gossip score or IP colocation.', get: i => i.grey ? fmtNum(i.grey) : '<span class="faint">0</span>', cls: i => i.grey ? 'bad' : '' },
+          { h: 'median tenure', tip: 'Half of this client\'s connected peers have been connected for longer than this.', get: i => fmtDur(i.tenure) }] }), { sub: 'click a client to scope every view to it', info: 'Client type is derived from the agent string, so several versions and builds of one client count together.' }) +
       sec('This node', kv([
         ['Peer ID', ident.peer_id ? '<span class="mono">' + esc(ident.peer_id) + '</span> ' + copyBtn(ident.peer_id) : '–'],
         ['Listening', listen ? '<span class="mono">' + esc(listen) + '</span>' : '–'],
         ['Metadata', 'seq ' + esc(md.seq_number || '–') + ' · attnets <span class="mono">' + esc(md.attnets || '–') + '</span>' + (md.syncnets ? ' · syncnets <span class="mono">' + esc(md.syncnets) + '</span>' : '') + (md.custody_group_count ? ' · custody groups ' + esc(md.custody_group_count) : '')],
-        ['Strike rules', cfg.threshold + ' standing strikes grey-list a peer · 1 forgiven every ' + esc(cfg.decay || '–') + ' · last ' + fmtNum(cfg.historySize) + ' kept per peer'],
-        ['Other rules', 'invalid status grey-lists for ' + esc(cfg.statusTTL || '–') + ' · gossip score grey-lists below ' + fmtNum(cfg.gossipThreshold) + ' · last ' + fmtNum(cfg.maxRejections) + ' rejections kept per peer'],
         ['Scorer', fmtNum(cfg.trackedPeers) + ' peers tracked · ' + fmtNum(state.peers.length) + ' listed · ' + fmtNum(cfg.peersWithRejections) + ' with rejections'],
-      ])) +
+        ['Scoring memory', mem ? '<b>' + fmtKB(mem.total_bytes) + '</b> · ' + MEMORY_PARTS.map(m => m[1] + ' ' + fmtKB(mem[m[0]])).join(' · ') : '<span class="muted">not measured yet</span>'],
+      ]) +
+        '<div class="sec-h inner"><h2>Grey-listing rules' + info('When the node refuses a peer, when it forgives it, and the caps that bound both. Values come from this node\'s config.') + '</h2><span class="sub">click a count to list the peers</span></div>' +
+        greyListRules(aspectCounts)) +
       '</div><div class="colstack">' +
       sec('Why peers are grey-listed', bars(ASPECTS.map(a => ({ label: a[1], key: a[0], value: aspectCounts.get(a[0]) || 0, color: { strikes: 'var(--bad)', peer_status: 'var(--warn)', gossip: 'var(--info)', bad_ip: 'var(--neutral-2)' }[a[0]] })), { data: 'aspect', max: Math.max(grey.length, 1), total: grey.length }) +
         '<div class="note">' + plural(grey.length, 'peer') + ' refused' + (greyConn.length ? ', ' + greyConn.length + ' still connected and due to be dropped' : '') + '. A peer can fire several aspects; click one to list its peers.</div>' +
@@ -708,7 +805,7 @@
         bars(topReasons.map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k.split(' · ')[0]), tip: k })), { data: 'reason', tall: true, total: strikes.length, empty: 'No strikes in this window' }) +
         '<div class="note">Strikes feed the standing count; ' + cfg.threshold + ' standing strikes grey-list a peer and one is forgiven every ' + esc(cfg.decay || '?') + '.</div>') +
       '</div></div>' +
-      sec('Recent activity', feed.length ? '<div class="feed">' + feed.map(f => feedRow(f.at, f.html)).join('') + '</div>' : emptyState('Quiet', 'No strikes, rejections or invalid statuses in the ' + winLabel() + ' window.'), { sub: 'strikes, rejections and invalid statuses, newest first' });
+      sec('Recent activity', activityGroups(s), { sub: 'newest first, one panel per kind of record', info: 'Strikes, chain status rejections and gossip rejections are time-stamped and follow the window above. IP colocation refusals have no timer, so that panel lists the peers refused right now, grouped by IP.' });
   }
 
   // ------------------------------------------------------------------ peers
@@ -822,37 +919,32 @@
   }
 
   // ------------------------------------------------------------------ grey list
-  const GREY_SORT = { peer: p => p.id, agent: p => p.agent || null, state: p => STATES.indexOf(p.state), aspect: p => p.aspects.join(','), reason: p => cleanVerdict(p.details[p.aspects[0]] || ''), recovery: p => p.recoveryMax == null ? Infinity : p.recoveryMax, strikes: p => p.standing };
-  const NEAR_SORT = { peer: p => p.id, agent: p => p.agent || null, state: p => STATES.indexOf(p.state), strikes: p => p.standing, last: p => p.lastStrike ? p.lastStrike.at : 0 };
+  const GREY_SORT = { peer: p => p.id, agent: p => p.agent || null, state: p => STATES.indexOf(p.state), aspect: p => p.aspects.join(','), reason: p => cleanVerdict(p.details[p.aspects[0]] || ''), recovery: p => p.recoverySort == null ? Infinity : p.recoverySort, strikes: p => p.standing };
   function mountGreylist(el) { el.innerHTML = '<div id="greyTiles" class="tiles"></div><div id="greyBody"></div>'; }
   function updateGreylist(el) {
     if (!state.fetchedAt) { $('#greyBody', el).innerHTML = waiting(); return; }
     const f = state.filters.greylist, s = scoped(), cfg = state.cfg;
     const grey = s.grey, aspectCounts = countBy(grey.flatMap(p => p.aspects));
     const exempt = s.peers.filter(p => p.exemption);
-    const near = s.peers.filter(p => p.nearThreshold);
     const reasonKey = e => e.source + ' · ' + e.reason;
     const reasons = topN(countBy(s.strikes.map(reasonKey)), 14);
     const bySource = countBy(s.strikes.map(e => e.source));
     const aspectLabel = { strikes: 'Refused for strikes', peer_status: 'Refused for peer status', gossip: 'Refused for gossip score', bad_ip: 'Refused for IP colocation' };
-    const aspectRule = { strikes: cfg.threshold + ' standing strikes', peer_status: 'invalid status, ' + esc(cfg.statusTTL || '?') + ' TTL', gossip: 'score below ' + fmtNum(cfg.gossipThreshold), bad_ip: 'too many peers from one IP' };
+    const aspectRule = { strikes: cfg.threshold + ' standing strikes', peer_status: 'invalid status, ' + esc(cfg.statusTTL || '?') + ' TTL', gossip: 'score below ' + fmtNum(cfg.gossipThreshold), bad_ip: 'more than ' + COLOCATION_LIMIT + ' peers on one IP' };
     const aspectTone = { strikes: 'bad', peer_status: 'warn', gossip: 'info', bad_ip: '' };
     const aspectInfo = {
       strikes: 'Refused because standing strikes reached ' + cfg.threshold + '. Recovers as strikes decay, one every ' + (cfg.decay || '?') + '.',
       peer_status: 'Refused because the last status exchange failed validation. Recovers when the verdict expires after ' + (cfg.statusTTL || '?') + '.',
-      gossip: 'Refused because libp2p\'s gossip score fell below ' + fmtNum(cfg.gossipThreshold) + '. Recovers as the score decays, so there is no time estimate.',
-      bad_ip: 'Refused because too many peers already share this IP. Clears when the others leave.',
+      gossip: 'Refused because libp2p\'s gossip score fell below ' + fmtNum(cfg.gossipThreshold) + '. The score is frozen while the peer is disconnected and forgotten ' + GOSSIP_RETAIN_EPOCHS + ' epochs after it left, so there is no exact estimate.',
+      bad_ip: 'Refused because more than ' + COLOCATION_LIMIT + ' known peer IDs share this IP. There is no timer: refused peers are never pruned, so in practice the IP stays refused until the node restarts.',
     };
 
     $('#greyTiles', el).innerHTML =
       tile({ label: 'Grey-listed now', value: fmtNum(grey.length), cls: grey.length ? 'bad' : 'good', pick: true, on: !f.aspect, data: 'data-gaspect=""', sub: [grey.filter(p => p.connected).length + ' still connected', exempt.length ? exempt.length + ' exempt (trusted)' : 'every aspect'] }) +
-      ASPECTS.map(a => tile({ label: aspectLabel[a[0]], info: aspectInfo[a[0]], value: fmtNum(aspectCounts.get(a[0]) || 0), pick: true, on: f.aspect === a[0], data: 'data-gaspect="' + a[0] + '"', cls: aspectCounts.get(a[0]) ? aspectTone[a[0]] : '', sub: [aspectRule[a[0]]] })).join('') +
-      tile({ label: 'One strike from grey-listing', value: fmtNum(near.length), cls: near.length ? 'warn' : '', sub: [near.filter(p => p.connected).length + ' connected', 'standing at ' + (cfg.threshold - 1) + ' of ' + cfg.threshold] });
+      ASPECTS.map(a => tile({ label: aspectLabel[a[0]], info: aspectInfo[a[0]], value: fmtNum(aspectCounts.get(a[0]) || 0), pick: true, on: f.aspect === a[0], data: 'data-gaspect="' + a[0] + '"', cls: aspectCounts.get(a[0]) ? aspectTone[a[0]] : '', sub: [aspectRule[a[0]]] })).join('');
 
     const gs = state.sort.grey;
     const rows = sortBy(grey.filter(p => !f.aspect || p.aspects.includes(f.aspect)), GREY_SORT[gs.key] || GREY_SORT.recovery, gs.dir);
-    const ns = state.sort.near;
-    const nearRows = sortBy(near, NEAR_SORT[ns.key] || NEAR_SORT.strikes, ns.dir);
 
     // "Peers struck for …": every peer hit by the picked reason (source · reason) or source, grey-listed or not.
     const key = f.reason, keyIsSource = !!key && !key.includes(' · ');
@@ -873,24 +965,13 @@
           '<td class="reason">' + p.aspects.map(a => esc(cleanVerdict(p.details[a]))).join('<br>') + '</td>' +
           '<td class="tight">' + recoveryCell(p) + '</td><td>' + meter(p) + '</td></tr>').join('') ||
           '<tr><td colspan="6">' + emptyState(grey.length ? 'No grey-listed peer has this aspect' : 'No peer is grey-listed', grey.length ? 'Pick another aspect above.' : 'Nothing in scope is refused right now.') + '</td></tr>') +
-        '</tbody></table></div>', { sub: fmtNum(rows.length) + ' of ' + fmtNum(grey.length) + ' · the reason is the node\'s own verdict text', info: 'Recovers in is the node\'s own estimate: decays still needed for strikes, TTL left for peer status. Gossip-score and IP verdicts are not timed.', id: 'grey' }) +
+        '</tbody></table></div>', { sub: fmtNum(rows.length) + ' of ' + fmtNum(grey.length) + ' · the reason is the node\'s own verdict text', info: 'Recovers in is the node\'s own estimate: decays still needed for strikes, TTL left for peer status. IP colocation clears only on node restart; a gossip score is forgotten ' + GOSSIP_RETAIN_EPOCHS + ' epochs after the peer leaves.', id: 'grey' }) +
       sec('Strike reasons, ' + winLabel(), '<div class="grid-2" style="margin-bottom:0">' +
         '<div>' + bars(reasons.map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k.split(' · ')[0]), tip: k, on: f.reason === k })), { data: 'greason', tall: true, total: s.strikes.length, empty: 'No strikes in this window' }) + '</div>' +
         '<div>' + (bySource.size ? '<div class="sec-h" style="margin-top:0"><h2>By source</h2><span class="sub">click to list the peers</span></div>' + bars(topN(bySource, 12).map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k), on: f.reason === k })), { data: 'greason', total: s.strikes.length }) : '') +
         '<div class="note">Source is where the strike came from (dial, an RPC handler, gossip validation, sync…); the reason is that handler\'s own label. Click a reason or a source to list every peer it hit.</div></div></div>',
         { sub: fmtNum(s.strikes.length) + ' strikes on ' + plural(new Set(s.strikes.map(e => e.peer.id)).size, 'peer'), info: 'Source is the subsystem that struck: dial, an RPC handler, gossip validation, sync… The reason is that handler\'s own label. Click either to list every peer it hit.', id: 'reasons' }) +
-      struckSec +
-      sec('One strike from grey-listing', '<div class="tbl-wrap"><table class="tbl compact" data-table="near"><thead><tr>' + th('Peer', 'peer', ns) + th('Strikes', 'strikes', ns, '', 'Standing strikes / grey-list threshold') + th('Last strike', 'last', ns) + '</tr></thead><tbody>' +
-        (nearRows.map(p => '<tr class="row" data-nav data-peer="' + attr(p.id) + '"><td><div class="peer-cell">' + peerCell(p) + '</div><div class="badges" style="margin-top:3px">' + stateBadge(p.state) + dirBadge(p.direction) + '</div></td><td>' + meter(p) + '</td><td class="reason" style="min-width:160px">' + lastStrikeCell(p) + '</td></tr>').join('') ||
-          '<tr><td colspan="3">' + emptyState('Nobody is close', 'No peer in scope is within one strike of the threshold.') + '</td></tr>') + '</tbody></table></div>' +
-        '<div class="note">The next strike before a decay tick refuses these peers; a connected one is dropped at the following status round.</div>', { sub: plural(nearRows.length, 'peer') + ' · standing at ' + (cfg.threshold - 1) + ' of ' + cfg.threshold, info: 'The next strike before a decay tick refuses these peers. A connected one is then dropped at the following status round.', id: 'near' }) +
-      sec('Scoring rules', '<div class="grid-2" style="margin-bottom:0">' + kv([
-        ['Strikes', cfg.threshold + ' standing strikes grey-list a peer; one is forgiven every ' + esc(cfg.decay || '–') + '. Recovery is the decays still needed.'],
-        ['Peer status', 'A status exchange that fails validation grey-lists the peer until the verdict expires after ' + esc(cfg.statusTTL || '–') + '.'],
-      ]) + kv([
-        ['Gossip score', 'libp2p\'s score grey-lists below ' + fmtNum(cfg.gossipThreshold) + '; it recovers as the score decays, so no time estimate is given.'],
-        ['IP colocation', 'More than the allowed peers from one IP refuses the newcomers; clears when the others leave.'],
-      ]) + '</div><div class="note">Trusted peers are exempt from every verdict, and grey-listed peers are never forgotten by the peer store.</div>', { id: 'rules' });
+      struckSec;
   }
 
   // ------------------------------------------------------------------ gossip
@@ -1015,17 +1096,29 @@
     const eth = d.eth || {}, cfg = state.cfg, node = state.node;
     const addr = eth.last_seen_p2p_address || p.addr, enr = eth.enr || p.enr;
     const rejections = p.rejections.slice().sort((a, b) => b.at - a.at);
-    const topics = p.topicScores ? Object.entries(p.topicScores).map(([t, v]) => ({ topic: t, short: shortTopic(t), mesh: v.time_in_mesh_ms || 0, first: v.first_message_deliveries || 0, meshDel: v.mesh_message_deliveries || 0, invalid: v.invalid_message_deliveries || 0 }))
-      .filter(t => t.mesh || t.first || t.meshDel || t.invalid).sort((a, b) => (b.invalid - a.invalid) || (b.mesh - a.mesh)) : [];
+    const rejByTopic = new Map();
+    for (const r of rejections) { if (!rejByTopic.has(r.topic)) rejByTopic.set(r.topic, []); rejByTopic.get(r.topic).push(r); }
+    const topicScores = Object.assign({}, p.topicScores || {});
+    for (const t of rejByTopic.keys()) if (!topicScores[t]) topicScores[t] = {};
+    const topics = Object.entries(topicScores).map(([t, v]) => ({ topic: t, short: shortTopic(t), mesh: v.time_in_mesh_ms || 0, first: v.first_message_deliveries || 0, meshDel: v.mesh_message_deliveries || 0, invalid: v.invalid_message_deliveries || 0, rej: rejByTopic.get(t) || [] }))
+      .filter(t => t.mesh || t.first || t.meshDel || t.invalid || t.rej.length).sort((a, b) => (b.invalid - a.invalid) || (b.rej.length - a.rej.length) || (b.mesh - a.mesh));
+    const rejCell = rs => {
+      if (!rs.length) return '<span class="faint">—</span>';
+      const reasons = topN(countBy(rs.map(r => r.reason || 'no reason given')), 5);
+      const tip = rs.length + ' kept for this topic, last ' + ago(rs[0].at) + '\n' + reasons.map(([k, v]) => v + ' × ' + k).join('\n');
+      return '<span class="rej-cell" data-tip="' + attr(tip) + '"><span class="reason">' + esc(rs[0].reason || 'no reason given') + '</span>' + (rs.length > 1 ? '<span class="rej-n">×' + rs.length + '</span>' : '') + '</span>';
+    };
     const verdict = p.greyListed
       ? '<div class="verdict bad"><div class="vt">' + badge('grey-listed', 'bad') + 'The node refuses this peer</div><div class="vb">' +
-        (p.recoveryEnd != null ? 'Expected to be white-listed in ' + liveCountdown(p.recoveryEnd) + (p.recoveryUnknown ? ', if the untimed aspects clear too' : '') + '.' : p.recoveryUnknown ? 'Recovery is not time based (gossip score decay or IP colocation).' : '') +
+        (p.onRestart ? 'Refused until the node restarts: IP colocation verdicts are never forgiven.' :
+          p.recoveryEnd != null ? 'Expected to be white-listed in ' + liveCountdown(p.recoveryEnd) + (p.gossipUntimed ? ', once its gossip score is also forgotten ' + fmtSpan(gossipRetainSec()) + ' after it leaves' : '') + '.' :
+          p.gossipUntimed ? 'Its gossip score is forgotten ' + fmtSpan(gossipRetainSec()) + ' after it leaves, which clears the verdict.' : '') +
         (p.connected ? ' It is still connected and will be dropped at the next status round.' : '') + '</div></div>'
       : p.aspects.length && p.exemption
         ? '<div class="verdict warn"><div class="vt">' + badge('exempt: ' + p.exemption, 'accent') + 'A refusal fires but the peer is exempt</div></div>'
         : '<div class="verdict ok"><div class="vt">' + badge('clear', 'ok') + 'Not grey-listed</div><div class="vb">' + (p.nearThreshold ? 'One more strike before decay would grey-list it.' : p.standing ? p.standing + ' standing strikes; grey-listed at ' + p.threshold + '.' : 'No standing strikes.') + '</div></div>';
     const aspects = p.aspects.map(a => '<div class="aspect ' + a + '"><div class="at">' + aspectBadge(a) +
-      (p.recovery[a] ? '<span class="muted" style="font-weight:500">' + (p.recoverySec[a] != null ? 'recovers in ' + liveCountdown(state.fetchedAt + p.recoverySec[a] * 1000) : '<span data-tip="Clears when the score decays back above the threshold or the colocated peers leave">recovery not timed</span>') + '</span>' : '') + '</div><div class="ab reason">' + esc(cleanVerdict(p.details[a])) + '</div></div>').join('');
+      (p.recovery[a] ? '<span class="muted" style="font-weight:500">' + (p.recoverySec[a] != null ? 'recovers in ' + liveCountdown(state.fetchedAt + p.recoverySec[a] * 1000) : a === 'bad_ip' ? '<span data-tip="' + attr(RESTART_TIP) + '">recovers on node restart</span>' : '<span data-tip="' + attr(gossipLeftTip()) + '">recovers ' + fmtSpan(gossipRetainSec()) + ' after it left</span>') + '</span>' : '') + '</div><div class="ab reason">' + esc(cleanVerdict(p.details[a])) + '</div></div>').join('');
     const history = p.history.slice().reverse();
 
     el.innerHTML = back +
@@ -1036,7 +1129,7 @@
       (addr ? '<span class="mono" title="' + attr(addr) + '">' + esc(addr) + '</span>' + copyBtn(addr) : '<span class="faint">address unknown</span>') +
       (enr ? '<span class="mono" title="' + attr(enr) + '">' + esc(enr.length > 44 ? enr.slice(0, 42) + '…' : enr) + '</span>' + copyBtn(enr) : '') +
       '</div></div>' +
-      '<div class="actions">' + (p.agent ? '<a class="btn sm" href="' + attr(hashForScope({ client: p.agentType, agent: p.agent }, 'clients')) + '">Peers of this agent</a>' : '') + '<a class="btn sm" href="' + attr(hashForScope({ client: p.agentType, agent: '' }, 'clients')) + '">All ' + esc(p.agentType) + ' peers</a>' +
+      '<div class="actions">' +
       (d.loading ? '<span class="spin" data-tip="Loading full details"></span>' : '') + '</div></div>' +
       (d.error && !d.data ? '<div class="banner warn">Detail request failed: ' + esc(d.error) + '. Showing the list entry.</div>' : '') +
 
@@ -1057,13 +1150,21 @@
       sec('Strikes', history.length ? '<div class="timeline">' + history.map(h => '<div class="tl-row"><span class="tl-t">' + esc(fmtTime(h.at)) + '<small>' + liveAgo(h.at) + '</small></span><span>' + srcLabel(h.source) + '</span><span class="reason">' + esc(h.reason) + '</span></div>').join('') + '</div>' +
         '<div class="note">' + history.length + ' retained of up to ' + fmtNum(cfg.historySize) + '; the standing count is what decay and grey-listing act on.</div>' : emptyState('No strikes recorded'), { sub: p.standing + ' standing · newest first', info: 'The retained history is capped; the standing count, which decays over time, is what grey-listing acts on.' }) +
 
-      '<div class="grid-2">' +
-      sec('Gossip', kv([['Score', gossipCell(p.gossipScore) + ' <span class="muted">grey-listed below ' + fmtNum(cfg.gossipThreshold) + '</span>'], ['Behaviour penalty', fmtScore(p.behaviourPenalty)]]) +
-        (topics.length ? '<div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr><th>Topic</th><th class="num">In mesh</th><th class="num">First</th><th class="num">Mesh deliveries</th><th class="num">Invalid</th></tr></thead><tbody>' +
-          topics.slice(0, 40).map(t => '<tr><td title="' + attr(t.topic) + '">' + esc(t.short) + '</td><td class="num">' + fmtDur(t.mesh / 1000) + '</td><td class="num">' + fmtScore(t.first) + '</td><td class="num">' + fmtScore(t.meshDel) + '</td><td class="num">' + (t.invalid ? '<span class="sbad">' + fmtScore(t.invalid) + '</span>' : '0') + '</td></tr>').join('') + '</tbody></table></div>' +
+      sec('Gossip', kv([
+        ['Score', gossipCell(p.gossipScore) + ' <span class="muted">grey-listed below ' + fmtNum(cfg.gossipThreshold) + '</span>', 'libp2p\'s gossipsub score for this peer: every topic\'s weighted counters below (positive part capped at +' + GOSSIP_TOPIC_SCORE_CAP + '), plus IP colocation and behaviour penalties. Below −4,000 its gossip is ignored, below −8,000 we stop publishing to it, below ' + fmtNum(cfg.gossipThreshold) + ' it is grey-listed.'],
+        ['Behaviour penalty', fmtScore(p.behaviourPenalty), 'Counts gossipsub protocol misbehaviour, such as broken IWANT promises or grafting during a prune backoff. Above 6 it costs −15.92 × the excess squared, and it fades over 10 epochs.'],
+      ]) +
+        (topics.length ? '<div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr>' +
+          '<th>Topic' + info('The gossip topic these counters are for. Only topics with activity or rejections are listed.') + '</th>' +
+          '<th class="num">In mesh' + info('How long the peer has been in our mesh for this topic. Earns a small positive score, capped at 1 hour; resets when it leaves the mesh.') + '</th>' +
+          '<th class="num">First' + info('Decayed count of messages this peer delivered to us before any other peer. Positive score, capped per topic.') + '</th>' +
+          '<th class="num">Mesh deliveries' + info('Decayed count of messages the peer delivered while in our mesh. Prysm gives this zero weight today, so it does not change the score.') + '</th>' +
+          '<th class="num">Invalid' + info('Decayed count of this peer\'s messages our validators rejected on this topic. Costs weight × count², so a few rejections hurt a lot; decays to 1% over ' + GOSSIP_INVALID_DECAY_EPOCHS + ' epochs.') + '</th>' +
+          '<th>Rejection reason' + info('The latest reason our validator gave for rejecting this peer\'s message on this topic, from the last ' + fmtNum(cfg.maxRejections) + ' rejections kept per peer. ×N is how many of those were on this topic; hover for every reason.') + '</th>' +
+          '</tr></thead><tbody>' +
+          topics.slice(0, 40).map(t => '<tr><td title="' + attr(t.topic) + '">' + esc(t.short) + '</td><td class="num">' + fmtDur(t.mesh / 1000) + '</td><td class="num">' + fmtScore(t.first) + '</td><td class="num">' + fmtScore(t.meshDel) + '</td><td class="num">' + (t.invalid ? '<span class="sbad">' + fmtScore(t.invalid) + '</span>' : '0') + '</td><td>' + rejCell(t.rej) + '</td></tr>').join('') + '</tbody></table></div>' +
           (topics.length > 40 ? '<div class="note">' + (topics.length - 40) + ' more topics with activity.</div>' : '') : (d.data ? '<div class="note">No per-topic gossip activity recorded by libp2p for this peer.</div>' : ''))) +
-      sec('Rejected messages', rejections.length ? '<div class="timeline">' + rejections.slice(0, 50).map(r => '<div class="tl-row rej"><span class="tl-t">' + esc(fmtTime(r.at)) + '<small>' + liveAgo(r.at) + '</small></span><span>' + badge(r.topicShort, 'sm', r.topic) + '</span><span class="reason">' + esc(r.reason) + '</span></div>').join('') + '</div>' : emptyState('No rejected gossip from this peer'), { sub: rejections.length + ' retained' }) +
-      '</div>';
+      sec('Rejected messages', rejections.length ? '<div class="timeline">' + rejections.slice(0, 50).map(r => '<div class="tl-row rej"><span class="tl-t">' + esc(fmtTime(r.at)) + '<small>' + liveAgo(r.at) + '</small></span><span>' + badge(r.topicShort, 'sm', r.topic) + '</span><span class="reason">' + esc(r.reason) + '</span></div>').join('') + '</div>' : emptyState('No rejected gossip from this peer'), { sub: rejections.length + ' retained' });
   }
 
   // ------------------------------------------------------------------ views registry & routing
@@ -1096,7 +1197,6 @@
     return s ? '?' + s : '';
   }
   const hashFor = (view, param, extra) => '#/' + view + (param ? '/' + encodeURIComponent(param) : '') + scopeQuery(scope, extra);
-  const hashForScope = (patch, view) => '#/' + view + scopeQuery(Object.assign({}, scope, patch));
   function syncHash() { history.replaceState(null, '', hashFor(state.route.view, state.route.param)); }
   function onRoute() {
     const r = parseHash();
@@ -1179,6 +1279,7 @@
     tip.style.left = Math.max(4, x) + 'px'; tip.style.top = Math.max(4, y) + 'px';
   }
   function init() {
+    $$('#nav a').forEach(a => { const t = NAV_TIPS[a.dataset.view]; if (t) $('.lbl', a).insertAdjacentHTML('beforeend', info(t)); });
     let theme = 'dark', url = '', auto = '1';
     try { theme = localStorage.getItem(LS.theme) || 'dark'; url = localStorage.getItem(LS.url) || ''; auto = localStorage.getItem(LS.auto) || '1'; } catch (_) { /* storage unavailable */ }
     setTheme(theme);
@@ -1235,7 +1336,7 @@
       if ((el = hit('[data-more]'))) { state.filters.peers.peerLimit = Infinity; VIEW_IMPL[state.route.view].update($('#view')); applyCursor(); return; }
       if ((el = hit('th[data-sort]'))) {
         const table = el.closest('table').dataset.table;
-        const sortState = { peers: state.sort.peers, agents: state.sort.agents, chain: state.sort.chain, grey: state.sort.grey, near: state.sort.near }[table];
+        const sortState = { peers: state.sort.peers, agents: state.sort.agents, chain: state.sort.chain, grey: state.sort.grey }[table];
         if (sortState) { toggleSort(sortState, el.dataset.sort, /^(peer|agent|agentType|rank|aspect|reason)$/.test(el.dataset.sort) ? 'asc' : 'desc'); VIEW_IMPL[state.route.view].update($('#view')); applyCursor(); }
         return;
       }
