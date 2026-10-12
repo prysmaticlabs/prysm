@@ -92,6 +92,11 @@ func (s signedExecutionPayloadBid) Signature() [96]byte {
 	return [96]byte(s.bid.Signature)
 }
 
+// HashTreeRoot returns the hash tree root of the signed execution payload bid.
+func (s signedExecutionPayloadBid) HashTreeRoot() ([32]byte, error) {
+	return s.bid.HashTreeRoot()
+}
+
 // ParentBlockHash returns the hash of the parent execution block.
 func (h executionPayloadBidGloas) ParentBlockHash() [32]byte {
 	return [32]byte(h.payload.ParentBlockHash)

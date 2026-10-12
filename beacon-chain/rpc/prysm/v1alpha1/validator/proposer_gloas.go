@@ -123,10 +123,14 @@ func (vs *Server) gloasPayloadValue(sBlk interfaces.SignedBeaconBlock, local *co
 		}
 		return local.Bid
 	}
-	bid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	if err != nil || bid == nil || bid.Message == nil {
+	sbid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	if err != nil {
 		return primitives.ZeroWei()
 	}
-	value := new(big.Int).SetUint64(uint64(bid.Message.Value))
+	bid, err := sbid.Bid()
+	if err != nil {
+		return primitives.ZeroWei()
+	}
+	value := new(big.Int).SetUint64(uint64(bid.Value()))
 	return value.Mul(value, big.NewInt(1e9))
 }
