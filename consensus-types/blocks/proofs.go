@@ -58,7 +58,7 @@ func ComputeBlockBodyFieldRoots(ctx context.Context, blockBody *BeaconBlockBody)
 		fieldRoots = make([][]byte, 13)
 	case version.Fulu:
 		fieldRoots = make([][]byte, 13)
-	case version.Gloas:
+	case version.Gloas, version.Heze:
 		fieldRoots = make([][]byte, 13)
 	default:
 		return nil, fmt.Errorf("unknown block body version %s", version.String(blockBody.version))

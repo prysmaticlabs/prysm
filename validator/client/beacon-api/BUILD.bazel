@@ -91,6 +91,7 @@ go_test(
         "freshness_test.go",
         "genesis_test.go",
         "get_beacon_block_test.go",
+        "heze_block_test.go",
         "index_test.go",
         "payload_attestation_test.go",
         "prepare_beacon_proposer_test.go",
