@@ -9,6 +9,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -50,7 +51,7 @@ func gethGroundTruthHash(t *testing.T, p *enginev1.ExecutionPayloadGloas, reques
 		Timestamp:       p.Timestamp,
 		ExtraData:       p.ExtraData,
 		BaseFeePerGas:   bytesutil.LittleEndianBytesToBigInt(p.BaseFeePerGas),
-		Transactions:    p.Transactions,
+		Transactions:    p.Transactions.Slice(),
 		Withdrawals:     withdrawals,
 		BlobGasUsed:     &bgu,
 		ExcessBlobGas:   &ebg,
@@ -98,7 +99,7 @@ func TestExecutionBlockHashGloasMatchesGeth(t *testing.T) {
 			Timestamp:       1_700_000_000,
 			ExtraData:       []byte("prysm-local-hash-test"),
 			BaseFeePerGas:   baseFeeLE,
-			Transactions:    [][]byte{txBytes},
+			Transactions:    util.TransactionList(t, txBytes),
 			Withdrawals:     []*enginev1.Withdrawal{{Index: 5, ValidatorIndex: 9, Address: bytesutil.PadTo([]byte("w-addr"), 20), Amount: 42}},
 			BlobGasUsed:     131072,
 			ExcessBlobGas:   262144,
@@ -124,7 +125,7 @@ func TestExecutionBlockHashGloasMatchesGeth(t *testing.T) {
 
 	t.Run("undecodable transaction errors", func(t *testing.T) {
 		p := testGloasPayload(primitives.Slot(10), nil, bytesutil.PadTo([]byte("parent"), 32))
-		p.Transactions = [][]byte{{0xde, 0xad}}
+		p.Transactions = util.TransactionList(t, []byte{0xde, 0xad})
 		_, err := executionBlockHashGloas(p, &enginev1.ExecutionRequestsGloas{}, [32]byte{})
 		require.NotNil(t, err)
 	})

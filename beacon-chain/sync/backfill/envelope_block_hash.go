@@ -20,10 +20,11 @@ func executionBlockHashGloas(p *enginev1.ExecutionPayloadGloas, requests *engine
 	if p == nil {
 		return [32]byte{}, errors.New("nil execution payload")
 	}
-	txs := make(gethtypes.Transactions, 0, len(p.Transactions))
-	for i, raw := range p.Transactions {
+	n := p.Transactions.Len()
+	txs := make(gethtypes.Transactions, 0, n)
+	for i := 0; i < n; i++ {
 		tx := &gethtypes.Transaction{}
-		if err := tx.UnmarshalBinary(raw); err != nil {
+		if err := tx.UnmarshalBinary(p.Transactions.Get(i)); err != nil {
 			return [32]byte{}, errors.Wrapf(err, "decode transaction %d", i)
 		}
 		txs = append(txs, tx)

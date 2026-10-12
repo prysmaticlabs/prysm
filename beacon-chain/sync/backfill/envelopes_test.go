@@ -500,7 +500,7 @@ func TestEnvelopeFetchAndVerify(t *testing.T) {
 		es, err := newEnvelopeSync(ctx, c.blks, testEnvSyncCfg(t, c, ds))
 		require.NoError(t, err)
 		env := c.envelope(t, 0, nil)
-		env.Message.Payload.Transactions = [][]byte{{0xde, 0xad, 0xbe, 0xef}}
+		env.Message.Payload.Transactions = util.TransactionList(t, []byte{0xde, 0xad, 0xbe, 0xef})
 		c.resign(t, env, 0)
 		f := &scriptedFetcher{responses: [][]*ethpb.SignedExecutionPayloadEnvelope{{env}}}
 		es.fetchPass(ctx, "peer-a", f.fetch)

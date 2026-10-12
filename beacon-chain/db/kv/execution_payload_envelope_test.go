@@ -32,7 +32,7 @@ func testEnvelope(t *testing.T) *ethpb.SignedExecutionPayloadEnvelope {
 				ExtraData:     []byte("extra"),
 				BaseFeePerGas: bytesutil.PadTo([]byte{1}, 32),
 				BlockHash:     bytesutil.PadTo([]byte("blockhash"), 32),
-				Transactions:  [][]byte{[]byte("tx1"), []byte("tx2")},
+				Transactions:  txList(t, []byte("tx1"), []byte("tx2")),
 				Withdrawals:   []*enginev1.Withdrawal{{Index: 1, ValidatorIndex: 2, Address: bytesutil.PadTo([]byte("addr"), 20), Amount: 100}},
 				BlobGasUsed:   131072,
 				ExcessBlobGas: 0,
@@ -221,4 +221,12 @@ func TestStore_SaveBlindedExecutionPayloadEnvelope_MatchesFullSavePath(t *testin
 	require.NoError(t, err)
 	require.Equal(t, iface.EnvelopeSaveByteIdentical, outcome)
 	require.Equal(t, true, db.HasExecutionPayloadEnvelope(ctx, blockRoot))
+}
+
+// txList builds a serialized transaction list from fixture transactions.
+func txList(t *testing.T, txs ...[]byte) *enginev1.ProgressiveTransactionList {
+	t.Helper()
+	l, err := enginev1.NewProgressiveTransactionList(txs)
+	require.NoError(t, err)
+	return l
 }
