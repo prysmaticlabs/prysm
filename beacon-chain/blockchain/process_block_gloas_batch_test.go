@@ -144,7 +144,7 @@ func gloasBlock(t *testing.T, parent state.BeaconState, parentRoot [32]byte, slo
 			ExtraData:     []byte{},
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     blockHash[:],
-			Transactions:  [][]byte{},
+			Transactions:  util.TransactionList(t),
 			Withdrawals:   withdrawals,
 			SlotNumber:    slot,
 		},
