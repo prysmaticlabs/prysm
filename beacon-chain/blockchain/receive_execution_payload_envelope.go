@@ -295,7 +295,13 @@ func (s *Service) callNewPayload(
 	requests *enginev1.ExecutionRequestsGloas,
 	slot primitives.Slot,
 ) (bool, error) {
-	_, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &parentRoot, requests)
+	var err error
+	if slots.ToEpoch(slot) >= params.BeaconConfig().HezeForkEpoch {
+		// TODO(heze): send the timely EIP-7805 inclusion list transactions and record payload_inclusion_list_satisfaction.
+		_, _, err = s.cfg.ExecutionEngineCaller.NewPayloadWithInclusionList(ctx, payload, versionedHashes, &parentRoot, requests, [][]byte{})
+	} else {
+		_, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &parentRoot, requests)
+	}
 	if err == nil {
 		newPayloadValidNodeCount.Inc()
 		return true, nil
