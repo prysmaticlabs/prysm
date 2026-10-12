@@ -112,13 +112,15 @@ func gloasHeaderTestRoot(value byte) []byte {
 func populateGloasHeaderTestExecution(t *testing.T, block interfaces.SignedBeaconBlock) {
 	t.Helper()
 	if block.Version() == version.Gloas {
-		bid, err := block.Block().Body().SignedExecutionPayloadBid()
-		require.NoError(t, err)
+		bid := util.NewBeaconBlockGloas().Block.Body.SignedExecutionPayloadBid
 		bid.Message.ParentBlockHash = gloasHeaderTestRoot(42)
 		bid.Message.BlockHash = gloasHeaderTestRoot(99)
 		bid.Message.BlobKzgCommitments = [][]byte{make([]byte, 48)}
 		bid.Message.GasLimit = 30_000_000
 		bid.Signature[0] = 7
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadBid(bid)
+		require.NoError(t, err)
+		require.NoError(t, block.SetSignedExecutionPayloadBid(wrapped))
 		return
 	}
 	if block.Version() < version.Bellatrix {
@@ -168,17 +170,18 @@ func TestBlockToLightClientHeader_GloasErrors(t *testing.T) {
 
 func TestMakeExecutionAndProofGloas_Errors(t *testing.T) {
 	t.Run("missing bid", func(t *testing.T) {
-		block, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockGloas())
-		require.NoError(t, err)
 		for _, bid := range []*pb.SignedExecutionPayloadBid{nil, {}} {
-			require.NoError(t, block.SetSignedExecutionPayloadBid(bid))
+			p := util.NewBeaconBlockGloas()
+			p.Block.Body.SignedExecutionPayloadBid = bid
+			block, err := blocks.NewSignedBeaconBlock(p)
+			require.NoError(t, err)
 			_, _, err = makeExecutionAndProofGloas(t.Context(), block)
-			require.ErrorContains(t, "signed execution payload bid is nil", err)
+			require.ErrorContains(t, "could not get signed execution payload bid", err)
 		}
 	})
-	t.Run("invalid bid proof", func(t *testing.T) {
+	t.Run("invalid execution block hash proof", func(t *testing.T) {
 		p := util.NewBeaconBlockGloas()
-		p.Block.Body.SignedExecutionPayloadBid.Signature = []byte{1}
+		p.Block.Body.Eth1Data.DepositRoot = []byte{1}
 		block, err := blocks.NewSignedBeaconBlock(p)
 		require.NoError(t, err)
 		_, _, err = makeExecutionAndProofGloas(t.Context(), block)

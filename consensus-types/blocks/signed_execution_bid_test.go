@@ -127,3 +127,18 @@ func TestWrappedROSignedExecutionPayloadBid(t *testing.T) {
 		require.Equal(t, wantRoot, gotRoot)
 	})
 }
+
+func TestWrappedROSignedExecutionPayloadBid_HashTreeRoot(t *testing.T) {
+	signed := &ethpb.SignedExecutionPayloadBid{
+		Message:   validExecutionPayloadBid(),
+		Signature: bytes.Repeat([]byte{0xAB}, 96),
+	}
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadBid(signed)
+	require.NoError(t, err)
+
+	want, err := signed.HashTreeRoot()
+	require.NoError(t, err)
+	got, err := wrapped.HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}

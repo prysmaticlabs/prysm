@@ -265,7 +265,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			if err != nil {
 				return err
 			}
-			if idx := sbid.Message.BuilderIndex; idx != params.BeaconConfig().BuilderIndexSelfBuild {
+			bid, err := sbid.Bid()
+			if err != nil {
+				return err
+			}
+			if idx := bid.BuilderIndex(); idx != params.BeaconConfig().BuilderIndexSelfBuild {
 				pk, err := preState.BuilderPubkey(idx)
 				if err != nil {
 					return err

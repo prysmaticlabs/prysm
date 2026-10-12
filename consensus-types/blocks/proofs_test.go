@@ -3,9 +3,9 @@ package blocks
 import (
 	"testing"
 
-	methodicalssz "github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	consensus_types "github.com/OffchainLabs/prysm/v7/consensus-types"
 	"github.com/OffchainLabs/prysm/v7/container/trie"
 	"github.com/OffchainLabs/prysm/v7/encoding/ssz"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -295,10 +295,9 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		require.Equal(t, 11, len(proof))
 		bodyRoot, err := block.Body().HashTreeRoot()
 		require.NoError(t, err)
-		signedBid, err := block.Body().SignedExecutionPayloadBid()
-		require.NoError(t, err)
+		parentBlockHash := block.body.signedExecutionPayloadBid.Message.ParentBlockHash
 		require.Equal(t, true, trie.VerifyMerkleProof(
-			bodyRoot[:], signedBid.Message.ParentBlockHash, 2856, proof,
+			bodyRoot[:], parentBlockHash, 2856, proof,
 		))
 	})
 
@@ -331,7 +330,7 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorContains(t, "bid is nil", err)
+		require.ErrorIs(t, err, consensus_types.ErrNilObjectWrapped)
 	})
 
 	t.Run("rejects invalid bid field", func(t *testing.T) {
@@ -340,7 +339,7 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid.Message.ParentBlockHash = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorIs(t, err, methodicalssz.ErrBytesLength)
+		require.ErrorIs(t, err, consensus_types.ErrNilObjectWrapped)
 	})
 
 	t.Run("rejects invalid commitment", func(t *testing.T) {
@@ -349,7 +348,7 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid.Message.BlobKzgCommitments[0] = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorIs(t, err, methodicalssz.ErrBytesLength)
+		require.ErrorIs(t, err, consensus_types.ErrNilObjectWrapped)
 	})
 
 	t.Run("rejects invalid signature", func(t *testing.T) {
@@ -358,6 +357,6 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid.Signature = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorIs(t, err, methodicalssz.ErrBytesLength)
+		require.ErrorIs(t, err, consensus_types.ErrNilObjectWrapped)
 	})
 }

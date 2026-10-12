@@ -9,6 +9,7 @@ type ROSignedExecutionPayloadBid interface {
 	Bid() (ROExecutionPayloadBid, error)
 	Signature() [field_params.BLSSignatureLength]byte
 	SigningRoot([]byte) ([32]byte, error)
+	HashTreeRoot() ([32]byte, error)
 	IsNil() bool
 }
 

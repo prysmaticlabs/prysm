@@ -221,11 +221,18 @@ func (b *SignedBeaconBlock) SetParentExecutionRequests(r *enginev1.ExecutionRequ
 	return nil
 }
 
-// SetSignedExecutionPayloadBid sets the signed execution payload header in the block.
-func (b *SignedBeaconBlock) SetSignedExecutionPayloadBid(header *eth.SignedExecutionPayloadBid) error {
+// SetSignedExecutionPayloadBid sets the signed execution payload bid in the block.
+func (b *SignedBeaconBlock) SetSignedExecutionPayloadBid(bid interfaces.ROSignedExecutionPayloadBid) error {
 	if b.version < version.Gloas {
 		return consensus_types.ErrNotSupported("SetSignedExecutionPayloadBid", b.version)
 	}
-	b.block.body.signedExecutionPayloadBid = header
+	if bid == nil || bid.IsNil() {
+		return consensus_types.ErrNilObjectWrapped
+	}
+	w, ok := bid.(signedExecutionPayloadBid)
+	if !ok {
+		return errIncorrectBlockVersion
+	}
+	b.block.body.signedExecutionPayloadBid = w.bid
 	return nil
 }
