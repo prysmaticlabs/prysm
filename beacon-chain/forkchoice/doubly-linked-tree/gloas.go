@@ -258,7 +258,6 @@ func (s *Store) updateBestDescendantConsensusNode(ctx context.Context, n *Node, 
 	if err := s.updateBestDescendantPayloadNode(ctx, fn, justifiedEpoch, finalizedEpoch, currentEpoch); err != nil {
 		return err
 	}
-	// Only viable variants compete for head, get_filtered_node_tree in v1.7.0-beta.3+.
 	emptyViable := en.leadsToViableHead(justifiedEpoch, currentEpoch)
 	fullViable := fn.leadsToViableHead(justifiedEpoch, currentEpoch)
 	switch {
