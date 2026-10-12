@@ -137,7 +137,6 @@ func populateStateDiffCacheFromDB(s *Store, offset uint64) (*stateDiffCache, err
 			return nil, err
 		}
 	}
-	cache.levelsWithData[0] = true
 
 	return cache, nil
 }
@@ -341,6 +340,7 @@ func (c *stateDiffCache) setAnchor(level int, anchorState state.ReadOnlyBeaconSt
 	}
 	c.anchors[level] = anchor{slot: anchorState.Slot(), data: compressed}
 	c.memoDrop(level)
+	c.levelsWithData[level] = true
 	stateDiffAnchorCacheBytes.WithLabelValues(strconv.Itoa(level)).Set(float64(len(compressed)))
 	return nil
 }
