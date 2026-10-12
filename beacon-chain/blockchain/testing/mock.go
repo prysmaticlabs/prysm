@@ -58,11 +58,14 @@ type ChainService struct {
 	MockDataAvailable                    map[[32]byte]bool
 	MockDataAvailableErr                 error
 	ParentPayloadReadyVal                *bool
+	HasPayloadBlockHashVal               *bool
 	BlockSlot                            primitives.Slot
+	RecentBlockSlotErr                   error
 	OptimisticRoots                      map[[32]byte]bool
 	FinalizedRoots                       map[[32]byte]bool
 	ForkchoiceRoots                      map[[32]byte]bool
 	ForkchoiceBlockHashes                map[[32]byte][32]byte
+	BuilderPubkeys                       map[[32]byte]*[fieldparams.BLSPubkeyLength]byte
 	ForkchoiceGasLimits                  map[[32]byte]uint64
 	FinalizedCheckPoint                  *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint           *ethpb.Checkpoint
@@ -404,6 +407,13 @@ func (s *ChainService) HeadRootAndFull() ([32]byte, bool) {
 	return bytesutil.ToBytes32(s.Root), s.Full
 }
 
+// HeadAndCanonicalNodeAtSlot mocks HeadAndCanonicalNodeAtSlot method in chain service.
+func (s *ChainService) HeadAndCanonicalNodeAtSlot(slot primitives.Slot) ([32]byte, bool, [32]byte, bool) {
+	headRoot, headFull := s.HeadRootAndFull()
+	canonicalRoot, canonicalFull := s.CanonicalNodeAtSlot(slot)
+	return headRoot, headFull, canonicalRoot, canonicalFull
+}
+
 // HeadBlock mocks HeadBlock method in chain service.
 func (s *ChainService) HeadBlock(context.Context) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	return s.Block, nil
@@ -557,6 +567,9 @@ func (s *ChainService) AvailableBlocks(ctx context.Context, blockRoots [][32]byt
 
 // RecentBlockSlot mocks the same method in the chain service.
 func (s *ChainService) RecentBlockSlot([32]byte) (primitives.Slot, error) {
+	if s.RecentBlockSlotErr != nil {
+		return 0, s.RecentBlockSlotErr
+	}
 	return s.BlockSlot, nil
 }
 
@@ -645,8 +658,24 @@ func (s *ChainService) BlockHash(root [32]byte) ([32]byte, error) {
 	return [32]byte{}, errors.New("block hash not found")
 }
 
+// BuilderPubkey mocks the same method in the chain service.
+func (s *ChainService) BuilderPubkey(root [32]byte) (*[fieldparams.BLSPubkeyLength]byte, error) {
+	if pk, ok := s.BuilderPubkeys[root]; ok {
+		return pk, nil
+	}
+	if s.ForkChoiceStore == nil {
+		return nil, errors.New("builder pubkey not found")
+	}
+	s.ForkChoiceStore.RLock()
+	defer s.ForkChoiceStore.RUnlock()
+	return s.ForkChoiceStore.BuilderPubkey(root)
+}
+
 // HasPayloadBlockHash mocks the same method in the chain service.
 func (s *ChainService) HasPayloadBlockHash(root, blockHash [32]byte) bool {
+	if s.HasPayloadBlockHashVal != nil {
+		return *s.HasPayloadBlockHashVal
+	}
 	if s.ForkChoiceStore == nil {
 		return false
 	}
@@ -927,6 +956,11 @@ func (*ChainService) FinalizedBlockHash() [32]byte {
 
 // UnrealizedJustifiedPayloadBlockHash mocks the same method in the chain service
 func (*ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
+	return [32]byte{}
+}
+
+// SafeBlockHash mocks the same method in the chain service
+func (*ChainService) SafeBlockHash() [32]byte {
 	return [32]byte{}
 }
 

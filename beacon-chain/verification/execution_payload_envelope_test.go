@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/params"
@@ -108,6 +109,102 @@ func TestEnvelopeVerifier_VerifyPayloadHash(t *testing.T) {
 	require.NoError(t, verifier.VerifyPayloadHash(okBid))
 }
 
+func TestEnvelopeVerifier_VerifyExecutionRequestsLimits(t *testing.T) {
+	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
+	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
+	cfg := params.BeaconConfig()
+
+	newVerifier := func(t *testing.T, reqs *enginev1.ExecutionRequestsGloas) *EnvelopeVerifier {
+		env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
+		env.Message.ExecutionRequests = reqs
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+		require.NoError(t, err)
+		return &EnvelopeVerifier{results: newResults(RequireExecutionRequestsLimitsValid), e: wrapped}
+	}
+
+	t.Run("at limits", func(t *testing.T) {
+		reqs := &enginev1.ExecutionRequestsGloas{
+			Withdrawals:     make([]*enginev1.WithdrawalRequest, cfg.MaxWithdrawalRequestsPerPayload),
+			Consolidations:  make([]*enginev1.ConsolidationRequest, cfg.MaxConsolidationsRequestsPerPayload),
+			BuilderDeposits: make([]*enginev1.BuilderDepositRequest, cfg.MaxBuilderDepositRequestsPerPayload),
+			BuilderExits:    make([]*enginev1.BuilderExitRequest, cfg.MaxBuilderExitRequestsPerPayload),
+		}
+		require.NoError(t, newVerifier(t, reqs).VerifyExecutionRequestsLimits())
+	})
+
+	cases := []struct {
+		name string
+		reqs *enginev1.ExecutionRequestsGloas
+		want string
+	}{
+		{
+			name: "withdrawal requests over limit",
+			reqs: &enginev1.ExecutionRequestsGloas{Withdrawals: make([]*enginev1.WithdrawalRequest, cfg.MaxWithdrawalRequestsPerPayload+1)},
+			want: "too many withdrawal requests",
+		},
+		{
+			name: "consolidation requests over limit",
+			reqs: &enginev1.ExecutionRequestsGloas{Consolidations: make([]*enginev1.ConsolidationRequest, cfg.MaxConsolidationsRequestsPerPayload+1)},
+			want: "too many consolidation requests",
+		},
+		{
+			name: "builder deposit requests over limit",
+			reqs: &enginev1.ExecutionRequestsGloas{BuilderDeposits: make([]*enginev1.BuilderDepositRequest, cfg.MaxBuilderDepositRequestsPerPayload+1)},
+			want: "too many builder deposit requests",
+		},
+		{
+			name: "builder exit requests over limit",
+			reqs: &enginev1.ExecutionRequestsGloas{BuilderExits: make([]*enginev1.BuilderExitRequest, cfg.MaxBuilderExitRequestsPerPayload+1)},
+			want: "too many builder exit requests",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.ErrorContains(t, tc.want, newVerifier(t, tc.reqs).VerifyExecutionRequestsLimits())
+		})
+	}
+
+	// SSZ decoding enforces the request list limits on untrusted input, so an
+	// oversized envelope never reaches the verifier. The cases above cover the
+	// post-decode check for envelopes assembled in process.
+	t.Run("rejected at decode", func(t *testing.T) {
+		env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
+		for range cfg.MaxBuilderDepositRequestsPerPayload + 1 {
+			env.Message.ExecutionRequests.BuilderDeposits = append(env.Message.ExecutionRequests.BuilderDeposits, &enginev1.BuilderDepositRequest{
+				Pubkey:                make([]byte, 48),
+				WithdrawalCredentials: make([]byte, 32),
+				Signature:             make([]byte, 96),
+			})
+		}
+		encoded, err := env.MarshalSSZ()
+		require.NoError(t, err)
+		decoded := &ethpb.SignedExecutionPayloadEnvelope{}
+		require.ErrorIs(t, decoded.UnmarshalSSZ(encoded), ssz.ErrListTooBig)
+	})
+}
+
+func TestEnvelopeVerifier_VerifyWithdrawalsLimit(t *testing.T) {
+	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
+	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
+	limit := params.BeaconConfig().MaxWithdrawalsPerPayload
+
+	newVerifier := func(t *testing.T, withdrawals []*enginev1.Withdrawal) *EnvelopeVerifier {
+		env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
+		env.Message.Payload.Withdrawals = withdrawals
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+		require.NoError(t, err)
+		return &EnvelopeVerifier{results: newResults(RequireWithdrawalsLimitValid), e: wrapped}
+	}
+
+	t.Run("at limit", func(t *testing.T) {
+		require.NoError(t, newVerifier(t, make([]*enginev1.Withdrawal, limit)).VerifyWithdrawalsLimit())
+	})
+
+	t.Run("over limit", func(t *testing.T) {
+		require.ErrorIs(t, newVerifier(t, make([]*enginev1.Withdrawal, limit+1)).VerifyWithdrawalsLimit(), ErrTooManyWithdrawals)
+	})
+}
+
 func TestEnvelopeVerifier_VerifySignature_Builder(t *testing.T) {
 	slot := primitives.Slot(1)
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
@@ -167,6 +264,35 @@ func TestEnvelopeVerifier_VerifySignature_SelfBuild(t *testing.T) {
 	require.NoError(t, verifier.VerifySignature(t.Context(), st))
 }
 
+func TestEnvelopeVerifier_VerifySignatureWithPubkey(t *testing.T) {
+	slot := primitives.Slot(1)
+	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
+	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
+	genesisValidatorsRoot := bytesutil.ToBytes32(bytes.Repeat([]byte{0x11}, 32))
+	env := testSignedExecutionPayloadEnvelope(t, slot, 0, root, blockHash)
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	pubkey := bytesutil.ToBytes48(sk.PublicKey().Marshal())
+	fork, err := params.Fork(slots.ToEpoch(slot))
+	require.NoError(t, err)
+
+	sig := signEnvelope(t, sk, env.Message, fork, genesisValidatorsRoot[:], slot)
+	env.Signature = sig[:]
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	require.NoError(t, err)
+	verifier := &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
+	require.NoError(t, verifier.VerifySignatureWithPubkey(pubkey, genesisValidatorsRoot))
+
+	sk2, err := bls.RandKey()
+	require.NoError(t, err)
+	verifier = &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
+	require.ErrorIs(t, verifier.VerifySignatureWithPubkey(bytesutil.ToBytes48(sk2.PublicKey().Marshal()), genesisValidatorsRoot), signing.ErrSigFailedToVerify)
+
+	verifier = &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
+	require.ErrorIs(t, verifier.VerifySignatureWithPubkey(pubkey, [32]byte{}), signing.ErrSigFailedToVerify)
+}
+
 func testSignedExecutionPayloadEnvelope(t *testing.T, slot primitives.Slot, builderIdx primitives.BuilderIndex, root, blockHash [32]byte) *ethpb.SignedExecutionPayloadEnvelope {
 	t.Helper()
 
@@ -183,7 +309,7 @@ func testSignedExecutionPayloadEnvelope(t *testing.T, slot primitives.Slot, buil
 		Timestamp:     4,
 		BaseFeePerGas: bytes.Repeat([]byte{0x07}, 32),
 		BlockHash:     blockHash[:],
-		Transactions:  [][]byte{},
+		Transactions:  &enginev1.ProgressiveTransactionList{},
 		Withdrawals:   []*enginev1.Withdrawal{},
 		BlobGasUsed:   0,
 		ExcessBlobGas: 0,
