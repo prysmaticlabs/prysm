@@ -507,6 +507,8 @@ func topicForEvent(event *feed.Event) string {
 		return ProposerPreferencesTopic
 	case *operation.ExecutionPayloadBidReceivedData:
 		return ExecutionPayloadBidTopic
+	case *operation.ExecutionPayloadBidHezeReceivedData:
+		return ExecutionPayloadBidTopic
 	case *statefeed.ExecutionPayloadAvailableData:
 		return ExecutionPayloadAvailableTopic
 	case *statefeed.ExecutionPayloadProcessedData:
@@ -728,6 +730,14 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 			return jsonMarshalReader(eventName, &structs.ProposerPreferencesEvent{
 				Version: version.String(params.GetNetworkScheduleEntry(epoch).VersionEnum),
 				Data:    structs.SignedProposerPreferencesFromConsensus(v.Data),
+			})
+		}, nil
+	case *operation.ExecutionPayloadBidHezeReceivedData:
+		return func() io.Reader {
+			epoch := slots.ToEpoch(v.Bid.Message.Slot)
+			return jsonMarshalReader(eventName, &structs.ExecutionPayloadBidHezeEvent{
+				Version: version.String(params.GetNetworkScheduleEntry(epoch).VersionEnum),
+				Data:    structs.SignedExecutionPayloadBidHezeFromConsensus(v.Bid),
 			})
 		}, nil
 	case *operation.ExecutionPayloadBidReceivedData:
