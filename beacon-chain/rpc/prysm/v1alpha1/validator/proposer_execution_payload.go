@@ -145,16 +145,19 @@ func (vs *Server) getLocalPayloadFromEngine(
 			return nil, err
 		}
 		parentGasLimit := helpers.ParentTargetGasLimit(st)
+		ils, err := helpers.NewProposalInclusionLists(ctx, vs.BeaconDB, vs.ForkchoiceFetcher.InclusionListStore(), st, slot)
+		if err != nil {
+			return nil, err
+		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV5{
-			Timestamp:             uint64(t.Unix()),
-			PrevRandao:            random,
-			SuggestedFeeRecipient: val.FeeRecipient[:],
-			Withdrawals:           withdrawals,
-			ParentBeaconBlockRoot: parentRoot[:],
-			SlotNumber:            uint64(slot),
-			TargetGasLimit:        val.GasLimitOr(parentGasLimit),
-			// TODO(heze): fill inclusion_list_transactions from the EIP-7805 inclusion list store.
-			InclusionListTransactions: [][]byte{},
+			Timestamp:                 uint64(t.Unix()),
+			PrevRandao:                random,
+			SuggestedFeeRecipient:     val.FeeRecipient[:],
+			Withdrawals:               withdrawals,
+			ParentBeaconBlockRoot:     parentRoot[:],
+			SlotNumber:                uint64(slot),
+			TargetGasLimit:            val.GasLimitOr(parentGasLimit),
+			InclusionListTransactions: ils.Transactions(),
 		})
 		if err != nil {
 			return nil, err

@@ -724,4 +724,48 @@ func TestProduceBlockV4_Heze(t *testing.T) {
 		var block structs.BeaconBlockHeze
 		require.NoError(t, json.Unmarshal(resp.Data, &block))
 	})
+
+	hezeBlock := util.NewBeaconBlockHeze().Block
+	hezeBlock.Body.SignedExecutionPayloadBid.Message.InclusionListBits = []byte{0x05, 0x00}
+	for _, ssz := range []bool{false, true} {
+		t.Run(fmt.Sprintf("ssz=%v", ssz), func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+			v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(&eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Heze{Heze: hezeBlock}}, nil)
+			server := &Server{
+				V1Alpha1Server:        v1alpha1Server,
+				SyncChecker:           &mockSync.Sync{IsSyncing: false},
+				OptimisticModeFetcher: &blockchainTesting.ChainService{},
+				BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: &structs.BlockRewards{Total: "10"}},
+			}
+			// A bare block response carries no execution payload.
+			request := produceV4Request(t, fmt.Sprintf("http://foo.example/eth/v4/validator/blocks/1?randao_reveal=%s&graffiti=%s&include_payload=true", testRandao, testGraffiti))
+			request.SetPathValue("slot", "1")
+			if ssz {
+				request.Header.Set("Accept", "application/octet-stream")
+			}
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+			server.ProduceBlockV4(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			require.Equal(t, "heze", writer.Header().Get(api.VersionHeader))
+			require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadIncludedHeader))
+
+			got := &eth.BeaconBlockHeze{}
+			if ssz {
+				require.NoError(t, got.UnmarshalSSZ(writer.Body.Bytes()))
+			} else {
+				var resp structs.ProduceBlockV4Response
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
+				require.Equal(t, "heze", resp.Version)
+				require.Equal(t, false, resp.ExecutionPayloadIncluded)
+				var block structs.BeaconBlockHeze
+				require.NoError(t, json.Unmarshal(resp.Data, &block))
+				var err error
+				got, err = block.ToConsensus()
+				require.NoError(t, err)
+			}
+			require.DeepEqual(t, hezeBlock, got)
+		})
+	}
 }
