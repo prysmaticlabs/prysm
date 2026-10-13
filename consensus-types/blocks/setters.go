@@ -233,6 +233,19 @@ func (b *SignedBeaconBlock) SetSignedExecutionPayloadBid(bid interfaces.ROSigned
 	if !ok {
 		return errIncorrectBlockVersion
 	}
-	b.block.body.signedExecutionPayloadBid = w.bid
+	switch pb := w.bid.(type) {
+	case *eth.SignedExecutionPayloadBid:
+		if b.version >= version.Heze {
+			return errIncorrectBlockVersion
+		}
+		b.block.body.signedExecutionPayloadBid = pb
+	case *eth.SignedExecutionPayloadBidHeze:
+		if b.version < version.Heze {
+			return errIncorrectBlockVersion
+		}
+		b.block.body.signedExecutionPayloadBidHeze = pb
+	default:
+		return errIncorrectBlockVersion
+	}
 	return nil
 }

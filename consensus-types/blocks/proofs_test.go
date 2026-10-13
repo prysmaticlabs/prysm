@@ -197,6 +197,12 @@ func TestComputeBlockBodyFieldRoots_Heze(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 13, len(roots))
 
+	signedBid, err := b.SignedExecutionPayloadBid()
+	require.NoError(t, err)
+	bidRoot, err := signedBid.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, bidRoot[:], roots[10])
+
 	rootChunks := make([][32]byte, len(roots))
 	activeFields := make([]bool, len(roots))
 	for i := range roots {
@@ -208,6 +214,28 @@ func TestComputeBlockBodyFieldRoots_Heze(t *testing.T) {
 	expectedBodyRoot, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, expectedBodyRoot, computedBodyRoot)
+}
+
+func TestExecutionPayloadBidFieldRoots_Heze(t *testing.T) {
+	bid := hydrateBeaconBlockBodyHeze().SignedExecutionPayloadBid.Message
+	wrapped, err := WrappedROExecutionPayloadBidHeze(bid)
+	require.NoError(t, err)
+
+	roots, err := executionPayloadBidFieldRoots(version.Heze, wrapped)
+	require.NoError(t, err)
+	require.Equal(t, 13, len(roots))
+
+	rootChunks := make([][32]byte, len(roots))
+	activeFields := make([]bool, len(roots))
+	for i := range roots {
+		copy(rootChunks[i][:], roots[i])
+		activeFields[i] = true
+	}
+	computed, err := ssz.ContainerRootProgressive(rootChunks, activeFields)
+	require.NoError(t, err)
+	expected, err := bid.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, expected, computed)
 }
 
 func TestPayloadProof(t *testing.T) {
@@ -261,6 +289,19 @@ func TestProgressiveContainerActiveFields(t *testing.T) {
 			require.DeepEqual(t, test.want, packed)
 		})
 	}
+
+	t.Run("heze", func(t *testing.T) {
+		for container, want := range map[progressiveContainerType][32]byte{
+			executionPayloadBidProgressiveContainer: {0xff, 0x1f},
+			beaconBlockBodyProgressiveContainer:     {0xff, 0x1f},
+		} {
+			activeFields, err := progressiveContainerActiveFields(version.Heze, container)
+			require.NoError(t, err)
+			packed, err := ssz.PackActiveFields(activeFields)
+			require.NoError(t, err)
+			require.DeepEqual(t, want, packed)
+		}
+	})
 
 	t.Run("unsupported version", func(t *testing.T) {
 		_, err := progressiveContainerActiveFields(version.Fulu, beaconBlockBodyProgressiveContainer)

@@ -5,6 +5,7 @@ package blocks
 import (
 	"context"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
@@ -254,21 +255,36 @@ func gloasGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execu
 	}
 }
 
-// hezeGenesisBlock is gloasGenesisBlock for a Heze state.
-// TODO(heze): Implement the Heze-specific genesis block logic if it differs from the Gloas genesis block.
-func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.ExecutionPayloadBid) *ethpb.BeaconBlockHeze {
-	g := gloasGenesisBlock(root, latestBid)
+// hezeGenesisBlock is gloasGenesisBlock with the Heze bid.
+func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.ExecutionPayloadBidHeze) *ethpb.BeaconBlockHeze {
+	bidMessage := latestBid.Copy()
+	if bidMessage == nil {
+		bidMessage = &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       make([]byte, 32),
+			ParentBlockRoot:       make([]byte, 32),
+			BlockHash:             make([]byte, 32),
+			PrevRandao:            make([]byte, 32),
+			FeeRecipient:          make([]byte, 20),
+			BlobKzgCommitments:    make([][]byte, 0),
+			ExecutionRequestsRoot: make([]byte, 32),
+			InclusionListBits:     bitfield.NewBitvector16(),
+		}
+	}
+	gloasBody := gloasGenesisBlock(root, nil).Body
 	return &ethpb.BeaconBlockHeze{
-		ParentRoot: g.ParentRoot,
-		StateRoot:  g.StateRoot,
+		ParentRoot: params.BeaconConfig().ZeroHash[:],
+		StateRoot:  root[:],
 		Body: &ethpb.BeaconBlockBodyHeze{
-			RandaoReveal:              g.Body.RandaoReveal,
-			Eth1Data:                  g.Body.Eth1Data,
-			Graffiti:                  g.Body.Graffiti,
-			SyncAggregate:             g.Body.SyncAggregate,
-			SignedExecutionPayloadBid: g.Body.SignedExecutionPayloadBid,
-			PayloadAttestations:       g.Body.PayloadAttestations,
-			ParentExecutionRequests:   g.Body.ParentExecutionRequests,
+			RandaoReveal:  gloasBody.RandaoReveal,
+			Eth1Data:      gloasBody.Eth1Data,
+			Graffiti:      gloasBody.Graffiti,
+			SyncAggregate: gloasBody.SyncAggregate,
+			SignedExecutionPayloadBid: &ethpb.SignedExecutionPayloadBidHeze{
+				Message:   bidMessage,
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+			PayloadAttestations:     gloasBody.PayloadAttestations,
+			ParentExecutionRequests: gloasBody.ParentExecutionRequests,
 		},
 	}
 }

@@ -16,7 +16,6 @@ import (
 
 // ----------------------------------------------------------------------------
 // Heze
-// TODO(heze): Implement the Heze-specific conversions between consensus and API server structs.
 // ----------------------------------------------------------------------------
 
 func SignedBeaconBlockHezeFromConsensus(b *eth.SignedBeaconBlockHeze) (*SignedBeaconBlockHeze, error) {
@@ -52,11 +51,39 @@ func BeaconBlockHezeFromConsensus(b *eth.BeaconBlockHeze) (*BeaconBlockHeze, err
 			VoluntaryExits:            SignedExitsFromConsensus(b.Body.VoluntaryExits),
 			SyncAggregate:             SyncAggregateFromConsensus(b.Body.SyncAggregate),
 			BLSToExecutionChanges:     SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
-			SignedExecutionPayloadBid: SignedExecutionPayloadBidFromConsensus(b.Body.SignedExecutionPayloadBid),
+			SignedExecutionPayloadBid: SignedExecutionPayloadBidHezeFromConsensus(b.Body.SignedExecutionPayloadBid),
 			PayloadAttestations:       payloadAttestations,
 			ParentExecutionRequests:   ExecutionRequestsGloasFromConsensus(b.Body.ParentExecutionRequests),
 		},
 	}, nil
+}
+
+func SignedExecutionPayloadBidHezeFromConsensus(b *eth.SignedExecutionPayloadBidHeze) *SignedExecutionPayloadBidHeze {
+	return &SignedExecutionPayloadBidHeze{
+		Message:   ExecutionPayloadBidHezeFromConsensus(b.Message),
+		Signature: hexutil.Encode(b.Signature),
+	}
+}
+
+func ExecutionPayloadBidHezeFromConsensus(b *eth.ExecutionPayloadBidHeze) *ExecutionPayloadBidHeze {
+	gloasBid := ExecutionPayloadBidFromConsensus(&eth.ExecutionPayloadBid{
+		ParentBlockHash:       b.ParentBlockHash,
+		ParentBlockRoot:       b.ParentBlockRoot,
+		BlockHash:             b.BlockHash,
+		PrevRandao:            b.PrevRandao,
+		FeeRecipient:          b.FeeRecipient,
+		GasLimit:              b.GasLimit,
+		BuilderIndex:          b.BuilderIndex,
+		Slot:                  b.Slot,
+		Value:                 b.Value,
+		ExecutionPayment:      b.ExecutionPayment,
+		BlobKzgCommitments:    b.BlobKzgCommitments,
+		ExecutionRequestsRoot: b.ExecutionRequestsRoot,
+	})
+	return &ExecutionPayloadBidHeze{
+		ExecutionPayloadBid: *gloasBid,
+		InclusionListBits:   hexutil.Encode(b.InclusionListBits),
+	}
 }
 
 func (b *SignedBeaconBlockHeze) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
@@ -240,4 +267,51 @@ func (b *BeaconBlockHeze) ToGeneric() (*eth.GenericBeaconBlock, error) {
 		return nil, errors.Wrap(err, "could not convert heze block to consensus")
 	}
 	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Heze{Heze: block}}, nil
+}
+
+func (b *SignedExecutionPayloadBidHeze) ToConsensus() (*eth.SignedExecutionPayloadBidHeze, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	message, err := b.Message.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Message")
+	}
+	return &eth.SignedExecutionPayloadBidHeze{
+		Message:   message,
+		Signature: sig,
+	}, nil
+}
+
+func (b *ExecutionPayloadBidHeze) ToConsensus() (*eth.ExecutionPayloadBidHeze, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	bid, err := b.ExecutionPayloadBid.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	inclusionListBits, err := bytesutil.DecodeHexWithLength(b.InclusionListBits, (fieldparams.InclusionListCommitteeSize+7)/8)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "InclusionListBits")
+	}
+	return &eth.ExecutionPayloadBidHeze{
+		ParentBlockHash:       bid.ParentBlockHash,
+		ParentBlockRoot:       bid.ParentBlockRoot,
+		BlockHash:             bid.BlockHash,
+		PrevRandao:            bid.PrevRandao,
+		FeeRecipient:          bid.FeeRecipient,
+		GasLimit:              bid.GasLimit,
+		BuilderIndex:          bid.BuilderIndex,
+		Slot:                  bid.Slot,
+		Value:                 bid.Value,
+		ExecutionPayment:      bid.ExecutionPayment,
+		BlobKzgCommitments:    bid.BlobKzgCommitments,
+		ExecutionRequestsRoot: bid.ExecutionRequestsRoot,
+		InclusionListBits:     inclusionListBits,
+	}, nil
 }
