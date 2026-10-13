@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "bootstrap.go",
         "bootstrap_gloas.go",
+        "epoch_data.go",
         "finality_update.go",
         "finality_update_gloas.go",
         "header.go",
@@ -34,10 +35,14 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["gloas_test.go"],
+    srcs = [
+        "epoch_data_test.go",
+        "gloas_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//config/fieldparams:go_default_library",
+        "//config/params:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",

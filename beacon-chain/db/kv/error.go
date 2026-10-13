@@ -19,6 +19,13 @@ var ErrNotFoundGenesisBlockRoot = errors.Wrap(ErrNotFound, "OriginGenesisRoot")
 // ErrNotFoundMetadataSeqNum is a not found error specifically for the metadata sequence number getter
 var ErrNotFoundMetadataSeqNum = errors.Wrap(ErrNotFound, "metadata sequence number")
 
+// ErrLightClientEpochDataConflict is returned when an epoch already holds different data.
+// Finalized data is deterministic, so the new data is non-canonical or produced by a bug.
+var ErrLightClientEpochDataConflict = errors.New("light client epoch data already stored with different content")
+
+// ErrLightClientPeriodSyncCommitteeConflict is the same for the per-period sync committee.
+var ErrLightClientPeriodSyncCommitteeConflict = errors.New("light client period sync committee already stored with different content")
+
 // ErrStateDiffIncompatible is returned when state-diff feature is enabled
 // but the database was created without state-diff support.
 var ErrStateDiffIncompatible = errors.New("state-diff feature enabled but database was created without state-diff support")
