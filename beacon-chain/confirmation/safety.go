@@ -1,6 +1,8 @@
 package confirmation
 
 import (
+	"fmt"
+
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
@@ -110,6 +112,7 @@ func ComputeEmptySlotSupportDiscount(
 
 	parentBlockHash, err := fc.BlockHash(parentRoot)
 	if err != nil {
+		log.WithError(err).WithField("parentRoot", fmt.Sprintf("%#x", parentRoot)).Debug("Could not get parent block hash for empty slot support discount")
 		return 0
 	}
 	parentFull := fc.ParentHash(blockRoot) == parentBlockHash
