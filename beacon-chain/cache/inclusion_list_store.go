@@ -37,7 +37,7 @@ func NewInclusionListStore() *InclusionListStore {
 	}
 }
 
-// Process stores the inclusion list as in process_inclusion_list and returns true only when it adds a new entry.
+// Process stores the inclusion list as in process_inclusion_list and returns true only when it adds a new entry. The caller must not change the list after Process.
 func (s *InclusionListStore) Process(signed *ethpb.SignedInclusionList, timely bool) bool {
 	if signed == nil || signed.Message == nil {
 		return false
@@ -76,7 +76,7 @@ func sameInclusionList(a, b *ethpb.InclusionList) bool {
 	return ra == rb
 }
 
-// Transactions returns the unique transactions of the non-equivocating lists, as in get_inclusion_list_transactions.
+// Transactions returns the unique transactions of the non-equivocating lists, as in get_inclusion_list_transactions. The caller must not change the returned transactions.
 func (s *InclusionListStore) Transactions(slot primitives.Slot, dependentRoot [32]byte, onlyTimely bool) [][]byte {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -123,7 +123,7 @@ func (s *InclusionListStore) IsBitsInclusive(committee []primitives.ValidatorInd
 	return true
 }
 
-// Get returns the stored inclusion list and its timeliness. The caller must not change the returned list.
+// Get returns the stored inclusion list and its timeliness, also for an equivocator; call IsEquivocator. The caller must not change the returned list.
 func (s *InclusionListStore) Get(slot primitives.Slot, dependentRoot [32]byte, validatorIndex primitives.ValidatorIndex) (*ethpb.SignedInclusionList, bool, bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()

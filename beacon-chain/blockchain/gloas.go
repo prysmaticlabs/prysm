@@ -231,7 +231,7 @@ func (s *Service) latePayloadTasks(ctx context.Context) {
 		log.WithError(err).Error("Could not get latest block hash")
 		return
 	}
-	pid, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, bh, attr)
+	pid, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, hr, bh, attr)
 	if err != nil {
 		log.WithError(err).Error("Could not notify forkchoice update")
 		return
@@ -247,7 +247,7 @@ func (s *Service) latePayloadTasks(ctx context.Context) {
 }
 
 func (s *Service) fcuFromReorgData(headBlock interfaces.ReadOnlySignedBeaconBlock, hr [32]byte, hash [32]byte, full bool, attr payloadattribute.Attributer, proposingSlot primitives.Slot) {
-	pid, fcs, err := s.notifyForkchoiceUpdateGloas(s.ctx, hash, attr)
+	pid, fcs, err := s.notifyForkchoiceUpdateGloas(s.ctx, hr, hash, attr)
 	if err != nil {
 		log.WithError(err).Error("Could not update forkchoice with engine")
 	}

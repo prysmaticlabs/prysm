@@ -107,6 +107,20 @@ func TestEpochEndSlot_OK(t *testing.T) {
 	}
 }
 
+func TestShufflingLookaheadEpoch(t *testing.T) {
+	tests := []struct {
+		epoch, want primitives.Epoch
+	}{
+		{epoch: 0, want: 0},
+		{epoch: 1, want: 0},
+		{epoch: 2, want: 1},
+		{epoch: 10, want: 9},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, ShufflingLookaheadEpoch(tt.epoch), "ShufflingLookaheadEpoch(%d)", tt.epoch)
+	}
+}
+
 func TestShufflingDependentSlot(t *testing.T) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {

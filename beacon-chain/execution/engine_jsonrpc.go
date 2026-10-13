@@ -262,10 +262,11 @@ type ForkchoiceUpdatedResponse struct {
 	ValidationError string             `json:"validationError"`
 }
 
-// ForkchoiceUpdated calls the engine_forkchoiceUpdatedV1 method via JSON-RPC.
+// ForkchoiceUpdated calls the engine_forkchoiceUpdated method via JSON-RPC.
+// The flag is the inclusionListSatisfied value of a VALID response, nil otherwise.
 func (s *Service) ForkchoiceUpdated(
 	ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
-) (*pb.PayloadIDBytes, []byte, error) {
+) (*pb.PayloadIDBytes, []byte, *bool, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdated")
 	defer span.End()
 	start := time.Now()
@@ -279,60 +280,60 @@ func (s *Service) ForkchoiceUpdated(
 	result := &ForkchoiceUpdatedResponse{}
 
 	if attrs == nil {
-		return nil, nil, errors.New("nil payload attributer")
+		return nil, nil, nil, errors.New("nil payload attributer")
 	}
 	switch attrs.Version() {
 	case version.Bellatrix:
 		a, err := attrs.PbV1()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, a)
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, nil, handleRPCError(err)
 		}
 	case version.Capella:
 		a, err := attrs.PbV2()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV2, state, a)
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, nil, handleRPCError(err)
 		}
 	case version.Deneb, version.Electra, version.Fulu:
 		a, err := attrs.PbV3()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV3, state, a)
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, nil, handleRPCError(err)
 		}
 	case version.Gloas, version.Heze:
 		a, err := attrs.PbV4()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV4, state, a)
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, nil, handleRPCError(err)
 		}
 	case version.Heze:
 		a, err := attrs.PbV5()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		err = s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethodV5, state, a)
 		if err != nil {
-			return nil, nil, handleRPCError(err)
+			return nil, nil, nil, handleRPCError(err)
 		}
 	default:
-		return nil, nil, fmt.Errorf("unknown payload attribute version: %v", attrs.Version())
+		return nil, nil, nil, fmt.Errorf("unknown payload attribute version: %v", attrs.Version())
 	}
 
 	if result.Status == nil {
-		return nil, nil, ErrNilResponse
+		return nil, nil, nil, ErrNilResponse
 	}
 	if result.ValidationError != "" {
 		log.WithError(errors.New(result.ValidationError)).Error("Got a validation error in forkChoiceUpdated")
@@ -340,13 +341,13 @@ func (s *Service) ForkchoiceUpdated(
 	resp := result.Status
 	switch resp.Status {
 	case pb.PayloadStatus_SYNCING:
-		return nil, nil, ErrAcceptedSyncingPayloadStatus
+		return nil, nil, nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
-		return nil, resp.LatestValidHash, ErrInvalidPayloadStatus
+		return nil, resp.LatestValidHash, nil, ErrInvalidPayloadStatus
 	case pb.PayloadStatus_VALID:
-		return result.PayloadId, resp.LatestValidHash, nil
+		return result.PayloadId, resp.LatestValidHash, resp.InclusionListSatisfied, nil
 	default:
-		return nil, nil, ErrUnknownPayloadStatus
+		return nil, nil, nil, ErrUnknownPayloadStatus
 	}
 }
 

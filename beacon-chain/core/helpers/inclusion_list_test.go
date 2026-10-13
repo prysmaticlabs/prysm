@@ -111,6 +111,12 @@ func TestInclusionListCommitteeAssignment(t *testing.T) {
 		_, _, err := helpers.InclusionListCommitteeAssignment(t.Context(), st, 2, concatenated[0])
 		require.ErrorContains(t, "after the next epoch", err)
 	})
+	t.Run("before Heze", func(t *testing.T) {
+		setHezeForkEpoch(t, 1)
+		st, _ := util.DeterministicGenesisStateElectra(t, 64)
+		_, _, err := helpers.InclusionListCommitteeAssignment(t.Context(), st, 0, 0)
+		require.ErrorContains(t, "before the Heze fork", err)
+	})
 }
 
 func TestVerifyInclusionListSignature(t *testing.T) {
@@ -141,6 +147,11 @@ func TestVerifyInclusionListSignature(t *testing.T) {
 		return &ethpb.SignedInclusionList{Message: m, Signature: keys[idx].Sign(root[:]).Marshal()}
 	}
 	otherSlot := &ethpb.InclusionList{Slot: hezeSlot + 1, ValidatorIndex: valIdx, DependentRoot: make([]byte, 32), Transactions: txs}
+	unknownValidator := &ethpb.InclusionList{Slot: hezeSlot, ValidatorIndex: 1000, DependentRoot: make([]byte, 32), Transactions: txs}
+	undecodable := make([]byte, 96)
+	for i := range undecodable {
+		undecodable[i] = 0xff
+	}
 
 	tests := []struct {
 		name   string
@@ -154,6 +165,8 @@ func TestVerifyInclusionListSignature(t *testing.T) {
 		{name: "nil signed list", signed: nil, err: "nil inclusion list"},
 		{name: "nil message", signed: &ethpb.SignedInclusionList{Signature: make([]byte, 96)}, err: "nil inclusion list"},
 		{name: "short signature", signed: &ethpb.SignedInclusionList{Message: msg, Signature: make([]byte, 95)}, err: "signature length"},
+		{name: "validator index out of range", signed: sign(valIdx, unknownValidator, hezeDomain), err: "could not get validator"},
+		{name: "undecodable signature", signed: &ethpb.SignedInclusionList{Message: msg, Signature: undecodable}, err: "could not convert signature"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

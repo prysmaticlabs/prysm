@@ -123,14 +123,24 @@ func UnsafeEpochStart(epoch primitives.Epoch) primitives.Slot {
 	return es
 }
 
+// ShufflingLookaheadEpoch is the epoch of compute_shuffling_lookahead_start_slot:
+// saturating_sub(epoch, MIN_SEED_LOOKAHEAD).
+func ShufflingLookaheadEpoch(epoch primitives.Epoch) primitives.Epoch {
+	lookahead := params.BeaconConfig().MinSeedLookahead
+	if epoch <= lookahead {
+		return 0
+	}
+	return epoch - lookahead
+}
+
 // ShufflingDependentSlot is compute_shuffling_dependent_slot: the last slot whose
 // block can be the shuffling dependent root for epoch.
 func ShufflingDependentSlot(epoch primitives.Epoch) (primitives.Slot, error) {
-	lookahead := params.BeaconConfig().MinSeedLookahead
-	if epoch <= lookahead {
+	lookaheadEpoch := ShufflingLookaheadEpoch(epoch)
+	if lookaheadEpoch == 0 {
 		return 0, nil
 	}
-	start, err := EpochStart(epoch - lookahead)
+	start, err := EpochStart(lookaheadEpoch)
 	if err != nil {
 		return 0, err
 	}
