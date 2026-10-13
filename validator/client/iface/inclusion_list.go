@@ -15,3 +15,11 @@ type InclusionListDuty struct {
 	ValidatorIndex primitives.ValidatorIndex
 	Slot           primitives.Slot
 }
+
+// GetDependentRoot returns the dependent root, or nil for a nil response.
+func (r *InclusionListDutiesResponse) GetDependentRoot() []byte {
+	if r == nil {
+		return nil
+	}
+	return r.DependentRoot
+}
