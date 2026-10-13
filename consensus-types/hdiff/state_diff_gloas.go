@@ -50,7 +50,7 @@ func diffGloasFields(diff *stateDiff, source, target state.ReadOnlyBeaconState) 
 	feeRecipient := bid.FeeRecipient()
 	executionRequestsRoot := bid.ExecutionRequestsRoot()
 	if target.Version() >= version.Heze {
-		diff.latestExecutionPayloadBidHeze = hezeExecutionPayloadBid(bid)
+		diff.latestExecutionPayloadBidHeze = blocks.ExecutionPayloadBidHezeProto(bid, bid.InclusionListBits())
 	} else {
 		diff.latestExecutionPayloadBid = &ethpb.ExecutionPayloadBid{
 			ParentBlockHash:       parentBlockHash[:],

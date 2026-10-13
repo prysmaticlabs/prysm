@@ -5,18 +5,27 @@ package validator
 import (
 	"context"
 	"math"
+	"math/big"
 	"testing"
 
 	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	dbutil "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	mockExecution "github.com/OffchainLabs/prysm/v7/beacon-chain/execution/testing"
+	mockstategen "github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen/mock"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 func TestSetRemoteBidFallback(t *testing.T) {
@@ -200,4 +209,98 @@ func TestGloasPayloadValue(t *testing.T) {
 		got := vs.gloasPayloadValue(newBlockWithBid(primitives.Gwei(math.MaxUint64), 0), nil, false)
 		require.Equal(t, "18446744073709551615000000000", primitives.WeiToBigInt(got).String())
 	})
+}
+
+func TestBuildBlockGloas_EagerSelfBuild(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		hezeEpoch primitives.Epoch
+		version   int
+	}{
+		{name: "Gloas", hezeEpoch: params.BeaconConfig().FarFutureEpoch, version: version.Gloas},
+		{name: "Heze", hezeEpoch: 1, version: version.Heze},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.AltairForkEpoch, cfg.BellatrixForkEpoch, cfg.CapellaForkEpoch, cfg.DenebForkEpoch = 0, 0, 0, 0
+			cfg.ElectraForkEpoch, cfg.FuluForkEpoch, cfg.GloasForkEpoch, cfg.HezeForkEpoch = 0, 0, 0, tt.hezeEpoch
+			params.OverrideBeaconConfig(cfg)
+			helpers.ClearCache()
+			t.Cleanup(helpers.ClearCache)
+			// Other tests cache slot transitions of the same genesis state under other fork schedules.
+			transition.SkipSlotCache.Disable()
+			t.Cleanup(transition.SkipSlotCache.Enable)
+
+			// The genesis state is Gloas; with Heze at epoch 1, the slot transition into epoch 1 upgrades it.
+			genesis, _ := util.DeterministicGenesisStateGloas(t, 64)
+			stateRoot, err := genesis.HashTreeRoot(ctx)
+			require.NoError(t, err)
+			header := genesis.LatestBlockHeader()
+			header.StateRoot = stateRoot[:]
+			parentRoot, err := header.HashTreeRoot()
+			require.NoError(t, err)
+
+			db := dbutil.SetupDB(t)
+			require.NoError(t, db.SaveGenesisBlockRoot(ctx, parentRoot))
+			vs := getProposerServer(ctx, db, genesis, parentRoot[:])
+			stateGen := mockstategen.NewService()
+			stateGen.AddStateForRoot(genesis, parentRoot)
+			vs.StateGen = stateGen
+			vs.ExecutionPayloadEnvelopeCache = cache.NewExecutionPayloadEnvelopeCache()
+
+			slot := params.BeaconConfig().SlotsPerEpoch + 1
+			head, err := transition.ProcessSlots(ctx, genesis.Copy(), slot)
+			require.NoError(t, err)
+			require.Equal(t, tt.version, head.Version())
+			parentHash, err := head.LatestBlockHash()
+			require.NoError(t, err)
+			prevRandao, err := helpers.RandaoMix(head, slots.ToEpoch(slot))
+			require.NoError(t, err)
+			ed, err := consensusblocks.WrappedExecutionPayloadGloas(&enginev1.ExecutionPayloadGloas{
+				ParentHash:    parentHash[:],
+				FeeRecipient:  make([]byte, 20),
+				StateRoot:     make([]byte, 32),
+				ReceiptsRoot:  make([]byte, 32),
+				LogsBloom:     make([]byte, 256),
+				PrevRandao:    prevRandao,
+				BaseFeePerGas: make([]byte, 32),
+				BlockHash:     bytesutil.PadTo([]byte{'b'}, 32),
+				ExtraData:     make([]byte, 0),
+				SlotNumber:    slot,
+			})
+			require.NoError(t, err)
+			vs.ExecutionEngineCaller = &mockExecution.EngineClient{GetPayloadResponse: &consensusblocks.GetPayloadResponse{
+				ExecutionData:          ed,
+				Bid:                    big.NewInt(0),
+				BlobsBundler:           &enginev1.BlobsBundle{},
+				ExecutionRequestsGloas: &enginev1.ExecutionRequestsGloas{},
+			}}
+			vs.PayloadIDCache.Set(slot, parentRoot, false, primitives.PayloadID{1})
+
+			sBlk, err := getEmptyBlock(slot)
+			require.NoError(t, err)
+			require.Equal(t, tt.version, sBlk.Version())
+			sBlk.SetSlot(slot)
+			sBlk.SetParentRoot(parentRoot[:])
+			proposer, err := helpers.BeaconProposerIndexAtSlot(ctx, head, slot)
+			require.NoError(t, err)
+			sBlk.SetProposerIndex(proposer)
+
+			result, err := vs.buildBlockGloas(ctx, sBlk, head, true, false, true, nil)
+			require.NoError(t, err)
+			if tt.version == version.Gloas {
+				// The eager path bundles the envelope with the block.
+				contents := result.GetGloasContents()
+				require.NotNil(t, contents)
+				require.NotNil(t, contents.ExecutionPayloadEnvelope)
+				require.Equal(t, slot, contents.Block.Slot)
+				return
+			}
+			// A Heze block has no block contents type, so the eager path returns the bare block.
+			require.NotNil(t, result.GetHeze())
+			require.Equal(t, slot, result.GetHeze().Slot)
+		})
+	}
 }

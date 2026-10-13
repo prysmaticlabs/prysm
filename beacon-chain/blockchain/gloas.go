@@ -191,7 +191,8 @@ func (s *Service) getLatePayloadAttribute(ctx context.Context, st state.ReadOnly
 	parentGasLimit := helpers.ParentTargetGasLimit(st)
 
 	if st.Version() >= version.Heze {
-		return payloadAttributesHeze(uint64(t.Unix()), prevRando, feeRecipient[:], headRoot, withdrawals, slot, val.GasLimitOr(parentGasLimit))
+		ilTxs := s.proposalInclusionListTransactions(ctx, st, slot)
+		return payloadAttributesHeze(uint64(t.Unix()), prevRando, feeRecipient[:], headRoot, withdrawals, slot, val.GasLimitOr(parentGasLimit), ilTxs)
 	}
 	return payloadAttributesGloas(uint64(t.Unix()), prevRando, feeRecipient[:], headRoot, withdrawals, slot, val.GasLimitOr(parentGasLimit))
 }

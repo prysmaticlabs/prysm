@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
@@ -178,4 +180,108 @@ func TestVerifyInclusionListSignature(t *testing.T) {
 			require.ErrorContains(t, tt.err, err)
 		})
 	}
+}
+
+func TestProposalInclusionLists(t *testing.T) {
+	newView := func(t *testing.T, store *cache.InclusionListStore, slot primitives.Slot) *helpers.ProposalInclusionLists {
+		st, _ := util.DeterministicGenesisStateElectra(t, 16*uint64(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, st.SetSlot(slot))
+		view, err := helpers.NewProposalInclusionLists(t.Context(), nil, store, st, slot)
+		require.NoError(t, err)
+		return view
+	}
+
+	t.Run("no view without inclusion lists at slot - 1", func(t *testing.T) {
+		for _, tt := range []struct {
+			name      string
+			hezeEpoch primitives.Epoch
+			slot      primitives.Slot
+		}{
+			{name: "slot 0", hezeEpoch: 0, slot: 0},
+			{name: "before Heze", hezeEpoch: 5, slot: params.BeaconConfig().SlotsPerEpoch + 1},
+			// slot - 1 is the last Gloas slot.
+			{name: "first Heze slot", hezeEpoch: 2, slot: 2 * params.BeaconConfig().SlotsPerEpoch},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				setHezeForkEpoch(t, tt.hezeEpoch)
+				view := newView(t, cache.NewInclusionListStore(), tt.slot)
+				require.Equal(t, true, view == nil)
+				require.DeepEqual(t, [][]byte{}, view.Transactions())
+				bits, err := view.Bits(t.Context())
+				require.NoError(t, err)
+				require.DeepEqual(t, bitfield.NewBitvector16(), bits)
+				inclusive, err := view.IsBitsInclusive(t.Context(), bitfield.NewBitvector16())
+				require.NoError(t, err)
+				require.Equal(t, true, inclusive)
+			})
+		}
+	})
+
+	t.Run("lists of slot - 1 with only_timely=False", func(t *testing.T) {
+		setHezeForkEpoch(t, 0)
+		slot := 2*params.BeaconConfig().SlotsPerEpoch + 1
+		st, _ := util.DeterministicGenesisStateElectra(t, 16*uint64(params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, st.SetSlot(slot))
+		dependentRoot := [32]byte{'d'}
+		dependentSlot, err := slots.ShufflingDependentSlot(slots.ToEpoch(slot - 1))
+		require.NoError(t, err)
+		require.NoError(t, st.UpdateBlockRootAtIndex(uint64(dependentSlot%params.BeaconConfig().SlotsPerHistoricalRoot), dependentRoot))
+		committee, err := helpers.InclusionListCommittee(t.Context(), st, slot-1)
+		require.NoError(t, err)
+
+		store := cache.NewInclusionListStore()
+		for _, l := range []struct {
+			member int
+			root   [32]byte
+			timely bool
+		}{
+			{member: 0, root: dependentRoot, timely: true},
+			{member: 1, root: dependentRoot, timely: false},
+			{member: 2, root: [32]byte{'o'}, timely: true},
+		} {
+			txs, err := enginev1.NewProgressiveTransactionList([][]byte{{byte(l.member)}})
+			require.NoError(t, err)
+			il := &ethpb.InclusionList{Slot: slot - 1, ValidatorIndex: committee[l.member], DependentRoot: l.root[:], Transactions: txs}
+			store.Process(&ethpb.SignedInclusionList{Message: il, Signature: make([]byte, fieldparams.BLSSignatureLength)}, l.timely)
+		}
+		view, err := helpers.NewProposalInclusionLists(t.Context(), nil, store, st, slot)
+		require.NoError(t, err)
+		require.NotNil(t, view)
+
+		// The late list counts, and the list of another dependent root does not.
+		want := [][]byte{{0}, {1}}
+		if committee[1] < committee[0] {
+			want[0], want[1] = want[1], want[0]
+		}
+		require.DeepEqual(t, want, view.Transactions())
+
+		bits, err := view.Bits(t.Context())
+		require.NoError(t, err)
+		want01 := bitfield.NewBitvector16()
+		want01.SetBitAt(0, true)
+		want01.SetBitAt(1, true)
+		require.DeepEqual(t, want01, bits)
+
+		only0 := bitfield.NewBitvector16()
+		only0.SetBitAt(0, true)
+		extra := bitfield.NewBitvector16()
+		extra.SetBitAt(0, true)
+		extra.SetBitAt(1, true)
+		extra.SetBitAt(2, true)
+		for _, tt := range []struct {
+			name string
+			bits bitfield.Bitvector16
+			want bool
+		}{
+			{name: "same bits", bits: want01, want: true},
+			{name: "extra bits", bits: extra, want: true},
+			{name: "missing bit", bits: only0, want: false},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				inclusive, err := view.IsBitsInclusive(t.Context(), tt.bits)
+				require.NoError(t, err)
+				require.Equal(t, tt.want, inclusive)
+			})
+		}
+	})
 }

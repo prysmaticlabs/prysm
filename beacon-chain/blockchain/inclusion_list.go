@@ -7,6 +7,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -163,6 +164,16 @@ func (s *Service) inclusionListTransactions(blockRoot [32]byte, slot primitives.
 		return [][]byte{}
 	}
 	return txs
+}
+
+// proposalInclusionListTransactions returns the inclusion list transactions for the payload attributes of a proposal at slot.
+func (s *Service) proposalInclusionListTransactions(ctx context.Context, st state.ReadOnlyBeaconState, slot primitives.Slot) [][]byte {
+	ils, err := helpers.NewProposalInclusionLists(ctx, s.cfg.BeaconDB, s.cfg.InclusionListStore, st, slot)
+	if err != nil {
+		log.WithError(err).WithField("slot", slot).Error("Could not get the inclusion list dependent root for payload attributes")
+		return [][]byte{}
+	}
+	return ils.Transactions()
 }
 
 // recordForkchoiceInclusionListSatisfaction records the flag of a VALID forkchoice update for the optimistic Heze payload with blockHash, found from headRoot or its ancestors.

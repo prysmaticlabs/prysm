@@ -41,6 +41,13 @@ func (vs *Server) SubmitSignedExecutionPayloadBid(
 			"execution payload bids are not supported before Gloas fork (slot %d)", req.Message.Slot)
 	}
 
+	// TODO(heze): accept Heze bids. Peers reject a Gloas bid for a Heze slot.
+	// Revisit this when external builder submits Heze bids.
+	if slots.ToEpoch(req.Message.Slot) >= params.BeaconConfig().HezeForkEpoch {
+		return nil, status.Errorf(codes.InvalidArgument,
+			"Gloas execution payload bids are not valid at or after the Heze fork (slot %d)", req.Message.Slot)
+	}
+
 	if !features.Get().SubmitBlacklistedBuilderBids &&
 		vs.BuilderCircuitBreaker.Blacklisted(req.Message.BuilderIndex, slots.ToEpoch(req.Message.Slot)) {
 		return nil, status.Errorf(codes.FailedPrecondition, "builder %d is blacklisted by the circuit breaker", req.Message.BuilderIndex)

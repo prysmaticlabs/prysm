@@ -242,3 +242,28 @@ func (h executionPayloadBid) ExecutionRequestsRoot() [32]byte {
 func (h executionPayloadBid) InclusionListBits() bitfield.Bitvector16 {
 	return bytesutil.SafeCopyBytes(h.inclusionListBits)
 }
+
+// ExecutionPayloadBidHezeProto copies bid into a Heze bid protobuf with the given inclusion list bits.
+func ExecutionPayloadBidHezeProto(bid interfaces.ROExecutionPayloadBid, inclusionListBits bitfield.Bitvector16) *ethpb.ExecutionPayloadBidHeze {
+	parentBlockHash := bid.ParentBlockHash()
+	parentBlockRoot := bid.ParentBlockRoot()
+	blockHash := bid.BlockHash()
+	prevRandao := bid.PrevRandao()
+	feeRecipient := bid.FeeRecipient()
+	executionRequestsRoot := bid.ExecutionRequestsRoot()
+	return &ethpb.ExecutionPayloadBidHeze{
+		ParentBlockHash:       parentBlockHash[:],
+		ParentBlockRoot:       parentBlockRoot[:],
+		BlockHash:             blockHash[:],
+		PrevRandao:            prevRandao[:],
+		GasLimit:              bid.GasLimit(),
+		BuilderIndex:          bid.BuilderIndex(),
+		Slot:                  bid.Slot(),
+		Value:                 bid.Value(),
+		ExecutionPayment:      bid.ExecutionPayment(),
+		BlobKzgCommitments:    bid.BlobKzgCommitments(),
+		FeeRecipient:          feeRecipient[:],
+		ExecutionRequestsRoot: executionRequestsRoot[:],
+		InclusionListBits:     inclusionListBits,
+	}
+}
