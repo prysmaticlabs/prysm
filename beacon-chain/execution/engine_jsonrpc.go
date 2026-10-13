@@ -310,7 +310,7 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, nil, handleRPCError(err)
 		}
-	case version.Gloas, version.Heze:
+	case version.Gloas:
 		a, err := attrs.PbV4()
 		if err != nil {
 			return nil, nil, nil, err
