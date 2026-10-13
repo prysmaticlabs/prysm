@@ -1,6 +1,7 @@
 package payloadattribute
 
 import (
+	"github.com/OffchainLabs/go-bitfield"
 	field_params "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
@@ -147,4 +148,5 @@ type EventData struct {
 	Attributer         Attributer
 	HeadBlock          interfaces.ReadOnlySignedBeaconBlock
 	HeadRoot           [field_params.RootLength]byte
+	InclusionListBits  bitfield.Bitvector16 // Set from Heze
 }

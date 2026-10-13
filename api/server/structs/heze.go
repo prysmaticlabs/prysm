@@ -53,3 +53,47 @@ func (s *SignedBeaconBlockHeze) MessageRawJson() ([]byte, error) {
 func (s *SignedBeaconBlockHeze) SigString() string {
 	return s.Signature
 }
+
+// InclusionList is the Heze inclusion list.
+type InclusionList struct {
+	Slot           string   `json:"slot"`
+	ValidatorIndex string   `json:"validator_index"`
+	DependentRoot  string   `json:"dependent_root"`
+	Transactions   []string `json:"transactions"`
+}
+
+// SignedInclusionList is the Heze inclusion list with the signature of the committee member.
+type SignedInclusionList struct {
+	Message   *InclusionList `json:"message"`
+	Signature string         `json:"signature"`
+}
+
+// InclusionListDuty is one inclusion list committee assignment.
+type InclusionListDuty struct {
+	Pubkey         string `json:"pubkey"`
+	ValidatorIndex string `json:"validator_index"`
+	Slot           string `json:"slot"`
+}
+
+// GetInclusionListDutiesResponse is the response of the inclusion list committee duties endpoint.
+type GetInclusionListDutiesResponse struct {
+	DependentRoot       string               `json:"dependent_root"`
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
+	Data                []*InclusionListDuty `json:"data"`
+}
+
+// ProduceInclusionListResponse is the response of the produce inclusion list endpoint.
+type ProduceInclusionListResponse struct {
+	Data []string `json:"data"`
+}
+
+// PublishInclusionListRequest is the request body of the publish inclusion list endpoint.
+type PublishInclusionListRequest struct {
+	Data *SignedInclusionList `json:"data"`
+}
+
+// InclusionListEvent is the data of the inclusion_list event.
+type InclusionListEvent struct {
+	Version string               `json:"version"`
+	Data    *SignedInclusionList `json:"data"`
+}
