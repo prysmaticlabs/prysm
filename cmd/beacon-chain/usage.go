@@ -45,6 +45,11 @@ type flagGroup struct {
 	Flags []cli.Flag
 }
 
+// deprecatedFlags still work, but are expected to be removed in a future release.
+var deprecatedFlags = []cli.Flag{
+	features.DevModeFlag,
+}
+
 var appHelpFlagGroups = []flagGroup{
 	{ // Flags relevant to running the process.
 		Name: "cmd",
@@ -218,7 +223,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{ // Feature flags.
 		Name:  "features",
-		Flags: features.ActiveFlags(features.BeaconChainFlags),
+		Flags: features.WithoutFlags(features.ActiveFlags(features.BeaconChainFlags), deprecatedFlags),
 	},
 	{ // Flags required to configure the merge.
 		Name: "merge",
@@ -231,7 +236,7 @@ var appHelpFlagGroups = []flagGroup{
 	{ // The deprecated section represents beacon flags that still have use, but should not be used
 		// as they are expected to be deleted in a feature release.
 		Name:  "deprecated",
-		Flags: []cli.Flag{},
+		Flags: deprecatedFlags,
 	},
 	{ // Flags used in debugging Prysm. These are flags not usually run by end users.
 		Name: "debug",
