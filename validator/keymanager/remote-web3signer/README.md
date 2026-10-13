@@ -23,6 +23,16 @@ with hex keys
 with url
 - `--validators-external-signer-public-keys=https://web3signer.com/api/v1/eth2/publicKeys`
 
+### Prysm key file
+
+`--validators-external-signer-key-file=/path/to/keys.txt` loads one public key per line at startup and persists Keymanager API changes. Use one validator process per file. Manual edits made while the validator is running are ignored and can be overwritten by an API update. Restart the validator to load manual edits.
+
+For containers, mount the containing directory. Individual file bind mounts cannot be atomically replaced, and API updates will fail.
+
+Enable `--rpc` to use Prysm's Keymanager API without the Web UI. `--web` also enables the API. Import keys with `POST /eth/v1/remotekeys` and remove them with `DELETE /eth/v1/remotekeys`. Authenticate with the bearer token from `--keymanager-token-file`. These endpoints update Prysm's active public-key set; they do not import or delete private keys in Web3Signer.
+
+Startup combines file keys with keys supplied by `--validators-external-signer-public-keys`, including keys fetched from a URL. A key removed through the API returns after restart if the flag or URL still supplies it.
+
 ### API
 
 - Get Public keys: returns all public keys currently stored with web3signer excluding newly added keys if reload keys

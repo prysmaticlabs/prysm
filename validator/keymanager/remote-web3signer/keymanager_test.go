@@ -10,14 +10,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"slices"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v7/async/event"
-	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
@@ -49,7 +47,7 @@ func (mc *MockClient) GetPublicKeys(_ context.Context, _ string) ([]string, erro
 	return mc.PublicKeys, nil
 }
 
-func newWatchedKeymanager(t *testing.T, contents string) (*Keymanager, string, chan [][fieldparams.BLSPubkeyLength]byte) {
+func newFileKeymanager(t *testing.T, contents string) (*Keymanager, string, chan [][fieldparams.BLSPubkeyLength]byte) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
@@ -62,8 +60,6 @@ func newWatchedKeymanager(t *testing.T, contents string) (*Keymanager, string, c
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		KeyFilePath:           keyFilePath,
-		keyFileRemovalGrace:   500 * time.Millisecond,
-		keyFileReadRetryDelay: 10 * time.Millisecond,
 	})
 	require.NoError(t, err)
 
@@ -91,12 +87,12 @@ func requireAccountChange(t *testing.T, changes <-chan [][fieldparams.BLSPubkeyL
 	}
 }
 
-func requireNoAccountChange(t *testing.T, changes <-chan [][fieldparams.BLSPubkeyLength]byte, wait time.Duration) {
+func requireNoAccountChange(t *testing.T, changes <-chan [][fieldparams.BLSPubkeyLength]byte) {
 	t.Helper()
 	select {
 	case keys := <-changes:
 		t.Fatalf("unexpected additional account change: %#x", keys)
-	case <-time.After(wait):
+	default:
 	}
 }
 
@@ -170,7 +166,8 @@ func TestNewKeymanager(t *testing.T) {
 				KeyFilePath:           filepath.Join(t.TempDir(), "bad_keyfile.txt"),
 			},
 			fileContents: []string{"8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "not-a-key"},
-			wantErr:      "invalid public key",
+			want:         []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"},
+			wantLog:      "Invalid public key in remote signer key file",
 		},
 		{
 			name: "happy path key file",
@@ -198,9 +195,11 @@ func TestNewKeymanager(t *testing.T) {
 			args: &SetupConfig{
 				BaseEndpoint:          "http://prysm.xyz/",
 				GenesisValidatorsRoot: root,
+				KeyFilePath:           filepath.Join(t.TempDir(), "good_keyfile.txt"),
 				ProvidedPublicKeys:    []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"},
 			},
-			want: []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+			fileContents: []string{"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
+			want:         []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"},
 		},
 	}
 	for _, tt := range tests {
@@ -228,11 +227,14 @@ func TestNewKeymanager(t *testing.T) {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
 			}
+			require.NoError(t, err)
 			keys := make([]string, len(km.providedPublicKeys))
 			for i, key := range km.providedPublicKeys {
 				keys[i] = hexutil.Encode(key[:])
-				require.Equal(t, true, slices.Contains(tt.want, keys[i]))
 			}
+			slices.Sort(keys)
+			slices.Sort(tt.want)
+			require.DeepEqual(t, tt.want, keys)
 		})
 	}
 }
@@ -250,526 +252,268 @@ func TestNewKeyManager_fileMissing(t *testing.T) {
 	require.ErrorContains(t, "no file exists in remote signer key file path", err)
 }
 
-func TestNewKeyManager_ChangingFileCreated(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
-	bytesBuf := new(bytes.Buffer)
-	_, err := bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
-	require.NoError(t, err)
-	_, err = bytesBuf.WriteString("\n")
-	require.NoError(t, err)
-	_, err = bytesBuf.WriteString("0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be")
-	require.NoError(t, err)
-	_, err = bytesBuf.WriteString("\n")
-	require.NoError(t, err)
-	err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
-	require.NoError(t, err)
-
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		KeyFilePath:           keyFilePath,
-		ProvidedPublicKeys:    []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6"},
-	})
-	require.NoError(t, err)
-	wantSlice := []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6", "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", "0x800057e262bfe42413c2cfce948ff77f11efeea19721f590c8b5b2f32fecb0e164cafba987c80465878408d05b97c9be"}
-	keys := make([]string, len(km.providedPublicKeys))
-	require.Equal(t, 3, len(km.providedPublicKeys))
-	for i, key := range km.providedPublicKeys {
-		keys[i] = hexutil.Encode(key[:])
-		require.Equal(t, slices.Contains(wantSlice, keys[i]), true)
-	}
-	pubKeysChan := make(chan [][fieldparams.BLSPubkeyLength]byte)
-	sub := km.SubscribeAccountChanges(pubKeysChan)
-	defer sub.Unsubscribe()
-
-	// Open the file for writing, create it if it does not exist, and truncate it if it does.
-	f, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	require.NoError(t, err)
-
-	// Write the buffer's contents to the file.
-	_, err = f.WriteString("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055")
-	require.NoError(t, err)
-	require.NoError(t, f.Sync())
-	require.NoError(t, f.Close())
-
-	ks, _, err := km.readKeyFile()
-	require.NoError(t, err)
-	require.Equal(t, 1, len(ks))
-	require.Equal(t, "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055", hexutil.Encode(ks[0][:]))
-
-	timer := time.NewTimer(5 * time.Second)
-	defer timer.Stop()
-	for {
-		select {
-		case updatedKeys := <-pubKeysChan:
-			if len(updatedKeys) == 1 && hexutil.Encode(updatedKeys[0][:]) == "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055" {
-				return
-			}
-		case <-timer.C:
-			t.Fatal("timed out waiting for the key file update")
-		}
-	}
-}
-
-func TestKeymanager_FileChangeNotifications(t *testing.T) {
+func TestKeymanager_KeyFileChangesApplyOnRestart(t *testing.T) {
 	const (
-		debounce = 50 * time.Millisecond
-		keyA     = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
-		keyB     = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
+		keyA = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
+		keyB = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
 	)
-	resetFeatures := features.InitWithReset(&features.Flags{KeystoreImportDebounceInterval: debounce})
-	defer resetFeatures()
 
-	t.Run("same count with different keys", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\n")))
-
-		requireAccountChange(t, changes, keyB)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("semantic no-op", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n"+keyB+"\n")
-		contents := strings.TrimPrefix(keyB, "0x") + "\n\n" + keyA + "\n" + keyA + "\n"
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(contents)))
-
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("editor write burst", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		f, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_TRUNC, 0600)
-		require.NoError(t, err)
-		midpoint := len(keyB) / 2
-		_, err = f.WriteString(keyB[:midpoint])
-		require.NoError(t, err)
-		require.NoError(t, f.Sync())
-		time.Sleep(debounce / 4)
-		_, err = f.WriteString(keyB[midpoint:] + "\n")
-		require.NoError(t, err)
-		require.NoError(t, f.Sync())
-		require.NoError(t, f.Close())
-
-		requireAccountChange(t, changes, keyB)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("atomic replacement keeps watcher", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		tmp, err := os.CreateTemp(filepath.Dir(keyFilePath), ".keyfile-swap-*")
-		require.NoError(t, err)
-		tmpPath := tmp.Name()
-		defer func() { _ = os.Remove(tmpPath) }()
-		_, err = tmp.WriteString(keyB + "\n")
-		require.NoError(t, err)
-		require.NoError(t, tmp.Sync())
-		require.NoError(t, tmp.Close())
-		require.NoError(t, os.Rename(tmpPath, keyFilePath))
-
-		requireAccountChange(t, changes, keyB)
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(keyA+"\n")))
-		requireAccountChange(t, changes, keyA)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("remove and recreate within grace emits only final state", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		require.NoError(t, os.Remove(keyFilePath))
-		requireNoAccountChange(t, changes, 2*debounce)
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\n")))
-		requireAccountChange(t, changes, keyB)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("sustained removal applies fallback once", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		require.NoError(t, os.Remove(keyFilePath))
-
-		requireAccountChange(t, changes)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("truncate and rewrite within grace emits only final state", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		require.NoError(t, os.Truncate(keyFilePath, 0))
-		requireNoAccountChange(t, changes, 2*debounce)
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\n")))
-
-		requireAccountChange(t, changes, keyB)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("sustained empty file falls back to flag keys once", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		require.NoError(t, file.WriteFile(keyFilePath, []byte("\n")))
-
-		requireAccountChange(t, changes)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("malformed replacement retains last valid keys", func(t *testing.T) {
-		_, keyFilePath, changes := newWatchedKeymanager(t, keyA+"\n")
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\ninvalid\n")))
-		requireNoAccountChange(t, changes, 6*debounce)
-
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\n")))
-		requireAccountChange(t, changes, keyB)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("API write watcher echo is suppressed", func(t *testing.T) {
-		km, _, changes := newWatchedKeymanager(t, "")
-		statuses, err := km.AddPublicKeys([]string{keyA})
-		require.NoError(t, err)
-		require.Equal(t, keymanager.StatusImported, statuses[0].Status)
-		requireAccountChange(t, changes, keyA)
-		requireNoAccountChange(t, changes, 4*debounce)
-
-		statuses, err = km.DeletePublicKeys([]string{keyA})
-		require.NoError(t, err)
-		require.Equal(t, keymanager.StatusDeleted, statuses[0].Status)
-		requireAccountChange(t, changes)
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
-
-	t.Run("concurrent API writes are serialized", func(t *testing.T) {
-		km, _, changes := newWatchedKeymanager(t, "")
-		results := make(chan error, 2)
-		var wg sync.WaitGroup
-		for _, key := range []string{keyA, keyB} {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				statuses, err := km.AddPublicKeys([]string{key})
-				if err == nil && statuses[0].Status != keymanager.StatusImported {
-					err = fmt.Errorf("unexpected import status: %s", statuses[0].Status)
-				}
-				results <- err
-			}()
-		}
-		wg.Wait()
-		close(results)
-		for err := range results {
-			require.NoError(t, err)
-		}
-
-		for _, wantCount := range []int{1, 2} {
-			select {
-			case keys := <-changes:
-				require.Equal(t, wantCount, len(keys))
-			case <-time.After(5 * time.Second):
-				t.Fatal("timed out waiting for serialized API account change")
+	tests := []struct {
+		name   string
+		change func(string) error
+	}{
+		{"replace", func(path string) error {
+			if err := os.WriteFile(path+".tmp", []byte(keyB+"\n"), 0600); err != nil {
+				return err
 			}
-		}
-		keys, err := km.FetchValidatingPublicKeys(t.Context())
-		require.NoError(t, err)
-		require.Equal(t, 2, len(keys))
-		requireNoAccountChange(t, changes, 4*debounce)
-	})
+			return os.Rename(path+".tmp", path)
+		}},
+		{"truncate", func(path string) error { return os.Truncate(path, 0) }},
+		{"remove", os.Remove},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			km, keyFilePath, changes := newFileKeymanager(t, keyA+"\n")
+			require.NoError(t, tt.change(keyFilePath))
+			requireNoAccountChange(t, changes)
+			keys, err := km.FetchValidatingPublicKeys(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, 1, len(keys))
+			require.Equal(t, keyA, hexutil.Encode(keys[0][:]))
 
-	t.Run("symlinked key file tracks target across API and external writes", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(t.Context())
-		t.Cleanup(cancel)
-		dirA := t.TempDir()
-		dirB := t.TempDir()
-		target := filepath.Join(dirB, "real.txt")
-		link := filepath.Join(dirA, "keyfile.txt")
-		require.NoError(t, file.WriteFile(target, []byte(keyA+"\n")))
-		require.NoError(t, os.Symlink(target, link))
-
-		root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-		require.NoError(t, err)
-		km, err := NewKeymanager(ctx, &SetupConfig{
-			BaseEndpoint:          "http://example.com",
-			GenesisValidatorsRoot: root,
-			KeyFilePath:           link,
-			keyFileRemovalGrace:   200 * time.Millisecond,
-			keyFileReadRetryDelay: 10 * time.Millisecond,
+			require.NoError(t, os.WriteFile(keyFilePath, []byte(keyB+"\n"), 0600))
+			restarted, err := NewKeymanager(t.Context(), &SetupConfig{
+				BaseEndpoint:          "http://example.com",
+				GenesisValidatorsRoot: km.genesisValidatorsRoot,
+				KeyFilePath:           keyFilePath,
+			})
+			require.NoError(t, err)
+			keys, err = restarted.FetchValidatingPublicKeys(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, 1, len(keys))
+			require.Equal(t, keyB, hexutil.Encode(keys[0][:]))
 		})
-		require.NoError(t, err)
-		changes := make(chan [][fieldparams.BLSPubkeyLength]byte, 10)
-		sub := km.SubscribeAccountChanges(changes)
-		t.Cleanup(sub.Unsubscribe)
-
-		// API save must write through the symlink and suppress its own watcher echo.
-		_, err = km.AddPublicKeys([]string{keyB})
-		require.NoError(t, err)
-		requireAccountChange(t, changes, keyA, keyB)
-		info, err := os.Lstat(link)
-		require.NoError(t, err)
-		require.Equal(t, true, info.Mode()&os.ModeSymlink != 0)
-		requireNoAccountChange(t, changes, 6*debounce)
-
-		require.NoError(t, file.WriteFile(target, []byte(keyB+"\n")))
-		requireAccountChange(t, changes, keyB)
-		requireNoAccountChange(t, changes, 4*debounce)
-
-		require.NoError(t, os.WriteFile(link, []byte(keyA+"\n"), 0o600))
-		requireAccountChange(t, changes, keyA)
-		requireNoAccountChange(t, changes, 4*debounce)
-
-		for _, d := range []string{dirA, dirB} {
-			m, err := filepath.Glob(filepath.Join(d, ".*tmp*"))
-			require.NoError(t, err)
-			require.Equal(t, 0, len(m))
-		}
-	})
+	}
 }
 
-func TestKeymanager_DeleteAllFileKeysDoesNotFallback(t *testing.T) {
+func TestKeymanager_APIAccountNotifications(t *testing.T) {
 	const (
-		debounce = 20 * time.Millisecond
-		keyA     = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
+		keyA = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
+		keyB = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
 	)
-	resetFeatures := features.InitWithReset(&features.Flags{KeystoreImportDebounceInterval: debounce})
-	defer resetFeatures()
+	tests := []struct {
+		changed  bool
+		delete   bool
+		status   keymanager.KeyStatusType
+		name     string
+		contents string
+		key      string
+		want     []string
+	}{
+		{true, false, keymanager.StatusImported, "import", "", keyA, []string{keyA}},
+		{false, false, keymanager.StatusDuplicate, "duplicate", keyA + "\n", keyA, nil},
+		{true, false, keymanager.StatusImported, "second import", keyA + "\n", keyB, []string{keyA, keyB}},
+		{true, true, keymanager.StatusDeleted, "delete", keyA + "\n" + keyB + "\n", keyA, []string{keyB}},
+		{false, true, keymanager.StatusNotFound, "missing", keyB + "\n", keyA, nil},
+		{true, true, keymanager.StatusDeleted, "delete last", keyB + "\n", keyB, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			km, _, changes := newFileKeymanager(t, tt.contents)
+			apply := km.AddPublicKeys
+			if tt.delete {
+				apply = km.DeletePublicKeys
+			}
+			statuses, err := apply([]string{tt.key})
+			require.NoError(t, err)
+			require.Equal(t, 1, len(statuses))
+			require.Equal(t, tt.status, statuses[0].Status)
+			if tt.changed {
+				requireAccountChange(t, changes, tt.want...)
+			}
+			requireNoAccountChange(t, changes)
+		})
+	}
+}
 
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
-	require.NoError(t, file.WriteFile(keyFilePath, []byte(keyA+"\n")))
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
+func TestKeymanager_ConcurrentAPIWritesPersist(t *testing.T) {
+	const (
+		keyA = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
+		keyB = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
+	)
+	km, keyFilePath, changes := newFileKeymanager(t, "")
+	results := make(chan error, 2)
+	var wg sync.WaitGroup
+	for _, key := range []string{keyA, keyB} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			statuses, err := km.AddPublicKeys([]string{key})
+			if err == nil && (len(statuses) != 1 || statuses[0].Status != keymanager.StatusImported) {
+				err = fmt.Errorf("unexpected import statuses: %v", statuses)
+			}
+			results <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+	for err := range results {
+		require.NoError(t, err)
+	}
+	select {
+	case keys := <-changes:
+		require.Equal(t, 1, len(keys))
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for first import")
+	}
+	requireAccountChange(t, changes, keyA, keyB)
+	requireNoAccountChange(t, changes)
+	restarted, err := NewKeymanager(t.Context(), &SetupConfig{
 		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
+		GenesisValidatorsRoot: km.genesisValidatorsRoot,
 		KeyFilePath:           keyFilePath,
-		ProvidedPublicKeys:    []string{keyA},
-		keyFileRemovalGrace:   100 * time.Millisecond,
-		keyFileReadRetryDelay: 10 * time.Millisecond,
-		keyFileReconcileEvery: time.Hour,
 	})
 	require.NoError(t, err)
-	changes := make(chan [][fieldparams.BLSPubkeyLength]byte, 10)
-	sub := km.SubscribeAccountChanges(changes)
-	defer sub.Unsubscribe()
+	keys, err := restarted.FetchValidatingPublicKeys(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, 2, len(keys))
+	got := []string{hexutil.Encode(keys[0][:]), hexutil.Encode(keys[1][:])}
+	slices.Sort(got)
+	want := []string{keyA, keyB}
+	slices.Sort(want)
+	require.DeepEqual(t, want, got)
+}
 
-	statuses, err := km.DeletePublicKeys([]string{keyA})
+func TestKeymanager_DeleteAllFileKeysPersists(t *testing.T) {
+	const key = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
+	km, keyFilePath, changes := newFileKeymanager(t, key+"\n")
+	statuses, err := km.DeletePublicKeys([]string{key})
 	require.NoError(t, err)
 	require.Equal(t, keymanager.StatusDeleted, statuses[0].Status)
 	requireAccountChange(t, changes)
-	requireNoAccountChange(t, changes, 250*time.Millisecond)
-
-	keys, err := km.FetchValidatingPublicKeys(t.Context())
+	requireNoAccountChange(t, changes)
+	contents, err := os.ReadFile(keyFilePath)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(contents))
+	restarted, err := NewKeymanager(t.Context(), &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: km.genesisValidatorsRoot,
+		KeyFilePath:           keyFilePath,
+	})
+	require.NoError(t, err)
+	keys, err := restarted.FetchValidatingPublicKeys(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, 0, len(keys))
 }
 
-func TestKeymanager_WatcherInitializationEmptyFileUsesGrace(t *testing.T) {
-	const (
-		debounce = 20 * time.Millisecond
-		keyA     = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
-		keyB     = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
-	)
-	resetFeatures := features.InitWithReset(&features.Flags{KeystoreImportDebounceInterval: debounce})
-	defer resetFeatures()
-
-	keyABytes, err := hexutil.Decode(keyA)
-	require.NoError(t, err)
-	keyBBytes, err := hexutil.Decode(keyB)
-	require.NoError(t, err)
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
-	require.NoError(t, file.WriteFile(keyFilePath, nil))
-	km := &Keymanager{
-		providedPublicKeys:    [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(keyABytes)},
-		flagLoadedKeysMap:     map[string][48]byte{keyB: bytesutil.ToBytes48(keyBBytes)},
-		accountsChangedFeed:   new(event.Feed),
-		retriesRemaining:      maxRetries,
-		keyFilePath:           keyFilePath,
-		keyFileRemovalGrace:   400 * time.Millisecond,
-		keyFileReadRetryDelay: 10 * time.Millisecond,
-		keyFileReconcileEvery: time.Hour,
+func TestKeymanager_PersistenceErrors(t *testing.T) {
+	keyA := hexutil.Encode(bytes.Repeat([]byte{0x11}, fieldparams.BLSPubkeyLength))
+	keyB := hexutil.Encode(bytes.Repeat([]byte{0x22}, fieldparams.BLSPubkeyLength))
+	tests := []struct {
+		name      string
+		want      []string
+		delete    bool
+		committed bool
+	}{
+		{"add before rename", []string{keyA}, false, false},
+		{"delete before rename", []string{keyA}, true, false},
+		{"add after rename", []string{keyA, keyB}, false, true},
+		{"delete after rename", []string{}, true, true},
 	}
-	changes := make(chan [][fieldparams.BLSPubkeyLength]byte, 10)
-	sub := km.SubscribeAccountChanges(changes)
-	defer sub.Unsubscribe()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	result := make(chan error, 1)
-	ready := make(chan error, 1)
-	go func() {
-		result <- km.refreshRemoteKeysFromFileChanges(ctx, func(err error) { ready <- err })
-	}()
-	select {
-	case err := <-ready:
-		require.NoError(t, err)
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for watcher initialization")
-	}
-
-	// Initialization must retain the last-valid key set. The empty file is applied only after grace.
-	requireNoAccountChange(t, changes, 75*time.Millisecond)
-	keys, err := km.FetchValidatingPublicKeys(t.Context())
-	require.NoError(t, err)
-	require.Equal(t, keyA, hexutil.Encode(keys[0][:]))
-	requireAccountChange(t, changes, keyB)
-
-	cancel()
-	select {
-	case err := <-result:
-		require.NoError(t, err)
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out stopping watcher")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.committed && (runtime.GOOS == "windows" || os.Geteuid() == 0) {
+				t.Skip("requires Unix directory permission enforcement")
+			}
+			km, keyFilePath, changes := newFileKeymanager(t, keyA+"\n")
+			dir := filepath.Dir(keyFilePath)
+			if tt.committed {
+				t.Cleanup(func() { require.NoError(t, os.Chmod(dir, 0700)) })
+				require.NoError(t, os.Chmod(dir, 0300))
+			} else {
+				require.NoError(t, os.RemoveAll(dir))
+			}
+			apply, key := km.AddPublicKeys, keyB
+			if tt.delete {
+				apply, key = km.DeletePublicKeys, keyA
+			}
+			_, err := apply([]string{key})
+			require.ErrorContains(t, "persist remote signer key file", err)
+			keys, err := km.FetchValidatingPublicKeys(t.Context())
+			require.NoError(t, err)
+			got := make([]string, len(keys))
+			for i, key := range keys {
+				got[i] = hexutil.Encode(key[:])
+			}
+			require.DeepEqual(t, tt.want, got)
+			if tt.committed {
+				requireAccountChange(t, changes, tt.want...)
+				persisted, _, err := km.readKeyFile()
+				require.NoError(t, err)
+				require.DeepEqual(t, keys, persisted)
+			}
+			requireNoAccountChange(t, changes)
+		})
 	}
 }
 
-func TestKeymanager_PeriodicReconcileIsNotDebounced(t *testing.T) {
+func TestKeymanager_APIPersistenceFollowsSymlink(t *testing.T) {
 	const (
 		keyA = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
 		keyB = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
 	)
-	resetFeatures := features.InitWithReset(&features.Flags{KeystoreImportDebounceInterval: time.Hour})
-	defer resetFeatures()
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
-	require.NoError(t, file.WriteFile(keyFilePath, []byte(keyA+"\n")))
+	target := filepath.Join(t.TempDir(), "target.txt")
+	link := filepath.Join(t.TempDir(), "keys.txt")
+	require.NoError(t, file.WriteFile(target, []byte(keyA+"\n")))
+	require.NoError(t, os.Symlink(target, link))
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
+	km, err := NewKeymanager(t.Context(), &SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		KeyFilePath:           keyFilePath,
-		keyFileRemovalGrace:   100 * time.Millisecond,
-		keyFileReadRetryDelay: 10 * time.Millisecond,
-		keyFileReconcileEvery: 20 * time.Millisecond,
+		KeyFilePath:           link,
 	})
 	require.NoError(t, err)
-	changes := make(chan [][fieldparams.BLSPubkeyLength]byte, 10)
-	sub := km.SubscribeAccountChanges(changes)
-	defer sub.Unsubscribe()
-
-	require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\n")))
-	requireAccountChange(t, changes, keyB)
-}
-
-func TestKeymanager_ReconcileRetriesWithoutFileEvent(t *testing.T) {
-	const (
-		keyA = "0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"
-		keyB = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
-	)
-	keyABytes, err := hexutil.Decode(keyA)
-	require.NoError(t, err)
-	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
-	require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\ninvalid\n")))
-	km := &Keymanager{
-		providedPublicKeys:    [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(keyABytes)},
-		accountsChangedFeed:   new(event.Feed),
-		keyFilePath:           keyFilePath,
-		keyFileRemovalGrace:   100 * time.Millisecond,
-		keyFileReadRetryDelay: 20 * time.Millisecond,
-	}
 	changes := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	sub := km.SubscribeAccountChanges(changes)
 	defer sub.Unsubscribe()
-
-	done := make(chan struct{})
-	go func() {
-		km.reconcileRemoteKeysFile(t.Context())
-		close(done)
-	}()
-	time.Sleep(25 * time.Millisecond)
-	require.NoError(t, file.WriteFile(keyFilePath, []byte(keyB+"\n")))
-	requireAccountChange(t, changes, keyB)
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for remote key file retry")
-	}
+	statuses, err := km.AddPublicKeys([]string{keyB})
+	require.NoError(t, err)
+	require.Equal(t, keymanager.StatusImported, statuses[0].Status)
+	requireAccountChange(t, changes, keyA, keyB)
+	requireNoAccountChange(t, changes)
+	info, err := os.Lstat(link)
+	require.NoError(t, err)
+	require.Equal(t, true, info.Mode()&os.ModeSymlink != 0)
+	contents, err := os.ReadFile(target)
+	require.NoError(t, err)
+	require.Equal(t, keyB+"\n"+keyA+"\n", string(contents))
 }
 
 func TestNewKeyManager_FileAndFlagsWithDifferentKeys(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	logHook := logTest.NewGlobal()
+	const (
+		fileKey = "0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"
+		flagKey = "0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6"
+	)
 	keyFilePath := filepath.Join(t.TempDir(), "keyfile.txt")
-	bytesBuf := new(bytes.Buffer)
-	_, err := bytesBuf.WriteString("8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055") // test without 0x
-	require.NoError(t, err)
-	err = file.WriteFile(keyFilePath, bytesBuf.Bytes())
-	require.NoError(t, err)
-
+	require.NoError(t, file.WriteFile(keyFilePath, []byte(fileKey+"\n")))
 	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
 	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
+	km, err := NewKeymanager(t.Context(), &SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		KeyFilePath:           keyFilePath,
-		ProvidedPublicKeys:    []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6"},
-		keyFileRemovalGrace:   100 * time.Millisecond,
+		ProvidedPublicKeys:    []string{flagKey},
 	})
 	require.NoError(t, err)
-	wantSlice := []string{"0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6",
-		"0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055"}
-	// provided public keys are saved to the file
-	keys, _, err := km.readKeyFile()
+	keys, err := km.FetchValidatingPublicKeys(t.Context())
 	require.NoError(t, err)
-	for _, key := range keys {
-		require.Equal(t, slices.Contains(wantSlice, hexutil.Encode(key[:])), true)
-	}
-	// wait for reading to be done
-	time.Sleep(2 * time.Second)
-	// test fall back by clearing file
-	go func() {
-		require.NoError(t, file.WriteFile(keyFilePath, []byte(" ")))
-	}()
-	// waiting for writing to be done
-	time.Sleep(2 * time.Second)
-	require.LogsContain(t, logHook, "Remote signer key file no longer has keys, defaulting to flag provided keys")
-
-	// fall back to flag provided keys
-	keys, err = km.FetchValidatingPublicKeys(context.TODO())
+	fileKeys, _, err := km.readKeyFile()
 	require.NoError(t, err)
-	require.Equal(t, 1, len(keys))
-	require.Equal(t, "0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6", hexutil.Encode(keys[0][:]))
-}
-
-func TestRefreshRemoteKeysFromFileChangesWithRetry_failsFastBeforeInitialized(t *testing.T) {
-	ctx := t.Context()
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-	})
-	require.NoError(t, err)
-	km.keyFilePath = filepath.Join(t.TempDir(), "missing-dir", "missing.txt")
-
-	// The hour-long retry delay would hang the test if the first failure did not
-	// return immediately.
-	err = km.refreshRemoteKeysFromFileChangesWithRetry(ctx, time.Hour, func(error) {})
-	require.ErrorContains(t, "could not add remote signer key file watcher", err)
-	require.Equal(t, maxRetries, km.retriesRemaining)
-}
-
-// startFailingWatcher starts the retry helper on a valid key file, waits for the
-// watcher to initialize, then removes the file so every subsequent refresh fails.
-func startFailingWatcher(t *testing.T, ctx context.Context, km *Keymanager, keyFilePath string, retryDelay time.Duration) chan error {
-	t.Helper()
-	require.NoError(t, file.WriteFile(keyFilePath, []byte("0x8000a9a6d3f5e22d783eefaadbcf0298146adb5d95b04db910a0d4e16976b30229d0b1e7b9cda6c7e0bfa11f72efe055\n")))
-	km.keyFilePath = keyFilePath
-
-	ready := make(chan struct{})
-	result := make(chan error, 1)
-	go func() {
-		var readyOnce sync.Once
-		result <- km.refreshRemoteKeysFromFileChangesWithRetry(ctx, retryDelay, func(error) {
-			readyOnce.Do(func() { close(ready) })
-		})
-	}()
-	select {
-	case <-ready:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timed out waiting for the watcher to initialize")
-	}
-	require.NoError(t, os.RemoveAll(filepath.Dir(keyFilePath)))
-	return result
+	require.DeepEqual(t, keys, fileKeys)
+	require.Equal(t, 2, len(keys))
+	require.Equal(t, flagKey, hexutil.Encode(keys[0][:]))
+	require.Equal(t, fileKey, hexutil.Encode(keys[1][:]))
 }
 
 func TestReadKeyFile_PathMissing(t *testing.T) {
@@ -784,66 +528,6 @@ func TestReadKeyFile_PathMissing(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = km.readKeyFile()
 	require.ErrorContains(t, "no key file path provided", err)
-}
-
-func TestRefreshRemoteKeysFromFileChangesWithRetry_maxRetryReached(t *testing.T) {
-	ctx := t.Context()
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-	})
-	require.NoError(t, err)
-
-	result := startFailingWatcher(t, ctx, km, filepath.Join(t.TempDir(), "keyfile.txt"), time.Millisecond)
-	select {
-	case err := <-result:
-		require.ErrorContains(t, "file check retries remaining exceeded", err)
-	case <-time.After(30 * time.Second):
-		t.Fatal("timed out waiting for retries to be exhausted")
-	}
-}
-
-func TestRefreshRemoteKeysFromFileChangesWithRetry_ctxCancelDuringRetryWait(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	logHook := logTest.NewGlobal()
-	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
-	require.NoError(t, err)
-	km, err := NewKeymanager(ctx, &SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-	})
-	require.NoError(t, err)
-
-	// The hour-long retry delay would hang the test if cancellation did not
-	// interrupt the wait.
-	result := startFailingWatcher(t, ctx, km, filepath.Join(t.TempDir(), "keyfile.txt"), time.Hour)
-	// Wait until the helper reaches the retry wait before cancelling.
-	deadline := time.Now().Add(5 * time.Second)
-	for !logsContain(logHook, "Could not refresh keys") {
-		if time.Now().After(deadline) {
-			t.Fatal("timed out waiting for the retry warning")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	cancel()
-	select {
-	case err := <-result:
-		require.ErrorContains(t, context.Canceled.Error(), err)
-	case <-time.After(5 * time.Second):
-		t.Fatal("cancellation did not interrupt the retry wait")
-	}
-}
-
-func logsContain(hook *logTest.Hook, substr string) bool {
-	for _, entry := range hook.AllEntries() {
-		if strings.Contains(entry.Message, substr) {
-			return true
-		}
-	}
-	return false
 }
 
 func TestKeymanager_Sign(t *testing.T) {

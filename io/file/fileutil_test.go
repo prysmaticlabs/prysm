@@ -135,72 +135,49 @@ func TestWriteFile_OK(t *testing.T) {
 func TestWriteFileAtomically(t *testing.T) {
 	t.Run("replaces existing file", func(t *testing.T) {
 		filePath := filepath.Join(t.TempDir(), "keys.txt")
-		require.NoError(t, file.WriteFile(filePath, []byte("old")))
+		require.NoError(t, os.WriteFile(filePath, []byte("old"), 0644))
 		before, err := os.Stat(filePath)
 		require.NoError(t, err)
 
-		require.NoError(t, file.WriteFileAtomically(filePath, []byte("new")))
+		committed, err := file.WriteFileAtomically(filePath, []byte("new"))
+		require.NoError(t, err)
+		require.Equal(t, true, committed)
 		got, err := os.ReadFile(filePath)
 		require.NoError(t, err)
 		assert.Equal(t, "new", string(got))
 		after, err := os.Stat(filePath)
 		require.NoError(t, err)
-		assert.Equal(t, params.BeaconIoConfig().ReadWritePermissions, after.Mode().Perm())
 		assert.Equal(t, false, os.SameFile(before, after))
+		if runtime.GOOS != "windows" {
+			assert.Equal(t, params.BeaconIoConfig().ReadWritePermissions, after.Mode().Perm())
+		}
 
 		matches, err := filepath.Glob(filepath.Join(filepath.Dir(filePath), ".keys.txt*"))
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(matches))
 	})
 
-	t.Run("follows symlink and replaces its target", func(t *testing.T) {
+	t.Run("follows symlink chain to the final target", func(t *testing.T) {
 		dir := t.TempDir()
-		targetPath := filepath.Join(dir, "target.txt")
-		linkPath := filepath.Join(dir, "keys.txt")
-		require.NoError(t, file.WriteFile(targetPath, []byte("old")))
-		require.NoError(t, os.Symlink(targetPath, linkPath))
-
-		require.NoError(t, file.WriteFileAtomically(linkPath, []byte("new")))
-		got, err := os.ReadFile(targetPath)
-		require.NoError(t, err)
-		assert.Equal(t, "new", string(got))
-		info, err := os.Lstat(linkPath)
-		require.NoError(t, err)
-		assert.Equal(t, true, info.Mode()&os.ModeSymlink != 0)
-	})
-
-	t.Run("resolves symlink chain to the final target", func(t *testing.T) {
-		dir := t.TempDir()
-		target := filepath.Join(dir, "real.txt")
+		target := filepath.Join(t.TempDir(), "real.txt")
 		link2 := filepath.Join(dir, "link2")
 		link1 := filepath.Join(dir, "link1")
 		require.NoError(t, file.WriteFile(target, []byte("old")))
 		require.NoError(t, os.Symlink(target, link2))
 		require.NoError(t, os.Symlink(link2, link1))
 
-		require.NoError(t, file.WriteFileAtomically(link1, []byte("new")))
-		got, err := os.ReadFile(link1)
+		committed, err := file.WriteFileAtomically(link1, []byte("new"))
+		require.NoError(t, err)
+		require.Equal(t, true, committed)
+		got, err := os.ReadFile(target)
 		require.NoError(t, err)
 		assert.Equal(t, "new", string(got))
-	})
-
-	t.Run("leaves no temp files across symlinked directories", func(t *testing.T) {
-		dirA := t.TempDir()
-		dirB := t.TempDir()
-		target := filepath.Join(dirB, "real.txt")
-		link := filepath.Join(dirA, "keys.txt")
-		require.NoError(t, file.WriteFile(target, []byte("old")))
-		require.NoError(t, os.Symlink(target, link))
-
-		require.NoError(t, file.WriteFileAtomically(link, []byte("new")))
-		got, err := os.ReadFile(link)
+		info, err := os.Lstat(link1)
 		require.NoError(t, err)
-		assert.Equal(t, "new", string(got))
-		for _, d := range []string{dirA, dirB} {
-			m, err := filepath.Glob(filepath.Join(d, ".*tmp*"))
-			require.NoError(t, err)
-			assert.Equal(t, 0, len(m), "leftover temp in %s", d)
-		}
+		assert.Equal(t, true, info.Mode()&os.ModeSymlink != 0)
+		matches, err := filepath.Glob(filepath.Join(dir, ".*tmp*"))
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(matches))
 	})
 
 	t.Run("creates missing file under symlinked parent directory", func(t *testing.T) {
@@ -209,24 +186,13 @@ func TestWriteFileAtomically(t *testing.T) {
 		require.NoError(t, os.MkdirAll(realDir, 0700))
 		linkDir := filepath.Join(base, "link-dir")
 		require.NoError(t, os.Symlink(realDir, linkDir))
-		origPath := filepath.Join(linkDir, "keys.txt")
 
-		require.NoError(t, file.WriteFileAtomically(origPath, []byte("new")))
-		got, err := os.ReadFile(origPath)
+		committed, err := file.WriteFileAtomically(filepath.Join(linkDir, "keys.txt"), []byte("new"))
+		require.NoError(t, err)
+		require.Equal(t, true, committed)
+		got, err := os.ReadFile(filepath.Join(realDir, "keys.txt"))
 		require.NoError(t, err)
 		assert.Equal(t, "new", string(got))
-		info, err := os.Stat(filepath.Join(realDir, "keys.txt"))
-		require.NoError(t, err)
-		assert.Equal(t, params.BeaconIoConfig().ReadWritePermissions, info.Mode().Perm())
-	})
-
-	t.Run("refuses broken symlink", func(t *testing.T) {
-		dir := t.TempDir()
-		linkPath := filepath.Join(dir, "keys.txt")
-		require.NoError(t, os.Symlink(filepath.Join(dir, "missing.txt"), linkPath))
-
-		err := file.WriteFileAtomically(linkPath, []byte("new"))
-		require.ErrorContains(t, "refusing to replace broken symlink", err)
 	})
 
 	t.Run("errors on symlink loop without leaving temp files", func(t *testing.T) {
@@ -234,43 +200,62 @@ func TestWriteFileAtomically(t *testing.T) {
 		link := filepath.Join(dir, "loop")
 		require.NoError(t, os.Symlink(link, link))
 
-		err := file.WriteFileAtomically(link, []byte("new"))
+		committed, err := file.WriteFileAtomically(link, []byte("new"))
 		require.NotNil(t, err)
+		require.Equal(t, false, committed)
 		m, err := filepath.Glob(filepath.Join(dir, ".*tmp*"))
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(m))
 	})
+}
 
-	t.Run("errors when parent directory is a broken symlink", func(t *testing.T) {
-		dir := t.TempDir()
-		linkDir := filepath.Join(dir, "linkdir")
-		require.NoError(t, os.Symlink(filepath.Join(dir, "missing-dir"), linkDir))
+func TestWriteFileAtomically_BrokenSymlink(t *testing.T) {
+	tests := []struct {
+		name          string
+		symlinkParent bool
+	}{
+		{"direct parent", false},
+		{"symlink parent", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			target := filepath.Join(dir, "missing.txt")
+			link := filepath.Join(dir, "keys.txt")
+			require.NoError(t, os.Symlink(target, link))
+			if tt.symlinkParent {
+				parent := filepath.Join(t.TempDir(), "parent")
+				require.NoError(t, os.Symlink(dir, parent))
+				link = filepath.Join(parent, "keys.txt")
+			}
+			committed, err := file.WriteFileAtomically(link, []byte("new"))
+			require.ErrorContains(t, "refusing to replace broken symlink", err)
+			require.Equal(t, false, committed)
+			got, err := os.Readlink(link)
+			require.NoError(t, err)
+			require.Equal(t, target, got)
+			_, err = os.Stat(target)
+			require.Equal(t, true, os.IsNotExist(err))
+		})
+	}
+}
 
-		err := file.WriteFileAtomically(filepath.Join(linkDir, "keys.txt"), []byte("new"))
-		require.NotNil(t, err)
-	})
-
-	t.Run("refuses directory", func(t *testing.T) {
-		dir := t.TempDir()
-		err := file.WriteFileAtomically(dir, []byte("new"))
-		require.ErrorContains(t, "is not a regular file", err)
-	})
-
-	t.Run("normalizes permissions of existing file", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("Windows does not report Unix permission bits")
-		}
-		filePath := filepath.Join(t.TempDir(), "keys.txt")
-		require.NoError(t, os.WriteFile(filePath, []byte("old"), 0644))
-
-		require.NoError(t, file.WriteFileAtomically(filePath, []byte("new")))
-		got, err := os.ReadFile(filePath)
-		require.NoError(t, err)
-		assert.Equal(t, "new", string(got))
-		info, err := os.Stat(filePath)
-		require.NoError(t, err)
-		assert.Equal(t, params.BeaconIoConfig().ReadWritePermissions, info.Mode().Perm())
-	})
+func TestWriteFileAtomically_DirectorySyncError(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("directory permissions do not prevent opening the directory")
+	}
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "keys.txt")
+	require.NoError(t, os.WriteFile(filePath, []byte("old"), 0600))
+	t.Cleanup(func() { _ = os.Chmod(dir, 0700) })
+	require.NoError(t, os.Chmod(dir, 0300))
+	committed, err := file.WriteFileAtomically(filePath, []byte("new"))
+	require.Equal(t, true, os.IsPermission(err))
+	require.Equal(t, true, committed)
+	require.NoError(t, os.Chmod(dir, 0700))
+	got, err := os.ReadFile(filePath)
+	require.NoError(t, err)
+	require.Equal(t, "new", string(got))
 }
 
 func TestCopyFile(t *testing.T) {

@@ -14,9 +14,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
-        "//async:go_default_library",
         "//async/event:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
@@ -29,7 +27,6 @@ go_library(
         "//validator/keymanager/remote-web3signer/internal:go_default_library",
         "//validator/keymanager/remote-web3signer/types:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
-        "@com_github_fsnotify_fsnotify//:go_default_library",
         "@com_github_go_playground_validator_v10//:go_default_library",
         "@com_github_logrusorgru_aurora//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -44,8 +41,6 @@ go_test(
     srcs = ["keymanager_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//async/event:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",

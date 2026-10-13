@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/pkg/errors"
@@ -111,90 +112,55 @@ func WriteFile(file string, data []byte) error {
 	return os.WriteFile(expanded, data, params.BeaconIoConfig().ReadWritePermissions)
 }
 
-// WriteFileAtomically replaces a regular file without exposing partial contents.
-// Symlinks are resolved and their final target is replaced; the result always has 0600 permissions.
-func WriteFileAtomically(filePath string, data []byte) error {
+// WriteFileAtomically replaces filePath through a synced temporary file, following symlinks.
+// The result reports whether replacement occurred, even if syncing the directory fails.
+func WriteFileAtomically(filePath string, data []byte) (bool, error) {
 	expanded, err := ExpandPath(filePath)
 	if err != nil {
-		return err
+		return false, err
 	}
-	target, err := resolveAtomicWriteTarget(expanded)
-	if err != nil {
-		return err
+	target := expanded
+	if resolved, err := filepath.EvalSymlinks(expanded); err == nil {
+		target = resolved
+	} else if !os.IsNotExist(err) {
+		return false, err
+	} else if info, err := os.Lstat(expanded); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return false, errors.Errorf("refusing to replace broken symlink at %s", expanded)
 	}
 
 	dir := filepath.Dir(target)
 	pending, err := os.CreateTemp(dir, "."+filepath.Base(target)+".tmp-*")
 	if err != nil {
-		return err
+		return false, err
 	}
 	pendingPath := pending.Name()
-	closed := false
-	defer func() {
-		if !closed {
-			_ = pending.Close()
-		}
-		_ = os.Remove(pendingPath)
-	}()
-	if err := pending.Chmod(params.BeaconIoConfig().ReadWritePermissions); err != nil {
-		return err
-	}
+	defer func() { _ = os.Remove(pendingPath) }()
 	if _, err := pending.Write(data); err != nil {
-		return err
+		_ = pending.Close()
+		return false, err
 	}
 	if err := pending.Sync(); err != nil {
-		return err
+		_ = pending.Close()
+		return false, err
 	}
 	if err := pending.Close(); err != nil {
-		return err
+		return false, err
 	}
-	closed = true
 	if err := os.Rename(pendingPath, target); err != nil {
-		return err
+		if errors.Is(err, syscall.EBUSY) {
+			return false, errors.Wrapf(err, "%s is a mount point, mount its directory instead", target)
+		}
+		return false, err
 	}
-
-	// Directory fsync is unsupported on Windows.
 	if runtime.GOOS == "windows" {
-		return nil
+		return true, nil
 	}
 	d, err := os.Open(dir)
 	if err != nil {
-		return err
+		return true, err
 	}
-	defer func() {
-		_ = d.Close()
-	}()
-	return d.Sync()
-}
-
-// resolveAtomicWriteTarget follows symlinks so the rename replaces the final target in place.
-func resolveAtomicWriteTarget(path string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(path)
-	if err == nil {
-		info, err := os.Stat(resolved)
-		if err != nil {
-			return "", err
-		}
-		if !info.Mode().IsRegular() {
-			return "", errors.Errorf("path %s is not a regular file", resolved)
-		}
-		if info.Mode().Perm() != params.BeaconIoConfig().ReadWritePermissions {
-			log.WithField("path", resolved).Warn("Normalizing file permissions to 0600 on atomic replace")
-		}
-		return resolved, nil
-	}
-	if !os.IsNotExist(err) {
-		return "", err
-	}
-	resolvedDir, err := filepath.EvalSymlinks(filepath.Dir(path))
-	if err != nil {
-		return "", errors.Wrapf(err, "could not resolve parent directory of %s", path)
-	}
-	candidate := filepath.Join(resolvedDir, filepath.Base(path))
-	if info, err := os.Lstat(candidate); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		return "", errors.Errorf("refusing to replace broken symlink at %s", candidate)
-	}
-	return candidate, nil
+	defer func() { _ = d.Close() }()
+	return true, d.Sync()
 }
 
 // HomeDir for a user.
