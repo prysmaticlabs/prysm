@@ -150,6 +150,11 @@ type ExecutionPayloadBidEvent struct {
 	Data    *SignedExecutionPayloadBid `json:"data"`
 }
 
+type ExecutionPayloadBidHezeEvent struct {
+	Version string                         `json:"version"`
+	Data    *SignedExecutionPayloadBidHeze `json:"data"`
+}
+
 type PayloadAttestationMessageEvent struct {
 	Version string                     `json:"version"`
 	Data    *PayloadAttestationMessage `json:"data"`

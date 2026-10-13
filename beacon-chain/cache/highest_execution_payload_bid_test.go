@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -20,6 +21,7 @@ func TestHighestExecutionPayloadBidCache(t *testing.T) {
 		newBid testBidFunc
 	}{
 		{name: "gloas", newBid: testWrappedBid},
+		{name: "heze", newBid: testWrappedBidHeze},
 	}
 	scenarios := []struct {
 		name string
@@ -145,6 +147,12 @@ func testWrappedBid(t *testing.T, slot primitives.Slot, parentHash, parentRoot [
 	return bid
 }
 
+func testWrappedBidHeze(t *testing.T, slot primitives.Slot, parentHash, parentRoot [32]byte, value uint64) interfaces.ROSignedExecutionPayloadBid {
+	bid, err := blocks.WrappedROSignedExecutionPayloadBidHeze(testSignedExecutionPayloadBidHeze(slot, parentHash, parentRoot, value))
+	require.NoError(t, err)
+	return bid
+}
+
 func testSignedExecutionPayloadBid(
 	slot primitives.Slot,
 	parentHash [32]byte,
@@ -164,6 +172,32 @@ func testSignedExecutionPayloadBid(
 			Value:                 primitives.Gwei(value),
 			ExecutionPayment:      10,
 			ExecutionRequestsRoot: make([]byte, 32),
+		},
+		Signature: bytes.Repeat([]byte{0x06}, 96),
+	}
+}
+
+func testSignedExecutionPayloadBidHeze(
+	slot primitives.Slot,
+	parentHash [32]byte,
+	parentRoot [32]byte,
+	value uint64,
+) *ethpb.SignedExecutionPayloadBidHeze {
+	gloas := testSignedExecutionPayloadBid(slot, parentHash, parentRoot, value).Message
+	return &ethpb.SignedExecutionPayloadBidHeze{
+		Message: &ethpb.ExecutionPayloadBidHeze{
+			Slot:                  gloas.Slot,
+			ParentBlockHash:       gloas.ParentBlockHash,
+			ParentBlockRoot:       gloas.ParentBlockRoot,
+			BlockHash:             gloas.BlockHash,
+			PrevRandao:            gloas.PrevRandao,
+			FeeRecipient:          gloas.FeeRecipient,
+			GasLimit:              gloas.GasLimit,
+			BuilderIndex:          gloas.BuilderIndex,
+			Value:                 gloas.Value,
+			ExecutionPayment:      gloas.ExecutionPayment,
+			ExecutionRequestsRoot: gloas.ExecutionRequestsRoot,
+			InclusionListBits:     bitfield.NewBitvector16(),
 		},
 		Signature: bytes.Repeat([]byte{0x06}, 96),
 	}

@@ -193,4 +193,8 @@ func TestGossipTopicMappings_CorrectType(t *testing.T) {
 	_, ok = pMessage.(*ethpb.SignedExecutionPayloadBidHeze)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, ExecutionPayloadBidTopicFormat, GossipTypeMapping[reflect.TypeFor[*ethpb.SignedExecutionPayloadBidHeze]()])
+	pMessage = GossipTopicMappings(InclusionListTopicFormat, hezeForkEpoch)
+	_, ok = pMessage.(*ethpb.SignedInclusionList)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, InclusionListTopicFormat, GossipTypeMapping[reflect.TypeFor[*ethpb.SignedInclusionList]()])
 }

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	mockChain "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
@@ -435,6 +436,51 @@ func TestStreamEvents_ProposerPreferencesWrappedWithVersion(t *testing.T) {
 	require.Equal(t, "gloas", got.Version)
 	require.NotNil(t, got.Data)
 	require.Equal(t, "7", got.Data.Message.ValidatorIndex)
+}
+
+func TestStreamEvents_ExecutionPayloadBidHeze(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	cfg.HezeForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	s := &Server{}
+	topics, err := newTopicRequest([]string{ExecutionPayloadBidTopic})
+	require.NoError(t, err)
+	ev := &feed.Event{
+		Type: operation.ExecutionPayloadBidReceived,
+		Data: &operation.ExecutionPayloadBidHezeReceivedData{
+			Bid: &eth.SignedExecutionPayloadBidHeze{
+				Message: &eth.ExecutionPayloadBidHeze{
+					ParentBlockHash:       make([]byte, fieldparams.RootLength),
+					ParentBlockRoot:       make([]byte, fieldparams.RootLength),
+					BlockHash:             make([]byte, fieldparams.RootLength),
+					PrevRandao:            make([]byte, fieldparams.RootLength),
+					FeeRecipient:          make([]byte, 20),
+					Slot:                  32,
+					BuilderIndex:          7,
+					ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
+					InclusionListBits:     bitfield.Bitvector16{0x05, 0x80},
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
+		},
+	}
+	require.Equal(t, ExecutionPayloadBidTopic, topicForEvent(ev))
+	lr, err := s.lazyReaderForEvent(t.Context(), ev, topics)
+	require.NoError(t, err)
+	out, err := io.ReadAll(lr())
+	require.NoError(t, err)
+
+	_, payload, found := strings.Cut(string(out), "data: ")
+	require.Equal(t, true, found)
+	var got structs.ExecutionPayloadBidHezeEvent
+	require.NoError(t, json.Unmarshal([]byte(strings.TrimSpace(payload)), &got))
+	require.Equal(t, "heze", got.Version)
+	require.NotNil(t, got.Data)
+	require.Equal(t, "7", got.Data.Message.BuilderIndex)
+	require.Equal(t, "0x0580", got.Data.Message.InclusionListBits)
 }
 
 func TestStreamEvents_BlockEventBuilderBid(t *testing.T) {
