@@ -89,7 +89,7 @@ func (s *Service) validatePartialDataColumnHeader(ctx context.Context, col *bloc
 		return nil, pubsub.ValidationReject, errHeaderEmptyCommitments
 	}
 
-	// [REJECT]
+	// [REJECT] kzg_commitments must not be greater than the max blobs limit.
 	if col.KzgCommitmentCount() > uint64(params.BeaconConfig().MaxBlobsPerBlock(sbh.Header.Slot)) {
 		return nil, pubsub.ValidationReject, errHeaderTooManyCommitments
 	}
