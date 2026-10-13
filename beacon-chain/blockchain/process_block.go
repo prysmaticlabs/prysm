@@ -173,7 +173,7 @@ func (s *Service) getBatchPrestate(ctx context.Context, b consensusblocks.ROBloc
 		if err != nil {
 			return nil, false, err
 		}
-		if _, err := s.notifyNewEnvelope(ctx, blockPreState, env); err != nil {
+		if _, _, err := s.notifyNewEnvelope(ctx, blockPreState, env, nil); err != nil {
 			return nil, false, err
 		}
 	}
@@ -1244,7 +1244,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		if full {
 			bh = bid.BlockHash()
 		}
-		id, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, bh, attribute)
+		id, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, headRoot, bh, attribute)
 		if err != nil {
 			log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 		}

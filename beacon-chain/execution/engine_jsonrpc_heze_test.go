@@ -160,10 +160,12 @@ func TestForkchoiceUpdated_Heze(t *testing.T) {
 		s := hezeEngineService(t, result, 0, &got)
 		attrs, err := payloadattribute.New(v5)
 		require.NoError(t, err)
-		id, gotLVH, err := s.ForkchoiceUpdated(t.Context(), fcs, attrs)
+		id, gotLVH, satisfied, err := s.ForkchoiceUpdated(t.Context(), fcs, attrs)
 		require.NoError(t, err)
 		require.DeepEqual(t, &pb.PayloadIDBytes{0, 0, 0, 0, 0, 0, 0, 1}, id)
 		require.DeepEqual(t, lvh[:], gotLVH)
+		require.NotNil(t, satisfied)
+		require.Equal(t, true, *satisfied)
 		require.Equal(t, ForkchoiceUpdatedMethodV5, got.Method)
 		require.Equal(t, 2, len(got.Params))
 		onWire := &pb.PayloadAttributesV5{}
@@ -175,14 +177,35 @@ func TestForkchoiceUpdated_Heze(t *testing.T) {
 		s := hezeEngineService(t, result, 0, &got)
 		attrs, err := payloadattribute.New(&pb.PayloadAttributesV4{Timestamp: 1, PrevRandao: make([]byte, 32), ParentBeaconBlockRoot: make([]byte, 32)})
 		require.NoError(t, err)
-		_, _, err = s.ForkchoiceUpdated(t.Context(), fcs, attrs)
+		_, _, _, err = s.ForkchoiceUpdated(t.Context(), fcs, attrs)
 		require.NoError(t, err)
 		require.Equal(t, ForkchoiceUpdatedMethodV4, got.Method)
 	})
+	for _, tc := range []struct {
+		name   string
+		status map[string]any
+		want   *bool
+	}{
+		{name: "VALID with false", status: map[string]any{"status": "VALID", "latestValidHash": lvh, "inclusionListSatisfied": false}, want: new(bool)},
+		{name: "VALID with null", status: map[string]any{"status": "VALID", "latestValidHash": lvh, "inclusionListSatisfied": nil}},
+		{name: "SYNCING drops the flag", status: map[string]any{"status": "SYNCING", "latestValidHash": nil, "inclusionListSatisfied": true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got capturedRPC
+			s := hezeEngineService(t, map[string]any{"payloadStatus": tc.status, "payloadId": nil}, 0, &got)
+			_, _, satisfied, err := s.ForkchoiceUpdated(t.Context(), fcs, payloadattribute.EmptyWithVersion(version.Heze))
+			if tc.status["status"] == "SYNCING" {
+				require.ErrorIs(t, err, ErrAcceptedSyncingPayloadStatus)
+			} else {
+				require.NoError(t, err)
+			}
+			require.DeepEqual(t, tc.want, satisfied)
+		})
+	}
 	t.Run("unsupported fork", func(t *testing.T) {
 		var got capturedRPC
 		s := hezeEngineService(t, nil, -38005, &got)
-		_, _, err := s.ForkchoiceUpdated(t.Context(), fcs, payloadattribute.EmptyWithVersion(version.Heze))
+		_, _, _, err := s.ForkchoiceUpdated(t.Context(), fcs, payloadattribute.EmptyWithVersion(version.Heze))
 		require.ErrorIs(t, err, ErrUnsupportedFork)
 		require.Equal(t, ForkchoiceUpdatedMethodV5, got.Method)
 		require.Equal(t, `null`, string(got.Params[1]))

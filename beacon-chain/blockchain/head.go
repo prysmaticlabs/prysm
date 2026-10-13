@@ -221,7 +221,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.ReadOnlySignedB
 		}
 		parentHash := bid.ParentBlockHash()
 		go func() {
-			if _, _, err := s.notifyForkchoiceUpdateGloas(s.ctx, parentHash, nil); err != nil {
+			if _, _, err := s.notifyForkchoiceUpdateGloas(s.ctx, r, parentHash, nil); err != nil {
 				log.WithError(err).Error("Could not notify forkchoice update after batch import")
 			}
 		}()

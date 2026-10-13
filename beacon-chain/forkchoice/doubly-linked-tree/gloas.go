@@ -266,6 +266,11 @@ func (s *Store) shouldExtendPayload(fn *PayloadNode) bool {
 		return false
 	}
 	n := fn.node
+
+	// [New in Heze:EIP7805]
+	if !fn.inclusionListSatisfied() {
+		return false
+	}
 	if ptcVotedEarlyAndAvailable(n) {
 		return true
 	}
@@ -296,6 +301,11 @@ func ptcVotedLate(n *Node) bool {
 	present := min(attesters, n.payloadAvailabilityVote.Count())
 	dataAvailable := min(attesters, n.payloadDataAvailabilityVote.Count())
 	return attesters-present > fieldparams.PTCSize/2 || attesters-dataAvailable > fieldparams.PTCSize/2
+}
+
+// inclusionListSatisfied is false only for a Heze payload that the engine reported as not satisfying the inclusion list constraints.
+func (pn *PayloadNode) inclusionListSatisfied() bool {
+	return !pn.inclusionListUnsatisfied || slots.ToEpoch(pn.node.slot) < params.BeaconConfig().HezeForkEpoch
 }
 
 // choosePayloadContent chooses between empty or full for the passed consensus node.
@@ -552,6 +562,16 @@ func (f *ForkChoice) SetPTCVote(root [32]byte, ptcIdx uint64, payloadPresent, bl
 	n.node.payloadDataAvailabilityVote.SetBitAt(ptcIdx, blobDataAvailable)
 }
 
+// SetPayloadInclusionListSatisfied records the inclusion list satisfaction of the payload of root. The caller must hold the forkchoice write lock.
+func (f *ForkChoice) SetPayloadInclusionListSatisfied(root [32]byte, satisfied bool) error {
+	fn := f.store.fullNodeByRoot[root]
+	if fn == nil {
+		return errors.Wrap(ErrNilNode, "could not set inclusion list satisfaction")
+	}
+	fn.inclusionListUnsatisfied = !satisfied
+	return nil
+}
+
 // PTCVotes returns the recorded PTC vote bitvectors for the given root. The caller MUST hold the forkchoice lock.
 func (f *ForkChoice) PTCVotes(root [32]byte) (attesters, payloadPresent, blobDataAvailable bitfield.Bitvector512, ok bool) {
 	n := f.store.emptyNodeByRoot[root]
@@ -633,6 +653,12 @@ func (f *ForkChoice) PTCVotedLate(root [32]byte) bool {
 		return false
 	}
 	return ptcVotedLate(en.node)
+}
+
+// IsPayloadInclusionListSatisfied returns whether root has a full node that satisfies the inclusion list constraints.
+func (f *ForkChoice) IsPayloadInclusionListSatisfied(root [32]byte) bool {
+	fn := f.store.fullNodeByRoot[root]
+	return fn != nil && fn.inclusionListSatisfied()
 }
 
 // ParentHash returns the payload hash of the latest full parent that the given block builds on.

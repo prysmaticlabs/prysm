@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	f "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
@@ -74,6 +75,9 @@ type ForkchoiceFetcher interface {
 	CanonicalNodeAtSlot(primitives.Slot) ([32]byte, bool)
 	ShouldIgnoreData(parentRoot [32]byte, dataSlot primitives.Slot) bool
 	RecordBlockForEquivocation(primitives.Slot, primitives.ValidatorIndex, [32]byte)
+	InclusionListStore() *cache.InclusionListStore
+	LookaheadState(ctx context.Context, dependentRoot [32]byte, dependentEpoch primitives.Epoch) (state.ReadOnlyBeaconState, error)
+	DependentState(ctx context.Context, dependentRoot [32]byte, dependentEpoch primitives.Epoch) (state.ReadOnlyBeaconState, error)
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
