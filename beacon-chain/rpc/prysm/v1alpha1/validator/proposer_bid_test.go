@@ -222,7 +222,7 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 	}
 
 	bidCache := cache.NewHighestExecutionPayloadBidCache()
-	bidCache.SetIfHigher(p2pBid)
+	bidCache.SetIfHigher(wrapBid(t, p2pBid))
 
 	vs := &Server{HighestBidCache: bidCache}
 
@@ -276,7 +276,7 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 	}
 
 	bidCache := cache.NewHighestExecutionPayloadBidCache()
-	bidCache.SetIfHigher(&ethpb.SignedExecutionPayloadBid{
+	bidCache.SetIfHigher(wrapBid(t, &ethpb.SignedExecutionPayloadBid{
 		Message: &ethpb.ExecutionPayloadBid{
 			Slot:                  slot,
 			ParentBlockHash:       parentHash[:],
@@ -292,7 +292,7 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 			ExecutionRequestsRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
-	})
+	}))
 
 	vs := &Server{
 		HighestBidCache:       bidCache,
@@ -363,7 +363,7 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 	}
 
 	bidCache := cache.NewHighestExecutionPayloadBidCache()
-	bidCache.SetIfHigher(p2pBid)
+	bidCache.SetIfHigher(wrapBid(t, p2pBid))
 
 	vs := &Server{HighestBidCache: bidCache}
 
@@ -435,7 +435,7 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 	}
 
 	bidCache := cache.NewHighestExecutionPayloadBidCache()
-	bidCache.SetIfHigher(p2pBid)
+	bidCache.SetIfHigher(wrapBid(t, p2pBid))
 
 	vs := &Server{HighestBidCache: bidCache}
 

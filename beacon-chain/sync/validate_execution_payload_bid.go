@@ -181,7 +181,11 @@ func (s *Service) executionPayloadBidSubscriber(_ context.Context, msg proto.Mes
 	if signedBid.Message == nil {
 		return errNilMessage
 	}
-	s.setHighestExecutionPayloadBid(signedBid)
+	b, err := blocks.WrappedROSignedExecutionPayloadBid(signedBid)
+	if err != nil {
+		return err
+	}
+	s.highestExecutionPayloadBidCache.SetIfHigher(b)
 	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.ExecutionPayloadBidReceived,
 		Data: &opfeed.ExecutionPayloadBidReceivedData{Bid: signedBid},
@@ -222,13 +226,9 @@ func (s *Service) proposerDependentRoot(parentBlockRoot [32]byte, slot primitive
 }
 
 func (s *Service) isHighestExecutionPayloadBid(bid interfaces.ROExecutionPayloadBid) bool {
-	cached, ok := s.highestExecutionPayloadBidCache.Get(bid.Slot(), bid.ParentBlockHash(), bid.ParentBlockRoot())
+	cached, ok := s.highestExecutionPayloadBidCache.HighestValue(bid.Slot(), bid.ParentBlockHash(), bid.ParentBlockRoot())
 	if !ok {
 		return true
 	}
-	return bid.Value() > cached.Message.Value
-}
-
-func (s *Service) setHighestExecutionPayloadBid(signedBid *ethpb.SignedExecutionPayloadBid) {
-	s.highestExecutionPayloadBidCache.SetIfHigher(signedBid)
+	return bid.Value() > cached
 }

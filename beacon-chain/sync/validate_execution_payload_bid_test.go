@@ -247,7 +247,7 @@ func TestValidateExecutionPayloadBidGossip_LowerOrEqualBidIgnored(t *testing.T) 
 	s, msg, signedBid := setupExecutionPayloadBidService(t)
 	s.newExecutionPayloadBidVerifier = testNewExecutionPayloadBidVerifier(mockExecutionPayloadBidVerifier{})
 
-	s.setHighestExecutionPayloadBid(signedBid)
+	s.highestExecutionPayloadBidCache.SetIfHigher(mustWrapBid(t, signedBid))
 
 	var err error
 	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
@@ -263,7 +263,7 @@ func TestValidateExecutionPayloadBidGossip_LowerBidIgnoredStillMarksTupleSeen(t 
 
 	higherBid := proto.Clone(signedBid).(*ethpb.SignedExecutionPayloadBid)
 	higherBid.Message.Value = signedBid.Message.Value + 1
-	s.setHighestExecutionPayloadBid(higherBid)
+	s.highestExecutionPayloadBidCache.SetIfHigher(mustWrapBid(t, higherBid))
 
 	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
 	require.NoError(t, err)
@@ -290,7 +290,7 @@ func TestValidateExecutionPayloadBidGossip_HigherBidAccepted(t *testing.T) {
 	require.NoError(t, err)
 	lowerBid := proto.Clone(signedBid).(*ethpb.SignedExecutionPayloadBid)
 	lowerBid.Message.Value = bid.Value() - 1
-	s.setHighestExecutionPayloadBid(lowerBid)
+	s.highestExecutionPayloadBidCache.SetIfHigher(mustWrapBid(t, lowerBid))
 
 	result, err := s.validateExecutionPayloadBidGossip(ctx, "", msg)
 	require.NoError(t, err)
@@ -412,7 +412,7 @@ func TestExecutionPayloadBidSubscriber_HappyPath(t *testing.T) {
 	bid := mustBid(t, signedBid)
 	got, ok := s.highestExecutionPayloadBidCache.Get(bid.Slot(), bid.ParentBlockHash(), bid.ParentBlockRoot())
 	require.Equal(t, true, ok)
-	require.DeepEqual(t, signedBid, got)
+	require.DeepEqual(t, mustWrapBid(t, signedBid), got)
 }
 
 // TestProposerDependentRoot_DelegatesToForkchoice asserts that the helper
@@ -653,4 +653,12 @@ func mustBid(t *testing.T, signedBid *ethpb.SignedExecutionPayloadBid) interface
 	bid, err := wrapped.Bid()
 	require.NoError(t, err)
 	return bid
+}
+
+func mustWrapBid(t *testing.T, signedBid *ethpb.SignedExecutionPayloadBid) interfaces.ROSignedExecutionPayloadBid {
+	t.Helper()
+
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadBid(signedBid)
+	require.NoError(t, err)
+	return wrapped
 }
