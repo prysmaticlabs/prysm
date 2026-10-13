@@ -752,14 +752,27 @@ func hydrateBeaconBlockBodyCapella() *eth.BeaconBlockBodyCapella {
 
 func hydrateBeaconBlockBodyHeze() *eth.BeaconBlockBodyHeze {
 	g := hydrateBeaconBlockBodyGloas()
+	bid := g.SignedExecutionPayloadBid.Message
 	return &eth.BeaconBlockBodyHeze{
-		RandaoReveal:              g.RandaoReveal,
-		Eth1Data:                  g.Eth1Data,
-		Graffiti:                  g.Graffiti,
-		SyncAggregate:             g.SyncAggregate,
-		SignedExecutionPayloadBid: g.SignedExecutionPayloadBid,
-		ParentExecutionRequests:   g.ParentExecutionRequests,
-		PayloadAttestations:       g.PayloadAttestations,
+		RandaoReveal:  g.RandaoReveal,
+		Eth1Data:      g.Eth1Data,
+		Graffiti:      g.Graffiti,
+		SyncAggregate: g.SyncAggregate,
+		SignedExecutionPayloadBid: &eth.SignedExecutionPayloadBidHeze{
+			Message: &eth.ExecutionPayloadBidHeze{
+				ParentBlockHash:       bid.ParentBlockHash,
+				ParentBlockRoot:       bid.ParentBlockRoot,
+				BlockHash:             bid.BlockHash,
+				PrevRandao:            bid.PrevRandao,
+				FeeRecipient:          bid.FeeRecipient,
+				BlobKzgCommitments:    bid.BlobKzgCommitments,
+				ExecutionRequestsRoot: bid.ExecutionRequestsRoot,
+				InclusionListBits:     []byte{0x01, 0x80},
+			},
+			Signature: g.SignedExecutionPayloadBid.Signature,
+		},
+		ParentExecutionRequests: g.ParentExecutionRequests,
+		PayloadAttestations:     g.PayloadAttestations,
 	}
 }
 

@@ -24,6 +24,7 @@ const (
 	signedExecutionPayloadBidFieldIndex = 10
 	parentBlockHashFieldIndex           = 0
 	executionPayloadBidFieldCount       = 12
+	executionPayloadBidFieldCountHeze   = 13
 	beaconBlockBodyFieldCount           = 13
 )
 
@@ -309,7 +310,7 @@ func ExecutionBlockHashProof(ctx context.Context, block interfaces.ReadOnlyBeaco
 		return nil, err
 	}
 
-	bidFieldRoots, err := executionPayloadBidFieldRoots(bid)
+	bidFieldRoots, err := executionPayloadBidFieldRoots(block.Version(), bid)
 	if err != nil {
 		return nil, err
 	}
@@ -346,8 +347,12 @@ func ExecutionBlockHashProof(ctx context.Context, block interfaces.ReadOnlyBeaco
 	return append(proof, blockBodyProof...), nil
 }
 
-func executionPayloadBidFieldRoots(bid interfaces.ROExecutionPayloadBid) ([][]byte, error) {
-	fieldRoots := make([][]byte, executionPayloadBidFieldCount)
+func executionPayloadBidFieldRoots(v int, bid interfaces.ROExecutionPayloadBid) ([][]byte, error) {
+	fieldCount := executionPayloadBidFieldCount
+	if v >= version.Heze {
+		fieldCount = executionPayloadBidFieldCountHeze
+	}
+	fieldRoots := make([][]byte, fieldCount)
 	for index, value := range [][32]byte{bid.ParentBlockHash(), bid.ParentBlockRoot(), bid.BlockHash(), bid.PrevRandao()} {
 		fieldRoots[index] = bytesutil.SafeCopyBytes(value[:])
 	}
@@ -376,6 +381,14 @@ func executionPayloadBidFieldRoots(bid interfaces.ROExecutionPayloadBid) ([][]by
 	fieldRoots[10] = commitmentsRoot[:]
 	executionRequestsRoot := bid.ExecutionRequestsRoot()
 	fieldRoots[11] = executionRequestsRoot[:]
+
+	if v >= version.Heze {
+		root, err := fixedByteVectorRoot(bid.InclusionListBits(), (fieldparams.InclusionListCommitteeSize+7)/8)
+		if err != nil {
+			return nil, err
+		}
+		fieldRoots[12] = root[:]
+	}
 	return fieldRoots, nil
 }
 
@@ -433,7 +446,11 @@ func progressiveContainerActiveFields(v int, container progressiveContainerType)
 
 	switch container {
 	case executionPayloadBidProgressiveContainer:
-		af := make([]bool, executionPayloadBidFieldCount)
+		fieldCount := executionPayloadBidFieldCount
+		if v >= version.Heze {
+			fieldCount = executionPayloadBidFieldCountHeze
+		}
+		af := make([]bool, fieldCount)
 		for i := range af {
 			af[i] = true
 		}

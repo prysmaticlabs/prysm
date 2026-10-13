@@ -294,6 +294,7 @@ type BeaconStateGloas struct {
 }
 
 // BeaconStateHeze is the Heze SSZ state.
+// TODO(heze): The eth1 fields stay until EIP-8015.
 type BeaconStateHeze struct {
 	GenesisTime                   uint64
 	GenesisValidatorsRoot         []byte `ssz-size:"32"`
@@ -338,7 +339,7 @@ type BeaconStateHeze struct {
 	ExecutionPayloadAvailability  []byte                      `ssz-size:"8"`
 	BuilderPendingPayments        []*BuilderPendingPayment    `ssz-size:"16"`
 	BuilderPendingWithdrawals     []*BuilderPendingWithdrawal `ssz-max:"1048576"`
-	LatestExecutionPayloadBid     *ExecutionPayloadBid
+	LatestExecutionPayloadBid     *ExecutionPayloadBidHeze
 	PayloadExpectedWithdrawals    []*enginev1.Withdrawal `ssz-max:"4"`
 	PtcWindow                     []*PTCs                `ssz-size:"24"`
 }

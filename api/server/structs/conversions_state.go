@@ -1203,9 +1203,230 @@ func BeaconStateGloasFromConsensus(st beaconState.BeaconState) (*BeaconStateGloa
 // ----------------------------------------------------------------------------
 
 func BeaconStateHezeFromConsensus(st beaconState.BeaconState) (*BeaconStateHeze, error) {
-	s, err := BeaconStateGloasFromConsensus(st)
+	srcBr := st.BlockRoots()
+	br := make([]string, len(srcBr))
+	for i, r := range srcBr {
+		br[i] = hexutil.Encode(r)
+	}
+	srcSr := st.StateRoots()
+	sr := make([]string, len(srcSr))
+	for i, r := range srcSr {
+		sr[i] = hexutil.Encode(r)
+	}
+	srcHr := st.HistoricalRoots()
+	hr := make([]string, len(srcHr))
+	for i, r := range srcHr {
+		hr[i] = hexutil.Encode(r)
+	}
+	srcVotes := st.Eth1DataVotes()
+	votes := make([]*Eth1Data, len(srcVotes))
+	for i, e := range srcVotes {
+		votes[i] = Eth1DataFromConsensus(e)
+	}
+	srcVals := st.Validators()
+	vals := make([]*Validator, len(srcVals))
+	for i, v := range srcVals {
+		vals[i] = ValidatorFromConsensus(v)
+	}
+	srcBals := st.Balances()
+	bals := make([]string, len(srcBals))
+	for i, b := range srcBals {
+		bals[i] = fmt.Sprintf("%d", b)
+	}
+	srcRm := st.RandaoMixes()
+	rm := make([]string, len(srcRm))
+	for i, m := range srcRm {
+		rm[i] = hexutil.Encode(m)
+	}
+	srcSlashings := st.Slashings()
+	slashings := make([]string, len(srcSlashings))
+	for i, s := range srcSlashings {
+		slashings[i] = fmt.Sprintf("%d", s)
+	}
+	srcPrevPart, err := st.PreviousEpochParticipation()
 	if err != nil {
 		return nil, fmt.Errorf("convert Heze state: %w", err)
 	}
-	return (*BeaconStateHeze)(s), nil
+	prevPart := make([]string, len(srcPrevPart))
+	for i, p := range srcPrevPart {
+		prevPart[i] = fmt.Sprintf("%d", p)
+	}
+	srcCurrPart, err := st.CurrentEpochParticipation()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	currPart := make([]string, len(srcCurrPart))
+	for i, p := range srcCurrPart {
+		currPart[i] = fmt.Sprintf("%d", p)
+	}
+	srcIs, err := st.InactivityScores()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	is := make([]string, len(srcIs))
+	for i, s := range srcIs {
+		is[i] = fmt.Sprintf("%d", s)
+	}
+	currSc, err := st.CurrentSyncCommittee()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	nextSc, err := st.NextSyncCommittee()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	srcHs, err := st.HistoricalSummaries()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	hs := make([]*HistoricalSummary, len(srcHs))
+	for i, s := range srcHs {
+		hs[i] = HistoricalSummaryFromConsensus(s)
+	}
+	nwi, err := st.NextWithdrawalIndex()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	nwvi, err := st.NextWithdrawalValidatorIndex()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	drsi, err := st.DepositRequestsStartIndex()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	dbtc, err := st.DepositBalanceToConsume()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	ebtc, err := st.ExitBalanceToConsume()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	eee, err := st.EarliestExitEpoch()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	cbtc, err := st.ConsolidationBalanceToConsume()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	ece, err := st.EarliestConsolidationEpoch()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	pbd, err := st.PendingDeposits()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	ppw, err := st.PendingPartialWithdrawals()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	pc, err := st.PendingConsolidations()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	srcLookahead, err := st.ProposerLookahead()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	lookahead := make([]string, len(srcLookahead))
+	for i, v := range srcLookahead {
+		lookahead[i] = fmt.Sprintf("%d", uint64(v))
+	}
+	// Heze-specific fields
+	lepb, err := st.LatestExecutionPayloadBid()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	builders, err := st.Builders()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	nwbi, err := st.NextWithdrawalBuilderIndex()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	epa, err := st.ExecutionPayloadAvailabilityVector()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	bpp, err := st.BuilderPendingPayments()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	bpw, err := st.BuilderPendingWithdrawals()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	lbh, err := st.LatestBlockHash()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	pew, err := st.PayloadExpectedWithdrawals()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+	ptcWindow, err := st.PTCWindow()
+	if err != nil {
+		return nil, fmt.Errorf("convert Heze state: %w", err)
+	}
+
+	var bid *ExecutionPayloadBidHeze
+	if lepb != nil {
+		bid = &ExecutionPayloadBidHeze{
+			ExecutionPayloadBid: *ROExecutionPayloadBidFromConsensus(lepb),
+			InclusionListBits:   hexutil.Encode(lepb.InclusionListBits()),
+		}
+	}
+
+	return &BeaconStateHeze{
+		GenesisTime:                   fmt.Sprintf("%d", st.GenesisTime().Unix()),
+		GenesisValidatorsRoot:         hexutil.Encode(st.GenesisValidatorsRoot()),
+		Slot:                          fmt.Sprintf("%d", st.Slot()),
+		Fork:                          ForkFromConsensus(st.Fork()),
+		LatestBlockHeader:             BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
+		BlockRoots:                    br,
+		StateRoots:                    sr,
+		HistoricalRoots:               hr,
+		Eth1Data:                      Eth1DataFromConsensus(st.Eth1Data()),
+		Eth1DataVotes:                 votes,
+		Eth1DepositIndex:              fmt.Sprintf("%d", st.Eth1DepositIndex()),
+		Validators:                    vals,
+		Balances:                      bals,
+		RandaoMixes:                   rm,
+		Slashings:                     slashings,
+		PreviousEpochParticipation:    prevPart,
+		CurrentEpochParticipation:     currPart,
+		JustificationBits:             hexutil.Encode(st.JustificationBits()),
+		PreviousJustifiedCheckpoint:   CheckpointFromConsensus(st.PreviousJustifiedCheckpoint()),
+		CurrentJustifiedCheckpoint:    CheckpointFromConsensus(st.CurrentJustifiedCheckpoint()),
+		FinalizedCheckpoint:           CheckpointFromConsensus(st.FinalizedCheckpoint()),
+		InactivityScores:              is,
+		CurrentSyncCommittee:          SyncCommitteeFromConsensus(currSc),
+		NextSyncCommittee:             SyncCommitteeFromConsensus(nextSc),
+		NextWithdrawalIndex:           fmt.Sprintf("%d", nwi),
+		NextWithdrawalValidatorIndex:  fmt.Sprintf("%d", nwvi),
+		HistoricalSummaries:           hs,
+		DepositRequestsStartIndex:     fmt.Sprintf("%d", drsi),
+		DepositBalanceToConsume:       fmt.Sprintf("%d", dbtc),
+		ExitBalanceToConsume:          fmt.Sprintf("%d", ebtc),
+		EarliestExitEpoch:             fmt.Sprintf("%d", eee),
+		ConsolidationBalanceToConsume: fmt.Sprintf("%d", cbtc),
+		EarliestConsolidationEpoch:    fmt.Sprintf("%d", ece),
+		PendingDeposits:               PendingDepositsFromConsensus(pbd),
+		PendingPartialWithdrawals:     PendingPartialWithdrawalsFromConsensus(ppw),
+		PendingConsolidations:         PendingConsolidationsFromConsensus(pc),
+		ProposerLookahead:             lookahead,
+		LatestExecutionPayloadBid:     bid,
+		Builders:                      BuildersFromConsensus(builders),
+		NextWithdrawalBuilderIndex:    fmt.Sprintf("%d", nwbi),
+		ExecutionPayloadAvailability:  hexutil.Encode(epa),
+		BuilderPendingPayments:        BuilderPendingPaymentsFromConsensus(bpp),
+		BuilderPendingWithdrawals:     BuilderPendingWithdrawalsFromConsensus(bpw),
+		LatestBlockHash:               hexutil.Encode(lbh[:]),
+		PayloadExpectedWithdrawals:    WithdrawalsFromConsensus(pew),
+		PtcWindow:                     PTCWindowFromConsensus(ptcWindow),
+	}, nil
 }
