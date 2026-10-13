@@ -48,6 +48,11 @@ type flagGroup struct {
 	Flags []cli.Flag
 }
 
+// deprecatedFlags still work, but are expected to be removed in a future release.
+var deprecatedFlags = []cli.Flag{
+	features.HoleskyTestnet,
+}
+
 var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
@@ -148,11 +153,11 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: features.ActiveFlags(features.ValidatorFlags),
+		Flags: features.WithoutFlags(features.ActiveFlags(features.ValidatorFlags), deprecatedFlags),
 	},
 	{
 		Name:  "deprecated",
-		Flags: []cli.Flag{},
+		Flags: deprecatedFlags,
 	},
 }
 
