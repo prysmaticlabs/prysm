@@ -92,6 +92,7 @@ message SignRequest {
 
     // Heze objects.
     ethereum.eth.v1alpha1.BeaconBlockHeze block_heze = 128;
+    ethereum.eth.v1alpha1.InclusionList inclusion_list = 129;
   }
 
   reserved 4, 5; // Reserving old, deleted fields.
