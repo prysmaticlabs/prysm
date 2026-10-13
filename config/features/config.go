@@ -181,7 +181,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	warnDeprecationUpcoming(ctx)
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(devModeFlag.Name) {
+	if ctx.Bool(DevModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
 	if err := configureTestnet(ctx); err != nil {
