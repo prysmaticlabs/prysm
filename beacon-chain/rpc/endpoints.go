@@ -118,8 +118,6 @@ func (s *Service) endpoints(
 	return endpoints
 }
 
-// doctorPeerEndpoints serves the DoctorPeer dashboard; a subtree route, so the one template
-// covers the index page and every asset beneath it.
 func (s *Service) doctorPeerEndpoints() []endpoint {
 	return []endpoint{
 		{
