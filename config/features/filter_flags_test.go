@@ -25,3 +25,34 @@ func TestWithoutFlags(t *testing.T) {
 		assert.DeepEqual(t, []cli.Flag{a}, WithoutFlags([]cli.Flag{a}, []cli.Flag{other}))
 	})
 }
+
+func TestSplitAliases(t *testing.T) {
+	t.Run("flag without alias", func(t *testing.T) {
+		flag := &cli.BoolFlag{Name: "a"}
+		withoutAliases, aliases := SplitAliases([]cli.Flag{flag}, []string{"b"})
+		assert.DeepEqual(t, []cli.Flag{flag}, withoutAliases)
+		assert.Equal(t, 0, len(aliases))
+	})
+
+	t.Run("flag without deprecated alias", func(t *testing.T) {
+		flag := &cli.BoolFlag{Name: "a", Aliases: []string{"b"}}
+		withoutAliases, aliases := SplitAliases([]cli.Flag{flag}, []string{"c"})
+		assert.DeepEqual(t, []cli.Flag{flag}, withoutAliases)
+		assert.Equal(t, 0, len(aliases))
+	})
+
+	t.Run("flag with deprecated aliases", func(t *testing.T) {
+		flag := &cli.StringFlag{Name: "a", Aliases: []string{"b", "c", "d"}, Usage: "Usage of a.", Value: "value"}
+		withoutAliases, aliases := SplitAliases([]cli.Flag{flag}, []string{"b", "d"})
+
+		assert.DeepEqual(t, []cli.Flag{&cli.StringFlag{Name: "a", Aliases: []string{"c"}, Usage: "Usage of a.", Value: "value"}}, withoutAliases)
+		assert.DeepEqual(t, []cli.Flag{
+			&cli.StringFlag{Name: "b", Usage: "Deprecated alias of --a.", Value: "value"},
+			&cli.StringFlag{Name: "d", Usage: "Deprecated alias of --a.", Value: "value"},
+		}, aliases)
+
+		// The original flag is left untouched.
+		assert.DeepEqual(t, []string{"b", "c", "d"}, flag.Aliases)
+		assert.Equal(t, "Usage of a.", flag.Usage)
+	})
+}

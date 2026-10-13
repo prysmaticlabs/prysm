@@ -54,6 +54,14 @@ var deprecatedFlags = []cli.Flag{
 	flags.TerminalBlockHashActivationEpochOverride,
 }
 
+// deprecatedAliases still work, but are expected to be removed in a future release.
+var deprecatedAliases = []string{
+	"subscribe-all-data-subnets",
+	"enable-experimental-backfill",
+	"extend-blob-retention-epoch",
+	"max-goroutines",
+}
+
 var appHelpFlagGroups = []flagGroup{
 	{ // Flags relevant to running the process.
 		Name: "cmd",
@@ -251,6 +259,7 @@ var appHelpFlagGroups = []flagGroup{
 
 func init() {
 	cli.AppHelpTemplate = appHelpTemplate
+	moveAliasesToDeprecatedGroup()
 
 	type helpData struct {
 		App        any
@@ -266,6 +275,24 @@ func init() {
 			originalHelpPrinter(w, tmpl, helpData{data, appHelpFlagGroups})
 		} else {
 			originalHelpPrinter(w, tmpl, data)
+		}
+	}
+}
+
+// moveAliasesToDeprecatedGroup displays each flag without its deprecated aliases,
+// and displays these aliases in the deprecated group instead.
+func moveAliasesToDeprecatedGroup() {
+	var aliases []cli.Flag
+	for i := range appHelpFlagGroups {
+		var groupAliases []cli.Flag
+		appHelpFlagGroups[i].Flags, groupAliases = features.SplitAliases(appHelpFlagGroups[i].Flags, deprecatedAliases)
+		aliases = append(aliases, groupAliases...)
+	}
+
+	for i := range appHelpFlagGroups {
+		if appHelpFlagGroups[i].Name == "deprecated" {
+			appHelpFlagGroups[i].Flags = append(appHelpFlagGroups[i].Flags, aliases...)
+			return
 		}
 	}
 }
