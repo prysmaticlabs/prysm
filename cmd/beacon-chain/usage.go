@@ -48,6 +48,7 @@ type flagGroup struct {
 // deprecatedFlags still work, but are expected to be removed in a future release.
 var deprecatedFlags = []cli.Flag{
 	features.DevModeFlag,
+	features.HoleskyTestnet,
 }
 
 var appHelpFlagGroups = []flagGroup{
