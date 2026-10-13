@@ -49,6 +49,9 @@ type flagGroup struct {
 var deprecatedFlags = []cli.Flag{
 	features.DevModeFlag,
 	features.HoleskyTestnet,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
 }
 
 var appHelpFlagGroups = []flagGroup{
@@ -225,14 +228,6 @@ var appHelpFlagGroups = []flagGroup{
 	{ // Feature flags.
 		Name:  "features",
 		Flags: features.WithoutFlags(features.ActiveFlags(features.BeaconChainFlags), deprecatedFlags),
-	},
-	{ // Flags required to configure the merge.
-		Name: "merge",
-		Flags: []cli.Flag{
-			flags.TerminalTotalDifficultyOverride,
-			flags.TerminalBlockHashOverride,
-			flags.TerminalBlockHashActivationEpochOverride,
-		},
 	},
 	{ // The deprecated section represents beacon flags that still have use, but should not be used
 		// as they are expected to be deleted in a feature release.
