@@ -127,3 +127,59 @@ func TestReconstructedEnvelopeBindingRetry(t *testing.T) {
 		require.Equal(t, false, done)
 	})
 }
+
+// Losing bids must not be able to starve the winning bid's reconstruction:
+// bound entries displace unbound partial sets, and a rejected insert rolls
+// back the first-seen marker so a later delivery still has a path in.
+func TestPayloadChunkPoolEviction(t *testing.T) {
+	mkChunk := func(root [32]byte, idx uint64) *ethpb.PayloadChunk {
+		return &ethpb.PayloadChunk{
+			PayloadChunksRoot: root[:],
+			Index:             idx,
+			Chunk:             []byte{0x1},
+			Slot:              1,
+			BeaconBlockRoot:   make([]byte, 32),
+		}
+	}
+
+	t.Run("bound newcomer evicts the weakest unbound entry", func(t *testing.T) {
+		p := newPayloadChunkPool()
+		for i := range maxChunkPoolRoots {
+			root := [32]byte{0x10, byte(i)}
+			accepted, _, _, _, _ := p.insert(mkChunk(root, 0), false)
+			require.Equal(t, true, accepted)
+		}
+		winner := [32]byte{0x99}
+		accepted, _, _, _, _ := p.insert(mkChunk(winner, 0), true)
+		require.Equal(t, true, accepted)
+		require.Equal(t, maxChunkPoolRoots, len(p.entries))
+		require.NotNil(t, p.entries[winner])
+	})
+
+	t.Run("unbound newcomer cannot displace bound entries", func(t *testing.T) {
+		p := newPayloadChunkPool()
+		for i := range maxChunkPoolRoots {
+			root := [32]byte{0x20, byte(i)}
+			accepted, _, _, _, _ := p.insert(mkChunk(root, 0), true)
+			require.Equal(t, true, accepted)
+		}
+		loser := [32]byte{0x98}
+		accepted, _, _, _, _ := p.insert(mkChunk(loser, 0), false)
+		require.Equal(t, false, accepted)
+	})
+
+	t.Run("rejected insert rolls back the first-seen marker", func(t *testing.T) {
+		s := newChunkTestService(t, [32]byte{0xAB})
+		for i := range maxChunkPoolRoots {
+			root := [32]byte{0x30, byte(i)}
+			accepted, _, _, _, _ := s.payloadChunkPool.insert(mkChunk(root, 0), true)
+			require.Equal(t, true, accepted)
+		}
+		root := [32]byte{0x97}
+		c := mkChunk(root, 3)
+		// Gossip validation marks seen before the subscriber runs.
+		s.setSeenPayloadChunk(1, root, c.Index)
+		s.acceptVerifiedPayloadChunk(s.ctx, c)
+		require.Equal(t, false, s.hasSeenPayloadChunk(root, c.Index))
+	})
+}

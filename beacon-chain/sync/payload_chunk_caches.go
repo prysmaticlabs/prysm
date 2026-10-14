@@ -94,3 +94,12 @@ func (s *Service) setSeenPayloadChunk(slot primitives.Slot, chunksRoot [32]byte,
 	}
 	s.seenPayloadChunkCache.Add(slot, payloadChunkSeenKey(chunksRoot, index), true)
 }
+
+// unsetSeenPayloadChunk rolls back a first-seen marker for a chunk the pool
+// could not hold, so a later delivery is not silently discarded.
+func (s *Service) unsetSeenPayloadChunk(chunksRoot [32]byte, index uint64) {
+	if s.seenPayloadChunkCache == nil {
+		return
+	}
+	s.seenPayloadChunkCache.Remove(payloadChunkSeenKey(chunksRoot, index))
+}

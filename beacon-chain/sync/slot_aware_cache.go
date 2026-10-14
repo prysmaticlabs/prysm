@@ -34,6 +34,14 @@ func (c *slotAwareCache) Get(key string) (any, bool) {
 	return c.cache.Get(key)
 }
 
+// Remove drops a single key. The slot index keeps a stale reference, which
+// slot pruning tolerates (removing an absent key is a no-op).
+func (c *slotAwareCache) Remove(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cache.Remove(key)
+}
+
 // Add adds a value to the cache associated with a specific slot.
 func (c *slotAwareCache) Add(slot primitives.Slot, key string, value any) {
 	c.mu.Lock()
