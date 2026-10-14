@@ -43,7 +43,7 @@ func TestSetSelfBuildExecutionPayloadBid(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -54,7 +54,7 @@ func TestSetSelfBuildExecutionPayloadBid(t *testing.T) {
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 
 	// 5 Gwei = 5,000,000,000 Wei
@@ -104,7 +104,7 @@ func TestSetSelfBuildExecutionPayloadBid_BlobCommitments(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -115,7 +115,7 @@ func TestSetSelfBuildExecutionPayloadBid_BlobCommitments(t *testing.T) {
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 
 	// Create blob commitments matching what the EL would return.
@@ -182,7 +182,7 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    parentHash[:],
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -193,7 +193,7 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 
 	local := &consensusblocks.GetPayloadResponse{
@@ -258,7 +258,7 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    parentHash[:],
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -269,7 +269,7 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 	local := &consensusblocks.GetPayloadResponse{
 		ExecutionData:          ed,
@@ -326,7 +326,7 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    parentHash[:],
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -337,7 +337,7 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 
 	// Local bid is 2000 Gwei (in Wei: 2000 * 1e9).
@@ -401,7 +401,7 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    parentHash[:],
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -412,7 +412,7 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 
 	local := &consensusblocks.GetPayloadResponse{
@@ -474,7 +474,7 @@ func TestSetExecutionPayloadBid_FallsBackToSelfBuildWhenNoCachedBid(t *testing.T
 	})
 	require.NoError(t, err)
 
-	payload := &enginev1.ExecutionPayloadDeneb{
+	payload := &enginev1.ExecutionPayloadGloas{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     make([]byte, 32),
@@ -485,7 +485,7 @@ func TestSetExecutionPayloadBid_FallsBackToSelfBuildWhenNoCachedBid(t *testing.T
 		BlockHash:     make([]byte, 32),
 		ExtraData:     make([]byte, 0),
 	}
-	ed, err := consensusblocks.WrappedExecutionPayloadDeneb(payload)
+	ed, err := consensusblocks.WrappedExecutionPayloadGloas(payload)
 	require.NoError(t, err)
 
 	local := &consensusblocks.GetPayloadResponse{

@@ -21,7 +21,6 @@ import (
 	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
@@ -129,6 +128,7 @@ func TestPublishExecutionPayloadEnvelope_NilRequest(t *testing.T) {
 	require.ErrorContains(t, "must set contents or signed_envelope", err)
 
 	_, err = vs.PublishExecutionPayloadEnvelopeV2(t.Context(), &ethpb.GenericSignedExecutionPayloadEnvelope{
+		BeaconBlockRoot: make([]byte, 32),
 		Envelope: &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
 			Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{SignedExecutionPayloadEnvelope: &ethpb.SignedExecutionPayloadEnvelope{}},
 		},
@@ -144,6 +144,7 @@ func TestPublishExecutionPayloadEnvelope_PreFork(t *testing.T) {
 
 	vs := &Server{}
 	_, err := vs.PublishExecutionPayloadEnvelopeV2(t.Context(), &ethpb.GenericSignedExecutionPayloadEnvelope{
+		BeaconBlockRoot: make([]byte, 32),
 		Envelope: &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
 			Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{
 				SignedExecutionPayloadEnvelope: &ethpb.SignedExecutionPayloadEnvelope{
@@ -188,7 +189,6 @@ func TestPublishExecutionPayloadEnvelope_StatelessContents_RejectsBadProofs(t *t
 		Message: &ethpb.ExecutionPayloadEnvelope{
 			Payload:               &enginev1.ExecutionPayloadGloas{SlotNumber: 1},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
-			BeaconBlockRoot:       make([]byte, 32),
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
@@ -196,6 +196,7 @@ func TestPublishExecutionPayloadEnvelope_StatelessContents_RejectsBadProofs(t *t
 
 	vs := &Server{}
 	_, err := vs.PublishExecutionPayloadEnvelopeV2(t.Context(), &ethpb.GenericSignedExecutionPayloadEnvelope{
+		BeaconBlockRoot: make([]byte, 32),
 		Envelope: &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
 			Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{
 				SignedExecutionPayloadEnvelope: signed,
@@ -277,7 +278,6 @@ func TestGetExecutionPayloadEnvelopeRPC_Success(t *testing.T) {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          primitives.BuilderIndex(0),
-		BeaconBlockRoot:       make([]byte, 32),
 		ParentBeaconBlockRoot: make([]byte, 32),
 	}
 
@@ -376,13 +376,13 @@ func TestPublishExecutionPayloadEnvelope_Success(t *testing.T) {
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 			BuilderIndex:          0,
-			BeaconBlockRoot:       make([]byte, 32),
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
 
 	resp, err := vs.PublishExecutionPayloadEnvelopeV2(t.Context(), &ethpb.GenericSignedExecutionPayloadEnvelope{
+		BeaconBlockRoot: make([]byte, 32),
 		Envelope: &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
 			Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{SignedExecutionPayloadEnvelope: req},
 		},
@@ -390,7 +390,8 @@ func TestPublishExecutionPayloadEnvelope_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Equal(t, true, broadcaster.BroadcastCalled.Load())
-	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	// EIP-8411: the envelope is revealed as one PayloadChunk message per index.
+	require.Equal(t, fieldparams.TotalExecutionPayloadChunks, len(broadcaster.BroadcastMessages))
 	waitForEnvelopeImport(t, receiver)
 	require.Equal(t, int32(1), receiver.calls.Load())
 }
@@ -424,13 +425,13 @@ func TestPublishExecutionPayloadEnvelope_ImportFailureDoesNotFailPublish(t *test
 				SlotNumber:    1,
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
-			BeaconBlockRoot:       make([]byte, 32),
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
 
 	resp, err := vs.PublishExecutionPayloadEnvelopeV2(t.Context(), &ethpb.GenericSignedExecutionPayloadEnvelope{
+		BeaconBlockRoot: make([]byte, 32),
 		Envelope: &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
 			Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{SignedExecutionPayloadEnvelope: req},
 		},
@@ -457,7 +458,7 @@ func TestPublishExecutionPayloadEnvelope_ContentsArmCachedColumns(t *testing.T) 
 	columns, err := peerdas.DataColumnSidecarsGloas(
 		[][]kzg.Cell{make([]kzg.Cell, fieldparams.NumberOfColumns)},
 		[][]kzg.Proof{make([]kzg.Proof, fieldparams.NumberOfColumns)},
-		1, bytesutil.ToBytes32(envelope.BeaconBlockRoot),
+		1, [32]byte{},
 	)
 	require.NoError(t, err)
 
@@ -477,6 +478,7 @@ func TestPublishExecutionPayloadEnvelope_ContentsArmCachedColumns(t *testing.T) 
 
 	contentsReq := func(blobs, kzgProofs [][]byte) *ethpb.GenericSignedExecutionPayloadEnvelope {
 		return &ethpb.GenericSignedExecutionPayloadEnvelope{
+			BeaconBlockRoot: make([]byte, 32),
 			Envelope: &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
 				Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{
 					SignedExecutionPayloadEnvelope: signed,
@@ -532,7 +534,6 @@ func testEnvelope(slot primitives.Slot) *ethpb.ExecutionPayloadEnvelope {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          0,
-		BeaconBlockRoot:       make([]byte, 32),
 		ParentBeaconBlockRoot: make([]byte, 32),
 	}
 }

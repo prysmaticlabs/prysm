@@ -138,7 +138,7 @@ func GenerateJsonGloasBeaconBlock() *structs.BeaconBlockGloas {
 					ExecutionPayment:      "124",
 					BlobKzgCommitments:    []string{},
 					ExecutionRequestsRoot: hexutil.Encode(FillByteSlice(32, 131)),
-					PayloadChunksRoot:     hexutil.Encode(make([]byte, 32)),
+					PayloadChunksRoot:     hexutil.Encode(FillByteSlice(32, 240)),
 				},
 				Signature: hexutil.Encode(FillByteSlice(96, 130)),
 			},
