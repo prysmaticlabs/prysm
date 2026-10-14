@@ -16,6 +16,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
@@ -27,7 +28,9 @@ func (c *beaconApiValidatorClient) beaconBlock(ctx context.Context, slot primiti
 	queryParams := neturl.Values{}
 	queryParams.Add("randao_reveal", hexutil.Encode(randaoReveal))
 	if len(graffiti) > 0 {
-		queryParams.Add("graffiti", hexutil.Encode(graffiti))
+		// Mirror gRPC server behavior: Pad or truncate.
+		g := bytesutil.ToBytes32(graffiti)
+		queryParams.Add("graffiti", hexutil.Encode(g[:]))
 	}
 
 	if slots.ToEpoch(slot) >= params.BeaconConfig().GloasForkEpoch {
