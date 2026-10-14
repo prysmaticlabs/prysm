@@ -62,4 +62,9 @@ const (
 	MaxSignedAggregateAndProofSize   = 1462   // MaxSignedAggregateAndProofSize is the maximum size of a signed aggregate and proof, ~1 KiB.
 	MaxAttesterSlashingSize          = 131536 // MaxAttesterSlashingSize is the maximum size of an attester slashing, ~128 KiB.
 	MaxSignedExecutionPayloadBidSize = 196932 // MaxSignedExecutionPayloadBidSize is the maximum size of a signed execution payload bid, ~192 KiB.
+
+	// Introduced by EIP-8411 (fast execution payload broadcast).
+	TotalExecutionPayloadChunks = 64     // TOTAL_EXECUTION_PAYLOAD_CHUNKS
+	ChunkInclusionProofDepth    = 6      // CHUNK_INCLUSION_PROOF_DEPTH, log2(TOTAL_EXECUTION_PAYLOAD_CHUNKS)
+	MaxPayloadChunkSize         = 163840 // MAX_PAYLOAD_CHUNK_SIZE = MAX_PAYLOAD_SIZE / TOTAL_EXECUTION_PAYLOAD_CHUNKS
 )
