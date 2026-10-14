@@ -242,6 +242,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	msg.ValidatorData = blkPb // Used in downstream subscriber
 
+	// EIP-8411: a valid block binds its bid's chunk commitment to the block
+	// root; chunk gossip rule 5 and envelope routing depend on this.
+	s.registerPayloadChunkCommitmentFromBlock(blk.Block(), blockRoot)
+
 	// Log the arrival time of the accepted block
 	graffiti := blk.Block().Body().Graffiti()
 	startTime, err := slots.StartTime(genesisTime, blk.Block().Slot())

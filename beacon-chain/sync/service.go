@@ -68,6 +68,8 @@ const (
 	seenPayloadEnvelopeSize     = 1000
 	seenExecutionPayloadBidSize = 1000
 	seenDataColumnSize          = seenBlockSize * 128 // Each block can have max 128 data columns.
+	payloadChunkCommitmentSize  = 1000                // EIP-8411: (slot, payload_chunks_root) commitments.
+	seenPayloadChunkSize        = 64 * 128            // EIP-8411: first-seen (payload_chunks_root, index) tuples.
 	seenUnaggregatedAttSize     = 20000
 	seenAggregatedAttSize       = 16384
 	seenSyncMsgSize             = 1000 // Maximum of 512 sync committee members, 1000 is a safe amount.
@@ -163,6 +165,8 @@ type Service struct {
 	seenBlobLock                         sync.RWMutex
 	seenBlobCache                        *lru.Cache
 	seenDataColumnCache                  *slotAwareCache
+	payloadChunkCommitments              *slotAwareCache
+	seenPayloadChunkCache                *slotAwareCache
 	pendingGloasColumnsLock              sync.RWMutex
 	pendingGloasColumns                  map[[32]byte]*pendingGloasEntry
 	seenAggregatedAttestationLock        sync.RWMutex
@@ -430,6 +434,8 @@ func (s *Service) initCaches() {
 	s.highestExecutionPayloadBidCache = cache.NewHighestExecutionPayloadBidCache()
 	s.seenBlobCache = lruwrpr.New(seenBlockSize * params.BeaconConfig().DeprecatedMaxBlobsPerBlockElectra)
 	s.seenDataColumnCache = newSlotAwareCache(seenDataColumnSize)
+	s.payloadChunkCommitments = newSlotAwareCache(payloadChunkCommitmentSize)
+	s.seenPayloadChunkCache = newSlotAwareCache(seenPayloadChunkSize)
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
@@ -608,6 +614,8 @@ func (s *Service) pruneDataColumnCache() {
 		return
 	}
 
+	s.payloadChunkCommitments.pruneSlotsBefore(finalizedSlot)
+	s.seenPayloadChunkCache.pruneSlotsBefore(finalizedSlot)
 	pruned := s.seenDataColumnCache.pruneSlotsBefore(finalizedSlot)
 	if pruned > 0 {
 		log.WithFields(logrus.Fields{

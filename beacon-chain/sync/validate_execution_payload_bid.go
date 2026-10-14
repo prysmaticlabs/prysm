@@ -124,6 +124,10 @@ func (s *Service) validateExecutionPayloadBidGossip(ctx context.Context, pid pee
 		return pubsub.ValidationReject, err
 	}
 	s.setSeenExecutionPayloadBid(bid.Slot(), tupleKey)
+	// EIP-8411: every signature-valid bid registers its chunk commitment, even
+	// if a later rule IGNOREs the bid (e.g. not the highest). Chunks for losing
+	// bids must still validate at the first hop.
+	s.registerPayloadChunkCommitment(bid.Slot(), bid.PayloadChunksRoot(), [32]byte{})
 	// [IGNORE] this bid is the highest value bid seen for the tuple (bid.slot, bid.parent_block_hash, bid.parent_block_root).
 	if !s.isHighestExecutionPayloadBid(bid) {
 		return pubsub.ValidationIgnore, nil
