@@ -273,9 +273,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
-	var decoupledBlocks []decoupled.Block
-	var decoupledFinalized decoupled.Pair
-	var decoupledValidators uint64
+	summaries := make([]*decoupled.FGSummary, len(blks))
+	var validators uint64
 	for i, b := range blks {
 		if features.BlacklistedBlock(b.Root()) {
 			return errBlacklistedRoot
@@ -299,16 +298,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			if err != nil {
 				return err
 			}
-			if len(decoupledBlocks) == 0 {
-				f, err := preState.Finalized()
-				if err != nil {
-					return err
-				}
-				fh, err := preState.FinalizedHeight()
-				if err != nil {
-					return err
-				}
-				decoupledFinalized, decoupledValidators = decoupled.Pair{Height: fh, Root: bytesutil.ToBytes32(f.Root)}, uint64(preState.NumValidators())
+			summaries[i] = &fg
+			if validators == 0 {
+				validators = uint64(preState.NumValidators())
 			}
 		}
 		sig := b.Signature()
@@ -403,15 +395,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			return errors.Wrap(err, "could not insert first payload in batch to forkchoice")
 		}
 	}
-	var prepared []decoupled.Block
-	if len(decoupledBlocks) > 0 {
-		s.cfg.ForkChoiceStore.SetExternalCheckpoints()
-		var err error
-		if prepared, err = s.prepareDecoupled(ctx, decoupledFinalized, decoupledValidators, decoupledBlocks...); err != nil {
-			return errors.Wrap(err, "could not prepare batch for the decoupled fork choice")
-		}
-	}
-	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
+	if err := s.insertChain(ctx, pendingNodes, validators); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	if lastB.Version() >= version.Decoupled {

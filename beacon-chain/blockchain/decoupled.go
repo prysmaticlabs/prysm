@@ -162,64 +162,6 @@ func (s *Service) DecoupledFinalityData(slot primitives.Slot) (*ethpb.FinalityAt
 	return d, d != nil
 }
 
-// prepareDecoupledBlock converts a validated block and its post-state, then
-// prepares any ancestors needed for insertion. The caller must hold the
-// legacy fork choice lock.
-func (s *Service) prepareDecoupledBlock(ctx context.Context, st state.BeaconState, roblock consensusblocks.ROBlock) ([]decoupled.Block, error) {
-	b, err := decoupledBlock(st, roblock)
-	if err != nil {
-		return nil, err
-	}
-	return s.prepareDecoupled(ctx, b.FG.Finalized, uint64(st.NumValidators()), b)
-}
-
-// Spec: ac_on_block after fg_on_block. Everything fallible happens here, the lookups for the missing ancestors, with no engine mutation beyond creating it, so an import that fails afterwards leaves the engine as it was. claimed is the finalized pair of the first block's post-state. The caller holds the legacy fork choice lock.
-func (s *Service) prepareDecoupled(ctx context.Context, claimed decoupled.Pair, validators uint64, blocks ...decoupled.Block) ([]decoupled.Block, error) {
-	s.decoupledLock.Lock()
-	defer s.decoupledLock.Unlock()
-	if s.decoupledStore == nil {
-		if err := s.startDecoupled(ctx, stateFinalized, validators, prysmTime.Now()); err != nil {
-			return nil, err
-		}
-	}
-	prepared := make(map[[32]byte]bool, len(blocks))
-	var out []decoupled.Block
-	for _, b := range blocks {
-		ancestors, err := s.missingDecoupledAncestors(ctx, b.Parent, prepared)
-		if err != nil {
-			return nil, err
-		}
-		for _, a := range ancestors {
-			prepared[a.Root] = true
-		}
-		prepared[b.Root] = true
-		out = append(append(out, ancestors...), b)
-	}
-	return out, nil
-}
-
-// commitDecoupled inserts prepared blocks and copies the accepted checkpoints
-// to the legacy store. The caller must first insert the blocks into the legacy
-// store and hold its lock. Cancellation is disabled so pruning finishes once
-// insertion begins; an insertion or checkpoint error is fatal.
-func (s *Service) commitDecoupled(ctx context.Context, blocks []decoupled.Block) {
-	ctx = context.WithoutCancel(ctx)
-	s.decoupledLock.Lock()
-	defer s.decoupledLock.Unlock()
-	now := prysmTime.Now()
-	for _, b := range blocks {
-		if err := s.decoupledStore.InsertNode(b, now); err != nil {
-			log.WithError(err).WithField("root", fmt.Sprintf("%#x", b.Root)).Fatal("Decoupled fork choice rejected a prepared block")
-		}
-		if s.inRegularSync() {
-			logDecoupledFG(s.decoupledStore.Node(b.Parent), b)
-		}
-	}
-	if err := s.syncDecoupledCheckpoints(ctx); err != nil {
-		log.WithError(err).Fatal("Legacy fork choice could not follow the decoupled checkpoints")
-	}
-}
-
 // poolDecoupledAttestations saves included FG attestations for reuse on other
 // branches. It then prunes attestations below the accepted finalized height.
 // The caller holds the fork choice lock.
