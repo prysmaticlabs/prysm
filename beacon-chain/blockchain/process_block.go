@@ -356,7 +356,13 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	}
 	// Insert all nodes to forkchoice
 	if applied {
-		env, err := envelopes[0].Envelope()
+		// The applied envelope belongs to the first block's parent; by-range
+		// wrappers carry no root, so rebind before the forkchoice insert.
+		rewrapped, err := rewrapEnvelopeWithRoot(envelopes[0], blks[0].Block().ParentRoot())
+		if err != nil {
+			return nil, err
+		}
+		env, err := rewrapped.Envelope()
 		if err != nil {
 			return nil, err
 		}
