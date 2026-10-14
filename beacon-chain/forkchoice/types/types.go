@@ -28,4 +28,19 @@ type BlockAndCheckpoints struct {
 	JustifiedCheckpoint *ethpb.Checkpoint
 	FinalizedCheckpoint *ethpb.Checkpoint
 	HasPayload          bool
+	// FG is set for Decoupled blocks only, a batch can't reload their post-states.
+	FG *FGSummary
+}
+
+// Pair identifies a block at an FG height.
+type Pair struct {
+	Height primitives.Height
+	Root   [32]byte
+}
+
+// FGSummary contains a block state's claims, not the store's accepted J and F.
+type FGSummary struct {
+	Target    Pair
+	Justified Pair
+	Finalized Pair
 }

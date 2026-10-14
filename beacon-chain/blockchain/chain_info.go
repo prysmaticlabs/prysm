@@ -53,6 +53,7 @@ type ForkchoiceFetcher interface {
 	GasLimit(root, blockHash [32]byte) (uint64, error)
 	CachedHeadRoot() [32]byte
 	GetProposerHead() [32]byte
+	ProposerParent(primitives.Slot) ([32]byte, error)
 	SetForkChoiceGenesisTime(time.Time)
 	UpdateHead(context.Context, primitives.Slot)
 	HighestReceivedBlockSlot() primitives.Slot
@@ -356,6 +357,10 @@ func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, er
 	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
 		return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
 	}
+	// Goldilocks F moves mid epoch, so epoch markers are not finality.
+	if s.goldilocks() != nil {
+		return s.cfg.BeaconDB.IsFinalizedAncestor(ctx, blockRoot), nil
+	}
 
 	// If the block has been finalized, the block will always be part of the canonical chain.
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot), nil
@@ -435,6 +440,9 @@ func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
 	// finalized.
 	if s.cfg.ForkChoiceStore.HasNode(root) {
 		return false
+	}
+	if s.goldilocks() != nil {
+		return s.cfg.BeaconDB.IsFinalizedAncestor(ctx, root)
 	}
 	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
 }

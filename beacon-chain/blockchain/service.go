@@ -18,6 +18,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
 	f "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/decoupled"
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	lightClient "github.com/OffchainLabs/prysm/v7/beacon-chain/light-client"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
@@ -75,6 +76,9 @@ type Service struct {
 	payloadArrivals                *payloadArrivals
 	goroutineCounter               *goroutineCounter
 	fcr                            *confirmation.FastConfirmationRule
+	decoupledProposal              decoupledProposal
+	decoupledFCU                   decoupledFCU
+	decoupledFCULock               sync.Mutex
 }
 
 // config options for the service.
@@ -208,6 +212,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if srv.clockSetter == nil {
 		return nil, ErrMissingClockSetter
 	}
+	if fc, ok := srv.cfg.ForkChoiceStore.(*decoupled.ForkChoice); ok {
+		fc.SetAncestorByDB(srv.ancestorByDB)
+	}
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
 	if err != nil {
 		return nil, err
@@ -224,6 +231,7 @@ func (s *Service) Start() {
 	}
 	s.InitFastConfirmation()
 	s.spawnProcessAttestationsRoutine()
+	s.spawnDecoupledTicker()
 	go s.runLateBlockTasks()
 	go s.runLatePayloadTasks()
 	go s.runGloasDepositWarmup()
@@ -465,6 +473,9 @@ func (s *Service) SafeBlockHash() [32]byte {
 
 // safeBlockHash prefers the FCR confirmed root over unrealized justified when the feature is on.
 func (s *Service) safeBlockHash() [32]byte {
+	if root, ok := s.decoupledConfirmed(); ok {
+		return s.cfg.ForkChoiceStore.ConfirmedPayloadBlockHash(root)
+	}
 	if s.fcr != nil {
 		root := s.fcr.ConfirmedRoot()
 		// A pruned confirmed root falls back to unrealized justified.

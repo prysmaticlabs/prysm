@@ -16,6 +16,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/das"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/decoupled"
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/features"
@@ -32,6 +33,7 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	prysmTime "github.com/OffchainLabs/prysm/v7/time"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -76,12 +78,29 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	defer reportProcessingTime(startTime)
 	defer reportAttestationInclusion(cfg.roblock.Block())
 
+	if cfg.roblock.Version() >= version.Decoupled && s.goldilocks() == nil {
+		finalized, err := cfg.postState.Finalized()
+		if err == nil {
+			err = s.startDecoupled(ctx, cfg.roblock.Block().ParentRoot(), bytesutil.ToBytes32(finalized.Root), uint64(cfg.postState.NumValidators()), prysmTime.Now())
+		}
+		if err != nil {
+			ctx = trace.NewContext(context.Background(), span)
+			s.rollbackBlock(ctx, cfg.roblock.Root())
+			return errors.Wrapf(err, "could not start the decoupled fork choice for block %d", cfg.roblock.Block().Slot())
+		}
+	}
 	err := s.cfg.ForkChoiceStore.InsertNode(ctx, cfg.postState, cfg.roblock)
 	if err != nil {
 		// Do not use parent context in the event it deadlined
 		ctx = trace.NewContext(context.Background(), span)
 		s.rollbackBlock(ctx, cfg.roblock.Root())
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", cfg.roblock.Block().Slot())
+	}
+	if st := s.goldilocks(); st != nil && cfg.roblock.Version() >= version.Decoupled {
+		if s.inRegularSync() {
+			logDecoupledFG(st.Node(cfg.roblock.Block().ParentRoot()), st.Node(cfg.roblock.Root()))
+		}
+		s.poolDecoupledAttestations(cfg.roblock)
 	}
 	if err := s.handleBlockAttestations(ctx, cfg.roblock.Block(), cfg.postState); err != nil {
 		return errors.Wrap(err, "could not handle block's attestations")
@@ -98,6 +117,17 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	}
 
 	defer s.sendStateFeedOnBlock(cfg) // only send event after successful insertion
+	if s.goldilocks() != nil {
+		cfg.headRoot, _ = s.publishDecoupledHead(ctx, s.CurrentSlot()+1)
+		s.checkBuilderPayloadFailure(cfg.roblock.Block(), cfg.postState)
+		go func() {
+			ctx, cancel := context.WithTimeout(s.ctx, slotDeadline)
+			defer cancel()
+			cfg.ctx = ctx
+			s.updateCachesPostBlockProcessing(cfg)
+		}()
+		return nil
+	}
 	start := time.Now()
 	cfg.headRoot, err = s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
@@ -128,6 +158,9 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	return nil
 }
 
+// getStateVersionAndPayload returns the fork version and execution header used
+// by batch validation. Gloas and Decoupled process separate payload envelopes,
+// so they return no header here.
 func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionData, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
@@ -136,7 +169,7 @@ func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionD
 	var err error
 	preStateVersion := st.Version()
 	switch preStateVersion {
-	case version.Phase0, version.Altair, version.Gloas:
+	case version.Phase0, version.Altair, version.Gloas, version.Decoupled:
 	default:
 		preStateHeader, err = st.LatestExecutionPayloadHeader()
 		if err != nil {
@@ -240,6 +273,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	var set *bls.SignatureBatch
 	boundaries := make(map[[32]byte]state.BeaconState)
+	var decoupledBlocks []decoupled.Block
+	var decoupledFinalized decoupled.Pair
+	var decoupledValidators uint64
 	for i, b := range blks {
 		if features.BlacklistedBlock(b.Root()) {
 			return errBlacklistedRoot
@@ -256,6 +292,24 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
 			return invalidBlock{error: err}
+		}
+		// preState is this block's post-state only until the next transition.
+		if b.Version() >= version.Decoupled {
+			fg, err := decoupled.Summary(preState, b.Root())
+			if err != nil {
+				return err
+			}
+			if len(decoupledBlocks) == 0 {
+				f, err := preState.Finalized()
+				if err != nil {
+					return err
+				}
+				fh, err := preState.FinalizedHeight()
+				if err != nil {
+					return err
+				}
+				decoupledFinalized, decoupledValidators = decoupled.Pair{Height: fh, Root: bytesutil.ToBytes32(f.Root)}, uint64(preState.NumValidators())
+			}
 		}
 		sig := b.Signature()
 		root := b.Root()
@@ -324,6 +378,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	if err != nil {
 		return err
 	}
+	for i, fg := range summaries {
+		pendingNodes[i].FG = fg
+	}
 	// Save boundary states that will be useful for forkchoice
 	for r, st := range boundaries {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
@@ -346,8 +403,22 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			return errors.Wrap(err, "could not insert first payload in batch to forkchoice")
 		}
 	}
+	var prepared []decoupled.Block
+	if len(decoupledBlocks) > 0 {
+		s.cfg.ForkChoiceStore.SetExternalCheckpoints()
+		var err error
+		if prepared, err = s.prepareDecoupled(ctx, decoupledFinalized, decoupledValidators, decoupledBlocks...); err != nil {
+			return errors.Wrap(err, "could not prepare batch for the decoupled fork choice")
+		}
+	}
 	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
+	}
+	if lastB.Version() >= version.Decoupled {
+		s.poolDecoupledAttestations(blks...)
+		if err := s.persistDecoupledCheckpoints(ctx); err != nil {
+			return errors.Wrap(err, "could not persist decoupled checkpoints")
+		}
 	}
 	// Set their optimistic status
 	if isValidPayload {
@@ -355,7 +426,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
-	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
+	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload); err != nil {
+		return err
+	}
+	s.publishSyncHead(lastBR)
+	return nil
 }
 
 func (s *Service) notifyEngineAndSaveData(
@@ -434,6 +509,10 @@ func (s *Service) notifyEngineAndSaveData(
 		}); err != nil {
 			tracing.AnnotateError(span, err)
 			return nil, false, err
+		}
+		// Decoupled checkpoints are persisted once fork choice accepts them.
+		if b.Version() >= version.Decoupled {
+			continue
 		}
 		if i > 0 && jCheckpoints[i].Epoch > jCheckpoints[i-1].Epoch {
 			if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, s.checkpointWithStoredRoot(ctx, jCheckpoints[i])); err != nil {

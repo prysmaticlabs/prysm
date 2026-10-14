@@ -9,10 +9,12 @@ import (
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	prysmTime "github.com/OffchainLabs/prysm/v7/time"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
@@ -58,6 +60,28 @@ func (s *Service) setupForkchoiceTree(st state.BeaconState) error {
 	headRoot := s.startupHeadRoot()
 	cp := s.FinalizedCheckpt()
 	fRoot := s.ensureRootNotZeros([32]byte(cp.Root))
+	// F and J can still be pre-fork with Decoupled blocks after them, and sync never saves the head.
+	head, err := s.cfg.BeaconDB.HeadBlock(s.ctx)
+	headDecoupled := err == nil && blocks.BeaconBlockIsNil(head) == nil && head.Version() >= version.Decoupled
+	if cp.Epoch >= params.BeaconConfig().DecoupledForkEpoch || headDecoupled {
+		// The registry only grows, so a Decoupled head's state sizes the committee rather than F's.
+		registry := st
+		if headDecoupled {
+			hRoot, err := s.cfg.BeaconDB.HeadBlockRoot()
+			if err != nil {
+				return errors.Wrap(err, "could not get head block root")
+			}
+			if registry, err = s.cfg.StateGen.StateByRoot(s.ctx, hRoot); err != nil {
+				return errors.Wrap(err, "could not get head state")
+			}
+		}
+		s.cfg.ForkChoiceStore.Lock()
+		err := s.startDecoupled(s.ctx, fRoot, fRoot, uint64(registry.NumValidators()), prysmTime.Now())
+		s.cfg.ForkChoiceStore.Unlock()
+		if err != nil {
+			return errors.Wrap(err, "could not start the decoupled fork choice")
+		}
+	}
 	if err := s.setupForkchoiceRoot(st); err != nil {
 		return errors.Wrap(err, "could not set up forkchoice root")
 	}
@@ -88,7 +112,11 @@ func (s *Service) setupForkchoiceTree(st state.BeaconState) error {
 	if err := s.markFinalizedRootFull(chain, fRoot); err != nil {
 		log.WithError(err).Error("Could not mark finalized root as full in forkchoice")
 	}
-	return s.cfg.ForkChoiceStore.InsertChain(s.ctx, chain)
+	if err := s.insertChain(s.ctx, chain, 0); err != nil {
+		return err
+	}
+	s.publishSyncHead(chain[len(chain)-1].Block.Root())
+	return nil
 }
 
 func (s *Service) buildForkchoiceChain(ctx context.Context, head interfaces.ReadOnlySignedBeaconBlock) ([]*forkchoicetypes.BlockAndCheckpoints, error) {

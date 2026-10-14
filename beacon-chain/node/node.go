@@ -33,7 +33,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/slasherkv"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/decoupled"
 	lightclient "github.com/OffchainLabs/prysm/v7/beacon-chain/light-client"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/monitor"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/node/registration"
@@ -214,7 +214,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, optFuncs []func(*cli.Co
 
 	synchronizer := startup.NewClockSynchronizer()
 	beacon.ClockWaiter = synchronizer
-	beacon.forkChoicer = doublylinkedtree.New()
+	beacon.forkChoicer = decoupled.NewForkChoice()
 
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {

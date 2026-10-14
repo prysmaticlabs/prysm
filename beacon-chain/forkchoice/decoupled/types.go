@@ -3,6 +3,7 @@ package decoupled
 import (
 	"time"
 
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 )
 
@@ -14,17 +15,10 @@ type Vote struct {
 }
 
 // Pair identifies a block at an FG height.
-type Pair struct {
-	Height primitives.Height
-	Root   [32]byte
-}
+type Pair = forkchoicetypes.Pair
 
 // FGSummary contains a block state's claims, not the store's accepted J and F.
-type FGSummary struct {
-	Target    Pair
-	Justified Pair
-	Finalized Pair
-}
+type FGSummary = forkchoicetypes.FGSummary
 
 // Node is a store-owned block in the tree rooted at accepted F.
 type Node struct {
@@ -62,20 +56,24 @@ type Lock struct {
 
 // Store holds Goldilocks fork-choice state. Callers must serialize all access.
 type Store struct {
-	committeeSize   uint64
-	genesis         time.Time
-	restartTime     time.Time
-	ticked          time.Time
-	nodes           map[[32]byte]*Node
-	finalized       *Node
-	justified       *Node
-	hJ              primitives.Height
-	hF              primitives.Height
-	hMax            primitives.Height
-	pool            map[primitives.Slot]*bucket
-	confirmations   map[primitives.Slot]*Node
-	locks           []lock
-	fastConfirmed   []*Node
+	committeeSize uint64
+	genesis       time.Time
+	restartTime   time.Time
+	ticked        time.Time
+	nodes         map[[32]byte]*Node
+	finalized     *Node
+	justified     *Node
+	// hJ and hF are accepted FG heights; hMax is the greatest stored target height.
+	hJ   primitives.Height
+	hF   primitives.Height
+	hMax primitives.Height
+	pool map[primitives.Slot]*bucket
+	// confirmations retains results before lock vetoes; nil breaks a slow-lock streak.
+	confirmations map[primitives.Slot]*Node
+	locks         []lock
+	// fastConfirmed holds the latest update's FG source candidates, deepest first.
+	fastConfirmed []*Node
+	// latestConfirmed is the record; Confirmed clips it to the head's chain.
 	latestConfirmed *Node
 	duty            duty
 }

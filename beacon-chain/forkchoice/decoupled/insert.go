@@ -32,7 +32,7 @@ func (st *Store) InsertNode(b Block, now time.Time) error {
 	return nil
 }
 
-func (p Pair) less(q Pair) bool {
+func less(p, q Pair) bool {
 	if p.Height != q.Height {
 		return p.Height < q.Height
 	}
@@ -45,12 +45,12 @@ func (st *Store) updateFinality(n *Node) {
 	st.hMax = max(st.hMax, n.FG.Target.Height)
 	j := st.nodes[n.FG.Justified.Root]
 	current := Pair{Height: st.hJ, Root: st.justified.Root}
-	if j != nil && current.less(n.FG.Justified) {
+	if j != nil && less(current, n.FG.Justified) {
 		st.justified, st.hJ = j, n.FG.Justified.Height
 	}
 	f := st.nodes[n.FG.Finalized.Root]
 	if f != nil && f != st.finalized && isAncestor(f, st.justified) && st.hasViableDescendant(f) {
-		st.finalized = f
+		st.finalized, st.hF = f, n.FG.Finalized.Height
 		st.prune()
 	}
 }
@@ -63,3 +63,6 @@ func (st *Store) Justified() *Node { return st.justified }
 
 // JustifiedHeight returns the FG height of J.
 func (st *Store) JustifiedHeight() primitives.Height { return st.hJ }
+
+// FinalizedHeight returns the FG height of accepted F.
+func (st *Store) FinalizedHeight() primitives.Height { return st.hF }

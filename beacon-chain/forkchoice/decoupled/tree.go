@@ -99,7 +99,7 @@ func (st *Store) Remove(roots [][32]byte, now time.Time) error {
 	st.justified, st.hJ, st.hMax = st.finalized, st.hF, st.finalized.FG.Target.Height
 	for _, n := range st.nodes {
 		st.hMax = max(st.hMax, n.FG.Target.Height)
-		if j := st.nodes[n.FG.Justified.Root]; j != nil && (Pair{Height: st.hJ, Root: st.justified.Root}).less(n.FG.Justified) {
+		if j := st.nodes[n.FG.Justified.Root]; j != nil && less(Pair{Height: st.hJ, Root: st.justified.Root}, n.FG.Justified) {
 			st.justified, st.hJ = j, n.FG.Justified.Height
 		}
 	}
