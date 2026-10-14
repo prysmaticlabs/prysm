@@ -150,8 +150,15 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 	case strings.Contains(topic, GossipPayloadAttestationMessageMessage):
 		// TODO: Revisit scoring params for payload attestation gossip.
 		return defaultBlockTopicParams(), nil
-	case strings.Contains(topic, GossipExecutionPayloadEnvelopeMessage):
-		// TODO: Revisit scoring params for execution payload envelope gossip.
+	case strings.Contains(topic, GossipPayloadChunkMessage):
+		// EIP-8411: up to TOTAL_EXECUTION_PAYLOAD_CHUNKS chunk messages arrive per
+		// slot from a single publisher, so one-per-slot block scoring would
+		// penalize honest peers. Topic scoring is disabled for the prototype.
+		return nil, nil
+	case strings.Contains(topic, GossipExecutionPayloadBidMessage):
+		// TODO: Revisit scoring params for execution payload bid gossip. This case
+		// existed implicitly before: the bid topic was absorbed by the envelope
+		// case via strings.Contains.
 		return defaultBlockTopicParams(), nil
 	case strings.Contains(topic, GossipSignedProposerPreferencesMessage):
 		// TODO: Revisit scoring params for signed proposer preferences gossip.
