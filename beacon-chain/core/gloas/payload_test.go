@@ -356,3 +356,50 @@ func TestVerifyExecutionPayloadEnvelopeSignature(t *testing.T) {
 		})
 	})
 }
+
+// A zero signature is only a marker for chunk-distributed envelopes; it must
+// route through the chunk commitment check, never bypass authentication.
+func TestEnvelopeChunkCommitmentAuthentication(t *testing.T) {
+	fixture := buildPayloadFixture(t, nil)
+
+	zeroSigned := &ethpb.SignedExecutionPayloadEnvelope{
+		Message:   fixture.signedProto.Message,
+		Signature: make([]byte, 96),
+	}
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(zeroSigned, [32]byte{})
+	require.NoError(t, err)
+
+	t.Run("mismatched commitment is rejected", func(t *testing.T) {
+		// The fixture bid commits to a zero payload_chunks_root, which can never
+		// equal a real envelope's commitment.
+		err := verifyExecutionPayloadEnvelopeSignature(fixture.state, wrapped)
+		require.ErrorContains(t, "does not match bid payload_chunks_root", err)
+
+		_, err = ExecutionPayloadEnvelopeSignatureBatch(fixture.state, wrapped)
+		require.ErrorContains(t, "does not match bid payload_chunks_root", err)
+	})
+
+	t.Run("matching commitment authenticates", func(t *testing.T) {
+		chunksRoot, err := PayloadChunksRootForEnvelope(fixture.signedProto.Message)
+		require.NoError(t, err)
+
+		stPb, ok := fixture.state.ToProtoUnsafe().(*ethpb.BeaconStateGloas)
+		require.Equal(t, true, ok)
+		stPb = stPb.Copy()
+		stPb.LatestExecutionPayloadBid.PayloadChunksRoot = chunksRoot[:]
+		st, err := state_native.InitializeFromProtoUnsafeGloas(stPb)
+		require.NoError(t, err)
+
+		require.NoError(t, verifyExecutionPayloadEnvelopeSignature(st, wrapped))
+
+		batch, err := ExecutionPayloadEnvelopeSignatureBatch(st, wrapped)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(batch.Signatures))
+	})
+
+	t.Run("real signatures still verify by signature", func(t *testing.T) {
+		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(fixture.signedProto, [32]byte{})
+		require.NoError(t, err)
+		require.NoError(t, verifyExecutionPayloadEnvelopeSignature(fixture.state, signed))
+	})
+}

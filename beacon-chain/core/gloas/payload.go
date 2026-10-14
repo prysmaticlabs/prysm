@@ -11,6 +11,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
@@ -201,10 +202,12 @@ func ExecutionPayloadEnvelopeSignatureBatch(
 	st state.BeaconState,
 	signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope,
 ) (*bls.SignatureBatch, error) {
-	// EIP-8411 prototype: chunk-reconstructed envelopes carry no builder
-	// signature; their authenticity derives from the bid's payload_chunks_root,
-	// which every chunk was Merkle-verified against. Nothing to batch.
+	// EIP-8411 prototype: signature-less envelopes authenticate against the
+	// bid's chunk commitment instead; nothing to batch when that holds.
 	if IsChunkAuthenticatedEnvelope(signedEnvelope) {
+		if err := verifyEnvelopeChunkCommitment(st, signedEnvelope); err != nil {
+			return nil, err
+		}
 		return bls.NewSet(), nil
 	}
 	envelope, err := signedEnvelope.Envelope()
@@ -262,10 +265,10 @@ func ExecutionPayloadEnvelopeSignatureBatch(
 //	    return bls.Verify(pubkey, signing_root, signed_envelope.signature)
 //	</spec>
 func verifyExecutionPayloadEnvelopeSignature(st state.BeaconState, signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) error {
-	// EIP-8411 prototype: envelopes reconstructed from verified chunks are
-	// authenticated by the bid's payload_chunks_root instead of a signature.
+	// EIP-8411 prototype: signature-less envelopes authenticate against the
+	// bid's chunk commitment instead of a BLS signature.
 	if IsChunkAuthenticatedEnvelope(signedEnvelope) {
-		return nil
+		return verifyEnvelopeChunkCommitment(st, signedEnvelope)
 	}
 	envelope, err := signedEnvelope.Envelope()
 	if err != nil {
@@ -308,12 +311,39 @@ func verifyExecutionPayloadEnvelopeSignature(st state.BeaconState, signedEnvelop
 }
 
 // IsChunkAuthenticatedEnvelope reports whether the signed envelope carries the
-// all-zero sentinel signature used for envelopes reconstructed from EIP-8411
-// payload chunks. Such envelopes were byte-authenticated against the bid's
-// payload_chunks_root at chunk validation time, so no signature exists or is
-// required. This mirrors the point-at-infinity sentinel used by self-build bids.
+// all-zero sentinel signature used for envelopes distributed as EIP-8411
+// payload chunks. The sentinel is only a marker, never proof: verification
+// routes such envelopes through verifyEnvelopeChunkCommitment, so an untrusted
+// peer cannot bypass authentication by zeroing the signature bytes.
 func IsChunkAuthenticatedEnvelope(signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) bool {
 	return signedEnvelope.Signature() == [96]byte{}
+}
+
+// verifyEnvelopeChunkCommitment authenticates a signature-less envelope by
+// recomputing its EIP-8411 chunk commitment and comparing it against the
+// payload_chunks_root committed by the state's latest (signed) bid. Matching
+// bytes mean the envelope IS the committed chunk set, which is the same
+// authenticity the chunk inclusion proofs establish on gossip.
+func verifyEnvelopeChunkCommitment(st state.BeaconState, signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) error {
+	protoSigned, ok := signedEnvelope.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
+	if !ok || protoSigned.Message == nil {
+		return fmt.Errorf("could not type assert signed envelope to proto")
+	}
+	got, err := PayloadChunksRootForEnvelope(protoSigned.Message)
+	if err != nil {
+		return fmt.Errorf("could not compute payload chunks root: %w", err)
+	}
+	bid, err := st.LatestExecutionPayloadBid()
+	if err != nil {
+		return fmt.Errorf("could not get latest execution payload bid: %w", err)
+	}
+	if bid == nil {
+		return fmt.Errorf("nil latest execution payload bid")
+	}
+	if committed := bid.PayloadChunksRoot(); got != committed {
+		return fmt.Errorf("envelope chunk commitment %#x does not match bid payload_chunks_root %#x", got, committed)
+	}
+	return nil
 }
 
 func envelopePublicKey(st state.BeaconState, builderIdx primitives.BuilderIndex) (bls.PublicKey, error) {
