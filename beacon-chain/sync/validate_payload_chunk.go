@@ -50,7 +50,7 @@ func (s *Service) validatePayloadChunk(ctx context.Context, pid peer.ID, msg *pu
 	}
 	receivedTime := prysmTime.Now()
 
-	ctx, span := trace.StartSpan(ctx, "sync.validatePayloadChunk")
+	_, span := trace.StartSpan(ctx, "sync.validatePayloadChunk")
 	defer span.End()
 
 	if msg.Topic == nil {
