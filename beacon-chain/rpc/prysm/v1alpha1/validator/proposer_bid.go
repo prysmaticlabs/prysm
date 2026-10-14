@@ -600,5 +600,8 @@ func (vs *Server) createSelfBuildExecutionPayloadBid(
 		ExecutionPayment:      0,
 		BlobKzgCommitments:    local.BlobsBundler.GetKzgCommitments(),
 		ExecutionRequestsRoot: executionRequestsRoot[:],
+		// EIP-8411: the real chunk commitment is filled in by the caller once the
+		// envelope bytes are fixed (see setExecutionPayloadBid).
+		PayloadChunksRoot: make([]byte, 32),
 	}, nil
 }

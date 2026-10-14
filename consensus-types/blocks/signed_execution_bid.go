@@ -152,6 +152,14 @@ func (h executionPayloadBidGloas) FeeRecipient() [20]byte {
 	return [20]byte(h.payload.FeeRecipient)
 }
 
+// PayloadChunksRoot returns the EIP-8411 commitment to the chunked envelope bytes.
+func (h executionPayloadBidGloas) PayloadChunksRoot() [32]byte {
+	if h.payload == nil || len(h.payload.PayloadChunksRoot) < 32 {
+		return [32]byte{}
+	}
+	return [32]byte(h.payload.PayloadChunksRoot)
+}
+
 // ExecutionRequestsRoot returns the hash tree root of the execution requests.
 func (h executionPayloadBidGloas) ExecutionRequestsRoot() [32]byte {
 	if h.payload == nil || len(h.payload.ExecutionRequestsRoot) < 32 {

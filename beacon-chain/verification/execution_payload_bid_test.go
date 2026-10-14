@@ -405,6 +405,7 @@ func testSignedExecutionPayloadBid(t *testing.T, slot primitives.Slot) *ethpb.Si
 			Value:                 100,
 			ExecutionPayment:      0,
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: bytes.Repeat([]byte{0x06}, 96),
 	}

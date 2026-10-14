@@ -83,6 +83,7 @@ func buildPayloadFixture(t *testing.T, mutate func(payload *enginev1.ExecutionPa
 		ExecutionPayment:      0,
 		FeeRecipient:          bytes.Repeat([]byte{0xEE}, 20),
 		ExecutionRequestsRoot: emptyRequestsRoot[:],
+		PayloadChunksRoot:     make([]byte, 32),
 	}
 
 	header := &ethpb.BeaconBlockHeader{

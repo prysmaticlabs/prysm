@@ -1577,6 +1577,9 @@ func HydrateExecutionPayloadBid(b *ethpb.ExecutionPayloadBid) *ethpb.ExecutionPa
 	if b.ExecutionRequestsRoot == nil {
 		b.ExecutionRequestsRoot = make([]byte, fieldparams.RootLength)
 	}
+	if b.PayloadChunksRoot == nil {
+		b.PayloadChunksRoot = make([]byte, fieldparams.RootLength)
+	}
 	return b
 }
 
@@ -1659,6 +1662,7 @@ func GenerateTestSignedExecutionPayloadBid(slot primitives.Slot) *ethpb.SignedEx
 			ExecutionPayment:      2000000,
 			BlobKzgCommitments:    [][]byte{blobKzgCommitment},
 			ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
+			PayloadChunksRoot:     make([]byte, fieldparams.RootLength),
 		},
 		Signature: signature,
 	}

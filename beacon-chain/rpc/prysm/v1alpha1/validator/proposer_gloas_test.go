@@ -62,6 +62,7 @@ func TestSetRemoteBidFallback(t *testing.T) {
 				PrevRandao:            make([]byte, 32),
 				BlobKzgCommitments:    [][]byte{},
 				ExecutionRequestsRoot: make([]byte, 32),
+				PayloadChunksRoot:     make([]byte, 32),
 			},
 			Signature: make([]byte, 96),
 		}
@@ -160,6 +161,7 @@ func TestSetRemoteBidFallback_GloasForkBoundary(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	})

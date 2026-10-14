@@ -103,6 +103,7 @@ func gloasBlock(t *testing.T, parent state.BeaconState, parentRoot [32]byte, slo
 					Slot:                  slot,
 					PrevRandao:            randaoMix,
 					ExecutionRequestsRoot: emptyRequestsRoot[:],
+					PayloadChunksRoot:     make([]byte, 32),
 				},
 				Signature: common.InfiniteSignature[:],
 			},

@@ -218,6 +218,7 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -292,6 +293,7 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	})
@@ -361,6 +363,7 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -434,6 +437,7 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}

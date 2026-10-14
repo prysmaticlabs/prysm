@@ -843,6 +843,7 @@ func TestSetExecutionPayloadBid_PrefersBuilderBid(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}

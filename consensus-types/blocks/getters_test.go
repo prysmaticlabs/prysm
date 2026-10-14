@@ -770,6 +770,7 @@ func hydrateBeaconBlockBodyGloas() *eth.BeaconBlockBodyGloas {
 				FeeRecipient:          make([]byte, 20),
 				BlobKzgCommitments:    [][]byte{make([]byte, fieldparams.BLSPubkeyLength)},
 				ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
+				PayloadChunksRoot:     make([]byte, 32),
 			},
 			Signature: make([]byte, fieldparams.BLSSignatureLength),
 		},

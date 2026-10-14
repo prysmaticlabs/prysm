@@ -409,6 +409,7 @@ func TestGloasExecutionRequestsRoot(t *testing.T) {
 		BlobKzgCommitments:    srcBid.BlobKzgCommitments(),
 		FeeRecipient:          feeRecipient[:],
 		ExecutionRequestsRoot: newRequestsRoot[:],
+		PayloadChunksRoot:     make([]byte, 32),
 	}
 	wrapped, err := blocks.WrappedROExecutionPayloadBid(newBidProto)
 	require.NoError(t, err)

@@ -35,6 +35,7 @@ func testExecutionPayloadBid() *eth.SignedExecutionPayloadBid {
 			ExecutionPayment:      500,
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: bytes.Repeat([]byte{6}, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: bytes.Repeat([]byte{7}, 96),
 	}

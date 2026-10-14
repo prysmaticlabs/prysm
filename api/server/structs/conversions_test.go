@@ -445,6 +445,7 @@ func TestROExecutionPayloadBidFromConsensus(t *testing.T) {
 			ExecutionPayment:      22,
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: bytes.Repeat([]byte{0x07}, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		}
 		roBid, err := blocks.WrappedROExecutionPayloadBid(bid)
 		require.NoError(t, err)
@@ -463,6 +464,7 @@ func TestROExecutionPayloadBidFromConsensus(t *testing.T) {
 			ExecutionPayment:      "22",
 			BlobKzgCommitments:    []string{},
 			ExecutionRequestsRoot: hexutil.Encode(bid.ExecutionRequestsRoot),
+			PayloadChunksRoot:     make([]byte, 32),
 		}
 		assert.DeepEqual(t, want, got)
 	})
@@ -481,6 +483,7 @@ func TestROExecutionPayloadBidFromConsensus(t *testing.T) {
 			ExecutionPayment:      22,
 			BlobKzgCommitments:    [][]byte{bytes.Repeat([]byte{0x06}, 48)},
 			ExecutionRequestsRoot: bytes.Repeat([]byte{0x07}, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		}
 		roBid, err := blocks.WrappedROExecutionPayloadBid(bid)
 		require.NoError(t, err)
@@ -504,6 +507,7 @@ func TestROExecutionPayloadBidFromConsensus(t *testing.T) {
 			ExecutionPayment:      "22",
 			BlobKzgCommitments:    bkcs,
 			ExecutionRequestsRoot: hexutil.Encode(bid.ExecutionRequestsRoot),
+			PayloadChunksRoot:     make([]byte, 32),
 		}
 		assert.DeepEqual(t, want, got)
 	})
@@ -578,6 +582,7 @@ func TestBeaconStateGloasFromConsensus(t *testing.T) {
 			ExecutionPayment:      7,
 			BlobKzgCommitments:    [][]byte{bytes.Repeat([]byte{0x16}, 48)},
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		}
 		state.Builders = []*eth.Builder{
 			{

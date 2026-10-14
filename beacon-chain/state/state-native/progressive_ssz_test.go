@@ -409,6 +409,7 @@ func gloasStateProtoForProgressiveSSZTests() *ethpb.BeaconStateGloas {
 			FeeRecipient:          make([]byte, fieldparams.FeeRecipientLength),
 			BlobKzgCommitments:    [][]byte{make([]byte, fieldparams.BLSPubkeyLength)},
 			ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
+			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Builders: []*ethpb.Builder{{
 			Pubkey:            pubkey1,

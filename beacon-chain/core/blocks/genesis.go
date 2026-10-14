@@ -219,6 +219,7 @@ func gloasGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execu
 			FeeRecipient:          make([]byte, 20),
 			BlobKzgCommitments:    make([][]byte, 0),
 			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
 		}
 	}
 	return &ethpb.BeaconBlockGloas{

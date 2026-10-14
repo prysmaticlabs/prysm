@@ -27,6 +27,7 @@ func validExecutionPayloadBid() *ethpb.ExecutionPayloadBid {
 		BlobKzgCommitments:    [][]byte{bytes.Repeat([]byte{0x05}, 48)},
 		FeeRecipient:          bytes.Repeat([]byte{0x06}, 20),
 		ExecutionRequestsRoot: bytes.Repeat([]byte{0x07}, 32),
+		PayloadChunksRoot:     make([]byte, 32),
 	}
 }
 
