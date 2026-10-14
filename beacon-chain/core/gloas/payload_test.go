@@ -96,7 +96,6 @@ func buildPayloadFixture(t *testing.T, mutate func(payload *enginev1.ExecutionPa
 
 	envelope := &ethpb.ExecutionPayloadEnvelope{
 		BuilderIndex:          builderIdx,
-		BeaconBlockRoot:       headerRoot[:],
 		ParentBeaconBlockRoot: header.ParentRoot,
 		Payload:               payload,
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
@@ -202,7 +201,7 @@ func buildPayloadFixture(t *testing.T, mutate func(payload *enginev1.ExecutionPa
 		Message:   envelope,
 		Signature: signature,
 	}
-	signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
+	signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, headerRoot)
 	require.NoError(t, err)
 
 	return payloadFixture{
@@ -303,14 +302,14 @@ func TestVerifyExecutionPayloadEnvelopeSignature(t *testing.T) {
 			Message:   msg,
 			Signature: signature,
 		}
-		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
+		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, [32]byte{})
 		require.NoError(t, err)
 
 		require.NoError(t, verifyExecutionPayloadEnvelopeSignature(st, signed))
 	})
 
 	t.Run("builder", func(t *testing.T) {
-		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(fixture.signedProto)
+		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(fixture.signedProto, [32]byte{})
 		require.NoError(t, err)
 
 		require.NoError(t, verifyExecutionPayloadEnvelopeSignature(fixture.state, signed))
@@ -336,7 +335,7 @@ func TestVerifyExecutionPayloadEnvelopeSignature(t *testing.T) {
 				Message:   msg,
 				Signature: bytes.Repeat([]byte{0xFF}, 96),
 			}
-			badSigned, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
+			badSigned, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, [32]byte{})
 			require.NoError(t, err)
 
 			err = verifyExecutionPayloadEnvelopeSignature(st, badSigned)
@@ -348,7 +347,7 @@ func TestVerifyExecutionPayloadEnvelopeSignature(t *testing.T) {
 				Message:   fixture.signedProto.Message,
 				Signature: bytes.Repeat([]byte{0xFF}, 96),
 			}
-			badSigned, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
+			badSigned, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, [32]byte{})
 			require.NoError(t, err)
 
 			err = verifyExecutionPayloadEnvelopeSignature(fixture.state, badSigned)
