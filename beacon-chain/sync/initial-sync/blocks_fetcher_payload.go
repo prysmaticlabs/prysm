@@ -112,9 +112,17 @@ func (f *blocksFetcher) validatePayloadBlockConsistency(r *fetchRequestResponse)
 	}
 	if pidx < len(r.envelopes) {
 		// Check if the next envelope belongs to the last block in the batch.
+		// EIP-8411: by-range envelopes carry no beacon block root, so the match
+		// is by the block hash the last block's bid commits to.
 		lastBlock := r.bwb[len(r.bwb)-1]
-		env, err := r.envelopes[pidx].Envelope()
-		if err == nil && env.BeaconBlockRoot() == lastBlock.Block.Root() {
+		matches := false
+		if sbid, bidErr := lastBlock.Block.Block().Body().SignedExecutionPayloadBid(); bidErr == nil && sbid != nil && sbid.Message != nil {
+			if env, envErr := r.envelopes[pidx].Envelope(); envErr == nil {
+				ph := env.BlockHash()
+				matches = ph != ([32]byte{}) && bytes.Equal(sbid.Message.BlockHash, ph[:])
+			}
+		}
+		if matches {
 			r.envelopes = r.envelopes[:pidx+1]
 		} else {
 			log.Debug("Not enough blocks in batch, truncating envelopes")

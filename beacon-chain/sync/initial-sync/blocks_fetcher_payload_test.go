@@ -26,6 +26,21 @@ func makeGloasBlock(t *testing.T, slot primitives.Slot, parentRoot [32]byte, par
 	return ro
 }
 
+// makeGloasBlockWithBidHash additionally sets the block hash the bid commits to,
+// i.e. the payload the block's own envelope must carry.
+func makeGloasBlockWithBidHash(t *testing.T, slot primitives.Slot, parentRoot, parentBlockHash, bidBlockHash [32]byte) blocks.ROBlock {
+	blk := util.NewBeaconBlockGloas()
+	blk.Block.Slot = slot
+	blk.Block.ParentRoot = parentRoot[:]
+	blk.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockHash = parentBlockHash[:]
+	blk.Block.Body.SignedExecutionPayloadBid.Message.BlockHash = bidBlockHash[:]
+	signed, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	ro, err := blocks.NewROBlock(signed)
+	require.NoError(t, err)
+	return ro
+}
+
 // makeEnvelope creates an ROSignedExecutionPayloadEnvelope with the given slot, blockHash, and parentHash.
 func makeEnvelope(t *testing.T, slot primitives.Slot, blockHash [32]byte, parentHash [32]byte) interfaces.ROSignedExecutionPayloadEnvelope {
 	return makeEnvelopeForRoot(t, slot, [32]byte{}, blockHash, parentHash)
@@ -179,6 +194,27 @@ func TestValidatePayloadBlockConsistency(t *testing.T) {
 		f.validatePayloadBlockConsistency(r)
 		// Should truncate bwb to the point where envelopes run out
 		require.NoError(t, r.err)
+	})
+
+	t.Run("trailing envelope for the last block is kept", func(t *testing.T) {
+		lastHash := [32]byte{0x60}
+		// The last block delivers its own payload: its bid commits to lastHash
+		// and the by-range stream ends with that payload's envelope.
+		b2Full := makeGloasBlockWithBidHash(t, 12, b1.Root(), hash2, lastHash)
+		envB1 := makeEnvelopeForRoot(t, 11, b1.Root(), hash2, hash1)
+		envLast := makeEnvelope(t, 12, lastHash, hash2)
+		f := &blocksFetcher{}
+		r := &fetchRequestResponse{
+			bwb: []blocks.BlockWithROSidecars{
+				{Block: b0},
+				{Block: b1},
+				{Block: b2Full},
+			},
+			envelopes: []interfaces.ROSignedExecutionPayloadEnvelope{env0, env1, envB1, envLast},
+		}
+		f.validatePayloadBlockConsistency(r)
+		require.NoError(t, r.err)
+		require.Equal(t, 4, len(r.envelopes))
 	})
 
 	t.Run("extra envelopes truncated", func(t *testing.T) {
