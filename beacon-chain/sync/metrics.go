@@ -251,6 +251,19 @@ var (
 			Buckets: prometheus.DefBuckets,
 		},
 	)
+	payloadChunkReceivedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "sync_payload_chunk_received_total",
+			Help: "EIP-8411: payload chunks accepted into the reconstruction pool.",
+		},
+	)
+	payloadChunkReconstructionTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "sync_payload_chunk_reconstruction_total",
+			Help: "EIP-8411: completed chunk sets by reconstruction outcome.",
+		},
+		[]string{"result"},
+	)
 	syncPayloadEnvelopeByRangeServedTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "sync_payload_envelope_by_range_served_total",

@@ -92,6 +92,7 @@ func (p *payloadChunkPool) pruneBefore(slot primitives.Slot) {
 // acceptVerifiedPayloadChunk buffers a gossip-verified chunk and triggers
 // reconstruction when the set completes.
 func (s *Service) acceptVerifiedPayloadChunk(ctx context.Context, c *ethpb.PayloadChunk) {
+	payloadChunkReceivedTotal.Inc()
 	complete, chunks, hint, firstArrival := s.payloadChunkPool.insert(c)
 	if !complete {
 		return
@@ -109,6 +110,7 @@ func (s *Service) acceptVerifiedPayloadChunk(ctx context.Context, c *ethpb.Paylo
 func (s *Service) importReconstructedEnvelope(ctx context.Context, slot primitives.Slot, chunksRoot, hint [32]byte, chunks [][]byte) {
 	envelope, err := gloas.ReconstructPayloadEnvelope(chunks)
 	if err != nil {
+		payloadChunkReconstructionTotal.WithLabelValues("decode_failed").Inc()
 		log.WithError(err).WithFields(logrus.Fields{
 			"slot":       slot,
 			"chunksRoot": fmt.Sprintf("%#x", chunksRoot),
@@ -122,9 +124,11 @@ func (s *Service) importReconstructedEnvelope(ctx context.Context, slot primitiv
 		root = bound
 	}
 	if root == ([32]byte{}) {
+		payloadChunkReconstructionTotal.WithLabelValues("no_binding").Inc()
 		log.Debug("Reconstructed payload envelope has no beacon block binding yet, dropping")
 		return
 	}
+	payloadChunkReconstructionTotal.WithLabelValues("ok").Inc()
 
 	// The zero signature marks the envelope as chunk-authenticated; see
 	// gloas.IsChunkAuthenticatedEnvelope.
