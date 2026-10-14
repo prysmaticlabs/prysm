@@ -183,6 +183,7 @@ func (s *Service) validateDataColumnFulu(
 	// [IGNORE] The sidecar's block's parent (defined by `block_header.parent_root`) has been seen (via gossip or non-gossip sources
 	// (a client MAY queue sidecars for processing once the parent block is retrieved).
 	if err := verifier.SidecarParentSeen(s.hasBadBlock); err != nil {
+		log.WithError(err).WithFields(logging.DataColumnFields(roDataColumn)).Debug("Sidecar's parent not seen, requesting batch root")
 		go func() {
 			parentRoot, err := roDataColumn.ParentRoot()
 			if err != nil {
