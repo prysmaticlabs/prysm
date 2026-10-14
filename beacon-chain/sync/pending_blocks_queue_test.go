@@ -8,6 +8,7 @@ import (
 	"math"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,13 +30,16 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/rand"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	core "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -1264,4 +1268,266 @@ func TestService_ProcessPendingBlocks_BroadcastsOnBlockForkDigest(t *testing.T) 
 	require.NoError(t, r.processPendingBlocks(ctx))
 	require.Equal(t, 0, len(r.slotToPendingBlocks.Items()), "pending block was not processed")
 	require.DeepEqual(t, []primitives.Epoch{0}, p.epochs, "block must be broadcast on its own fork digest, not the current one")
+}
+
+func TestRequestParentFromSender_OnlyAsksTheSender(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	us := p2ptest.NewTestP2P(t)
+	sender := p2ptest.NewTestP2P(t)
+	bystander := p2ptest.NewTestP2P(t)
+	us.Connect(sender)
+	us.Connect(bystander)
+
+	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
+	r := &Service{
+		ctx: t.Context(),
+		cfg: &config{
+			p2p:      us,
+			beaconDB: db,
+			chain: &mock.ChainService{
+				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			},
+			clock:    clock,
+			stateGen: stategen.New(db, doublylinkedtree.New()),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	r.initCaches()
+
+	// Both peers are known and equally eligible, so a fan-out would be free to pick either.
+	for _, p := range []*p2ptest.TestP2P{sender, bystander} {
+		us.Peers().Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
+		us.Peers().SetConnectionState(p.PeerID(), peers.Connected)
+		us.Peers().SetChainState(p.PeerID(), &ethpb.StatusV2{FinalizedEpoch: 1, HeadSlot: 1})
+	}
+
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(clock.CurrentSlot()))
+	require.NoError(t, err)
+	pcl := protocol.ID(topic + us.Encoding().ProtocolSuffix())
+
+	var senderHits, bystanderHits atomic.Int32
+	var wg sync.WaitGroup
+	var once sync.Once
+	wg.Add(1)
+	// Done only once, so a regression that fans out does not panic the WaitGroup before asserting.
+	sender.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer once.Do(wg.Done)
+		senderHits.Add(1)
+		require.NoError(t, stream.Close())
+	})
+	bystander.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer once.Do(wg.Done)
+		bystanderHits.Add(1)
+		require.NoError(t, stream.Close())
+	})
+
+	r.requestParentFromSender(sender.PeerID(), [32]byte{'u', 'n', 'k', 'n', 'o', 'w', 'n'})
+
+	util.WaitTimeout(&wg, 2*time.Second)
+	assert.Equal(t, int32(1), senderHits.Load(), "sender should have been asked for the parent")
+	assert.Equal(t, int32(0), bystanderHits.Load(), "no peer other than the sender may be asked")
+}
+
+func TestRequestParentFromSender_DedupesAndCaps(t *testing.T) {
+	// These two only exercise the claim bookkeeping, so they need no database or host.
+	t.Run("one peer cannot claim the same parent twice", func(t *testing.T) {
+		r := &Service{}
+		r.initCaches()
+		root := [32]byte{'a'}
+		pid := core.PeerID("sender")
+
+		require.Equal(t, true, r.beginParentRequest(root, pid))
+		// Every column of one block names this same parent, so the rest from that peer collapse.
+		require.Equal(t, false, r.beginParentRequest(root, pid))
+		require.Equal(t, false, r.beginParentRequest(root, pid))
+
+		// Once the request finishes the root is retryable.
+		r.endParentRequest(root)
+		require.Equal(t, true, r.beginParentRequest(root, pid))
+	})
+
+	t.Run("a second peer waits for the hedge delay before being asked", func(t *testing.T) {
+		r := &Service{}
+		r.initCaches()
+		root := [32]byte{'h'}
+
+		require.Equal(t, true, r.beginParentRequest(root, core.PeerID("first")))
+		// Healthy peers answer far inside the hedge delay, so the duplicate must collapse.
+		require.Equal(t, false, r.beginParentRequest(root, core.PeerID("second")))
+
+		// Pretend the first peer has been silent past the delay.
+		r.inFlightParentRequestsLock.Lock()
+		r.inFlightParentRequests[root].lastSent = time.Now().Add(-parentRequestHedgeDelay - time.Millisecond)
+		r.inFlightParentRequestsLock.Unlock()
+
+		require.Equal(t, true, r.beginParentRequest(root, core.PeerID("second")), "hedge should fire once the delay passes")
+	})
+
+	t.Run("a parent is chased by at most maxPeersPerParentRequest peers", func(t *testing.T) {
+		r := &Service{}
+		r.initCaches()
+		root := [32]byte{'m'}
+
+		for i := range maxPeersPerParentRequest {
+			pid := core.PeerID(fmt.Sprintf("peer-%d", i))
+			require.Equal(t, true, r.beginParentRequest(root, pid), "peer %d should be admitted", i)
+			// Expire the hedge so the next distinct peer is eligible immediately.
+			r.inFlightParentRequestsLock.Lock()
+			r.inFlightParentRequests[root].lastSent = time.Now().Add(-parentRequestHedgeDelay - time.Millisecond)
+			r.inFlightParentRequestsLock.Unlock()
+		}
+
+		require.Equal(t, false, r.beginParentRequest(root, core.PeerID("one-too-many")))
+	})
+
+	t.Run("outstanding requests are capped", func(t *testing.T) {
+		r := &Service{}
+		r.initCaches()
+		pid := core.PeerID("sender")
+
+		for i := range maxInFlightParentRequests {
+			root := bytesutil.ToBytes32(bytesutil.Uint64ToBytesLittleEndian(uint64(i)))
+			require.Equal(t, true, r.beginParentRequest(root, pid))
+		}
+
+		overflow := bytesutil.ToBytes32(bytesutil.Uint64ToBytesLittleEndian(uint64(maxInFlightParentRequests)))
+		require.Equal(t, false, r.beginParentRequest(overflow, pid))
+
+		// Freeing one slot admits exactly one more.
+		r.endParentRequest(bytesutil.ToBytes32(bytesutil.Uint64ToBytesLittleEndian(0)))
+		require.Equal(t, true, r.beginParentRequest(overflow, pid))
+	})
+
+	t.Run("a flood of sidecars for one parent produces a single request", func(t *testing.T) {
+		db := dbtest.SetupDB(t)
+		us := p2ptest.NewTestP2P(t)
+		sender := p2ptest.NewTestP2P(t)
+		us.Connect(sender)
+
+		clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
+		r := &Service{
+			ctx: t.Context(),
+			cfg: &config{
+				p2p:      us,
+				beaconDB: db,
+				chain: &mock.ChainService{
+					FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+				},
+				clock:    clock,
+				stateGen: stategen.New(db, doublylinkedtree.New()),
+			},
+			slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+			seenPendingBlocks:   make(map[[32]byte]bool),
+		}
+		r.initCaches()
+
+		us.Peers().Add(new(enr.Record), sender.PeerID(), nil, network.DirOutbound)
+		us.Peers().SetConnectionState(sender.PeerID(), peers.Connected)
+		us.Peers().SetChainState(sender.PeerID(), &ethpb.StatusV2{FinalizedEpoch: 1, HeadSlot: 1})
+
+		topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(clock.CurrentSlot()))
+		require.NoError(t, err)
+		pcl := protocol.ID(topic + us.Encoding().ProtocolSuffix())
+
+		// Hold each request open so the duplicates arrive while the first is still in flight.
+		release := make(chan struct{})
+		var hits atomic.Int32
+		var wg sync.WaitGroup
+		wg.Add(1)
+		var once sync.Once
+		sender.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+			hits.Add(1)
+			once.Do(wg.Done)
+			<-release
+			require.NoError(t, stream.Close())
+		})
+
+		root := [32]byte{'p', 'a', 'r', 'e', 'n', 't'}
+		for range 64 {
+			r.requestParentFromSender(sender.PeerID(), root)
+		}
+
+		// Wait for the first request to land, then settle so any extra ones would also have landed.
+		require.Equal(t, false, util.WaitTimeout(&wg, 2*time.Second), "no request reached the sender")
+		time.Sleep(500 * time.Millisecond)
+
+		assert.Equal(t, int32(1), hits.Load(), "64 sidecars naming one parent must produce one request")
+		close(release)
+	})
+}
+
+func TestRequestParentFromSender_HedgesToASecondPeer(t *testing.T) {
+	// A peer can send a sidecar and then withhold the parent, which costs it nothing. The hedge is
+	// what stops that peer from owning the root until its request times out.
+	db := dbtest.SetupDB(t)
+	us := p2ptest.NewTestP2P(t)
+	stalling := p2ptest.NewTestP2P(t)
+	helpful := p2ptest.NewTestP2P(t)
+	us.Connect(stalling)
+	us.Connect(helpful)
+
+	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
+	r := &Service{
+		ctx: t.Context(),
+		cfg: &config{
+			p2p:      us,
+			beaconDB: db,
+			chain: &mock.ChainService{
+				FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+			},
+			clock:    clock,
+			stateGen: stategen.New(db, doublylinkedtree.New()),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	r.initCaches()
+
+	for _, p := range []*p2ptest.TestP2P{stalling, helpful} {
+		us.Peers().Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
+		us.Peers().SetConnectionState(p.PeerID(), peers.Connected)
+		us.Peers().SetChainState(p.PeerID(), &ethpb.StatusV2{FinalizedEpoch: 1, HeadSlot: 1})
+	}
+
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(clock.CurrentSlot()))
+	require.NoError(t, err)
+	pcl := protocol.ID(topic + us.Encoding().ProtocolSuffix())
+
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	var stalledHits, helpfulHits atomic.Int32
+
+	// Accepts the stream and then says nothing, exactly as a withholding peer would.
+	stalling.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		stalledHits.Add(1)
+		<-release
+	})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	var once sync.Once
+	helpful.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		helpfulHits.Add(1)
+		once.Do(wg.Done)
+		require.NoError(t, stream.Close())
+	})
+
+	root := [32]byte{'w', 'i', 't', 'h', 'h', 'e', 'l', 'd'}
+
+	r.requestParentFromSender(stalling.PeerID(), root)
+
+	// Inside the hedge delay the second peer must not be asked: that is the healthy-path saving.
+	// The request is dispatched on a goroutine, so settle before asserting or this proves nothing.
+	time.Sleep(50 * time.Millisecond)
+	r.requestParentFromSender(helpful.PeerID(), root)
+	time.Sleep(250 * time.Millisecond)
+	assert.Equal(t, int32(0), helpfulHits.Load(), "must not hedge before the delay elapses")
+
+	// Past the delay the hedge should reach the second peer rather than waiting out the timeout.
+	time.Sleep(parentRequestHedgeDelay)
+	r.requestParentFromSender(helpful.PeerID(), root)
+
+	require.Equal(t, false, util.WaitTimeout(&wg, 3*time.Second), "hedge never reached the second peer")
+	assert.Equal(t, int32(1), helpfulHits.Load())
+	assert.Equal(t, int32(1), stalledHits.Load(), "the stalling peer is asked once, not repeatedly")
 }

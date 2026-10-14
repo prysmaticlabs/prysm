@@ -75,11 +75,11 @@ func TestValidateDataColumn(t *testing.T) {
 
 		clock := startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)
 		service := &Service{
-			cfg:                 &config{p2p: p, initialSync: &mockSync.Sync{}, clock: clock, chain: chainService, batchVerifierLimit: 10},
-			ctx:                 ctx,
-			newColumnsVerifier:  newDataColumnsVerifier,
-			seenDataColumnCache: newSlotAwareCache(seenDataColumnSize),
+			cfg:                &config{p2p: p, initialSync: &mockSync.Sync{}, clock: clock, chain: chainService, batchVerifierLimit: 10},
+			ctx:                ctx,
+			newColumnsVerifier: newDataColumnsVerifier,
 		}
+		service.initCaches()
 
 		// Encode a `beaconBlock` message instead of expected.
 		buf := new(bytes.Buffer)

@@ -203,6 +203,20 @@ var (
 		},
 	)
 
+	inFlightParentRequestsDroppedCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gossip_sidecar_parent_requests_dropped_total",
+			Help: "The number of sidecar parent block requests skipped because the in-flight ceiling was reached",
+		},
+	)
+
+	hedgedParentRequestsCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gossip_sidecar_parent_requests_hedged_total",
+			Help: "The number of sidecar parent block requests sent to an additional peer after the previous one did not answer in time",
+		},
+	)
+
 	blobRecoveredFromELTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "blob_recovered_from_el_total",

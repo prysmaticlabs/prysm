@@ -367,6 +367,103 @@ func (s *Service) checkIfBlockIsBad(
 	return true, nil
 }
 
+// maxInFlightParentRequests bounds how many unknown sidecar parents we chase at once. A sidecar is
+// unauthenticated until its parent is known, so without a ceiling a peer can make us hold an unbounded
+// number of goroutines and streams open.
+const maxInFlightParentRequests = 200
+
+const (
+	maxPeersPerParentRequest = 5
+
+	parentRequestHedgeDelay = 500 * time.Millisecond
+)
+
+type parentRequest struct {
+	asked    map[core.PeerID]struct{}
+	inFlight int
+	lastSent time.Time
+}
+
+func (s *Service) beginParentRequest(parentRoot [fieldparams.RootLength]byte, pid core.PeerID) bool {
+	s.inFlightParentRequestsLock.Lock()
+	defer s.inFlightParentRequestsLock.Unlock()
+
+	request, ok := s.inFlightParentRequests[parentRoot]
+	if !ok {
+		if len(s.inFlightParentRequests) >= maxInFlightParentRequests {
+			inFlightParentRequestsDroppedCount.Inc()
+			return false
+		}
+
+		s.inFlightParentRequests[parentRoot] = &parentRequest{
+			asked:    map[core.PeerID]struct{}{pid: {}},
+			inFlight: 1,
+			lastSent: time.Now(),
+		}
+
+		return true
+	}
+
+	// One peer must not occupy several slots for the same parent by sending several sidecars.
+	if _, asked := request.asked[pid]; asked {
+		return false
+	}
+
+	if request.inFlight >= maxPeersPerParentRequest {
+		return false
+	}
+
+	// Hold the hedge until the peer we are already waiting on has had its chance.
+	if time.Since(request.lastSent) < parentRequestHedgeDelay {
+		return false
+	}
+
+	request.asked[pid] = struct{}{}
+	request.inFlight++
+	request.lastSent = time.Now()
+	hedgedParentRequestsCount.Inc()
+
+	return true
+}
+
+func (s *Service) endParentRequest(parentRoot [fieldparams.RootLength]byte) {
+	s.inFlightParentRequestsLock.Lock()
+	defer s.inFlightParentRequestsLock.Unlock()
+
+	request, ok := s.inFlightParentRequests[parentRoot]
+	if !ok {
+		return
+	}
+
+	request.inFlight--
+	if request.inFlight <= 0 {
+		delete(s.inFlightParentRequests, parentRoot)
+	}
+}
+
+func (s *Service) requestParentFromSender(pid core.PeerID, parentRoot [fieldparams.RootLength]byte) {
+	roots := s.filterOutPendingAndSynced([][fieldparams.RootLength]byte{parentRoot})
+	if len(roots) == 0 {
+		return
+	}
+
+	if !s.beginParentRequest(parentRoot, pid) {
+		return
+	}
+
+	go func() {
+		defer s.endParentRequest(parentRoot)
+
+		req := p2ptypes.BeaconBlockByRootsReq(roots)
+		if err := s.sendBeaconBlocksRequest(s.ctx, &req, pid); err != nil {
+			log.WithError(err).WithFields(logrus.Fields{
+				"peer": pid,
+				"root": fmt.Sprintf("%#x", parentRoot),
+			}).Debug("Could not request parent block from sidecar sender")
+		}
+	}()
+}
+
 func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, randGen *rand.Rand) error {
 	ctx, span := prysmTrace.StartSpan(ctx, "sendBatchRootRequest")
 	defer span.End()

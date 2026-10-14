@@ -15,7 +15,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/container/slice"
-	"github.com/OffchainLabs/prysm/v7/crypto/rand"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/logging"
@@ -91,7 +90,7 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 			return validationResultFromError(err), baseValidationErr(err)
 		}
 	} else {
-		verifiedRODataColumn, err = s.validateDataColumnFulu(ctx, msg, roDataColumn, dataColumnSidecarSubTopic)
+		verifiedRODataColumn, err = s.validateDataColumnFulu(ctx, pid, msg, roDataColumn, dataColumnSidecarSubTopic)
 		if err != nil {
 			return validationResultFromError(err), baseValidationErr(err)
 		}
@@ -151,6 +150,7 @@ func (s *Service) validateDataColumn(ctx context.Context, pid peer.ID, msg *pubs
 
 func (s *Service) validateDataColumnFulu(
 	ctx context.Context,
+	pid peer.ID,
 	msg *pubsub.Message,
 	roDataColumn blocks.RODataColumn,
 	dataColumnSidecarSubTopic string,
@@ -183,18 +183,12 @@ func (s *Service) validateDataColumnFulu(
 	// [IGNORE] The sidecar's block's parent (defined by `block_header.parent_root`) has been seen (via gossip or non-gossip sources
 	// (a client MAY queue sidecars for processing once the parent block is retrieved).
 	if err := verifier.SidecarParentSeen(s.hasBadBlock); err != nil {
-		go func() {
-			parentRoot, err := roDataColumn.ParentRoot()
-			if err != nil {
-				log.WithError(err).WithFields(logging.DataColumnFields(roDataColumn)).Debug("Failed to get parent root for batch root request")
-				return
-			}
-			roots := [][fieldparams.RootLength]byte{parentRoot}
-			randGenerator := rand.NewGenerator()
-			if reqErr := s.sendBatchRootRequest(s.ctx, roots, randGenerator); reqErr != nil {
-				log.WithError(reqErr).WithFields(logging.DataColumnFields(roDataColumn)).Debug("Failed to send batch root request")
-			}
-		}()
+		parentRoot, parentErr := roDataColumn.ParentRoot()
+		if parentErr != nil {
+			log.WithError(parentErr).WithFields(logging.DataColumnFields(roDataColumn)).Debug("Failed to get parent root for root request")
+			return blocks.VerifiedRODataColumn{}, ignoreValidation(err)
+		}
+		s.requestParentFromSender(pid, parentRoot)
 
 		return blocks.VerifiedRODataColumn{}, ignoreValidation(err)
 	}

@@ -146,6 +146,8 @@ type Service struct {
 	cancel                               context.CancelFunc
 	slotToPendingBlocks                  *gcache.Cache
 	seenPendingBlocks                    map[[32]byte]bool
+	inFlightParentRequestsLock           sync.Mutex
+	inFlightParentRequests               map[[32]byte]*parentRequest
 	blkRootToPendingAtts                 map[[32]byte][]any
 	subHandler                           *subTopicHandler
 	pendingAttsLock                      sync.RWMutex
@@ -440,6 +442,7 @@ func (s *Service) initCaches() {
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
 	s.badBlockCache = lruwrpr.New(badBlockSize)
 	s.badPayloadCache = lruwrpr.New(badBlockSize)
+	s.inFlightParentRequests = make(map[[32]byte]*parentRequest, maxInFlightParentRequests)
 }
 
 func (s *Service) waitForChainStart() {

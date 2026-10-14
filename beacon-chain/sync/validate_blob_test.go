@@ -15,7 +15,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
 	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
-	lruwrpr "github.com/OffchainLabs/prysm/v7/cache/lru"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -86,13 +85,13 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
-		seenBlobCache: lruwrpr.New(10),
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{},
 			chain:       chainService,
 			stateGen:    stateGen,
 			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+	s.initCaches()
 	s.newBlobVerifier = testNewBlobVerifier()
 
 	beaconState, _ := util.DeterministicGenesisState(t, 100)
@@ -258,9 +257,9 @@ func TestValidateBlob_ErrorPathsWithMock(t *testing.T) {
 			chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 			s := &Service{
 				ctx:               ctx,
-				seenBlobCache:     lruwrpr.New(10),
 				seenPendingBlocks: make(map[[32]byte]bool),
 				cfg:               &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+			s.initCaches()
 			s.newBlobVerifier = tt.verifier
 
 			_, scs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, chainService.CurrentSlot()+1, 1)
