@@ -358,8 +358,16 @@ func (s *Service) registerSubscribers(nse params.NetworkScheduleEntry) bool {
 			)
 		})
 
-		// EIP-8411: the execution_payload envelope topic is replaced by
-		// execution_payload_chunks (subscribed below).
+		// EIP-8411: execution payload chunks replace the retired
+		// execution_payload envelope topic.
+		s.spawn(func() {
+			s.subscribe(
+				p2p.PayloadChunkTopicFormat,
+				s.validatePayloadChunk,
+				s.payloadChunkSubscriber,
+				nse,
+			)
+		})
 
 		s.spawn(func() {
 			s.subscribe(

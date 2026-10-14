@@ -237,6 +237,20 @@ var (
 			Buckets: prometheus.DefBuckets,
 		},
 	)
+	payloadChunkArrivalDelaySeconds = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "sync_payload_chunk_arrival_delay_seconds",
+			Help:    "EIP-8411: time from slot start to payload chunk gossip arrival, per chunk.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+	payloadChunkReconstructionSeconds = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "sync_payload_chunk_reconstruction_seconds",
+			Help:    "EIP-8411: time from first chunk arrival to a complete 64/64 chunk set.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
 	syncPayloadEnvelopeByRangeServedTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "sync_payload_envelope_by_range_served_total",

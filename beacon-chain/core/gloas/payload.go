@@ -201,6 +201,12 @@ func ExecutionPayloadEnvelopeSignatureBatch(
 	st state.BeaconState,
 	signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope,
 ) (*bls.SignatureBatch, error) {
+	// EIP-8411 prototype: chunk-reconstructed envelopes carry no builder
+	// signature; their authenticity derives from the bid's payload_chunks_root,
+	// which every chunk was Merkle-verified against. Nothing to batch.
+	if IsChunkAuthenticatedEnvelope(signedEnvelope) {
+		return bls.NewSet(), nil
+	}
 	envelope, err := signedEnvelope.Envelope()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get envelope: %w", err)
@@ -256,6 +262,11 @@ func ExecutionPayloadEnvelopeSignatureBatch(
 //	    return bls.Verify(pubkey, signing_root, signed_envelope.signature)
 //	</spec>
 func verifyExecutionPayloadEnvelopeSignature(st state.BeaconState, signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) error {
+	// EIP-8411 prototype: envelopes reconstructed from verified chunks are
+	// authenticated by the bid's payload_chunks_root instead of a signature.
+	if IsChunkAuthenticatedEnvelope(signedEnvelope) {
+		return nil
+	}
 	envelope, err := signedEnvelope.Envelope()
 	if err != nil {
 		return fmt.Errorf("failed to get envelope: %w", err)
@@ -294,6 +305,15 @@ func verifyExecutionPayloadEnvelopeSignature(st state.BeaconState, signedEnvelop
 	}
 
 	return nil
+}
+
+// IsChunkAuthenticatedEnvelope reports whether the signed envelope carries the
+// all-zero sentinel signature used for envelopes reconstructed from EIP-8411
+// payload chunks. Such envelopes were byte-authenticated against the bid's
+// payload_chunks_root at chunk validation time, so no signature exists or is
+// required. This mirrors the point-at-infinity sentinel used by self-build bids.
+func IsChunkAuthenticatedEnvelope(signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) bool {
+	return signedEnvelope.Signature() == [96]byte{}
 }
 
 func envelopePublicKey(st state.BeaconState, builderIdx primitives.BuilderIndex) (bls.PublicKey, error) {

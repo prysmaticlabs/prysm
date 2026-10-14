@@ -372,18 +372,18 @@ func (mr *MockValidatorClientMockRecorder) ProposerDuties(ctx, epoch any) *gomoc
 }
 
 // PublishExecutionPayloadEnvelope mocks base method.
-func (m *MockValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *eth.SignedExecutionPayloadEnvelope) (*empty.Empty, error) {
+func (m *MockValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *eth.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) (*empty.Empty, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishExecutionPayloadEnvelope", ctx, in)
+	ret := m.ctrl.Call(m, "PublishExecutionPayloadEnvelope", ctx, in, beaconBlockRoot)
 	ret0, _ := ret[0].(*empty.Empty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PublishExecutionPayloadEnvelope indicates an expected call of PublishExecutionPayloadEnvelope.
-func (mr *MockValidatorClientMockRecorder) PublishExecutionPayloadEnvelope(ctx, in any) *gomock.Call {
+func (mr *MockValidatorClientMockRecorder) PublishExecutionPayloadEnvelope(ctx, in, beaconBlockRoot any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExecutionPayloadEnvelope", reflect.TypeOf((*MockValidatorClient)(nil).PublishExecutionPayloadEnvelope), ctx, in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExecutionPayloadEnvelope", reflect.TypeOf((*MockValidatorClient)(nil).PublishExecutionPayloadEnvelope), ctx, in, beaconBlockRoot)
 }
 
 // StartEventStream mocks base method.

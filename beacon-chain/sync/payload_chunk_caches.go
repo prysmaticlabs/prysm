@@ -44,6 +44,9 @@ func (s *Service) registerPayloadChunkCommitment(slot primitives.Slot, chunksRoo
 		}
 	}
 	s.payloadChunkCommitments.Add(slot, key, blockRoot)
+	// A commitment becoming known may release chunks buffered before the bid
+	// or block arrived.
+	go s.drainPendingPayloadChunks(slot, chunksRoot)
 }
 
 // payloadChunkCommitmentBlockRoot reports whether the (slot, chunks root)

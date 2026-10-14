@@ -167,6 +167,9 @@ type Service struct {
 	seenDataColumnCache                  *slotAwareCache
 	payloadChunkCommitments              *slotAwareCache
 	seenPayloadChunkCache                *slotAwareCache
+	pendingPayloadChunksLock             sync.Mutex
+	pendingPayloadChunks                 map[[32]byte]*pendingChunkEntry
+	payloadChunkPool                     *payloadChunkPool
 	pendingGloasColumnsLock              sync.RWMutex
 	pendingGloasColumns                  map[[32]byte]*pendingGloasEntry
 	seenAggregatedAttestationLock        sync.RWMutex
@@ -436,6 +439,8 @@ func (s *Service) initCaches() {
 	s.seenDataColumnCache = newSlotAwareCache(seenDataColumnSize)
 	s.payloadChunkCommitments = newSlotAwareCache(payloadChunkCommitmentSize)
 	s.seenPayloadChunkCache = newSlotAwareCache(seenPayloadChunkSize)
+	s.pendingPayloadChunks = make(map[[32]byte]*pendingChunkEntry)
+	s.payloadChunkPool = newPayloadChunkPool()
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
