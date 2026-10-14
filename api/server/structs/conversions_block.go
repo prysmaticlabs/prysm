@@ -2957,6 +2957,7 @@ func ExecutionPayloadBidFromConsensus(b *eth.ExecutionPayloadBid) *ExecutionPayl
 		ExecutionPayment:      fmt.Sprintf("%d", b.ExecutionPayment),
 		BlobKzgCommitments:    blobKzgCommitments,
 		ExecutionRequestsRoot: hexutil.Encode(b.ExecutionRequestsRoot),
+		PayloadChunksRoot:     hexutil.Encode(b.PayloadChunksRoot),
 	}
 }
 
@@ -3246,6 +3247,10 @@ func (b *ExecutionPayloadBid) ToConsensus() (*eth.ExecutionPayloadBid, error) {
 	if err != nil {
 		return nil, server.NewDecodeError(err, "ExecutionRequestsRoot")
 	}
+	payloadChunksRoot, err := bytesutil.DecodeHexWithLength(b.PayloadChunksRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "PayloadChunksRoot")
+	}
 	return &eth.ExecutionPayloadBid{
 		ParentBlockHash:       parentBlockHash,
 		ParentBlockRoot:       parentBlockRoot,
@@ -3259,6 +3264,7 @@ func (b *ExecutionPayloadBid) ToConsensus() (*eth.ExecutionPayloadBid, error) {
 		ExecutionPayment:      primitives.Gwei(executionPayment),
 		BlobKzgCommitments:    blobKzgCommitments,
 		ExecutionRequestsRoot: executionRequestsRoot,
+		PayloadChunksRoot:     payloadChunksRoot,
 	}, nil
 }
 

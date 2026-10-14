@@ -521,6 +521,7 @@ type ExecutionPayloadBid struct {
 	ExecutionPayment      string   `json:"execution_payment"`
 	BlobKzgCommitments    []string `json:"blob_kzg_commitments"`
 	ExecutionRequestsRoot string   `json:"execution_requests_root"`
+	PayloadChunksRoot     string   `json:"payload_chunks_root"`
 }
 
 type SignedExecutionPayloadBid struct {
