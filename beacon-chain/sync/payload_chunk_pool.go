@@ -30,6 +30,10 @@ type chunkPoolEntry struct {
 	received      int
 	firstArrival  time.Time
 	completed     bool
+	// imported is set once the set was routed using the authoritative block
+	// binding. Routing by the unauthenticated hint does not set it, so a
+	// forged or missing hint is corrected when the binding registers.
+	imported bool
 }
 
 // payloadChunkPool buffers verified chunks until all
@@ -78,6 +82,30 @@ func (p *payloadChunkPool) insert(c *ethpb.PayloadChunk) (complete bool, chunks 
 	return true, out, entry.blockRootHint, entry.firstArrival
 }
 
+// completedChunks returns a copy of a finished chunk set that has not yet been
+// routed with an authoritative block binding, for retry once a binding exists.
+func (p *payloadChunkPool) completedChunks(chunksRoot [32]byte, slot primitives.Slot) ([][]byte, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	entry, ok := p.entries[chunksRoot]
+	if !ok || !entry.completed || entry.imported || entry.slot != slot {
+		return nil, false
+	}
+	out := make([][]byte, fieldparams.TotalExecutionPayloadChunks)
+	copy(out, entry.chunks[:])
+	return out, true
+}
+
+// markImported records that the set was routed via the authoritative binding,
+// stopping further binding-registration retries.
+func (p *payloadChunkPool) markImported(chunksRoot [32]byte) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if entry, ok := p.entries[chunksRoot]; ok {
+		entry.imported = true
+	}
+}
+
 // pruneBefore drops entries older than the given slot.
 func (p *payloadChunkPool) pruneBefore(slot primitives.Slot) {
 	p.mu.Lock()
@@ -118,15 +146,23 @@ func (s *Service) importReconstructedEnvelope(ctx context.Context, slot primitiv
 		return
 	}
 
-	// Prefer the authenticated block binding over the unauthenticated hint.
+	// Prefer the authenticated block binding over the unauthenticated hint. The
+	// hint can be forged or zero, so only an authoritative routing marks the
+	// pool entry imported; otherwise the set is retried when the binding
+	// registers (see drainPendingPayloadChunks).
 	root := hint
+	authoritative := false
 	if bound, known := s.payloadChunkCommitmentBlockRoot(slot, chunksRoot); known && bound != ([32]byte{}) {
 		root = bound
+		authoritative = true
 	}
 	if root == ([32]byte{}) {
 		payloadChunkReconstructionTotal.WithLabelValues("no_binding").Inc()
-		log.Debug("Reconstructed payload envelope has no beacon block binding yet, dropping")
+		log.Debug("Reconstructed payload envelope is awaiting its beacon block binding")
 		return
+	}
+	if authoritative {
+		s.payloadChunkPool.markImported(chunksRoot)
 	}
 	payloadChunkReconstructionTotal.WithLabelValues("ok").Inc()
 

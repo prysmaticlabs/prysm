@@ -178,27 +178,36 @@ func (s *Service) drainPendingPayloadChunks(slot primitives.Slot, chunksRoot [32
 		delete(s.pendingPayloadChunks, chunksRoot)
 	}
 	s.pendingPayloadChunksLock.Unlock()
-	if !ok || entry.slot != slot {
-		return
-	}
 
 	blockRoot, known := s.payloadChunkCommitmentBlockRoot(slot, chunksRoot)
 	if !known {
 		return
 	}
-	for _, c := range entry.chunks {
-		if c == nil {
-			continue
+	if ok && entry.slot == slot {
+		for _, c := range entry.chunks {
+			if c == nil {
+				continue
+			}
+			// Rule 5 against the now-known block binding.
+			if blockRoot != ([32]byte{}) && bytesutil.ToBytes32(c.BeaconBlockRoot) != blockRoot {
+				continue
+			}
+			if s.hasSeenPayloadChunk(chunksRoot, c.Index) {
+				continue
+			}
+			s.setSeenPayloadChunk(c.Slot, chunksRoot, c.Index)
+			s.acceptVerifiedPayloadChunk(s.ctx, c)
 		}
-		// Rule 5 against the now-known block binding.
-		if blockRoot != ([32]byte{}) && bytesutil.ToBytes32(c.BeaconBlockRoot) != blockRoot {
-			continue
+	}
+
+	// A set that completed before its block binding was known was either held
+	// back (zero hint) or parked under an unauthenticated hint that may be
+	// forged. Re-import it with the authoritative binding; duplicate imports
+	// dedupe downstream.
+	if blockRoot != ([32]byte{}) {
+		if chunks, done := s.payloadChunkPool.completedChunks(chunksRoot, slot); done {
+			s.importReconstructedEnvelope(s.ctx, slot, chunksRoot, [32]byte{}, chunks)
 		}
-		if s.hasSeenPayloadChunk(chunksRoot, c.Index) {
-			continue
-		}
-		s.setSeenPayloadChunk(c.Slot, chunksRoot, c.Index)
-		s.acceptVerifiedPayloadChunk(s.ctx, c)
 	}
 }
 
