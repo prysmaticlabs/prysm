@@ -1534,6 +1534,10 @@ message ExecutionPayloadEnvelopeRequest {
     (ethereum.eth.ext.cast_type) =
         "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
   ];
+  // The beacon block root the envelope must belong to. EIP-8411 removed the
+  // root from the envelope container, so the binding is checked server-side
+  // against this field.
+  bytes beacon_block_root = 2;
 }
 
 // ExecutionPayloadEnvelopeResponse is the response containing the cached

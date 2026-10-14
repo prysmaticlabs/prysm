@@ -207,7 +207,10 @@ func (f *blocksFetcher) fetchPayloadEnvelopesFromPeer(
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
 		roEnvelopes := make([]interfaces.ROSignedExecutionPayloadEnvelope, 0, len(envelopes))
 		for _, env := range envelopes {
-			wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+			// EIP-8411: the wire envelope carries no beacon block root; wrap with a
+			// zero root here and let batch processing bind each envelope to its
+			// block via the bid's block hash.
+			wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, [32]byte{})
 			if err != nil {
 				log.WithField("peer", p).WithError(err).Debug("Invalid payload envelope in response")
 				continue

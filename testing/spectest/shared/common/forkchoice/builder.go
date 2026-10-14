@@ -168,7 +168,9 @@ func (bb *Builder) recordIfEarly(b interfaces.ReadOnlySignedBeaconBlock, root [3
 // ExecutionPayloadEnvelope receives an envelope and notifies the chain service.
 // If expectValid is false the receive call must error; otherwise it must succeed.
 func (bb *Builder) ExecutionPayloadEnvelope(t testing.TB, signed *ethpb.SignedExecutionPayloadEnvelope, expectValid bool) {
-	ro, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed)
+	// Gloas spectest vectors predate EIP-8411 and are expected to fail on this
+	// prototype branch; a zero root keeps the harness compiling.
+	ro, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed, [32]byte{})
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 	defer cancel()

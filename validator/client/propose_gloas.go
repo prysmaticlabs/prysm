@@ -102,7 +102,7 @@ func (v *validator) proposeSelfBuildEnvelope(
 		return errors.Wrap(err, "could not sign execution payload envelope")
 	}
 
-	if _, err := v.validatorClient.PublishExecutionPayloadEnvelope(ctx, signedEnvelope); err != nil {
+	if _, err := v.validatorClient.PublishExecutionPayloadEnvelope(ctx, signedEnvelope, blockRoot); err != nil {
 		validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("failed").Inc()
 		return errors.Wrap(err, "failed to publish execution payload envelope")
 	}

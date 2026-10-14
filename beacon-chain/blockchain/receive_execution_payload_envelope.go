@@ -385,7 +385,11 @@ func (s *Service) savePostPayload(ctx context.Context, signed interfaces.ROSigne
 	if !ok {
 		return errors.New("could not type assert signed envelope to proto")
 	}
-	return s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv)
+	envelope, err := signed.Envelope()
+	if err != nil {
+		return errors.Wrap(err, "could not get envelope")
+	}
+	return s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv, envelope.BeaconBlockRoot())
 }
 
 func (s *Service) recordPayloadArrival(root [32]byte, slot primitives.Slot, arrivedAt time.Time) {

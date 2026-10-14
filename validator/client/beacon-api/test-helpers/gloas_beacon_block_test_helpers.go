@@ -161,7 +161,6 @@ func GenerateProtoExecutionPayloadEnvelope() *ethpb.ExecutionPayloadEnvelope {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          121,
-		BeaconBlockRoot:       FillByteSlice(32, 210),
 		ParentBeaconBlockRoot: FillByteSlice(32, 211),
 	}
 }

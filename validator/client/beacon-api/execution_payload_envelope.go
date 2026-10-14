@@ -10,7 +10,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -25,10 +24,9 @@ func (c *beaconApiValidatorClient) getExecutionPayloadEnvelope(
 	slot primitives.Slot,
 	beaconBlockRoot [32]byte,
 ) (*ethpb.ExecutionPayloadEnvelope, error) {
+	// The envelope no longer carries a beacon block root (EIP-8411); the cache is keyed by
+	// slot and the binding is enforced by the BN via the request path parameters.
 	if envelope, _, _ := c.envelopeCache.Peek(slot); envelope != nil {
-		if bytesutil.ToBytes32(envelope.BeaconBlockRoot) != beaconBlockRoot {
-			return nil, errors.New("cached execution payload envelope beacon_block_root does not match requested block")
-		}
 		return envelope, nil
 	}
 
@@ -63,6 +61,7 @@ func (c *beaconApiValidatorClient) getExecutionPayloadEnvelope(
 func (c *beaconApiValidatorClient) publishExecutionPayloadEnvelope(
 	ctx context.Context,
 	envelope *ethpb.SignedExecutionPayloadEnvelope,
+	beaconBlockRoot [32]byte,
 ) (*empty.Empty, error) {
 	const endpoint = "/eth/v1/beacon/execution_payload_envelopes"
 	if envelope == nil || envelope.Message == nil || envelope.Message.Payload == nil {
@@ -73,7 +72,7 @@ func (c *beaconApiValidatorClient) publishExecutionPayloadEnvelope(
 	cachedEnv, blobs, kzgProofs := c.envelopeCache.Take(slot)
 	if cachedEnv == nil {
 		jsonFn := func() ([]byte, error) {
-			j, jerr := structs.SignedExecutionPayloadEnvelopeFromConsensus(envelope)
+			j, jerr := structs.SignedExecutionPayloadEnvelopeFromConsensus(envelope, beaconBlockRoot)
 			if jerr != nil {
 				return nil, jerr
 			}
@@ -91,7 +90,7 @@ func (c *beaconApiValidatorClient) publishExecutionPayloadEnvelope(
 		Blobs:                          blobs,
 	}
 	jsonFn := func() ([]byte, error) {
-		j, jerr := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(envelope, kzgProofs, blobs)
+		j, jerr := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(envelope, beaconBlockRoot, kzgProofs, blobs)
 		if jerr != nil {
 			return nil, jerr
 		}

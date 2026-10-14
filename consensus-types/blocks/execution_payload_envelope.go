@@ -16,24 +16,32 @@ import (
 
 type signedExecutionPayloadEnvelope struct {
 	s *ethpb.SignedExecutionPayloadEnvelope
+	// root is the beacon block root the envelope belongs to. EIP-8411 removed
+	// beacon_block_root from the SSZ container, so the binding travels with
+	// the wrapper instead and is attached by the caller at construction.
+	root [field_params.RootLength]byte
 }
 
 type executionPayloadEnvelope struct {
-	p *ethpb.ExecutionPayloadEnvelope
+	p    *ethpb.ExecutionPayloadEnvelope
+	root [field_params.RootLength]byte
 }
 
-// WrappedROSignedExecutionPayloadEnvelope wraps a signed execution payload envelope proto in a read-only interface.
-func WrappedROSignedExecutionPayloadEnvelope(s *ethpb.SignedExecutionPayloadEnvelope) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
-	w := signedExecutionPayloadEnvelope{s: s}
+// WrappedROSignedExecutionPayloadEnvelope wraps a signed execution payload envelope proto in a
+// read-only interface. The beacon block root the envelope is bound to is attached out of band
+// because the EIP-8411 envelope container no longer carries it.
+func WrappedROSignedExecutionPayloadEnvelope(s *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [field_params.RootLength]byte) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
+	w := signedExecutionPayloadEnvelope{s: s, root: beaconBlockRoot}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
 	return w, nil
 }
 
-// WrappedROExecutionPayloadEnvelope wraps an execution payload envelope proto in a read-only interface.
-func WrappedROExecutionPayloadEnvelope(p *ethpb.ExecutionPayloadEnvelope) (interfaces.ROExecutionPayloadEnvelope, error) {
-	w := &executionPayloadEnvelope{p: p}
+// WrappedROExecutionPayloadEnvelope wraps an execution payload envelope proto in a read-only
+// interface, bound to the given beacon block root.
+func WrappedROExecutionPayloadEnvelope(p *ethpb.ExecutionPayloadEnvelope, beaconBlockRoot [field_params.RootLength]byte) (interfaces.ROExecutionPayloadEnvelope, error) {
+	w := &executionPayloadEnvelope{p: p, root: beaconBlockRoot}
 	if w.IsNil() {
 		return nil, consensus_types.ErrNilObjectWrapped
 	}
@@ -42,7 +50,7 @@ func WrappedROExecutionPayloadEnvelope(p *ethpb.ExecutionPayloadEnvelope) (inter
 
 // Envelope returns the execution payload envelope as a read-only interface.
 func (s signedExecutionPayloadEnvelope) Envelope() (interfaces.ROExecutionPayloadEnvelope, error) {
-	return WrappedROExecutionPayloadEnvelope(s.s.Message)
+	return WrappedROExecutionPayloadEnvelope(s.s.Message, s.root)
 }
 
 // Signature returns the BLS signature as a 96-byte array.
@@ -59,9 +67,6 @@ func (s signedExecutionPayloadEnvelope) IsNil() bool {
 		return true
 	}
 	if s.s.Message == nil {
-		return true
-	}
-	if len(s.s.Message.BeaconBlockRoot) != field_params.RootLength {
 		return true
 	}
 	if len(s.s.Message.ParentBeaconBlockRoot) != field_params.RootLength {
@@ -95,9 +100,6 @@ func (p *executionPayloadEnvelope) IsNil() bool {
 	if p.p.Payload == nil {
 		return true
 	}
-	if len(p.p.BeaconBlockRoot) != field_params.RootLength {
-		return true
-	}
 	if len(p.p.ParentBeaconBlockRoot) != field_params.RootLength {
 		return true
 	}
@@ -124,9 +126,10 @@ func (p *executionPayloadEnvelope) BuilderIndex() primitives.BuilderIndex {
 	return p.p.BuilderIndex
 }
 
-// BeaconBlockRoot returns the beacon block root referenced by the envelope.
+// BeaconBlockRoot returns the beacon block root the envelope is bound to. The binding is
+// attached at wrap time (EIP-8411 removed the root from the envelope container).
 func (p *executionPayloadEnvelope) BeaconBlockRoot() [field_params.RootLength]byte {
-	return [field_params.RootLength]byte(p.p.BeaconBlockRoot)
+	return p.root
 }
 
 // ParentBeaconBlockRoot returns the parent beacon block root referenced by the envelope.
@@ -219,12 +222,14 @@ func BlockBuiltOnParentPayload(parent, child interfaces.ReadOnlyBeaconBlock) (bo
 
 // BlockBuiltOnParentEnvelope reports whether env is the payload of blk's parent block and blk builds on it.
 // The root check matters when the parent was empty: an ancestor's payload then matches blk's parent hash.
+// EIP-8411: wrappers built from by-range responses carry a zero root (the wire envelope has no root
+// field); for those, binding falls back to the block hash check alone.
 func BlockBuiltOnParentEnvelope(env interfaces.ROSignedExecutionPayloadEnvelope, blk ROBlock) (bool, error) {
 	msg, err := env.Envelope()
 	if err != nil {
 		return false, err
 	}
-	if msg.BeaconBlockRoot() != blk.Block().ParentRoot() {
+	if root := msg.BeaconBlockRoot(); root != ([field_params.RootLength]byte{}) && root != blk.Block().ParentRoot() {
 		return false, nil
 	}
 	ex, err := msg.Execution()

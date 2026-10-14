@@ -18,7 +18,7 @@ import (
 // engine_getPayloadBodiesByHash.
 // A secondary index from BlockHash → BeaconBlockRoot is maintained so that
 // envelopes can be looked up by execution block hash.
-func (s *Store) SaveExecutionPayloadEnvelope(ctx context.Context, env *ethpb.SignedExecutionPayloadEnvelope) error {
+func (s *Store) SaveExecutionPayloadEnvelope(ctx context.Context, env *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.SaveExecutionPayloadEnvelope")
 	defer span.End()
 
@@ -26,9 +26,9 @@ func (s *Store) SaveExecutionPayloadEnvelope(ctx context.Context, env *ethpb.Sig
 		return errors.New("cannot save nil execution payload envelope")
 	}
 
-	blockRoot := bytesutil.ToBytes32(env.Message.BeaconBlockRoot)
+	blockRoot := beaconBlockRoot
 	blockHash := bytesutil.ToBytes32(env.Message.Payload.BlockHash)
-	blinded := blindEnvelope(env)
+	blinded := blindEnvelope(env, beaconBlockRoot)
 
 	enc, err := encodeBlindedEnvelope(blinded)
 	if err != nil {
@@ -127,14 +127,16 @@ func (s *Store) DeleteExecutionPayloadEnvelope(ctx context.Context, blockRoot [3
 
 // blindEnvelope converts a full signed envelope to its blinded form by replacing
 // the execution payload with its block hash. This avoids computing the expensive
-// payload hash tree root on the critical path.
-func blindEnvelope(env *ethpb.SignedExecutionPayloadEnvelope) *ethpb.SignedBlindedExecutionPayloadEnvelope {
+// payload hash tree root on the critical path. The beacon block root binding is
+// supplied by the caller (EIP-8411 removed it from the wire envelope) and is kept
+// in the storage-only blinded container.
+func blindEnvelope(env *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) *ethpb.SignedBlindedExecutionPayloadEnvelope {
 	return &ethpb.SignedBlindedExecutionPayloadEnvelope{
 		Message: &ethpb.BlindedExecutionPayloadEnvelope{
 			BlockHash:             env.Message.Payload.BlockHash,
 			ExecutionRequests:     env.Message.ExecutionRequests,
 			BuilderIndex:          env.Message.BuilderIndex,
-			BeaconBlockRoot:       env.Message.BeaconBlockRoot,
+			BeaconBlockRoot:       beaconBlockRoot[:],
 			Slot:                  primitives.Slot(env.Message.Payload.SlotNumber),
 			ParentBlockHash:       env.Message.Payload.ParentHash,
 			ParentBeaconBlockRoot: env.Message.ParentBeaconBlockRoot,

@@ -143,7 +143,7 @@ func (s *Service) fetchPayloadEnvelope(root [32]byte) {
 		if len(envelopes) == 0 {
 			continue
 		}
-		wrapped, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(envelopes[0])
+		wrapped, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(envelopes[0], root)
 		if err != nil {
 			log.WithError(err).Debug("Could not wrap requested payload envelope")
 			continue

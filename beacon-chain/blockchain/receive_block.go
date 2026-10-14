@@ -391,7 +391,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 	defer s.cfg.ForkChoiceStore.Unlock()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
-	if err := s.onBlockBatch(ctx, blocks, envelopes, avs); err != nil {
+	// EIP-8411: the returned envelopes are rebound to their block roots (the wire
+	// envelope no longer carries beacon_block_root); use them for persistence.
+	boundEnvelopes, err := s.onBlockBatch(ctx, blocks, envelopes, avs)
+	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
 		return err
@@ -431,12 +434,19 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	for _, e := range envelopes {
+	for _, e := range boundEnvelopes {
+		if e == nil {
+			continue
+		}
 		protoEnv, ok := e.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
 		if !ok {
 			return errors.New("could not type assert signed envelope to proto")
 		}
-		if err := s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv); err != nil {
+		envelope, err := e.Envelope()
+		if err != nil {
+			return errors.Wrap(err, "could not get envelope")
+		}
+		if err := s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv, envelope.BeaconBlockRoot()); err != nil {
 			return errors.Wrap(err, "could not save execution payload envelope")
 		}
 	}

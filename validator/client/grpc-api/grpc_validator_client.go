@@ -385,16 +385,16 @@ func (c *grpcValidatorClient) ConnectionGeneration() uint64 {
 // Gloas fork methods mirror the REST split: stateless self-build publishes the contents arm
 // (envelope + blobs); stateful publishes the bare signed_envelope arm (BN attaches cached blob data).
 func (c *grpcValidatorClient) GetExecutionPayloadEnvelope(ctx context.Context, slot primitives.Slot, beaconBlockRoot [32]byte) (*ethpb.ExecutionPayloadEnvelope, error) {
-	// Stateless: the full envelope + blobs were cached during block production.
+	// Stateless: the full envelope + blobs were cached during block production. The envelope no
+	// longer carries a beacon block root (EIP-8411); the cache is keyed by slot and the binding
+	// is enforced server-side via the request's beacon_block_root.
 	if envelope, _, _ := c.envelopeCache.Peek(slot); envelope != nil {
-		if bytesutil.ToBytes32(envelope.BeaconBlockRoot) != beaconBlockRoot {
-			return nil, errors.New("cached execution payload envelope beacon_block_root does not match requested block")
-		}
 		return envelope, nil
 	}
 	// Stateful: the BN returns the full envelope and attaches blobs/proofs on publish.
 	req := &ethpb.ExecutionPayloadEnvelopeRequest{
-		Slot: slot,
+		Slot:            slot,
+		BeaconBlockRoot: beaconBlockRoot[:],
 	}
 	resp, err := c.getClient().GetExecutionPayloadEnvelopeV2(ctx, req)
 	if err != nil {
@@ -406,23 +406,18 @@ func (c *grpcValidatorClient) GetExecutionPayloadEnvelope(ctx context.Context, s
 	if resp.Envelope == nil {
 		return nil, errors.New("beacon node returned nil execution payload envelope")
 	}
-	// Mirror the REST handler's root check (the gRPC request carries only the slot): the returned
-	// envelope must be for the block we are proposing before the VC signs and publishes it.
-	if bytesutil.ToBytes32(resp.Envelope.BeaconBlockRoot) != beaconBlockRoot {
-		return nil, errors.New("execution payload envelope beacon_block_root does not match requested block")
-	}
 	return resp.Envelope, nil
 }
 
 // PublishExecutionPayloadEnvelope publishes the contents arm when blobs/proofs were cached during
 // block production, and the bare signed_envelope arm otherwise (BN attaches cached blob data).
-func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope) (*empty.Empty, error) {
+func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) (*empty.Empty, error) {
 	var cachedEnv *ethpb.ExecutionPayloadEnvelope
 	var blobs, kzgProofs [][]byte
 	if in.GetMessage().GetPayload() != nil {
 		cachedEnv, blobs, kzgProofs = c.envelopeCache.Take(primitives.Slot(in.Message.Payload.SlotNumber))
 	}
-	generic := &ethpb.GenericSignedExecutionPayloadEnvelope{}
+	generic := &ethpb.GenericSignedExecutionPayloadEnvelope{BeaconBlockRoot: beaconBlockRoot[:]}
 	if cachedEnv == nil {
 		generic.Envelope = &ethpb.GenericSignedExecutionPayloadEnvelope_SignedEnvelope{SignedEnvelope: in}
 	} else {

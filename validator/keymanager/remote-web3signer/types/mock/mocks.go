@@ -835,7 +835,6 @@ func ExecutionPayloadEnvelopeProto() *eth.ExecutionPayloadEnvelope {
 			BuilderExits:    []*enginev1.BuilderExitRequest{},
 		},
 		BuilderIndex:          0,
-		BeaconBlockRoot:       make([]byte, fieldparams.RootLength),
 		ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
 	}
 }
@@ -878,7 +877,6 @@ func ExecutionPayloadEnvelopeSignRequest() *types.ExecutionPayloadEnvelopeSignRe
 					BuilderExits:    []*types.BuilderExitRequest{},
 				},
 				BuilderIndex:          "0",
-				BeaconBlockRoot:       make([]byte, fieldparams.RootLength),
 				ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			},
 		},

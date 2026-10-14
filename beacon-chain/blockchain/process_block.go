@@ -185,55 +185,49 @@ type versionAndHeader struct {
 	header  interfaces.ExecutionData
 }
 
-func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlock, envelopes []interfaces.ROSignedExecutionPayloadEnvelope, avs das.AvailabilityChecker) error {
+func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlock, envelopes []interfaces.ROSignedExecutionPayloadEnvelope, avs das.AvailabilityChecker) ([]interfaces.ROSignedExecutionPayloadEnvelope, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
 	if len(blks) == 0 {
-		return errors.New("no blocks provided")
+		return nil, errors.New("no blocks provided")
 	}
 
 	if err := consensusblocks.BeaconBlockIsNil(blks[0]); err != nil {
-		return invalidBlock{error: err}
+		return nil, invalidBlock{error: err}
 	}
 	b := blks[0].Block()
 
 	// Retrieve incoming block's pre state.
 	parentRoot := b.ParentRoot()
 	if err := s.verifyBlkPreState(ctx, parentRoot); err != nil {
-		return err
+		return nil, err
 	}
 	preState, applied, err := s.getBatchPrestate(ctx, blks[0], envelopes)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if preState == nil || preState.IsNil() {
-		return fmt.Errorf("nil pre state for slot %d", b.Slot())
+		return nil, fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 	var eidx int
-	var br [32]byte
 	// blockEnvelopes[i] is the envelope verified against blks[i]; nil when the block has none.
+	// EIP-8411: by-range envelopes carry no beacon block root, so each is bound to
+	// its block by the bid's block hash and rewrapped with the block root.
 	blockEnvelopes := make([]interfaces.ROSignedExecutionPayloadEnvelope, len(blks))
 	sigSet := bls.NewSet()
 	if applied {
 		eidx = 1
 		envSigSet, err := gloas.ExecutionPayloadEnvelopeSignatureBatch(preState, envelopes[0])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sigSet.Join(envSigSet)
-	}
-	if eidx < len(envelopes) {
-		env, err := envelopes[eidx].Envelope()
-		if err != nil {
-			return err
-		}
-		br = env.BeaconBlockRoot()
 	}
 
 	// Fill in missing blocks
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blks[0], preState.FinalizedCheckpoint(), preState.CurrentJustifiedCheckpoint()); err != nil {
-		return errors.Wrap(err, "could not fill in missing blocks to forkchoice")
+		return nil, errors.Wrap(err, "could not fill in missing blocks to forkchoice")
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
@@ -245,11 +239,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	boundaries := make(map[[32]byte]state.BeaconState)
 	for i, b := range blks {
 		if features.BlacklistedBlock(b.Root()) {
-			return errBlacklistedRoot
+			return nil, errBlacklistedRoot
 		}
 		v, h, err := getStateVersionAndPayload(preState)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		preVersionAndHeaders[i] = &versionAndHeader{
 			version: v,
@@ -258,17 +252,17 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return invalidBlock{error: err}
+			return nil, invalidBlock{error: err}
 		}
 		if b.Version() >= version.Gloas {
 			sbid, err := b.Block().Body().SignedExecutionPayloadBid()
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if idx := sbid.Message.BuilderIndex; idx != params.BeaconConfig().BuilderIndexSelfBuild {
 				pk, err := preState.BuilderPubkey(idx)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				builderPubkeys[i] = &pk
 			}
@@ -277,33 +271,34 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		root := b.Root()
 		domain, err := signing.Domain(preState.Fork(), slots.ToEpoch(preState.Slot()), params.BeaconConfig().DomainBeaconProposer, preState.GenesisValidatorsRoot())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		proposer, err := preState.ValidatorAtIndex(b.Block().ProposerIndex())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		proposerSig, err := signing.BlockSignatureBatch(proposer.PublicKey, sig[:], domain, func() ([32]byte, error) { return root, nil })
 		if err != nil {
-			return err
+			return nil, err
 		}
 		sigSet.Join(proposerSig)
-		if b.Root() == br && eidx < len(envelopes) {
-			envSigSet, err := gloas.VerifyExecutionPayloadEnvelopeWithDeferredSig(ctx, preState, envelopes[eidx])
+		if b.Version() >= version.Gloas && eidx < len(envelopes) {
+			matches, err := envelopeMatchesBlockBid(envelopes[eidx], b)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			sigSet.Join(envSigSet)
-			blockEnvelopes[i] = envelopes[eidx]
-			eidx++
-			if eidx < len(envelopes) {
-				nextEnv, err := envelopes[eidx].Envelope()
+			if matches {
+				rewrapped, err := rewrapEnvelopeWithRoot(envelopes[eidx], b.Root())
 				if err != nil {
-					return err
+					return nil, err
 				}
-				br = nextEnv.BeaconBlockRoot()
-			} else {
-				br = [32]byte{}
+				envSigSet, err := gloas.VerifyExecutionPayloadEnvelopeWithDeferredSig(ctx, preState, rewrapped)
+				if err != nil {
+					return nil, err
+				}
+				sigSet.Join(envSigSet)
+				blockEnvelopes[i] = rewrapped
+				eidx++
 			}
 		}
 		// Save potential boundary states.
@@ -315,7 +310,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 
 		v, h, err = getStateVersionAndPayload(preState)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		postVersionAndHeaders[i] = &versionAndHeader{
 			version: v,
@@ -324,7 +319,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		sigSet.Join(set)
 	}
 	if eidx != len(envelopes) {
-		return errBatchEnvelopeMismatch
+		return nil, errBatchEnvelopeMismatch
 	}
 
 	var verify bool
@@ -334,15 +329,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		verify, err = sigSet.Verify()
 	}
 	if err != nil {
-		return invalidBlock{error: err}
+		return nil, invalidBlock{error: err}
 	}
 	if !verify {
-		return errors.New("batch block signature verification failed")
+		return nil, errors.New("batch block signature verification failed")
 	}
 
 	pendingNodes, isValidPayload, err := s.notifyEngineAndSaveData(ctx, blks, blockEnvelopes, avs, preVersionAndHeaders, postVersionAndHeaders, jCheckpoints, fCheckpoints)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for i, n := range pendingNodes {
 		n.BuilderPubkey = builderPubkeys[i]
@@ -350,35 +345,64 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	// Save boundary states that will be useful for forkchoice
 	for r, st := range boundaries {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	lastB := blks[len(blks)-1]
 	lastBR := lastB.Root()
 	// Also saves the last post state which to be used as pre state for the next batch.
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
-		return err
+		return nil, err
 	}
 	// Insert all nodes to forkchoice
 	if applied {
 		env, err := envelopes[0].Envelope()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err := s.cfg.ForkChoiceStore.InsertPayload(env); err != nil {
-			return errors.Wrap(err, "could not insert first payload in batch to forkchoice")
+			return nil, errors.Wrap(err, "could not insert first payload in batch to forkchoice")
 		}
 	}
 	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
-		return errors.Wrap(err, "could not insert batch to forkchoice")
+		return nil, errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	// Set their optimistic status
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBR); err != nil {
-			return errors.Wrap(err, "could not set optimistic block to valid")
+			return nil, errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
-	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
+	return blockEnvelopes, s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
+}
+
+// envelopeMatchesBlockBid reports whether the envelope's payload is the one the
+// block's bid commits to. EIP-8411 removed beacon_block_root from the envelope,
+// so by-range responses are bound to blocks via the bid's block hash.
+func envelopeMatchesBlockBid(signed interfaces.ROSignedExecutionPayloadEnvelope, blk consensusblocks.ROBlock) (bool, error) {
+	env, err := signed.Envelope()
+	if err != nil {
+		return false, err
+	}
+	sbid, err := blk.Block().Body().SignedExecutionPayloadBid()
+	if err != nil {
+		return false, err
+	}
+	if sbid == nil || sbid.Message == nil {
+		return false, nil
+	}
+	bh := env.BlockHash()
+	return bytes.Equal(sbid.Message.BlockHash, bh[:]), nil
+}
+
+// rewrapEnvelopeWithRoot rebinds a signed envelope wrapper to the given beacon
+// block root once the owning block is known.
+func rewrapEnvelopeWithRoot(signed interfaces.ROSignedExecutionPayloadEnvelope, root [32]byte) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
+	protoEnv, ok := signed.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
+	if !ok {
+		return nil, errors.New("could not type assert signed envelope to proto")
+	}
+	return consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnv, root)
 }
 
 func (s *Service) notifyEngineAndSaveData(

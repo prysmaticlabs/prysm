@@ -880,12 +880,10 @@ func SendExecutionPayloadEnvelopesByRootRequest(
 
 	max := min(uint64(len(*req)), params.BeaconConfig().MaxRequestPayloads)
 
-	// Build multiset of requested roots for validation (tracks remaining expected count per root).
-	pendingRoots := make(map[[32]byte]int, len(*req))
-	for _, root := range *req {
-		pendingRoots[root]++
-	}
-
+	// EIP-8411: the envelope no longer carries beacon_block_root, so returned
+	// envelopes cannot self-identify. Only the response count is bounded here;
+	// callers bind envelopes to roots (single-root requests or by block hash)
+	// and consistency checks against the block's bid reject mismatches.
 	envelopes := make([]*ethpb.SignedExecutionPayloadEnvelope, 0, len(*req))
 	for i := range max + 1 {
 		envelope, err := readChunkedExecutionPayloadEnvelope(stream, p2pApi.Encoding(), ctxMap)
@@ -897,15 +895,6 @@ func SendExecutionPayloadEnvelopesByRootRequest(
 		}
 		if i == max {
 			return nil, errors.New("peer returned more execution payload envelopes than requested")
-		}
-		// Validate that the returned envelope was actually requested and not a duplicate.
-		if envelope.Message != nil {
-			root := bytesutil.ToBytes32(envelope.Message.BeaconBlockRoot)
-			remaining, ok := pendingRoots[root]
-			if !ok || remaining <= 0 {
-				return nil, errors.Errorf("received unrequested or duplicate execution payload envelope for root %#x", root)
-			}
-			pendingRoots[root] = remaining - 1
 		}
 		envelopes = append(envelopes, envelope)
 	}
@@ -1014,7 +1003,7 @@ func validateExecutionPayloadEnvelopeByRangeResponse(
 	prevHash []byte,
 	hasPrevious bool,
 ) (primitives.Slot, []byte, error) {
-	if _, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env); err != nil {
+	if _, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, [32]byte{}); err != nil {
 		return 0, nil, errors.Wrap(ErrInvalidFetchedData, "invalid execution payload envelope")
 	}
 

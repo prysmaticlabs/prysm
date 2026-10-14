@@ -430,12 +430,12 @@ func (c *beaconApiValidatorClient) GetExecutionPayloadEnvelope(ctx context.Conte
 	})
 }
 
-func (c *beaconApiValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope) (*empty.Empty, error) {
+func (c *beaconApiValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-api.PublishExecutionPayloadEnvelope")
 	defer span.End()
 
 	return wrapInMetrics[*empty.Empty]("PublishExecutionPayloadEnvelope", func() (*empty.Empty, error) {
-		return c.publishExecutionPayloadEnvelope(ctx, in)
+		return c.publishExecutionPayloadEnvelope(ctx, in, beaconBlockRoot)
 	})
 }
 

@@ -106,12 +106,13 @@ func (s *Service) ReconstructExecutionPayloadEnvelope(
 	if !ok || payload == nil {
 		return nil, errors.New("execution payload not found")
 	}
+	// The wire envelope no longer carries beacon_block_root (EIP-8411); the binding
+	// stays in the blinded storage container and is attached by callers at wrap time.
 	return &ethpb.SignedExecutionPayloadEnvelope{
 		Message: &ethpb.ExecutionPayloadEnvelope{
 			Payload:               payload,
 			ExecutionRequests:     envelope.Message.ExecutionRequests,
 			BuilderIndex:          envelope.Message.BuilderIndex,
-			BeaconBlockRoot:       envelope.Message.BeaconBlockRoot,
 			ParentBeaconBlockRoot: envelope.Message.ParentBeaconBlockRoot,
 		},
 		Signature: envelope.Signature,

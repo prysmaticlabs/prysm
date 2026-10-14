@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -266,7 +265,8 @@ func (s *Server) ExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Request
 	}
 
 	resp, err := s.V1Alpha1Server.GetExecutionPayloadEnvelopeV2(ctx, &eth.ExecutionPayloadEnvelopeRequest{
-		Slot: primitives.Slot(slot),
+		Slot:            primitives.Slot(slot),
+		BeaconBlockRoot: beaconBlockRoot,
 	})
 	if err != nil {
 		if st, ok := status.FromError(err); ok {
@@ -287,10 +287,8 @@ func (s *Server) ExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Request
 		httputil.HandleError(w, "execution payload envelope not found", http.StatusNotFound)
 		return
 	}
-	if !bytes.Equal(resp.Envelope.BeaconBlockRoot, beaconBlockRoot) {
-		httputil.HandleError(w, "cached envelope beacon_block_root does not match request", http.StatusNotFound)
-		return
-	}
+	// The envelope no longer carries beacon_block_root (EIP-8411); the binding
+	// against the requested root is enforced in GetExecutionPayloadEnvelopeV2.
 	envelope := resp.Envelope
 
 	w.Header().Set(api.VersionHeader, version.String(version.Gloas))
@@ -305,7 +303,7 @@ func (s *Server) ExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	jsonEnvelope, err := structs.ExecutionPayloadEnvelopeFromConsensus(envelope)
+	jsonEnvelope, err := structs.ExecutionPayloadEnvelopeFromConsensus(envelope, [fieldparams.RootLength]byte(beaconBlockRoot))
 	if err != nil {
 		httputil.HandleError(w, "could not convert envelope to JSON: "+err.Error(), http.StatusInternalServerError)
 		return

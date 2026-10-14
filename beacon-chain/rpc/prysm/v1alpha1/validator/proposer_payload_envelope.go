@@ -46,7 +46,6 @@ func (vs *Server) storeExecutionPayloadEnvelope(
 		Payload:               payload,
 		ExecutionRequests:     local.ExecutionRequestsGloas,
 		BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
-		BeaconBlockRoot:       blockRoot[:],
 		ParentBeaconBlockRoot: parentRoot[:],
 	}
 
@@ -74,9 +73,10 @@ func (vs *Server) storeExecutionPayloadEnvelope(
 	}
 
 	vs.ExecutionPayloadEnvelopeCache.Set(&cache.ExecutionPayloadContents{
-		Envelope:       envelope,
-		DataColumns:    roSidecars,
-		PartialColumns: partialColumns,
+		Envelope:        envelope,
+		BeaconBlockRoot: blockRoot,
+		DataColumns:     roSidecars,
+		PartialColumns:  partialColumns,
 	})
 	return envelope, nil
 }
@@ -133,6 +133,12 @@ func (vs *Server) GetExecutionPayloadEnvelopeV2(
 		return nil, status.Errorf(codes.NotFound,
 			"execution payload envelope not found for slot %d", req.Slot)
 	}
+	// EIP-8411: the envelope cannot self-identify its block, so the binding is
+	// checked here against the root the caller is proposing for.
+	if len(req.BeaconBlockRoot) == fieldparams.RootLength && bytesutil.ToBytes32(req.BeaconBlockRoot) != contents.BeaconBlockRoot {
+		return nil, status.Errorf(codes.NotFound,
+			"cached execution payload envelope is not for beacon block root %#x", req.BeaconBlockRoot)
+	}
 
 	return &ethpb.ExecutionPayloadEnvelopeResponse{
 		Envelope: contents.Envelope,
@@ -169,7 +175,20 @@ func (vs *Server) PublishExecutionPayloadEnvelopeV2(
 			"execution payload envelopes are not supported before Gloas fork (slot %d)", envSlot)
 	}
 
-	beaconBlockRoot := bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)
+	// EIP-8411: the envelope no longer carries its beacon block root. Prefer the
+	// out-of-band root from the request; fall back to the producer cache.
+	var beaconBlockRoot [32]byte
+	switch {
+	case len(req.BeaconBlockRoot) == fieldparams.RootLength:
+		beaconBlockRoot = bytesutil.ToBytes32(req.BeaconBlockRoot)
+	default:
+		cached, ok := vs.ExecutionPayloadEnvelopeCache.Contents()
+		if !ok {
+			return nil, status.Error(codes.InvalidArgument,
+				"publish request carries no beacon_block_root and the beacon node has no cached envelope to resolve it")
+		}
+		beaconBlockRoot = cached.BeaconBlockRoot
+	}
 	span.SetAttributes(
 		trace.StringAttribute("slot", fmt.Sprintf("%d", envSlot)),
 		trace.StringAttribute("builderIndex", fmt.Sprintf("%d", signed.Message.BuilderIndex)),
@@ -197,7 +216,7 @@ func (vs *Server) PublishExecutionPayloadEnvelopeV2(
 		}
 	}
 
-	roSigned, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signed)
+	roSigned, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signed, beaconBlockRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not wrap signed envelope: %v", err)
 	}
