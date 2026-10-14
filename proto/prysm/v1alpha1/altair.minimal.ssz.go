@@ -5,6 +5,7 @@ package eth
 import (
 	binary "encoding/binary"
 	"fmt"
+
 	go_bitfield "github.com/OffchainLabs/go-bitfield"
 	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
 )

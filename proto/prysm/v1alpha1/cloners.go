@@ -160,6 +160,7 @@ func copySignedExecutionPayloadBid(header *SignedExecutionPayloadBid) *SignedExe
 			ExecutionPayment:      header.Message.ExecutionPayment,
 			BlobKzgCommitments:    bytesutil.SafeCopy2dBytes(header.Message.BlobKzgCommitments),
 			ExecutionRequestsRoot: bytesutil.SafeCopyBytes(header.Message.ExecutionRequestsRoot),
+			PayloadChunksRoot:     bytesutil.SafeCopyBytes(header.Message.PayloadChunksRoot),
 		}
 	}
 	return copied
@@ -218,7 +219,6 @@ func copyExecutionPayloadEnvelope(env *ExecutionPayloadEnvelope) *ExecutionPaylo
 		Payload:               env.Payload, // engine proto, not deep copied here
 		ExecutionRequests:     env.ExecutionRequests,
 		BuilderIndex:          env.BuilderIndex,
-		BeaconBlockRoot:       bytesutil.SafeCopyBytes(env.BeaconBlockRoot),
 		ParentBeaconBlockRoot: bytesutil.SafeCopyBytes(env.ParentBeaconBlockRoot),
 	}
 }
