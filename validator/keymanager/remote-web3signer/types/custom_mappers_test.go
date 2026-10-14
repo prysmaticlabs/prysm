@@ -954,7 +954,6 @@ func TestMapExecutionPayloadEnvelope(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		envelope := mock.ExecutionPayloadEnvelopeProto()
 		envelope.BuilderIndex = 5
-		envelope.BeaconBlockRoot = make([]byte, fieldparams.RootLength)
 		envelope.ParentBeaconBlockRoot = bytesutil.PadTo([]byte{1}, fieldparams.RootLength)
 		got, err := types.MapExecutionPayloadEnvelope(envelope)
 		require.NoError(t, err)

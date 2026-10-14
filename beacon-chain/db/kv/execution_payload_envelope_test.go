@@ -13,6 +13,12 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
+// testEnvelopeRoot is the beacon block root the fixture envelope is saved
+// under; EIP-8411 removed the root from the envelope container.
+func testEnvelopeRoot() [32]byte {
+	return bytesutil.ToBytes32(bytesutil.PadTo([]byte("beaconroot"), 32))
+}
+
 func testEnvelope(t *testing.T) *ethpb.SignedExecutionPayloadEnvelope {
 	t.Helper()
 	return &ethpb.SignedExecutionPayloadEnvelope{
@@ -39,7 +45,6 @@ func testEnvelope(t *testing.T) *ethpb.SignedExecutionPayloadEnvelope {
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 			BuilderIndex:          primitives.BuilderIndex(42),
-			BeaconBlockRoot:       bytesutil.PadTo([]byte("beaconroot"), 32),
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: bytesutil.PadTo([]byte("sig"), 96),
@@ -51,14 +56,14 @@ func TestStore_SaveAndRetrieveExecutionPayloadEnvelope(t *testing.T) {
 	ctx := context.Background()
 	env := testEnvelope(t)
 
-	// Keyed by beacon block root.
-	blockRoot := bytesutil.ToBytes32(env.Message.BeaconBlockRoot)
+	// Keyed by beacon block root, supplied out of band.
+	blockRoot := testEnvelopeRoot()
 
 	// Initially should not exist.
 	assert.Equal(t, false, db.HasExecutionPayloadEnvelope(ctx, blockRoot))
 
 	// Save (always blinds internally).
-	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env))
+	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env, blockRoot))
 
 	// Should exist now.
 	assert.Equal(t, true, db.HasExecutionPayloadEnvelope(ctx, blockRoot))
@@ -70,7 +75,7 @@ func TestStore_SaveAndRetrieveExecutionPayloadEnvelope(t *testing.T) {
 	// Verify metadata is preserved.
 	assert.Equal(t, primitives.Slot(env.Message.Payload.SlotNumber), loaded.Message.Slot)
 	assert.Equal(t, env.Message.BuilderIndex, loaded.Message.BuilderIndex)
-	assert.DeepEqual(t, env.Message.BeaconBlockRoot, loaded.Message.BeaconBlockRoot)
+	assert.DeepEqual(t, blockRoot[:], loaded.Message.BeaconBlockRoot)
 	assert.DeepEqual(t, env.Signature, loaded.Signature)
 
 	// BlockHash should be the payload's block hash (not a hash tree root).
@@ -82,9 +87,9 @@ func TestStore_DeleteExecutionPayloadEnvelope(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	env := testEnvelope(t)
-	blockRoot := bytesutil.ToBytes32(env.Message.BeaconBlockRoot)
+	blockRoot := testEnvelopeRoot()
 
-	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env))
+	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env, blockRoot))
 	assert.Equal(t, true, db.HasExecutionPayloadEnvelope(ctx, blockRoot))
 
 	require.NoError(t, db.DeleteExecutionPayloadEnvelope(ctx, blockRoot))
@@ -104,7 +109,7 @@ func TestStore_SaveExecutionPayloadEnvelope_NilRejected(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	err := db.SaveExecutionPayloadEnvelope(ctx, nil)
+	err := db.SaveExecutionPayloadEnvelope(ctx, nil, [32]byte{})
 	require.ErrorContains(t, "nil", err)
 }
 
@@ -115,7 +120,7 @@ func TestStore_ExecutionPayloadEnvelopeByBlockHash(t *testing.T) {
 	blockHash := bytesutil.ToBytes32(env.Message.Payload.BlockHash)
 
 	// Save envelope — should populate both primary and BlockHash index.
-	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env))
+	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env, testEnvelopeRoot()))
 
 	// Look up by block hash.
 	loaded, err := db.ExecutionPayloadEnvelopeByBlockHash(ctx, blockHash)
@@ -138,10 +143,10 @@ func TestStore_DeleteExecutionPayloadEnvelope_CleansBlockHashIndex(t *testing.T)
 	db := setupDB(t)
 	ctx := context.Background()
 	env := testEnvelope(t)
-	blockRoot := bytesutil.ToBytes32(env.Message.BeaconBlockRoot)
+	blockRoot := testEnvelopeRoot()
 	blockHash := bytesutil.ToBytes32(env.Message.Payload.BlockHash)
 
-	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env))
+	require.NoError(t, db.SaveExecutionPayloadEnvelope(ctx, env, blockRoot))
 
 	// Verify BlockHash lookup works before delete.
 	_, err := db.ExecutionPayloadEnvelopeByBlockHash(ctx, blockHash)
@@ -157,7 +162,7 @@ func TestStore_DeleteExecutionPayloadEnvelope_CleansBlockHashIndex(t *testing.T)
 func TestBlindEnvelope_PreservesBlockHash(t *testing.T) {
 	env := testEnvelope(t)
 
-	blinded := blindEnvelope(env)
+	blinded := blindEnvelope(env, testEnvelopeRoot())
 
 	// Should contain the block hash from the payload, not a hash tree root.
 	assert.DeepEqual(t, env.Message.Payload.BlockHash, blinded.Message.BlockHash)
@@ -166,7 +171,8 @@ func TestBlindEnvelope_PreservesBlockHash(t *testing.T) {
 	// Metadata should be preserved.
 	assert.Equal(t, env.Message.BuilderIndex, blinded.Message.BuilderIndex)
 	assert.Equal(t, primitives.Slot(env.Message.Payload.SlotNumber), blinded.Message.Slot)
-	assert.DeepEqual(t, env.Message.BeaconBlockRoot, blinded.Message.BeaconBlockRoot)
+	root := testEnvelopeRoot()
+	assert.DeepEqual(t, root[:], blinded.Message.BeaconBlockRoot)
 	assert.DeepEqual(t, env.Signature, blinded.Signature)
 }
 

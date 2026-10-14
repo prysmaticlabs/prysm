@@ -221,7 +221,7 @@ func TestProgressiveContainerActiveFields(t *testing.T) {
 		{
 			name:      "execution payload bid",
 			container: executionPayloadBidProgressiveContainer,
-			want:      [32]byte{0xff, 0x0f},
+			want:      [32]byte{0xff, 0x1f},
 		},
 		{
 			name:      "beacon block body",

@@ -13,13 +13,12 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
-// makeEnvelopeForRoot creates an envelope whose BeaconBlockRoot is set to the given block root,
+// makeEnvelopeForRoot creates an envelope wrapped against the given block root,
 // i.e. the payload revealed for that block, with the given payload block hash and parent hash.
 func makeEnvelopeForRoot(t *testing.T, slot primitives.Slot, beaconBlockRoot, blockHash, parentHash [32]byte) interfaces.ROSignedExecutionPayloadEnvelope {
 	env := &ethpb.SignedExecutionPayloadEnvelope{
 		Signature: make([]byte, fieldparams.BLSSignatureLength),
 		Message: &ethpb.ExecutionPayloadEnvelope{
-			BeaconBlockRoot:       beaconBlockRoot[:],
 			ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 			Payload: &enginev1.ExecutionPayloadGloas{
@@ -35,7 +34,7 @@ func makeEnvelopeForRoot(t *testing.T, slot primitives.Slot, beaconBlockRoot, bl
 			},
 		},
 	}
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, beaconBlockRoot)
 	require.NoError(t, err)
 	return wrapped
 }

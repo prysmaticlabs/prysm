@@ -93,7 +93,8 @@ func TestExecutionPayloadEnvelopesByRootRPCHandler_AvailableEnvelopes(t *testing
 				SlotByBlockHash:             make(map[[32]byte]primitives.Slot),
 			}}
 			for _, envelope := range envelopes {
-				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, envelope))
+				// The fixture aliases the payload block hash to the beacon block root.
+				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, envelope, bytesutil.ToBytes32(envelope.Message.Payload.BlockHash)))
 				payload := envelope.Message.Payload
 				hash := bytesutil.ToBytes32(payload.BlockHash)
 				reconstructor.SlotByBlockHash[hash] = payload.SlotNumber
@@ -137,9 +138,9 @@ func TestExecutionPayloadEnvelopesByRootRPCHandler_AvailableEnvelopes(t *testing
 			}
 			var receivedRoots [][32]byte
 			for _, envelope := range received {
-				root := bytesutil.ToBytes32(envelope.Message.BeaconBlockRoot)
+				// Fixtures alias the payload block hash to the beacon block root.
+				root := bytesutil.ToBytes32(envelope.Message.Payload.BlockHash)
 				receivedRoots = append(receivedRoots, root)
-				assert.Equal(t, root, bytesutil.ToBytes32(envelope.Message.Payload.BlockHash))
 				assert.Equal(t, reconstructor.SlotByBlockHash[root], envelope.Message.Payload.SlotNumber)
 			}
 			assert.Equal(t, true, slices.Equal(tt.wantRoots, receivedRoots), "unexpected roots: got %v, want %v", receivedRoots, tt.wantRoots)
@@ -165,8 +166,11 @@ func TestSendExecutionPayloadEnvelopesByRootRequest(t *testing.T) {
 	protocol := fmt.Sprintf("%s/ssz_snappy", p2p.RPCExecutionPayloadEnvelopesByRootTopicV1)
 	clock := startup.NewClock(time.Now(), [fieldparams.RootLength]byte{})
 
-	// Helper: create a SignedExecutionPayloadEnvelope with the given beacon block root and slot.
+	// Helper: create a SignedExecutionPayloadEnvelope identified by its payload
+	// block hash (the envelope no longer carries a beacon block root).
 	makeEnvelope := func(root [32]byte, slot primitives.Slot) *ethpb.SignedExecutionPayloadEnvelope {
+		blockHash := make([]byte, fieldparams.RootLength)
+		copy(blockHash, root[:])
 		return &ethpb.SignedExecutionPayloadEnvelope{
 			Message: &ethpb.ExecutionPayloadEnvelope{
 				Payload: &enginev1.ExecutionPayloadGloas{
@@ -177,10 +181,9 @@ func TestSendExecutionPayloadEnvelopesByRootRequest(t *testing.T) {
 					LogsBloom:     make([]byte, 256),
 					PrevRandao:    make([]byte, fieldparams.RootLength),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
-					BlockHash:     make([]byte, fieldparams.RootLength),
+					BlockHash:     blockHash,
 					SlotNumber:    slot,
 				},
-				BeaconBlockRoot:       root[:],
 				ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
 			},
 			Signature: make([]byte, fieldparams.BLSSignatureLength),
@@ -217,15 +220,17 @@ func TestSendExecutionPayloadEnvelopesByRootRequest(t *testing.T) {
 		envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(t.Context(), clock, p1, p2p2.PeerID(), ctxMap, &reqRoots)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(envelopes))
-		assert.Equal(t, rootA, bytesutil.ToBytes32(envelopes[0].Message.BeaconBlockRoot))
+		assert.Equal(t, rootA, bytesutil.ToBytes32(envelopes[0].Message.Payload.BlockHash))
 
 		if util.WaitTimeout(&wg, time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")
 		}
 	})
 
-	t.Run("duplicate response for same root rejected", func(t *testing.T) {
-		// Request [A, B], server responds with [A, A] — should reject (duplicate).
+	t.Run("duplicate response accepted at transport", func(t *testing.T) {
+		// EIP-8411: envelopes cannot self-identify, so the client only bounds the
+		// response count; callers bind envelopes to roots and drop strays.
+		// Request [A, B], server responds with [A, A]: accepted, two envelopes.
 		p1, p2p2 := p2ptest.NewTestP2P(t), p2ptest.NewTestP2P(t)
 		p1.Connect(p2p2)
 
@@ -247,16 +252,17 @@ func TestSendExecutionPayloadEnvelopesByRootRequest(t *testing.T) {
 		})
 
 		reqRoots := p2ptypes.ExecutionPayloadEnvelopesByRootReq{rootA, rootB}
-		_, err := SendExecutionPayloadEnvelopesByRootRequest(t.Context(), clock, p1, p2p2.PeerID(), ctxMap, &reqRoots)
-		require.ErrorContains(t, "unrequested or duplicate", err)
+		envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(t.Context(), clock, p1, p2p2.PeerID(), ctxMap, &reqRoots)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(envelopes))
 
 		if util.WaitTimeout(&wg, time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")
 		}
 	})
 
-	t.Run("unrequested root rejected", func(t *testing.T) {
-		// Request [A, B], server responds with [C] — should reject.
+	t.Run("unrequested root accepted at transport", func(t *testing.T) {
+		// Request [A, B], server responds with [C]: accepted here, dropped by callers.
 		p1, p2p2 := p2ptest.NewTestP2P(t), p2ptest.NewTestP2P(t)
 		p1.Connect(p2p2)
 
@@ -277,8 +283,9 @@ func TestSendExecutionPayloadEnvelopesByRootRequest(t *testing.T) {
 		})
 
 		reqRoots := p2ptypes.ExecutionPayloadEnvelopesByRootReq{rootA, rootB}
-		_, err := SendExecutionPayloadEnvelopesByRootRequest(t.Context(), clock, p1, p2p2.PeerID(), ctxMap, &reqRoots)
-		require.ErrorContains(t, "unrequested or duplicate", err)
+		envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(t.Context(), clock, p1, p2p2.PeerID(), ctxMap, &reqRoots)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(envelopes))
 
 		if util.WaitTimeout(&wg, time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")
@@ -344,8 +351,8 @@ func TestSendExecutionPayloadEnvelopesByRootRequest(t *testing.T) {
 		envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(t.Context(), clock, p1, p2p2.PeerID(), ctxMap, &reqRoots)
 		require.NoError(t, err)
 		require.Equal(t, 2, len(envelopes))
-		assert.Equal(t, rootA, bytesutil.ToBytes32(envelopes[0].Message.BeaconBlockRoot))
-		assert.Equal(t, rootB, bytesutil.ToBytes32(envelopes[1].Message.BeaconBlockRoot))
+		assert.Equal(t, rootA, bytesutil.ToBytes32(envelopes[0].Message.Payload.BlockHash))
+		assert.Equal(t, rootB, bytesutil.ToBytes32(envelopes[1].Message.Payload.BlockHash))
 
 		if util.WaitTimeout(&wg, time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")

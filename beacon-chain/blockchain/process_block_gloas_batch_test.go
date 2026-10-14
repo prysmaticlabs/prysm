@@ -151,11 +151,10 @@ func gloasBlock(t *testing.T, parent state.BeaconState, parentRoot [32]byte, slo
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          cfg.BuilderIndexSelfBuild,
-		BeaconBlockRoot:       root[:],
 		ParentBeaconBlockRoot: parentRoot[:],
 	}
 	signedEnvelope := signGloasEnvelope(t, post, envelope, keys[proposerIdx])
-	wrapped, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signedEnvelope)
+	wrapped, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signedEnvelope, root)
 	require.NoError(t, err)
 	require.NoError(t, gloas.VerifyExecutionPayloadEnvelope(ctx, post, wrapped))
 	return gloasChainLink{block: ro, envelope: signedEnvelope, state: post}
@@ -175,7 +174,8 @@ func wrapGloasEnvelopes(t *testing.T, envs ...*ethpb.SignedExecutionPayloadEnvel
 	t.Helper()
 	out := make([]interfaces.ROSignedExecutionPayloadEnvelope, len(envs))
 	for i, e := range envs {
-		w, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(e)
+		// By-range envelopes carry no root; the batch binds them by block hash.
+		w, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(e, [32]byte{})
 		require.NoError(t, err)
 		out[i] = w
 	}
@@ -202,12 +202,15 @@ func TestOnBlockBatchGloasEnvelopes(t *testing.T) {
 		service.cfg.ForkChoiceStore.Lock()
 		service.cfg.ForkChoiceStore.MarkFullNode(genesisRoot, 0)
 		service.cfg.ForkChoiceStore.Unlock()
-		require.NoError(t, service.onBlockBatch(tr.ctx, []consensusblocks.ROBlock{a.block}, nil, &das.MockAvailabilityStore{}))
+		_, err := service.onBlockBatch(tr.ctx, []consensusblocks.ROBlock{a.block}, nil, &das.MockAvailabilityStore{})
+		require.NoError(t, err)
 		return service
 	}
-	withRoot := func(env *ethpb.SignedExecutionPayloadEnvelope, root [32]byte) *ethpb.SignedExecutionPayloadEnvelope {
+	// Envelopes bind to blocks via the bid's block hash now; a foreign hash is
+	// the EIP-8411 analogue of the old wrong-root envelope.
+	withBlockHash := func(env *ethpb.SignedExecutionPayloadEnvelope, hash [32]byte) *ethpb.SignedExecutionPayloadEnvelope {
 		c := proto.Clone(env).(*ethpb.SignedExecutionPayloadEnvelope)
-		c.Message.BeaconBlockRoot = root[:]
+		c.Message.Payload.BlockHash = hash[:]
 		return c
 	}
 	// Re-signs the envelope with a key that is not the block proposer's.
@@ -216,7 +219,7 @@ func TestOnBlockBatchGloasEnvelopes(t *testing.T) {
 		msg := proto.Clone(link.envelope.Message).(*ethpb.ExecutionPayloadEnvelope)
 		return signGloasEnvelope(t, link.state, msg, other)
 	}
-	unknownRoot := bytesutil.ToBytes32([]byte("not-a-block-in-this-batch"))
+	unknownHash := bytesutil.ToBytes32([]byte("not-a-payload-in-this-batch"))
 
 	tests := []struct {
 		name      string
@@ -256,7 +259,7 @@ func TestOnBlockBatchGloasEnvelopes(t *testing.T) {
 			name:      "unknown root ahead of a wrong signer",
 			successor: b1Full,
 			envelopes: func() []*ethpb.SignedExecutionPayloadEnvelope {
-				return []*ethpb.SignedExecutionPayloadEnvelope{a.envelope, withRoot(b0.envelope, unknownRoot), wrongSigner(b1Full)}
+				return []*ethpb.SignedExecutionPayloadEnvelope{a.envelope, withBlockHash(b0.envelope, unknownHash), wrongSigner(b1Full)}
 			},
 			wantErr:  errBatchEnvelopeMismatch.Error(),
 			wantFull: map[string]bool{"b0": false, "b1": false},
@@ -265,7 +268,7 @@ func TestOnBlockBatchGloasEnvelopes(t *testing.T) {
 			name:      "trailing envelope naming an unknown root",
 			successor: b1Full,
 			envelopes: func() []*ethpb.SignedExecutionPayloadEnvelope {
-				return []*ethpb.SignedExecutionPayloadEnvelope{a.envelope, b0.envelope, withRoot(b1Full.envelope, unknownRoot)}
+				return []*ethpb.SignedExecutionPayloadEnvelope{a.envelope, b0.envelope, withBlockHash(b1Full.envelope, unknownHash)}
 			},
 			wantErr:  errBatchEnvelopeMismatch.Error(),
 			wantFull: map[string]bool{"b0": false, "b1": false},
@@ -274,7 +277,7 @@ func TestOnBlockBatchGloasEnvelopes(t *testing.T) {
 			name:      "two envelopes naming the same block",
 			successor: b1Full,
 			envelopes: func() []*ethpb.SignedExecutionPayloadEnvelope {
-				return []*ethpb.SignedExecutionPayloadEnvelope{a.envelope, b0.envelope, withRoot(b1Full.envelope, b0.block.Root())}
+				return []*ethpb.SignedExecutionPayloadEnvelope{a.envelope, b0.envelope, withBlockHash(b1Full.envelope, bytesutil.ToBytes32([]byte("payload-0")))}
 			},
 			wantErr:  errBatchEnvelopeMismatch.Error(),
 			wantFull: map[string]bool{"b0": false, "b1": false},
@@ -289,7 +292,7 @@ func TestOnBlockBatchGloasEnvelopes(t *testing.T) {
 				blks = append(blks, link.block)
 				roots[fmt.Sprintf("b%d", i+2)] = link.block.Root()
 			}
-			err := service.onBlockBatch(ctx, blks, wrapGloasEnvelopes(t, tc.envelopes()...), &das.MockAvailabilityStore{})
+			_, err := service.onBlockBatch(ctx, blks, wrapGloasEnvelopes(t, tc.envelopes()...), &das.MockAvailabilityStore{})
 			for name, want := range tc.wantFull {
 				require.Equal(t, want, service.HasFullNode(roots[name]), "full node for %s", name)
 			}

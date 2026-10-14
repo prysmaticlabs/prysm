@@ -40,7 +40,7 @@ func testJSONSignedBid() *structs.SignedExecutionPayloadBid {
 			ExecutionPayment:      "0",
 			BlobKzgCommitments:    []string{},
 			ExecutionRequestsRoot: hex32,
-			PayloadChunksRoot:     make([]byte, 32),
+			PayloadChunksRoot:     hex32,
 		},
 		Signature: hex96,
 	}

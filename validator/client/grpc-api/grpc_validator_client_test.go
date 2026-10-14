@@ -254,7 +254,6 @@ func newTestGrpcValidatorClient(t *testing.T, client eth.BeaconNodeValidatorClie
 
 func TestBeaconBlock(t *testing.T) {
 	slot := primitives.Slot(7)
-	blockRoot := bytesutil.ToBytes32([]byte("beacon-block-root"))
 	gloasBlock := util.NewBeaconBlockGloas().Block
 
 	gloasContentsResp := &eth.GenericBeaconBlock{
@@ -262,8 +261,7 @@ func TestBeaconBlock(t *testing.T) {
 			GloasContents: &eth.BeaconBlockContentsGloas{
 				Block: gloasBlock,
 				ExecutionPayloadEnvelope: &eth.ExecutionPayloadEnvelope{
-					Payload:         &enginev1.ExecutionPayloadGloas{SlotNumber: slot},
-					BeaconBlockRoot: blockRoot[:],
+					Payload: &enginev1.ExecutionPayloadGloas{SlotNumber: slot},
 				},
 				Blobs:     [][]byte{[]byte("blob")},
 				KzgProofs: [][]byte{[]byte("proof")},
@@ -331,12 +329,12 @@ func TestBeaconBlock(t *testing.T) {
 func TestGetExecutionPayloadEnvelope(t *testing.T) {
 	slot := primitives.Slot(9)
 	matchingRoot := bytesutil.ToBytes32([]byte("matching-root"))
-	requestedRoot := bytesutil.ToBytes32([]byte("requested-root"))
 	cachedEnvelope := &eth.ExecutionPayloadEnvelope{
-		Payload:         &enginev1.ExecutionPayloadGloas{SlotNumber: slot},
-		BeaconBlockRoot: matchingRoot[:],
+		Payload: &enginev1.ExecutionPayloadGloas{SlotNumber: slot},
 	}
 
+	// EIP-8411: the envelope cannot self-identify, so root binding is enforced
+	// by the beacon node against the request's beacon_block_root.
 	tests := []struct {
 		name    string
 		root    [32]byte
@@ -352,29 +350,12 @@ func TestGetExecutionPayloadEnvelope(t *testing.T) {
 			},
 		},
 		{
-			name: "cache hit with mismatched root errors",
-			root: requestedRoot,
-			prepare: func(vc *grpcValidatorClient, _ *mock2.MockBeaconNodeValidatorClient) {
-				vc.envelopeCache.Add(slot, cachedEnvelope, nil, nil)
-			},
-			wantErr: "cached execution payload envelope beacon_block_root does not match",
-		},
-		{
 			name: "cache miss fetches envelope from the beacon node",
 			root: matchingRoot,
 			prepare: func(_ *grpcValidatorClient, client *mock2.MockBeaconNodeValidatorClient) {
-				client.EXPECT().GetExecutionPayloadEnvelopeV2(gomock.Any(), &eth.ExecutionPayloadEnvelopeRequest{Slot: slot}).Return(
+				client.EXPECT().GetExecutionPayloadEnvelopeV2(gomock.Any(), &eth.ExecutionPayloadEnvelopeRequest{Slot: slot, BeaconBlockRoot: matchingRoot[:]}).Return(
 					&eth.ExecutionPayloadEnvelopeResponse{Envelope: cachedEnvelope}, nil)
 			},
-		},
-		{
-			name: "cache miss with mismatched root errors",
-			root: requestedRoot,
-			prepare: func(_ *grpcValidatorClient, client *mock2.MockBeaconNodeValidatorClient) {
-				client.EXPECT().GetExecutionPayloadEnvelopeV2(gomock.Any(), gomock.Any()).Return(
-					&eth.ExecutionPayloadEnvelopeResponse{Envelope: cachedEnvelope}, nil)
-			},
-			wantErr: "execution payload envelope beacon_block_root does not match",
 		},
 	}
 
@@ -419,7 +400,7 @@ func TestPublishExecutionPayloadEnvelope_ArmSelection(t *testing.T) {
 			})
 		vc := newTestGrpcValidatorClient(t, client, true)
 		vc.envelopeCache.Add(slot, signed.Message, [][]byte{{1}}, [][]byte{{2}})
-		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed)
+		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed, [32]byte{0x01})
 		require.NoError(t, err)
 	})
 
@@ -434,7 +415,7 @@ func TestPublishExecutionPayloadEnvelope_ArmSelection(t *testing.T) {
 				return &emptypb.Empty{}, nil
 			})
 		vc := newTestGrpcValidatorClient(t, client, false)
-		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed)
+		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed, [32]byte{0x01})
 		require.NoError(t, err)
 	})
 }

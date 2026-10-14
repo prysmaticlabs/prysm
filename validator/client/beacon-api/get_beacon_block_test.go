@@ -1582,7 +1582,7 @@ func TestGetBeaconBlock_GloasValid_SSZ_WithPayload(t *testing.T) {
 	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
 	cached, _, _ := validatorClient.envelopeCache.Take(slot)
 	require.NotNil(t, cached)
-	assert.DeepEqual(t, contents.ExecutionPayloadEnvelope.BeaconBlockRoot, cached.BeaconBlockRoot)
+	assert.DeepEqual(t, contents.ExecutionPayloadEnvelope.ParentBeaconBlockRoot, cached.ParentBeaconBlockRoot)
 }
 
 func TestGetBeaconBlock_GloasValid_SSZ_WithoutPayload(t *testing.T) {

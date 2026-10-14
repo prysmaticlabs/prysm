@@ -51,6 +51,7 @@ func (t testExecutionPayloadBid) BlobKzgCommitmentCount() uint64 {
 }
 func (t testExecutionPayloadBid) FeeRecipient() [20]byte          { return t.feeRecipient }
 func (t testExecutionPayloadBid) ExecutionRequestsRoot() [32]byte { return [32]byte{} }
+func (t testExecutionPayloadBid) PayloadChunksRoot() [32]byte     { return [32]byte{} }
 func (t testExecutionPayloadBid) IsNil() bool                     { return false }
 
 func TestSetExecutionPayloadBid(t *testing.T) {

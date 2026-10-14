@@ -168,7 +168,7 @@ func TestCheckBuilderPayloadFailure_NotBlacklistedWhenPayloadPresent(t *testing.
 
 	// The payload did arrive, so a child on empty is a payload reorg attempt, not a failure.
 	env, err := blocks.WrappedROExecutionPayloadEnvelope(
-		testSignedEnvelope(t, parentRoot, 1, parentHash[:]).Message)
+		testSignedEnvelope(t, parentRoot, 1, parentHash[:]).Message, parentRoot)
 	require.NoError(t, err)
 	require.NoError(t, service.InsertPayload(env))
 
@@ -253,7 +253,7 @@ func TestCheckBuilderPayloadFailure_GaugesFollowExpiry(t *testing.T) {
 	// A later block that is not a failure candidate: the parent's payload is present, so every
 	// early return in recordBuilderPayloadFailure fires. The gauges must still be refreshed.
 	env, err := blocks.WrappedROExecutionPayloadEnvelope(
-		testSignedEnvelope(t, parentRoot, 1, parentHash[:]).Message)
+		testSignedEnvelope(t, parentRoot, 1, parentHash[:]).Message, parentRoot)
 	require.NoError(t, err)
 	require.NoError(t, service.InsertPayload(env))
 

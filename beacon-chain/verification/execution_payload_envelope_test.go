@@ -24,7 +24,7 @@ func TestEnvelopeVerifier_VerifySlotAboveFinalized(t *testing.T) {
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
 	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
 	env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	verifier := &EnvelopeVerifier{results: newResults(RequireEnvelopeSlotAboveFinalized), e: wrapped}
@@ -38,7 +38,7 @@ func TestEnvelopeVerifier_VerifySlotMatchesBlock(t *testing.T) {
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
 	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
 	env := testSignedExecutionPayloadEnvelope(t, 2, 1, root, blockHash)
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	verifier := &EnvelopeVerifier{results: newResults(RequireEnvelopeSlotMatchesBlock), e: wrapped}
@@ -52,7 +52,7 @@ func TestEnvelopeVerifier_VerifyBlockRootSeen(t *testing.T) {
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
 	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
 	env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	verifier := &EnvelopeVerifier{results: newResults(RequireBlockRootSeen), e: wrapped}
@@ -66,7 +66,7 @@ func TestEnvelopeVerifier_VerifyBlockRootValid(t *testing.T) {
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
 	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
 	env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	verifier := &EnvelopeVerifier{results: newResults(RequireBlockRootValid), e: wrapped}
@@ -80,7 +80,7 @@ func TestEnvelopeVerifier_VerifyBuilderValid(t *testing.T) {
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
 	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
 	env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	badBid := testExecutionPayloadBid(t, 1, 2, blockHash)
@@ -96,7 +96,7 @@ func TestEnvelopeVerifier_VerifyPayloadHash(t *testing.T) {
 	root := bytesutil.ToBytes32(bytes.Repeat([]byte{0xAA}, 32))
 	blockHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xBB}, 32))
 	env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	badHash := bytesutil.ToBytes32(bytes.Repeat([]byte{0xCC}, 32))
@@ -117,7 +117,7 @@ func TestEnvelopeVerifier_VerifyExecutionRequestsLimits(t *testing.T) {
 	newVerifier := func(t *testing.T, reqs *enginev1.ExecutionRequestsGloas) *EnvelopeVerifier {
 		env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
 		env.Message.ExecutionRequests = reqs
-		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 		require.NoError(t, err)
 		return &EnvelopeVerifier{results: newResults(RequireExecutionRequestsLimitsValid), e: wrapped}
 	}
@@ -191,7 +191,7 @@ func TestEnvelopeVerifier_VerifyWithdrawalsLimit(t *testing.T) {
 	newVerifier := func(t *testing.T, withdrawals []*enginev1.Withdrawal) *EnvelopeVerifier {
 		env := testSignedExecutionPayloadEnvelope(t, 1, 1, root, blockHash)
 		env.Message.Payload.Withdrawals = withdrawals
-		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 		require.NoError(t, err)
 		return &EnvelopeVerifier{results: newResults(RequireWithdrawalsLimitValid), e: wrapped}
 	}
@@ -219,7 +219,7 @@ func TestEnvelopeVerifier_VerifySignature_Builder(t *testing.T) {
 
 	sig := signEnvelope(t, sk, env.Message, st.Fork(), st.GenesisValidatorsRoot(), slot)
 	env.Signature = sig[:]
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	verifier := &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
@@ -229,7 +229,7 @@ func TestEnvelopeVerifier_VerifySignature_Builder(t *testing.T) {
 	require.NoError(t, err)
 	badSig := signEnvelope(t, sk2, env.Message, st.Fork(), st.GenesisValidatorsRoot(), slot)
 	env.Signature = badSig[:]
-	wrapped, err = blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err = blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 	verifier = &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
 	require.ErrorIs(t, verifier.VerifySignature(t.Context(), st), signing.ErrSigFailedToVerify)
@@ -257,7 +257,7 @@ func TestEnvelopeVerifier_VerifySignature_SelfBuild(t *testing.T) {
 
 	sig := signEnvelope(t, sk, env.Message, st.Fork(), st.GenesisValidatorsRoot(), slot)
 	env.Signature = sig[:]
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 
 	verifier := &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
@@ -279,7 +279,7 @@ func TestEnvelopeVerifier_VerifySignatureWithPubkey(t *testing.T) {
 
 	sig := signEnvelope(t, sk, env.Message, fork, genesisValidatorsRoot[:], slot)
 	env.Signature = sig[:]
-	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, root)
 	require.NoError(t, err)
 	verifier := &EnvelopeVerifier{results: newResults(RequireBuilderSignatureValid), e: wrapped}
 	require.NoError(t, verifier.VerifySignatureWithPubkey(pubkey, genesisValidatorsRoot))
@@ -323,7 +323,6 @@ func testSignedExecutionPayloadEnvelope(t *testing.T, slot primitives.Slot, buil
 				Deposits: []*enginev1.DepositRequest{},
 			},
 			BuilderIndex:          builderIdx,
-			BeaconBlockRoot:       root[:],
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: bytes.Repeat([]byte{0xCC}, 96),

@@ -369,7 +369,7 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 
 		// Once the tip envelope is processed, its columns are served.
 		env := testSignedEnvelope(40, roots[3][:])
-		require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
+		require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, roots[3]))
 		requestAndCollect([][fieldparams.RootLength]byte{roots[0], roots[2], roots[3]})
 	})
 }

@@ -164,7 +164,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		blks = append(blks, rwsb)
 	}
-	err := service.onBlockBatch(ctx, blks, nil, &das.MockAvailabilityStore{})
+	_, err := service.onBlockBatch(ctx, blks, nil, &das.MockAvailabilityStore{})
 	require.NoError(t, err)
 	jcp := service.CurrentJustifiedCheckpt()
 	jroot := bytesutil.ToBytes32(jcp.Root)
@@ -194,7 +194,8 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		require.NoError(t, service.saveInitSyncBlock(ctx, rwsb.Root(), wsb))
 		blks = append(blks, rwsb)
 	}
-	require.NoError(t, service.onBlockBatch(ctx, blks, nil, &das.MockAvailabilityStore{}))
+	_, err := service.onBlockBatch(ctx, blks, nil, &das.MockAvailabilityStore{})
+	require.NoError(t, err)
 }
 
 func TestGetBatchPrestate(t *testing.T) {
@@ -232,7 +233,7 @@ func TestGetBatchPrestate(t *testing.T) {
 			protoEnvelope := testSignedEnvelope(t, test.envelopeRoot, test.slot, test.payloadHash[:])
 			protoEnvelope.Message.Payload.SlotNumber = test.slot
 			protoEnvelope.Message.Payload.ParentHash = ancestorHash[:]
-			envelope, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnvelope)
+			envelope, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnvelope, test.envelopeRoot)
 			require.NoError(t, err)
 
 			got, applied, err := service.getBatchPrestate(tr.ctx, roChild, []interfaces.ROSignedExecutionPayloadEnvelope{envelope})
@@ -2120,7 +2121,8 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	rwsb, err := consensusblocks.NewROBlock(wsb)
 	require.NoError(t, err)
 	// We use onBlockBatch here because the valid chain is missing in forkchoice
-	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}, nil, &das.MockAvailabilityStore{}))
+	_, err = service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}, nil, &das.MockAvailabilityStore{})
+	require.NoError(t, err)
 	// Check that the head is now VALID and the node is not optimistic
 	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)

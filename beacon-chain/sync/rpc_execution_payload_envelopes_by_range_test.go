@@ -49,7 +49,6 @@ func testSignedEnvelope(slot primitives.Slot, beaconBlockRoot []byte) *pb.Signed
 				SlotNumber:    slot,
 			},
 			ExecutionRequests:     &engpb.ExecutionRequestsGloas{},
-			BeaconBlockRoot:       root,
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
@@ -300,7 +299,7 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 			if sl <= 30 {
 				env := testSignedEnvelope(sl, htr[:])
 				copy(env.Message.Payload.ParentHash, parentRoot[:])
-				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
+				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, htr))
 			}
 		}
 
@@ -407,7 +406,7 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 				if i != 1 {
 					copy(env.Message.Payload.ParentHash, parentRoot[:])
 				}
-				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
+				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, htr))
 			}
 		}
 
@@ -518,7 +517,7 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 			// Replace (not copy over) the payload block hash: the helper aliases it to BeaconBlockRoot.
 			env.Message.Payload.BlockHash = h[:]
 			copy(env.Message.Payload.ParentHash, prevHash[:])
-			require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
+			require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, htr))
 
 			prevRoot, prevHash = htr, h
 		}

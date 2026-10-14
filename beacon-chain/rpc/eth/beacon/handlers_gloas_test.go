@@ -93,7 +93,7 @@ func gloasBlockWithBid(t *testing.T, slot primitives.Slot, bid *ethpb.SignedExec
 func wireEnvelopeGossipDeps(t *testing.T, s *Server) {
 	t.Helper()
 	s.Blocker = &testutil.MockBlocker{BlockToReturn: gloasBlockWithBid(t, 100, util.GenerateTestSignedExecutionPayloadBid(100))}
-	envRoot := bytesutil.ToBytes32(testSignedEnvelope().Message.BeaconBlockRoot)
+	envRoot := testEnvelopeRoot()
 	chain := &chainMock.ChainService{Root: envRoot[:], FinalizedCheckPoint: &ethpb.Checkpoint{}}
 	if s.FinalizationFetcher == nil {
 		s.FinalizationFetcher = chain
@@ -111,7 +111,7 @@ func wireEnvelopeGossipDeps(t *testing.T, s *Server) {
 
 func bareEnvelopeJSONBody(t *testing.T, signed *ethpb.SignedExecutionPayloadEnvelope) []byte {
 	t.Helper()
-	msg, err := structs.SignedExecutionPayloadEnvelopeFromConsensus(signed)
+	msg, err := structs.SignedExecutionPayloadEnvelopeFromConsensus(signed, testEnvelopeRoot())
 	require.NoError(t, err)
 	body, err := json.Marshal(msg)
 	require.NoError(t, err)
@@ -142,12 +142,11 @@ func TestGetExecutionPayloadEnvelope_AcceptsSlotID(t *testing.T) {
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 			BuilderIndex:          primitives.BuilderIndex(42),
-			BeaconBlockRoot:       root[:],
 			ParentBeaconBlockRoot: bytesutil.PadTo([]byte("parent-beacon-root"), 32),
 		},
 		Signature: bytesutil.PadTo([]byte("sig"), 96),
 	}
-	require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
+	require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, root))
 
 	reconstructor := &executiontesting.EngineClient{
 		ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{
@@ -204,6 +203,12 @@ func TestGetExecutionPayloadEnvelope_BlockNotFound(t *testing.T) {
 	assert.Equal(t, true, bytes.Contains(w.Body.Bytes(), []byte("Block not found")))
 }
 
+// testEnvelopeRoot is the out-of-band beacon block root the shared fixture
+// envelope is bound to (EIP-8411 removed the root from the container).
+func testEnvelopeRoot() [32]byte {
+	return bytesutil.ToBytes32(bytesutil.PadTo([]byte("beacon-root"), 32))
+}
+
 func testSignedEnvelope() *ethpb.SignedExecutionPayloadEnvelope {
 	return &ethpb.SignedExecutionPayloadEnvelope{
 		Message: &ethpb.ExecutionPayloadEnvelope{
@@ -222,7 +227,6 @@ func testSignedEnvelope() *ethpb.SignedExecutionPayloadEnvelope {
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 			BuilderIndex:          primitives.BuilderIndex(42),
-			BeaconBlockRoot:       bytesutil.PadTo([]byte("beacon-root"), 32),
 			ParentBeaconBlockRoot: bytesutil.PadTo([]byte("parent-beacon-root"), 32),
 		},
 		Signature: bytesutil.PadTo([]byte("sig"), 96),
@@ -310,7 +314,7 @@ func TestPublishExecutionPayloadEnvelope_StatelessContents_NoBlobs(t *testing.T)
 
 	ctrl := gomock.NewController(t)
 	signed := testSignedEnvelope()
-	contents, err := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(signed, nil, nil)
+	contents, err := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(signed, testEnvelopeRoot(), nil, nil)
 	require.NoError(t, err)
 	body, err := json.Marshal(contents)
 	require.NoError(t, err)
@@ -359,7 +363,7 @@ func statelessContentsBody(t *testing.T, blobCount int) ([]byte, *ethpb.SignedEx
 	}
 
 	signed := testSignedEnvelope()
-	contents, err := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(signed, flatProofs, flatBlobs)
+	contents, err := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(signed, testEnvelopeRoot(), flatProofs, flatBlobs)
 	require.NoError(t, err)
 	body, err := json.Marshal(contents)
 	require.NoError(t, err)
@@ -532,7 +536,7 @@ func TestPublishExecutionPayloadEnvelope_BroadcastValidation(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 
 	signed := testSignedEnvelope()
-	envRoot := bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)
+	envRoot := testEnvelopeRoot()
 	envSlot := primitives.Slot(signed.Message.Payload.SlotNumber)
 	body := bareEnvelopeJSONBody(t, signed)
 
@@ -683,7 +687,7 @@ func TestPublishExecutionPayloadEnvelope_GossipValidation(t *testing.T) {
 	headState, err := util.NewBeaconStateGloas()
 	require.NoError(t, err)
 
-	envRoot := bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)
+	envRoot := testEnvelopeRoot()
 
 	cases := []struct {
 		name         string
@@ -770,7 +774,7 @@ func TestPublishExecutionPayloadEnvelope_GossipValidation(t *testing.T) {
 				body, err = signedEnv.MarshalSSZ()
 				require.NoError(t, err)
 			} else {
-				contents, err := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(signedEnv, nil, nil)
+				contents, err := structs.SignedExecutionPayloadEnvelopeContentsFromConsensus(signedEnv, testEnvelopeRoot(), nil, nil)
 				require.NoError(t, err)
 				body, err = json.Marshal(contents)
 				require.NoError(t, err)

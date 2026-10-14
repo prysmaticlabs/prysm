@@ -23,7 +23,7 @@ const (
 	payloadFieldIndex                   = 9
 	signedExecutionPayloadBidFieldIndex = 10
 	parentBlockHashFieldIndex           = 0
-	executionPayloadBidFieldCount       = 12
+	executionPayloadBidFieldCount       = 13
 	beaconBlockBodyFieldCount           = 13
 )
 
@@ -361,6 +361,7 @@ func executionPayloadBidFieldRoots(bid *eth.ExecutionPayloadBid) ([][]byte, erro
 		{index: 3, value: bid.PrevRandao, length: fieldparams.RootLength},
 		{index: 4, value: bid.FeeRecipient, length: fieldparams.FeeRecipientLength},
 		{index: 11, value: bid.ExecutionRequestsRoot, length: fieldparams.RootLength},
+		{index: 12, value: bid.PayloadChunksRoot, length: fieldparams.RootLength},
 	}
 	for _, field := range fixedFields {
 		root, err := fixedByteVectorRoot(field.value, field.length)
