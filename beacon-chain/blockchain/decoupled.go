@@ -73,18 +73,9 @@ func logDecoupledFG(parent, n *decoupled.Node) {
 
 func rootRef(root [32]byte) string { return fmt.Sprintf("%#x", bytesutil.Trunc(root[:])) }
 
-func blockRef(root [32]byte, slot primitives.Slot) string {
-	return fmt.Sprintf("%s@%d", rootRef(root), slot)
-}
-
-func nodeRef(n *decoupled.Node) string {
-	if n == nil {
-		return "none"
-	}
-	return blockRef(n.Root, n.Slot)
-}
-
-// Spec: fg_attest's inputs, (h_c, T_c) from the source state and (h_j, J, h_F) from the head state, read from the engine summaries. Nil when there is no source.
+// decoupledFinalityData builds the validator's FG inputs: height and entry
+// from the source, justification and finalized height from the head.
+// It returns nil if either block is missing.
 func decoupledFinalityData(source, head *decoupled.Node) *ethpb.FinalityAttestationData {
 	if source == nil || head == nil {
 		return nil
@@ -96,6 +87,14 @@ func decoupledFinalityData(source, head *decoupled.Node) *ethpb.FinalityAttestat
 		Justified:       bytesutil.SafeCopyBytes(head.FG.Justified.Root[:]),
 		FinalizedHeight: head.FG.Finalized.Height,
 	}
+}
+
+// goldilocks returns nil until fork choice switches to Goldilocks. It needs no lock.
+func (s *Service) goldilocks() *decoupled.Store {
+	if fc, ok := s.cfg.ForkChoiceStore.(*decoupled.ForkChoice); ok {
+		return fc.Decoupled()
+	}
+	return nil
 }
 
 // onDecoupledSyncComplete marks initial sync complete and restarts observation for
@@ -113,7 +112,8 @@ func (s *Service) onDecoupledSyncComplete() {
 	log.WithField("slot", s.CurrentSlot()).Info("Restarted the decoupled fork choice at sync")
 }
 
-// ReceiveAvailableAttestation is the paper's on_ac_message, the fork choice stamps the vote on receipt, the pool keeps the signed copy for the next proposer.
+// ReceiveAvailableAttestation records a verified AC vote at the current time
+// and saves its signature for block inclusion. The caller validates the message.
 func (s *Service) ReceiveAvailableAttestation(_ context.Context, m *ethpb.AvailableAttestationMessage) error {
 	if m == nil || m.Data == nil {
 		return errors.New("nil available attestation")

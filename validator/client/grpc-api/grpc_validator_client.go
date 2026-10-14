@@ -451,3 +451,23 @@ func (c *grpcValidatorClient) PayloadAttestationData(ctx context.Context, slot p
 func (c *grpcValidatorClient) SubmitPayloadAttestation(ctx context.Context, in *ethpb.PayloadAttestationMessage) (*empty.Empty, error) {
 	return c.getClient().SubmitPayloadAttestation(ctx, in)
 }
+
+// AvailableAttestationData fetches the slot's vote head. TODO(DC): a clock slightly ahead gets Unavailable before the capture, retry instead.
+func (c *grpcValidatorClient) AvailableAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.AvailableAttestationData, error) {
+	return c.getClient().AvailableAttestationData(ctx, &ethpb.DecoupledAttestationDataRequest{Slot: slot}, grpcretry.WithMax(0))
+}
+
+// SubmitAvailableAttestation sends an AC vote.
+func (c *grpcValidatorClient) SubmitAvailableAttestation(ctx context.Context, in *ethpb.AvailableAttestationMessage) (*empty.Empty, error) {
+	return c.getClient().SubmitAvailableAttestation(ctx, in)
+}
+
+// FinalityAttestationData fetches the round's FG inputs.
+func (c *grpcValidatorClient) FinalityAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.FinalityAttestationData, error) {
+	return c.getClient().FinalityAttestationData(ctx, &ethpb.DecoupledAttestationDataRequest{Slot: slot}, grpcretry.WithMax(0))
+}
+
+// SubmitFinalityAttestation sends an FG vote.
+func (c *grpcValidatorClient) SubmitFinalityAttestation(ctx context.Context, in *ethpb.FinalityAttestationMessage) (*empty.Empty, error) {
+	return c.getClient().SubmitFinalityAttestation(ctx, in)
+}

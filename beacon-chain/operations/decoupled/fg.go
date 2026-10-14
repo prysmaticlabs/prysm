@@ -73,7 +73,7 @@ func (p *FGPool) InsertSingle(validator primitives.ValidatorIndex, data *ethpb.A
 	return nil
 }
 
-// A repeat of a single already merged into this node's own aggregate, the gossip IGNORE rule. Rows held from blocks are not consulted, re-admitting one of their signers only grows the own aggregate.
+// Has reports whether the single is already in our own aggregate. Block rows don't count.
 func (p *FGPool) Has(validator primitives.ValidatorIndex, data *ethpb.AttestationDataDecoupled) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()

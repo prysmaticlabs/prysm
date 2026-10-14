@@ -97,7 +97,9 @@ func (st *Store) OnTick(now time.Time) {
 // True once per instant, on the first tick at or after it.
 func (st *Store) due(at, now time.Time) bool { return at.After(st.ticked) && !at.After(now) }
 
-// Spec: ac_restart. Every retained block is restamped at now and its carried votes replayed in parent order into fresh pools, saved confirmations and the fast set are cleared, locks keep their deadlines and the confirmation record stays. Observation counts from now.
+// Restart clears observations and replays retained votes at now. It preserves
+// the tree, locks, their original deadlines and the confirmation record.
+// Replay cannot restore the timing needed to count pre-restart support.
 func (st *Store) Restart(now time.Time) {
 	st.restartTime = now
 	st.pool = make(map[primitives.Slot]*bucket)

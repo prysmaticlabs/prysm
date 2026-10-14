@@ -448,6 +448,28 @@ func (c *beaconApiValidatorClient) PayloadAttestationData(ctx context.Context, s
 	})
 }
 
+var errDecoupledNotSupported = errors.New("decoupled duties are not supported over the beacon REST API")
+
+// AvailableAttestationData is unsupported over REST. TODO(DC): gRPC only for now.
+func (c *beaconApiValidatorClient) AvailableAttestationData(context.Context, primitives.Slot) (*ethpb.AvailableAttestationData, error) {
+	return nil, errDecoupledNotSupported
+}
+
+// SubmitAvailableAttestation is unsupported over REST.
+func (c *beaconApiValidatorClient) SubmitAvailableAttestation(context.Context, *ethpb.AvailableAttestationMessage) (*empty.Empty, error) {
+	return nil, errDecoupledNotSupported
+}
+
+// FinalityAttestationData is unsupported over REST.
+func (c *beaconApiValidatorClient) FinalityAttestationData(context.Context, primitives.Slot) (*ethpb.FinalityAttestationData, error) {
+	return nil, errDecoupledNotSupported
+}
+
+// SubmitFinalityAttestation is unsupported over REST.
+func (c *beaconApiValidatorClient) SubmitFinalityAttestation(context.Context, *ethpb.FinalityAttestationMessage) (*empty.Empty, error) {
+	return nil, errDecoupledNotSupported
+}
+
 func (c *beaconApiValidatorClient) SubmitPayloadAttestation(ctx context.Context, msg *ethpb.PayloadAttestationMessage) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-api.SubmitPayloadAttestation")
 	defer span.End()

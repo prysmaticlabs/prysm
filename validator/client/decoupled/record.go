@@ -99,7 +99,7 @@ func (r *Record) heightPair(a *Attestation, src Source) bool {
 	return true
 }
 
-// Restore rebuilds Λ from the rows this key signed, in the order they were signed.
+// Restore replays a signed row.
 func (r *Record) Restore(a Attestation) { r.record(a) }
 
 func (r *Record) record(a Attestation) {
