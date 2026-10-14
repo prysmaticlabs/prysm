@@ -15,8 +15,11 @@ import (
 type ExecutionPayloadContents struct {
 	Envelope        *ethpb.ExecutionPayloadEnvelope
 	BeaconBlockRoot [32]byte
-	DataColumns     []consensusblocks.RODataColumn
-	PartialColumns  []consensusblocks.PartialDataColumn
+	// Chunks are the precomputed EIP-8411 PayloadChunk messages for the
+	// envelope, with slot and beacon block root hints already stamped.
+	Chunks         []*ethpb.PayloadChunk
+	DataColumns    []consensusblocks.RODataColumn
+	PartialColumns []consensusblocks.PartialDataColumn
 }
 
 // ExecutionPayloadEnvelopeCache holds the most recent ExecutionPayloadContents

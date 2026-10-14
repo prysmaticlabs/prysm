@@ -12,6 +12,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/builder"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
@@ -587,6 +588,13 @@ func (vs *Server) createSelfBuildExecutionPayloadBid(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute execution requests root")
 	}
+	// EIP-8411: the bid commits to the chunked envelope bytes. The envelope no
+	// longer contains the beacon block root, so its serialization is final at
+	// bid time and the commitment can be computed here.
+	payloadChunksRoot, err := gloas.PayloadChunksRootForEnvelope(selfBuildEnvelope(local, parentBlockRoot))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute payload chunks root")
+	}
 	return &ethpb.ExecutionPayloadBid{
 		ParentBlockHash:       ed.ParentHash(),
 		ParentBlockRoot:       bytesutil.SafeCopyBytes(parentBlockRoot[:]),
@@ -600,8 +608,17 @@ func (vs *Server) createSelfBuildExecutionPayloadBid(
 		ExecutionPayment:      0,
 		BlobKzgCommitments:    local.BlobsBundler.GetKzgCommitments(),
 		ExecutionRequestsRoot: executionRequestsRoot[:],
-		// EIP-8411: the real chunk commitment is filled in by the caller once the
-		// envelope bytes are fixed (see setExecutionPayloadBid).
-		PayloadChunksRoot: make([]byte, 32),
+		PayloadChunksRoot:     payloadChunksRoot[:],
 	}, nil
+}
+
+// selfBuildEnvelope assembles the execution payload envelope a self-building
+// proposer commits to at bid time and later reveals as chunks.
+func selfBuildEnvelope(local *consensusblocks.GetPayloadResponse, parentRoot [32]byte) *ethpb.ExecutionPayloadEnvelope {
+	return &ethpb.ExecutionPayloadEnvelope{
+		Payload:               extractExecutionPayloadGloas(local),
+		ExecutionRequests:     local.ExecutionRequestsGloas,
+		BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
+		ParentBeaconBlockRoot: parentRoot[:],
+	}
 }

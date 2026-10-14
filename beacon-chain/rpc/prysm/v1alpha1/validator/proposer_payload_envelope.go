@@ -7,6 +7,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
@@ -39,14 +40,21 @@ func (vs *Server) storeExecutionPayloadEnvelope(
 		return nil, errors.Wrap(err, "could not compute block hash tree root")
 	}
 
-	payload := extractExecutionPayloadGloas(local)
+	envelope := selfBuildEnvelope(local, sBlk.Block().ParentRoot())
 
-	parentRoot := sBlk.Block().ParentRoot()
-	envelope := &ethpb.ExecutionPayloadEnvelope{
-		Payload:               payload,
-		ExecutionRequests:     local.ExecutionRequestsGloas,
-		BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
-		ParentBeaconBlockRoot: parentRoot[:],
+	// EIP-8411: precompute the 64 chunk messages (with proofs) during
+	// ProposeBeaconBlock slack so the reveal only broadcasts.
+	chunkMsgs, chunksRoot, err := gloas.BuildPayloadChunkMessages(envelope, sBlk.Block().Slot(), blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not build payload chunk messages")
+	}
+	if sbid, bidErr := sBlk.Block().Body().SignedExecutionPayloadBid(); bidErr == nil && sbid != nil && sbid.Message != nil {
+		if bytesutil.ToBytes32(sbid.Message.PayloadChunksRoot) != chunksRoot {
+			log.WithFields(logrus.Fields{
+				"bidRoot":      fmt.Sprintf("%#x", sbid.Message.PayloadChunksRoot),
+				"envelopeRoot": fmt.Sprintf("%#x", chunksRoot),
+			}).Error("Envelope chunk commitment does not match the bid in the proposed block")
+		}
 	}
 
 	// Precompute sidecars here (during ProposeBeaconBlock slack) so publish stays fast.
@@ -75,6 +83,7 @@ func (vs *Server) storeExecutionPayloadEnvelope(
 	vs.ExecutionPayloadEnvelopeCache.Set(&cache.ExecutionPayloadContents{
 		Envelope:        envelope,
 		BeaconBlockRoot: blockRoot,
+		Chunks:          chunkMsgs,
 		DataColumns:     roSidecars,
 		PartialColumns:  partialColumns,
 	})
@@ -236,8 +245,16 @@ func (vs *Server) PublishExecutionPayloadEnvelopeV2(
 		}
 	}
 
-	if err := vs.P2P.Broadcast(ctx, signed); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to broadcast execution payload envelope: %v", err)
+	// EIP-8411: the envelope bytes travel as 64 PayloadChunk messages on the
+	// execution_payload_chunks topic instead of a single envelope message.
+	chunkMsgs, err := vs.chunksForPublish(signed, envSlot, beaconBlockRoot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to build payload chunks: %v", err)
+	}
+	for _, chunk := range chunkMsgs {
+		if err := vs.P2P.Broadcast(ctx, chunk); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to broadcast payload chunk %d: %v", chunk.Index, err)
+		}
 	}
 
 	// Import in the background so the reveal is not delayed past the PTC deadline.
@@ -261,6 +278,27 @@ func (vs *Server) importPublishedEnvelope(log *logrus.Entry, sidecars []consensu
 		return
 	}
 	log.WithField("duration", time.Since(start)).Debug("Imported published execution payload envelope")
+}
+
+// chunksForPublish returns the precomputed chunk set when the published
+// envelope is the cached one, otherwise chunks the submitted envelope on the
+// fly. Hints are (re)stamped with the known slot and beacon block root.
+func (vs *Server) chunksForPublish(signed *ethpb.SignedExecutionPayloadEnvelope, slot primitives.Slot, beaconBlockRoot [32]byte) ([]*ethpb.PayloadChunk, error) {
+	if cached, ok := vs.ExecutionPayloadEnvelopeCache.Contents(); ok && len(cached.Chunks) > 0 && cached.Envelope != nil {
+		cachedRoot, err := cached.Envelope.HashTreeRoot()
+		if err == nil {
+			submittedRoot, err := signed.Message.HashTreeRoot()
+			if err == nil && cachedRoot == submittedRoot {
+				gloas.StampPayloadChunkHints(cached.Chunks, slot, beaconBlockRoot)
+				return cached.Chunks, nil
+			}
+		}
+	}
+	msgs, _, err := gloas.BuildPayloadChunkMessages(signed.Message, slot, beaconBlockRoot)
+	if err != nil {
+		return nil, err
+	}
+	return msgs, nil
 }
 
 // cachedDataColumns returns the precomputed data columns and partial columns when the published
