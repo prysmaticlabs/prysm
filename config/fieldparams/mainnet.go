@@ -56,6 +56,7 @@ const (
 
 	// Introduced in Gloas network upgrade.
 	PTCSize                = 512 // PTCSize is the size of the payload timeliness committee.
+	MaxPendingFinality     = 8   // MaxPendingFinality is the pending justified pairs a state retains.
 	MaxPayloadAttestations = 4   // MaxPayloadAttestations is the maximum number of payload attestations in a block.
 
 	// Type-specific SSZ bounds, introduced in Gloas network upgrade.
