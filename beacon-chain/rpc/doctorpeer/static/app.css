@@ -424,6 +424,8 @@ a.tile:hover::after { opacity: 1; }
 .peer-cell .id { color: var(--ink); }
 .peer-cell .ag { color: var(--ink-3); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tbl.compact .peer-cell .ag { max-width: 130px; }
+.peer-cell .ag.wide { max-width: 300px; }
+.filters .select { max-width: 340px; }
 .link { color: var(--accent); cursor: pointer; font-family: var(--mono); font-size: 12.5px; }
 .link:hover { text-decoration: underline; }
 

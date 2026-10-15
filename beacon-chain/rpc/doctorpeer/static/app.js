@@ -105,7 +105,7 @@
     filters: {
       peers: { preset: 'connected', q: '', dir: '', aspect: '', source: '', peerLimit: 300 },
       clients: { q: '', preset: 'all' },
-      greylist: { aspect: '', reason: '' },
+      greylist: { aspect: '', reason: '', source: '', strikeReason: '' },
       gossip: { groupBy: 'topic', q: '', pick: '' },
       chain: { q: '', connectedOnly: true },
     },
@@ -350,6 +350,7 @@
   const aspectBadge = (a, tip) => badge(ASPECT_NAME[a] || a, ASPECT_CLS[a] || '', tip);
   const dot = type => '<span class="dot" style="background:' + clientColor(type) + '" data-tip="' + attr(type) + '"></span>';
   const clientLabel = type => '<span class="peer-cell">' + dot(type) + esc(type) + '</span>';
+  const greyLabel = n => n ? fmtNum(n) + ' grey-listed' : 'none grey-listed';
   const srcLabel = s => '<span class="src"><span class="sw" style="background:' + sourceColor(s) + '"></span>' + esc(s) + '</span>';
   const peerLink = (id, label) => '<span class="link" data-peer="' + attr(id) + '" title="' + attr(id) + '">' + esc(label || short(id)) + '</span>';
   const copyBtn = text => '<button class="copy" type="button" data-copy="' + attr(text) + '" title="Copy">⧉</button>';
@@ -358,6 +359,9 @@
   const peerCell = p => '<span class="peer-cell">' + dot(p.agentType) + '<span class="id" title="' + attr(p.id) + '">' + esc(p.short) + '</span>' +
     (p.agent ? '<span class="ag" title="' + attr(p.agent) + '">' + esc(p.agent) + '</span>' : '<span class="ag faint">unknown agent</span>') +
     (p.trusted ? badge('trusted', 'accent sm') : '') + '</span>';
+  // The grey list shows client and agent as their own columns, so the peer cell there carries only the id.
+  const peerIdCell = p => '<span class="peer-cell">' + dot(p.agentType) + '<span class="id" title="' + attr(p.id) + '">' + esc(p.short) + '</span>' + (p.trusted ? badge('trusted', 'accent sm') : '') + '</span>';
+  const agentCell = p => p.agent ? '<span class="peer-cell"><span class="ag wide" title="' + attr(p.agent) + '">' + esc(p.agent) + '</span></span>' : '<span class="faint">unknown</span>';
   const liveSince = ts => '<span data-live="since" data-ts="' + ts + '">' + fmtDur((Date.now() - ts) / 1000) + '</span>';
   const liveAgo = ts => '<span data-live="ago" data-ts="' + ts + '">' + ago(ts) + '</span>';
   const liveCountdown = end => '<span data-live="countdown" data-end="' + end + '">' + fmtDur((end - Date.now()) / 1000) + '</span>';
@@ -682,7 +686,7 @@
   }
   function scopeCounts() {
     const byType = new Map();
-    for (const p of state.peers) { const t = byType.get(p.agentType) || { conn: 0, known: 0 }; t.known++; if (p.connected) t.conn++; byType.set(p.agentType, t); }
+    for (const p of state.peers) { const t = byType.get(p.agentType) || { conn: 0, known: 0, grey: 0 }; t.known++; if (p.connected) t.conn++; if (p.greyListed) t.grey++; byType.set(p.agentType, t); }
     return byType;
   }
   function renderScope() {
@@ -695,8 +699,8 @@
     const s = state.fetchedAt ? scoped() : null;
     bar.innerHTML =
       '<span class="scope-l">Scope</span>' +
-      '<label class="field"><span>Client' + info('Client type, derived from the agent string. The numbers are connected peers out of every peer of that type the node remembers.') + '</span><select class="select" data-scope="client"><option value="">All clients</option>' +
-      CLIENTS.filter(t => byType.get(t) || t === scope.client).map(t => { const c = byType.get(t) || { conn: 0, known: 0 }; return '<option value="' + attr(t) + '"' + (scope.client === t ? ' selected' : '') + '>' + esc(t) + ' · ' + c.conn + ' of ' + c.known + ' connected</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span>Client' + info('Client type, derived from the agent string. The number is how many peers of that type are grey-listed right now.') + '</span><select class="select" data-scope="client"><option value="">All clients · ' + greyLabel(state.peers.filter(p => p.greyListed).length) + '</option>' +
+      CLIENTS.filter(t => byType.get(t) || t === scope.client).map(t => { const c = byType.get(t) || { conn: 0, known: 0, grey: 0 }; return '<option value="' + attr(t) + '"' + (scope.client === t ? ' selected' : '') + '>' + esc(t) + ' · ' + greyLabel(c.grey) + '</option>'; }).join('') + '</select></label>' +
       '<div class="field"><span>Agent' + info('The exact agent string a peer announces. One client type (say, Lighthouse) can have many agents: versions, builds, platforms.') + '</span><div class="dd" id="agentDD"><button class="btn dd-btn" type="button" data-dd="toggle"><span class="trunc">' + esc(scope.agent || 'All agents') + '</span> ▾</button><div class="dd-menu" id="ddMenu" hidden></div></div></div>' +
       '<div class="field"><span>Window' + info('Applies to time-stamped events: strikes, gossip rejections and invalid statuses. Peer lists always show the current state.') + '</span>' + seg(WINDOWS.map(w => [w[0], w[0] === 'all' ? 'all' : 'last ' + w[0]]), scope.window, 'win') + '</div>' +
       (s ? '<span class="scope-note">' + (active ? fmtNum(s.connected.length) + ' connected · ' + fmtNum(s.peers.length) + ' known in scope' : 'Filters every view') + '</span>' : '') +
@@ -913,16 +917,25 @@
   }
 
   // ------------------------------------------------------------------ grey list
-  const GREY_SORT = { peer: p => p.id, agent: p => p.agent || null, state: p => STATES.indexOf(p.state), aspect: p => p.aspects.join(','), reason: p => cleanVerdict(p.details[p.aspects[0]] || ''), recovery: p => p.recoverySort == null ? Infinity : p.recoverySort, strikes: p => p.standing };
+  const GREY_SORT = { peer: p => p.id, agent: p => p.agent || null, client: p => p.agentType, state: p => STATES.indexOf(p.state), aspect: p => p.aspects.join(','), reason: p => cleanVerdict(p.details[p.aspects[0]] || ''), recovery: p => p.recoverySort == null ? Infinity : p.recoverySort, strikes: p => p.standing };
   function mountGreylist(el) { el.innerHTML = '<div id="greyTiles" class="tiles"></div><div id="greyBody"></div>'; }
   function updateGreylist(el) {
     if (!state.fetchedAt) { $('#greyBody', el).innerHTML = waiting(); return; }
     const f = state.filters.greylist, s = scoped(), cfg = state.cfg;
-    const grey = s.grey, aspectCounts = countBy(grey.flatMap(p => p.aspects));
+    const grey = s.grey;
+    // Every filter on this view narrows the whole page. Each dropdown's own counts are facets:
+    // they answer "how many would I get if I picked this?", so they apply the other filters but not their own.
+    const hasAspect = (p, a) => !a || p.aspects.includes(a);
+    const hasStrike = (p, src, rsn) => (!src && !rsn) || p.history.some(h => (!src || h.source === src) && (!rsn || h.reason === rsn));
+    const facet = (a, src, rsn) => grey.filter(p => hasAspect(p, a) && hasStrike(p, src, rsn));
+    const byAspect = facet('', f.source, f.strikeReason);      // tiles: every filter but the aspect itself
+    const matched = facet(f.aspect, f.source, f.strikeReason);  // the table and everything else
+    const aspectCounts = countBy(byAspect.flatMap(p => p.aspects));
     const exempt = s.peers.filter(p => p.exemption);
     const reasonKey = e => e.source + ' · ' + e.reason;
-    const reasons = topN(countBy(s.strikes.map(reasonKey)), 14);
-    const bySource = countBy(s.strikes.map(e => e.source));
+    const strikesF = s.strikes.filter(e => hasAspect(e.peer, f.aspect) && (!f.source || e.source === f.source) && (!f.strikeReason || e.reason === f.strikeReason));
+    const reasons = topN(countBy(strikesF.map(reasonKey)), 14);
+    const bySource = countBy(strikesF.map(e => e.source));
     const aspectLabel = { strikes: 'Refused for strikes', peer_status: 'Refused for peer status', gossip: 'Refused for gossip score', bad_ip: 'Refused for IP colocation' };
     const aspectRule = { strikes: cfg.threshold + ' standing strikes', peer_status: 'invalid status, ' + esc(cfg.statusTTL || '?') + ' TTL', gossip: 'score below ' + fmtNum(cfg.gossipThreshold), bad_ip: 'more than ' + state.cfg.colocationLimit + ' peers on one IP' };
     const aspectTone = { strikes: 'bad', peer_status: 'warn', gossip: 'info', bad_ip: '' };
@@ -934,37 +947,53 @@
     };
 
     $('#greyTiles', el).innerHTML =
-      tile({ label: 'Grey-listed now', value: fmtNum(grey.length), cls: grey.length ? 'bad' : 'good', pick: true, on: !f.aspect, data: 'data-gaspect=""', sub: [grey.filter(p => p.connected).length + ' still connected', exempt.length ? exempt.length + ' exempt (trusted)' : 'every aspect'] }) +
+      tile({ label: 'Grey-listed now', value: fmtNum(byAspect.length), cls: byAspect.length ? 'bad' : 'good', pick: true, on: !f.aspect, data: 'data-gaspect=""', sub: [byAspect.filter(p => p.connected).length + ' still connected', exempt.length ? exempt.length + ' exempt (trusted)' : 'every aspect'] }) +
       ASPECTS.map(a => tile({ label: aspectLabel[a[0]], info: aspectInfo[a[0]], value: fmtNum(aspectCounts.get(a[0]) || 0), pick: true, on: f.aspect === a[0], data: 'data-gaspect="' + a[0] + '"', cls: aspectCounts.get(a[0]) ? aspectTone[a[0]] : '', sub: [aspectRule[a[0]]] })).join('');
 
     const gs = state.sort.grey;
-    const rows = sortBy(grey.filter(p => !f.aspect || p.aspects.includes(f.aspect)), GREY_SORT[gs.key] || GREY_SORT.recovery, gs.dir);
+    const rows = sortBy(matched.slice(), GREY_SORT[gs.key] || GREY_SORT.recovery, gs.dir);
+    // An option is offered only when picking it would leave something on the page; the current pick always stays.
+    const options = (values, sel, count) => values.map(v => ({ v, n: count(v) })).filter(o => o.n || o.v === sel)
+      .map(o => '<option value="' + attr(o.v) + '"' + (sel === o.v ? ' selected' : '') + '>' + esc(o.v) + ' · ' + greyLabel(o.n) + '</option>').join('');
+    const srcOpts = Array.from(new Set(grey.flatMap(p => p.history.map(h => h.source)))).sort();
+    if (f.source && !srcOpts.includes(f.source)) srcOpts.push(f.source);
+    const reasonOpts = Array.from(new Set(grey.flatMap(p => p.history.map(h => h.reason)))).sort();
+    if (f.strikeReason && !reasonOpts.includes(f.strikeReason)) reasonOpts.push(f.strikeReason);
+    const anySrc = facet(f.aspect, '', f.strikeReason).length, anyReason = facet(f.aspect, f.source, '').length;
+    const greyFilters = '<div class="filters">' +
+      '<label class="field">Strike source' + info('The subsystem that struck the peer: dial, an RPC handler, the rate limiter, gossip validation, sync. Each count is the grey-listed peers you would be left with, under the other filters already set.') +
+        '<select class="select" data-f="filters.greylist.source"><option value="">any · ' + greyLabel(anySrc) + '</option>' +
+        options(srcOpts, f.source, v => facet(f.aspect, v, f.strikeReason).length) + '</select></label>' +
+      '<label class="field">Strike reason' + info('The striking handler\'s own label. Each count is the grey-listed peers you would be left with, under the other filters already set.') +
+        '<select class="select" data-f="filters.greylist.strikeReason"><option value="">any · ' + greyLabel(anyReason) + '</option>' +
+        options(reasonOpts, f.strikeReason, v => facet(f.aspect, f.source, v).length) + '</select></label>' +
+      ((f.source || f.strikeReason || f.aspect) ? '<button class="btn ghost sm" type="button" data-reset="greylist">Reset</button>' : '') + '</div>';
 
     // "Peers struck for …": every peer hit by the picked reason (source · reason) or source, grey-listed or not.
     const key = f.reason, keyIsSource = !!key && !key.includes(' · ');
-    const hits = key ? s.strikes.filter(e => keyIsSource ? e.source === key : reasonKey(e) === key) : [];
+    const hits = key ? strikesF.filter(e => keyIsSource ? e.source === key : reasonKey(e) === key) : [];
     const byPeer = new Map();
     for (const e of hits) { let r = byPeer.get(e.peer.id); if (!r) { r = { peer: e.peer, n: 0, last: 0 }; byPeer.set(e.peer.id, r); } r.n++; if (e.at > r.last) r.last = e.at; }
     const struck = Array.from(byPeer.values()).sort((x, y) => y.n - x.n || y.last - x.last);
     const struckSec = !key ? '' : sec('Peers struck for ' + key, struck.length ?
       '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Peer</th><th>State</th><th class="num" data-tip="Strikes with this reason in the window">Hits</th><th>Last hit</th><th data-tip="Standing strikes / grey-list threshold">Standing</th><th>Grey list</th></tr></thead><tbody>' +
         struck.map(r => '<tr class="row" data-nav data-peer="' + attr(r.peer.id) + '"><td>' + peerCell(r.peer) + '</td><td><span class="badges">' + stateBadge(r.peer.state) + dirBadge(r.peer.direction) + '</span></td><td class="num">' + r.n + '</td><td class="tight">' + liveAgo(r.last) + '</td><td>' + meter(r.peer) + '</td><td>' + greyCell(r.peer) + '</td></tr>').join('') + '</tbody></table></div>' :
-      emptyState('No strikes for this reason', 'Nothing in the ' + winLabel() + ' window matches; widen the window or pick another reason.'),
+      emptyState('No strikes for this reason', 'Nothing in the ' + winLabel() + ' window matches the filters; widen the window, or clear a filter above.'),
       { sub: plural(struck.length, 'peer') + ' · ' + plural(hits.length, 'strike') + ' · ' + winLabel() + (keyIsSource ? ' · every reason from this source' : ''), right: '<button class="btn sm" type="button" data-greason="' + attr(key) + '">Clear</button>', id: 'struck' });
 
     $('#greyBody', el).innerHTML =
-      sec('Grey-listed peers', '<div class="tbl-wrap"><table class="tbl" data-table="grey"><thead><tr>' + th('Peer', 'peer', gs) + th('State', 'state', gs) + th('Aspect', 'aspect', gs) + th('Why', 'reason', gs) + th('Recovers in', 'recovery', gs, '', 'Estimated time until the node accepts the peer again') + th('Strikes', 'strikes', gs, '', 'Standing strikes / grey-list threshold') + '</tr></thead><tbody>' +
-        (rows.map(p => '<tr class="row" data-nav data-peer="' + attr(p.id) + '"><td>' + peerCell(p) + '</td><td><span class="badges">' + stateBadge(p.state) + dirBadge(p.direction) + '</span></td>' +
+      sec('Grey-listed peers', greyFilters + '<div class="tbl-wrap"><table class="tbl" data-table="grey"><thead><tr>' + th('Peer', 'peer', gs) + th('Client', 'client', gs, '', 'Client type, derived from the agent string') + th('Agent', 'agent', gs, '', 'The exact agent string the peer announces') + th('State', 'state', gs) + th('Aspect', 'aspect', gs) + th('Why', 'reason', gs) + th('Recovers in', 'recovery', gs, '', 'Estimated time until the node accepts the peer again') + th('Strikes', 'strikes', gs, '', 'Standing strikes / grey-list threshold') + '</tr></thead><tbody>' +
+        (rows.map(p => '<tr class="row" data-nav data-peer="' + attr(p.id) + '"><td>' + peerIdCell(p) + '</td><td>' + esc(p.agentType) + '</td><td>' + agentCell(p) + '</td><td><span class="badges">' + stateBadge(p.state) + dirBadge(p.direction) + '</span></td>' +
           '<td><span class="badges">' + p.aspects.map(a => aspectBadge(a)).join('') + '</span></td>' +
           '<td class="reason">' + p.aspects.map(a => esc(cleanVerdict(p.details[a]))).join('<br>') + '</td>' +
           '<td class="tight">' + recoveryCell(p) + '</td><td>' + meter(p) + '</td></tr>').join('') ||
-          '<tr><td colspan="6">' + emptyState(grey.length ? 'No grey-listed peer has this aspect' : 'No peer is grey-listed', grey.length ? 'Pick another aspect above.' : 'Nothing in scope is refused right now.') + '</td></tr>') +
-        '</tbody></table></div>', { sub: fmtNum(rows.length) + ' of ' + fmtNum(grey.length) + ' · the reason is the node\'s own verdict text', info: 'Recovers in is the node\'s own estimate: decays still needed for strikes, TTL left for peer status and IP colocation. A gossip score is forgotten ' + GOSSIP_RETAIN_EPOCHS + ' epochs after the peer leaves.', id: 'grey' }) +
+          '<tr><td colspan="8">' + emptyState(grey.length ? 'No grey-listed peer matches these filters' : 'No peer is grey-listed', grey.length ? 'Clear the aspect tile or the strike filters above.' : 'Nothing in scope is refused right now.') + '</td></tr>') +
+        '</tbody></table></div>', { sub: fmtNum(rows.length) + ' of ' + fmtNum(grey.length) + ' · the reason is the node\'s own verdict text', info: 'The strike filters match a peer\'s retained strike history, not the events window. Recovers in is the node\'s own estimate: decays still needed for strikes, TTL left for peer status and IP colocation. A gossip score is forgotten ' + GOSSIP_RETAIN_EPOCHS + ' epochs after the peer leaves.', id: 'grey' }) +
       sec('Strike reasons, ' + winLabel(), '<div class="grid-2" style="margin-bottom:0">' +
-        '<div>' + bars(reasons.map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k.split(' · ')[0]), tip: k, on: f.reason === k })), { data: 'greason', tall: true, total: s.strikes.length, empty: 'No strikes in this window' }) + '</div>' +
-        '<div>' + (bySource.size ? '<div class="sec-h" style="margin-top:0"><h2>By source</h2><span class="sub">click to list the peers</span></div>' + bars(topN(bySource, 12).map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k), on: f.reason === k })), { data: 'greason', total: s.strikes.length }) : '') +
+        '<div>' + bars(reasons.map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k.split(' · ')[0]), tip: k, on: f.reason === k })), { data: 'greason', tall: true, total: strikesF.length, empty: 'No strikes match these filters in this window' }) + '</div>' +
+        '<div>' + (bySource.size ? '<div class="sec-h" style="margin-top:0"><h2>By source</h2><span class="sub">click to list the peers</span></div>' + bars(topN(bySource, 12).map(([k, v]) => ({ label: k, key: k, value: v, color: sourceColor(k), on: f.reason === k })), { data: 'greason', total: strikesF.length }) : '') +
         '<div class="note">Source is where the strike came from (dial, an RPC handler, gossip validation, sync…); the reason is that handler\'s own label. Click a reason or a source to list every peer it hit.</div></div></div>',
-        { sub: fmtNum(s.strikes.length) + ' strikes on ' + plural(new Set(s.strikes.map(e => e.peer.id)).size, 'peer'), info: 'Source is the subsystem that struck: dial, an RPC handler, gossip validation, sync… The reason is that handler\'s own label. Click either to list every peer it hit.', id: 'reasons' }) +
+        { sub: fmtNum(strikesF.length) + ' strikes on ' + plural(new Set(strikesF.map(e => e.peer.id)).size, 'peer'), info: 'Source is the subsystem that struck: dial, an RPC handler, gossip validation, sync… The reason is that handler\'s own label. Click either to list every peer it hit.', id: 'reasons' }) +
       struckSec;
   }
 
@@ -1325,12 +1354,15 @@
       if ((el = hit('[data-group]'))) { state.filters.gossip.groupBy = el.dataset.group; state.filters.gossip.pick = ''; VIEW_IMPL.gossip.update($('#view')); return; }
       if ((el = hit('[data-preset]'))) { state.filters.peers.preset = el.dataset.preset; state.filters.peers.peerLimit = 300; state.cursor = -1; VIEW_IMPL.peers.update($('#view')); return; }
       if ((el = hit('[data-cpreset]'))) { state.filters.clients.preset = el.dataset.cpreset; state.cursor = -1; VIEW_IMPL.clients.update($('#view')); return; }
-      if ((el = hit('[data-reset]'))) { Object.assign(state.filters.peers, { preset: 'connected', q: '', dir: '', aspect: '', source: '', peerLimit: 300 }); state.cursor = -1; VIEW_IMPL.peers.update($('#view')); return; }
+      if ((el = hit('[data-reset]'))) {
+        if (el.dataset.reset === 'greylist') { Object.assign(state.filters.greylist, { aspect: '', reason: '', source: '', strikeReason: '' }); state.cursor = -1; VIEW_IMPL.greylist.update($('#view')); return; }
+        Object.assign(state.filters.peers, { preset: 'connected', q: '', dir: '', aspect: '', source: '', peerLimit: 300 }); state.cursor = -1; VIEW_IMPL.peers.update($('#view')); return;
+      }
       if ((el = hit('[data-more]'))) { state.filters.peers.peerLimit = Infinity; VIEW_IMPL[state.route.view].update($('#view')); applyCursor(); return; }
       if ((el = hit('th[data-sort]'))) {
         const table = el.closest('table').dataset.table;
         const sortState = { peers: state.sort.peers, agents: state.sort.agents, chain: state.sort.chain, grey: state.sort.grey }[table];
-        if (sortState) { toggleSort(sortState, el.dataset.sort, /^(peer|agent|agentType|rank|aspect|reason)$/.test(el.dataset.sort) ? 'asc' : 'desc'); VIEW_IMPL[state.route.view].update($('#view')); applyCursor(); }
+        if (sortState) { toggleSort(sortState, el.dataset.sort, /^(peer|agent|agentType|client|rank|aspect|reason)$/.test(el.dataset.sort) ? 'asc' : 'desc'); VIEW_IMPL[state.route.view].update($('#view')); applyCursor(); }
         return;
       }
       if ((el = hit('[data-peer]'))) { state.cameFrom = true; navigate('peer', el.dataset.peer); return; }
