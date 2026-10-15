@@ -52,9 +52,16 @@ func RunExecutionPayloadBidTest(t *testing.T, config string, fork string, block 
 		if err != nil {
 			return nil, err
 		}
-		blk := util.NewBeaconBlockGloas()
-		blk.Block.ProposerIndex = proposerIndex
-		wsb, err := blocks.NewSignedBeaconBlock(blk)
+		var wsb interfaces.SignedBeaconBlock
+		if b.Version() >= version.Heze {
+			blk := util.NewBeaconBlockHeze()
+			blk.Block.ProposerIndex = proposerIndex
+			wsb, err = blocks.NewSignedBeaconBlock(blk)
+		} else {
+			blk := util.NewBeaconBlockGloas()
+			blk.Block.ProposerIndex = proposerIndex
+			wsb, err = blocks.NewSignedBeaconBlock(blk)
+		}
 		if err != nil {
 			return nil, err
 		}

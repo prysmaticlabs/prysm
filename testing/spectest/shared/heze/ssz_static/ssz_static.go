@@ -1,19 +1,38 @@
 package ssz_static
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/OffchainLabs/methodical-ssz/ssz"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	common "github.com/OffchainLabs/prysm/v7/testing/spectest/shared/common/ssz_static"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
-	common.RunSSZStaticTests(t, config, "heze", unmarshalledSSZ, nil)
+	common.RunSSZStaticTests(t, config, "heze", unmarshalledSSZ, customHtr)
+}
+
+func customHtr(t *testing.T, htrs []common.HTR, object any) []common.HTR {
+	_, ok := object.(*ethpb.BeaconStateHeze)
+	if !ok {
+		return htrs
+	}
+
+	htrs = append(htrs, func(s any) ([32]byte, error) {
+		beaconState, err := state_native.InitializeFromProtoUnsafeHeze(s.(*ethpb.BeaconStateHeze))
+		require.NoError(t, err)
+
+		return beaconState.HashTreeRoot(context.Background())
+	})
+
+	return htrs
 }
 
 // unmarshalledSSZ unmarshalls serialized input.
@@ -21,10 +40,6 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 	var obj any
 
 	switch folderName {
-	// TODO(heze): Un-skip these types when EIP-8015 removes the eth1 fields.
-	case "BeaconBlock", "BeaconBlockBody", "BeaconState", "SignedBeaconBlock":
-		t.Skip("eth1 fields stay until EIP-8015")
-
 	// Heze specific types
 	case "ExecutionPayloadBid":
 		obj = &ethpb.ExecutionPayloadBidHeze{}
@@ -42,6 +57,12 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 		obj = &ethpb.PayloadAttestation{}
 	case "PayloadAttestationMessage":
 		obj = &ethpb.PayloadAttestationMessage{}
+	case "BeaconBlock":
+		obj = &ethpb.BeaconBlockHeze{}
+	case "BeaconBlockBody":
+		obj = &ethpb.BeaconBlockBodyHeze{}
+	case "BeaconState":
+		obj = &ethpb.BeaconStateHeze{}
 	case "Builder":
 		obj = &ethpb.Builder{}
 	case "BuilderPendingPayment":
@@ -106,6 +127,8 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 		obj = &ethpb.ProposerSlashing{}
 	case "SignedAggregateAndProof":
 		obj = &ethpb.SignedAggregateAttestationAndProofGloas{}
+	case "SignedBeaconBlock":
+		obj = &ethpb.SignedBeaconBlockHeze{}
 	case "SignedBeaconBlockHeader":
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":
