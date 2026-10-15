@@ -346,13 +346,8 @@ func ProcessPendingDeposits(ctx context.Context, st state.BeaconState, activeBal
 					return errors.Wrap(err, "could not increase balance")
 				}
 			} else {
-				// Do not create validators with BLS withdrawal credentials. The skipped
-				// deposit still consumes churn and leaves the queue. [New in Heze:EIP8365]
-				skipNewValidator := disallowsNewBLSValidators(st) && hasBLSWithdrawalPrefix(pendingDeposit.WithdrawalCredentials)
-				if !skipNewValidator {
-					// Collect deposit for batch signature verification
-					pendingDepositsToBatchVerify = append(pendingDepositsToBatchVerify, pendingDeposit)
-				}
+				// Collect deposit for batch signature verification
+				pendingDepositsToBatchVerify = append(pendingDepositsToBatchVerify, pendingDeposit)
 			}
 		}
 
@@ -393,8 +388,21 @@ func batchProcessNewPendingDeposits(ctx context.Context, state state.BeaconState
 	}
 
 	for _, pd := range pendingDeposits {
-		validSig := allSignaturesVerified
+		// An earlier deposit in the batch may have created the validator, making this a top-up.
+		pubkey := bytesutil.ToBytes48(pd.PublicKey)
+		if index, exists := state.ValidatorIndexByPubkey(pubkey); exists {
+			if err := helpers.IncreaseBalance(state, index, pd.Amount); err != nil {
+				return errors.Wrap(err, "could not increase balance")
+			}
+			continue
+		}
 
+		// Do not create validators with BLS withdrawal credentials. [New in Heze:EIP8365]
+		if disallowsNewBLSValidators(state) && hasBLSWithdrawalPrefix(pd.WithdrawalCredentials) {
+			continue
+		}
+
+		validSig := allSignaturesVerified
 		if !allSignaturesVerified {
 			validSig, err = helpers.IsValidDepositSignature(&ethpb.Deposit_Data{
 				PublicKey:             bytesutil.SafeCopyBytes(pd.PublicKey),
@@ -406,13 +414,7 @@ func batchProcessNewPendingDeposits(ctx context.Context, state state.BeaconState
 				return errors.Wrap(err, "individual deposit signature verification failed")
 			}
 		}
-
-		pubkey := bytesutil.ToBytes48(pd.PublicKey)
-		if index, exists := state.ValidatorIndexByPubkey(pubkey); exists {
-			if err := helpers.IncreaseBalance(state, index, pd.Amount); err != nil {
-				return errors.Wrap(err, "could not increase balance")
-			}
-		} else if validSig {
+		if validSig {
 			if err := AddValidatorToRegistry(state, pd.PublicKey, pd.WithdrawalCredentials, pd.Amount); err != nil {
 				return errors.Wrap(err, "failed to add validator to registry")
 			}
@@ -479,10 +481,8 @@ func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *eth
 	return helpers.IncreaseBalance(st, index, deposit.Amount)
 }
 
-// disallowsNewBLSValidators reports whether the EIP-8365 rule is in effect for the
-// state's current epoch: from the Heze fork on, pending deposits must not create new
-// validators with BLS (0x00) withdrawal credentials. The check is gated on
-// HezeForkEpoch because the Heze state version does not exist yet.
+// disallowsNewBLSValidators reports whether the state is at or past the Heze fork.
+// TODO(heze): Use st.Version() >= version.Heze once the Heze state exists.
 func disallowsNewBLSValidators(st state.ReadOnlyBeaconState) bool {
 	return slots.ToEpoch(st.Slot()) >= params.BeaconConfig().HezeForkEpoch
 }
