@@ -10,12 +10,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-// UpgradeToHeze upgrades a Gloas state to Heze and rebuilds latest_execution_payload_bid with zero inclusion_list_bits.
-// TODO(heze): The eth1 fields stay until EIP-8015.
+// UpgradeToHeze upgrades a Gloas state to a Heze state.
 func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 	pre, err := state_native.ProtobufBeaconStateGloas(beaconState.ToProto())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert state to Gloas protobuf")
+	}
+	if pre.Eth1DepositIndex != pre.DepositRequestsStartIndex {
+		return nil, errors.Errorf("eth1 deposit index %d does not equal deposit requests start index %d", pre.Eth1DepositIndex, pre.DepositRequestsStartIndex)
 	}
 	bid := pre.LatestExecutionPayloadBid
 	if bid == nil {
@@ -35,9 +37,6 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		BlockRoots:                    pre.BlockRoots,
 		StateRoots:                    pre.StateRoots,
 		HistoricalRoots:               pre.HistoricalRoots,
-		Eth1Data:                      pre.Eth1Data,
-		Eth1DataVotes:                 pre.Eth1DataVotes,
-		Eth1DepositIndex:              pre.Eth1DepositIndex,
 		Validators:                    pre.Validators,
 		Balances:                      pre.Balances,
 		RandaoMixes:                   pre.RandaoMixes,
@@ -55,7 +54,6 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		NextWithdrawalIndex:           pre.NextWithdrawalIndex,
 		NextWithdrawalValidatorIndex:  pre.NextWithdrawalValidatorIndex,
 		HistoricalSummaries:           pre.HistoricalSummaries,
-		DepositRequestsStartIndex:     pre.DepositRequestsStartIndex,
 		DepositBalanceToConsume:       pre.DepositBalanceToConsume,
 		ExitBalanceToConsume:          pre.ExitBalanceToConsume,
 		EarliestExitEpoch:             pre.EarliestExitEpoch,

@@ -666,6 +666,7 @@ func TestValidateExecutionPayloadBidGossip_Heze(t *testing.T) {
 		chain, ok := s.cfg.chain.(*mock.ChainService)
 		require.Equal(t, true, ok)
 		st, _ := util.DeterministicGenesisStateGloas(t, 64)
+		require.NoError(t, st.SetDepositRequestsStartIndex(st.Eth1DepositIndex()))
 		require.NoError(t, st.SetSlot(bid.Message.Slot-1))
 		require.NoError(t, transition.UpdateNextSlotCache(t.Context(), chain.Root, st))
 		require.Equal(t, true, s.proposerPreferencesCache.Add(cache.ProposerPreference{

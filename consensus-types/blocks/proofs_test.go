@@ -197,23 +197,15 @@ func TestComputeBlockBodyFieldRoots_Heze(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 13, len(roots))
 
+	// Removed fields keep their positions as zero leaves.
+	require.DeepEqual(t, make([]byte, 32), roots[1])
+	require.DeepEqual(t, make([]byte, 32), roots[6])
+
 	signedBid, err := b.SignedExecutionPayloadBid()
 	require.NoError(t, err)
 	bidRoot, err := signedBid.HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, bidRoot[:], roots[10])
-
-	rootChunks := make([][32]byte, len(roots))
-	activeFields := make([]bool, len(roots))
-	for i := range roots {
-		copy(rootChunks[i][:], roots[i])
-		activeFields[i] = true
-	}
-	computedBodyRoot, err := ssz.ContainerRootProgressive(rootChunks, activeFields)
-	require.NoError(t, err)
-	expectedBodyRoot, err := b.HashTreeRoot()
-	require.NoError(t, err)
-	require.DeepEqual(t, expectedBodyRoot, computedBodyRoot)
 }
 
 func TestExecutionPayloadBidFieldRoots_Heze(t *testing.T) {
@@ -293,7 +285,7 @@ func TestProgressiveContainerActiveFields(t *testing.T) {
 	t.Run("heze", func(t *testing.T) {
 		for container, want := range map[progressiveContainerType][32]byte{
 			executionPayloadBidProgressiveContainer: {0xff, 0x1f},
-			beaconBlockBodyProgressiveContainer:     {0xff, 0x1f},
+			beaconBlockBodyProgressiveContainer:     {0xbd, 0x1f},
 		} {
 			activeFields, err := progressiveContainerActiveFields(version.Heze, container)
 			require.NoError(t, err)

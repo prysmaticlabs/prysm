@@ -63,6 +63,7 @@ func setupInclusionListRPC(t *testing.T, validatorsPerSlot uint64) *inclusionLis
 	t.Cleanup(helpers.ClearCache)
 
 	st, keys := util.DeterministicGenesisStateGloas(t, validatorsPerSlot*uint64(cfg.SlotsPerEpoch))
+	require.NoError(t, st.SetDepositRequestsStartIndex(st.Eth1DepositIndex()))
 	slot := cfg.SlotsPerEpoch + 2
 	committee, err := helpers.InclusionListCommittee(t.Context(), st, slot)
 	require.NoError(t, err)

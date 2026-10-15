@@ -267,6 +267,7 @@ func TestBuildBlockGloas_EagerSelfBuild(t *testing.T) {
 
 			// The genesis state is Gloas; with Heze at epoch 1, the slot transition into epoch 1 upgrades it.
 			genesis, _ := util.DeterministicGenesisStateGloas(t, 64)
+			require.NoError(t, genesis.SetDepositRequestsStartIndex(genesis.Eth1DepositIndex()))
 			stateRoot, err := genesis.HashTreeRoot(ctx)
 			require.NoError(t, err)
 			header := genesis.LatestBlockHeader()

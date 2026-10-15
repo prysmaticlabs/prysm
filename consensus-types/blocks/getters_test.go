@@ -755,7 +755,6 @@ func hydrateBeaconBlockBodyHeze() *eth.BeaconBlockBodyHeze {
 	bid := g.SignedExecutionPayloadBid.Message
 	return &eth.BeaconBlockBodyHeze{
 		RandaoReveal:  g.RandaoReveal,
-		Eth1Data:      g.Eth1Data,
 		Graffiti:      g.Graffiti,
 		SyncAggregate: g.SyncAggregate,
 		SignedExecutionPayloadBid: &eth.SignedExecutionPayloadBidHeze{

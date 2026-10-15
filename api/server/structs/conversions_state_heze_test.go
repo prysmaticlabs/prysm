@@ -32,6 +32,10 @@ func TestBeaconStateHezeFromConsensus(t *testing.T) {
 			require.NoError(t, err)
 			var fields map[string]json.RawMessage
 			require.NoError(t, json.Unmarshal(encoded, &fields))
+			for _, field := range []string{"eth1_data", "eth1_data_votes", "eth1_deposit_index", "deposit_requests_start_index"} {
+				_, present := fields[field]
+				require.Equal(t, false, present, field)
+			}
 			if nilBid {
 				require.Equal(t, "null", string(fields["latest_execution_payload_bid"]))
 				return
@@ -42,4 +46,23 @@ func TestBeaconStateHezeFromConsensus(t *testing.T) {
 			require.Equal(t, `"123"`, string(bid["gas_limit"]))
 		})
 	}
+}
+
+func TestBeaconStateGloasFromConsensus_PreservesEth1Fields(t *testing.T) {
+	state, err := util.NewBeaconStateGloas()
+	require.NoError(t, err)
+	converted, err := BeaconStateGloasFromConsensus(state)
+	require.NoError(t, err)
+	encoded, err := json.Marshal(converted)
+	require.NoError(t, err)
+	var fields map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(encoded, &fields))
+	for _, field := range []string{"eth1_data", "eth1_data_votes", "eth1_deposit_index", "deposit_requests_start_index"} {
+		_, present := fields[field]
+		require.Equal(t, true, present, field)
+	}
+	var bid map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(fields["latest_execution_payload_bid"], &bid))
+	_, present := bid["inclusion_list_bits"]
+	require.Equal(t, false, present)
 }

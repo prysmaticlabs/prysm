@@ -1119,6 +1119,7 @@ func TestPayloadAttributesHeze(t *testing.T) {
 func Test_GetPayloadAttribute_HezeInclusionListTransactions(t *testing.T) {
 	setHezeAtGenesis(t)
 	gloasSt, _ := util.DeterministicGenesisStateGloas(t, 64)
+	require.NoError(t, gloasSt.SetDepositRequestsStartIndex(gloasSt.Eth1DepositIndex()))
 	st, err := heze.UpgradeToHeze(gloasSt)
 	require.NoError(t, err)
 	slot := 2*params.BeaconConfig().SlotsPerEpoch + 1

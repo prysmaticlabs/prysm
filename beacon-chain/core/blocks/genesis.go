@@ -255,7 +255,6 @@ func gloasGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execu
 	}
 }
 
-// hezeGenesisBlock is gloasGenesisBlock with the Heze bid.
 func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.ExecutionPayloadBidHeze) *ethpb.BeaconBlockHeze {
 	bidMessage := latestBid.Copy()
 	if bidMessage == nil {
@@ -276,7 +275,6 @@ func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execut
 		StateRoot:  root[:],
 		Body: &ethpb.BeaconBlockBodyHeze{
 			RandaoReveal:  gloasBody.RandaoReveal,
-			Eth1Data:      gloasBody.Eth1Data,
 			Graffiti:      gloasBody.Graffiti,
 			SyncAggregate: gloasBody.SyncAggregate,
 			SignedExecutionPayloadBid: &ethpb.SignedExecutionPayloadBidHeze{
