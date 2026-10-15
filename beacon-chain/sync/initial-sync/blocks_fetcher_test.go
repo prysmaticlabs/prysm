@@ -570,9 +570,11 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
+	p2Done := make(chan error, 1)
 	go func() {
 		// Exhaust available rate for p2, so that rate limiting is triggered.
-		for i := uint64(0); i <= burstFactor; i++ {
+		var err error
+		for i := uint64(0); i <= burstFactor && err == nil; i++ {
 			if i == burstFactor {
 				// The next request will trigger rate limiting for p2. Now, allow concurrent
 				// p3 data request (p3 shouldn't be rate limited).
@@ -580,32 +582,32 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 					wg.Done()
 				})
 			}
-			_, err := fetcher.requestBlocks(ctx, req, p2.PeerID())
-			if err != nil {
-				assert.ErrorContains(t, errFetcherCtxIsDone.Error(), err)
-			}
+			_, err = fetcher.requestBlocks(ctx, req, p2.PeerID())
 		}
+		p2Done <- err
 	}()
 
 	// Wait until p2 exhausts its rate and is spinning on rate limiting timer.
 	wg.Wait()
 
 	// The next request should NOT trigger rate limiting as rate is exhausted for p2, not p3.
-	ch := make(chan struct{}, 1)
+	p3Done := make(chan error, 1)
 	go func() {
 		_, err := fetcher.requestBlocks(ctx, req, p3.PeerID())
-		assert.NoError(t, err)
-		ch <- struct{}{}
+		p3Done <- err
 	}()
 	timer := time.NewTimer(2 * time.Second)
 	select {
 	case <-timer.C:
 		t.Error("p3 takes too long to respond: lock contention")
-	case <-ch:
+	case err := <-p3Done:
 		// p3 responded w/o waiting for rate limiter's lock (on which p2 spins).
+		require.NoError(t, err)
 	}
 	// Make sure that p2 has been rate limited.
 	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" package=beacon-chain/sync/initial-sync peer=%s", p2.PeerID()))
+	// Wait for p2's last request so it cannot fail the test after it returns.
+	require.NoError(t, <-p2Done)
 }
 
 func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
