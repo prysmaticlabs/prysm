@@ -2514,11 +2514,11 @@ func TestValidateBeaconBlockPubSub_GloasDeposits(t *testing.T) {
 
 			res, err := r.validateBeaconBlockPubSub(t.Context(), "", m)
 			if tt.reject {
-				require.ErrorIs(t, err, errBlockHasDeposits)
+				require.ErrorContains(t, "block must not contain deposits", err)
 				require.Equal(t, pubsub.ValidationReject, res)
 				return
 			}
-			require.Equal(t, false, errors.Is(err, errBlockHasDeposits))
+			require.NoError(t, err)
 			require.Equal(t, pubsub.ValidationIgnore, res)
 		})
 	}
