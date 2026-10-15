@@ -43,7 +43,7 @@ const (
 	denebSharedFieldRefCount     = 7
 	electraSharedFieldRefCount   = 10
 	fuluSharedFieldRefCount      = 11
-	gloasSharedFieldRefCount     = 14 // Adds Builders + BuilderPendingWithdrawals + PTCWindow to the shared-ref set and LatestExecutionPayloadHeader is removed
+	gloasSharedFieldRefCount     = 13 // Fulu 11 + Builders, BuilderPendingWithdrawals, PTCWindow - LatestExecutionPayloadHeaderDeneb
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
