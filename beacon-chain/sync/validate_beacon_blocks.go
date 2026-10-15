@@ -38,6 +38,7 @@ var (
 	errRejectCommitmentLen      = errors.New("[REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer")
 	ErrSlashingSignatureFailure = errors.New("proposer slashing signature verification failed")
 	errBlockSlotNotAfterParent  = errors.New("block slot is not higher than its parent slot")
+	errBlockHasDeposits         = errors.New("block must not contain deposits")
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -75,6 +76,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	if blk.IsNil() || blk.Block().IsNil() {
 		return pubsub.ValidationReject, errors.New("block.Block is nil")
+	}
+
+	if blk.Version() >= version.Gloas && len(blk.Block().Body().Deposits()) != 0 {
+		return pubsub.ValidationReject, errBlockHasDeposits
 	}
 
 	// Broadcast the block on a feed to notify other services in the beacon node
