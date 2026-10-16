@@ -43,3 +43,10 @@ func (s *SignedBeaconBlockHeze) SigString() string {
 
 // BeaconStateHeze matches BeaconStateGloas until the Heze state diverges.
 type BeaconStateHeze BeaconStateGloas
+
+type BlockContentsHeze struct {
+	Block                    *BeaconBlockHeze          `json:"block"`
+	ExecutionPayloadEnvelope *ExecutionPayloadEnvelope `json:"execution_payload_envelope"`
+	KzgProofs                []string                  `json:"kzg_proofs"`
+	Blobs                    []string                  `json:"blobs"`
+}

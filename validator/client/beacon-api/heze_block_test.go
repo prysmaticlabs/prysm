@@ -7,11 +7,13 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/OffchainLabs/prysm/v7/validator/client/beacon-api/mock"
+	testhelpers "github.com/OffchainLabs/prysm/v7/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
 
@@ -48,14 +50,26 @@ func TestDecodeBlockV4Response_Heze(t *testing.T) {
 		require.DeepEqual(t, block, got.GetHeze())
 	})
 
-	t.Run("payload included is unsupported", func(t *testing.T) {
+	t.Run("payload included ssz", func(t *testing.T) {
+		want := &ethpb.BeaconBlockContentsHeze{
+			Block:                    block,
+			ExecutionPayloadEnvelope: testhelpers.GenerateProtoExecutionPayloadEnvelope(),
+			KzgProofs:                [][]byte{make([]byte, 48)},
+			Blobs:                    [][]byte{make([]byte, fieldparams.BlobLength)},
+		}
+		data, err := want.MarshalSSZ()
+		require.NoError(t, err)
 		header := http.Header{}
 		header.Set("Content-Type", api.OctetStreamMediaType)
 		header.Set(api.VersionHeader, version.String(version.Heze))
 		header.Set(api.ExecutionPayloadIncludedHeader, "true")
 
-		_, _, err := decodeBlockV4Response(nil, header, "url")
-		require.ErrorContains(t, "not supported for heze", err)
+		got, contents, err := decodeBlockV4Response(data, header, "url")
+		require.NoError(t, err)
+		require.DeepEqual(t, block, got.GetHeze())
+		require.DeepEqual(t, want.ExecutionPayloadEnvelope, contents.GetExecutionPayloadEnvelope())
+		require.DeepEqual(t, want.KzgProofs, contents.GetKzgProofs())
+		require.DeepEqual(t, want.Blobs, contents.GetBlobs())
 	})
 }
 

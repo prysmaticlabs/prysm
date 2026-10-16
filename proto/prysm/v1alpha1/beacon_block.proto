@@ -132,6 +132,10 @@ message GenericBeaconBlock {
 
     // Representing a post-Heze fork beacon block.
     BeaconBlockHeze heze = 15;
+
+    // Returned when eager_payload_state_root (stateless) is requested so the
+    // validator client has the envelope + blob data without a second fetch.
+    BeaconBlockContentsHeze heze_contents = 16;
   }
   bool is_blinded = 100;
   string payload_value = 101;

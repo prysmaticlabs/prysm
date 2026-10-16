@@ -10,6 +10,7 @@ types:
       VoluntaryExits:        {type: "ProgressiveList"}
       BlsToExecutionChanges: {type: "ProgressiveList"}
       PayloadAttestations:   {type: "ProgressiveList"}
+  - name: "BeaconBlockContentsHeze"
   - name: "BeaconBlockHeze"
   - name: "BeaconStateHeze"
     progressive: {}

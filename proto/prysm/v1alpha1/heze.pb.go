@@ -292,6 +292,74 @@ func (x *SignedBeaconBlockHeze) GetSignature() []byte {
 	return nil
 }
 
+type BeaconBlockContentsHeze struct {
+	state                    protoimpl.MessageState    `protogen:"open.v1"`
+	Block                    *BeaconBlockHeze          `protobuf:"bytes,1,opt,name=block,proto3" json:"block,omitempty"`
+	ExecutionPayloadEnvelope *ExecutionPayloadEnvelope `protobuf:"bytes,2,opt,name=execution_payload_envelope,json=executionPayloadEnvelope,proto3" json:"execution_payload_envelope,omitempty"`
+	KzgProofs                [][]byte                  `protobuf:"bytes,3,rep,name=kzg_proofs,json=kzgProofs,proto3" json:"kzg_proofs,omitempty" ssz-max:"33554432" ssz-size:"?,48"`
+	Blobs                    [][]byte                  `protobuf:"bytes,4,rep,name=blobs,proto3" json:"blobs,omitempty" ssz-max:"4096" ssz-size:"?,131072"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *BeaconBlockContentsHeze) Reset() {
+	*x = BeaconBlockContentsHeze{}
+	mi := &file_proto_prysm_v1alpha1_heze_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BeaconBlockContentsHeze) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BeaconBlockContentsHeze) ProtoMessage() {}
+
+func (x *BeaconBlockContentsHeze) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_prysm_v1alpha1_heze_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BeaconBlockContentsHeze.ProtoReflect.Descriptor instead.
+func (*BeaconBlockContentsHeze) Descriptor() ([]byte, []int) {
+	return file_proto_prysm_v1alpha1_heze_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *BeaconBlockContentsHeze) GetBlock() *BeaconBlockHeze {
+	if x != nil {
+		return x.Block
+	}
+	return nil
+}
+
+func (x *BeaconBlockContentsHeze) GetExecutionPayloadEnvelope() *ExecutionPayloadEnvelope {
+	if x != nil {
+		return x.ExecutionPayloadEnvelope
+	}
+	return nil
+}
+
+func (x *BeaconBlockContentsHeze) GetKzgProofs() [][]byte {
+	if x != nil {
+		return x.KzgProofs
+	}
+	return nil
+}
+
+func (x *BeaconBlockContentsHeze) GetBlobs() [][]byte {
+	if x != nil {
+		return x.Blobs
+	}
+	return nil
+}
+
 var File_proto_prysm_v1alpha1_heze_proto protoreflect.FileDescriptor
 
 var file_proto_prysm_v1alpha1_heze_proto_rawDesc = []byte{
@@ -413,11 +481,30 @@ var file_proto_prysm_v1alpha1_heze_proto_rawDesc = []byte{
 	0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x65, 0x7a, 0x65, 0x52, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x12,
 	0x24, 0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x02, 0x20, 0x01,
 	0x28, 0x0c, 0x42, 0x06, 0x8a, 0xb5, 0x18, 0x02, 0x39, 0x36, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e,
-	0x61, 0x74, 0x75, 0x72, 0x65, 0x42, 0x3b, 0x5a, 0x39, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
-	0x63, 0x6f, 0x6d, 0x2f, 0x4f, 0x66, 0x66, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x4c, 0x61, 0x62, 0x73,
-	0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x37, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f,
-	0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b, 0x65,
-	0x74, 0x68, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x74, 0x75, 0x72, 0x65, 0x22, 0xa7, 0x02, 0x0a, 0x17, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e,
+	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x73, 0x48, 0x65, 0x7a,
+	0x65, 0x12, 0x3c, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x26, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42,
+	0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x65, 0x7a, 0x65, 0x52, 0x05, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x12,
+	0x6d, 0x0a, 0x1a, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x70, 0x61, 0x79,
+	0x6c, 0x6f, 0x61, 0x64, 0x5f, 0x65, 0x6e, 0x76, 0x65, 0x6c, 0x6f, 0x70, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
+	0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x45, 0x78, 0x65, 0x63,
+	0x75, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x45, 0x6e, 0x76, 0x65,
+	0x6c, 0x6f, 0x70, 0x65, 0x52, 0x18, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x50,
+	0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x45, 0x6e, 0x76, 0x65, 0x6c, 0x6f, 0x70, 0x65, 0x12, 0x33,
+	0x0a, 0x0a, 0x6b, 0x7a, 0x67, 0x5f, 0x70, 0x72, 0x6f, 0x6f, 0x66, 0x73, 0x18, 0x03, 0x20, 0x03,
+	0x28, 0x0c, 0x42, 0x14, 0x8a, 0xb5, 0x18, 0x04, 0x3f, 0x2c, 0x34, 0x38, 0x92, 0xb5, 0x18, 0x08,
+	0x33, 0x33, 0x35, 0x35, 0x34, 0x34, 0x33, 0x32, 0x52, 0x09, 0x6b, 0x7a, 0x67, 0x50, 0x72, 0x6f,
+	0x6f, 0x66, 0x73, 0x12, 0x2a, 0x0a, 0x05, 0x62, 0x6c, 0x6f, 0x62, 0x73, 0x18, 0x04, 0x20, 0x03,
+	0x28, 0x0c, 0x42, 0x14, 0x8a, 0xb5, 0x18, 0x08, 0x3f, 0x2c, 0x31, 0x33, 0x31, 0x30, 0x37, 0x32,
+	0x92, 0xb5, 0x18, 0x04, 0x34, 0x30, 0x39, 0x36, 0x52, 0x05, 0x62, 0x6c, 0x6f, 0x62, 0x73, 0x42,
+	0x3b, 0x5a, 0x39, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x4f, 0x66,
+	0x66, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x4c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d,
+	0x2f, 0x76, 0x37, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b, 0x65, 0x74, 0x68, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -432,42 +519,46 @@ func file_proto_prysm_v1alpha1_heze_proto_rawDescGZIP() []byte {
 	return file_proto_prysm_v1alpha1_heze_proto_rawDescData
 }
 
-var file_proto_prysm_v1alpha1_heze_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_proto_prysm_v1alpha1_heze_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_prysm_v1alpha1_heze_proto_goTypes = []any{
 	(*BeaconBlockHeze)(nil),            // 0: ethereum.eth.v1alpha1.BeaconBlockHeze
 	(*BeaconBlockBodyHeze)(nil),        // 1: ethereum.eth.v1alpha1.BeaconBlockBodyHeze
 	(*SignedBeaconBlockHeze)(nil),      // 2: ethereum.eth.v1alpha1.SignedBeaconBlockHeze
-	(*Eth1Data)(nil),                   // 3: ethereum.eth.v1alpha1.Eth1Data
-	(*ProposerSlashing)(nil),           // 4: ethereum.eth.v1alpha1.ProposerSlashing
-	(*AttesterSlashingGloas)(nil),      // 5: ethereum.eth.v1alpha1.AttesterSlashingGloas
-	(*AttestationGloas)(nil),           // 6: ethereum.eth.v1alpha1.AttestationGloas
-	(*Deposit)(nil),                    // 7: ethereum.eth.v1alpha1.Deposit
-	(*SignedVoluntaryExit)(nil),        // 8: ethereum.eth.v1alpha1.SignedVoluntaryExit
-	(*SyncAggregate)(nil),              // 9: ethereum.eth.v1alpha1.SyncAggregate
-	(*SignedBLSToExecutionChange)(nil), // 10: ethereum.eth.v1alpha1.SignedBLSToExecutionChange
-	(*SignedExecutionPayloadBid)(nil),  // 11: ethereum.eth.v1alpha1.SignedExecutionPayloadBid
-	(*PayloadAttestation)(nil),         // 12: ethereum.eth.v1alpha1.PayloadAttestation
-	(*v1.ExecutionRequestsGloas)(nil),  // 13: ethereum.engine.v1.ExecutionRequestsGloas
+	(*BeaconBlockContentsHeze)(nil),    // 3: ethereum.eth.v1alpha1.BeaconBlockContentsHeze
+	(*Eth1Data)(nil),                   // 4: ethereum.eth.v1alpha1.Eth1Data
+	(*ProposerSlashing)(nil),           // 5: ethereum.eth.v1alpha1.ProposerSlashing
+	(*AttesterSlashingGloas)(nil),      // 6: ethereum.eth.v1alpha1.AttesterSlashingGloas
+	(*AttestationGloas)(nil),           // 7: ethereum.eth.v1alpha1.AttestationGloas
+	(*Deposit)(nil),                    // 8: ethereum.eth.v1alpha1.Deposit
+	(*SignedVoluntaryExit)(nil),        // 9: ethereum.eth.v1alpha1.SignedVoluntaryExit
+	(*SyncAggregate)(nil),              // 10: ethereum.eth.v1alpha1.SyncAggregate
+	(*SignedBLSToExecutionChange)(nil), // 11: ethereum.eth.v1alpha1.SignedBLSToExecutionChange
+	(*SignedExecutionPayloadBid)(nil),  // 12: ethereum.eth.v1alpha1.SignedExecutionPayloadBid
+	(*PayloadAttestation)(nil),         // 13: ethereum.eth.v1alpha1.PayloadAttestation
+	(*v1.ExecutionRequestsGloas)(nil),  // 14: ethereum.engine.v1.ExecutionRequestsGloas
+	(*ExecutionPayloadEnvelope)(nil),   // 15: ethereum.eth.v1alpha1.ExecutionPayloadEnvelope
 }
 var file_proto_prysm_v1alpha1_heze_proto_depIdxs = []int32{
 	1,  // 0: ethereum.eth.v1alpha1.BeaconBlockHeze.body:type_name -> ethereum.eth.v1alpha1.BeaconBlockBodyHeze
-	3,  // 1: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
-	4,  // 2: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.proposer_slashings:type_name -> ethereum.eth.v1alpha1.ProposerSlashing
-	5,  // 3: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.attester_slashings:type_name -> ethereum.eth.v1alpha1.AttesterSlashingGloas
-	6,  // 4: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.attestations:type_name -> ethereum.eth.v1alpha1.AttestationGloas
-	7,  // 5: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.deposits:type_name -> ethereum.eth.v1alpha1.Deposit
-	8,  // 6: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.voluntary_exits:type_name -> ethereum.eth.v1alpha1.SignedVoluntaryExit
-	9,  // 7: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
-	10, // 8: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.bls_to_execution_changes:type_name -> ethereum.eth.v1alpha1.SignedBLSToExecutionChange
-	11, // 9: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.signed_execution_payload_bid:type_name -> ethereum.eth.v1alpha1.SignedExecutionPayloadBid
-	12, // 10: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.payload_attestations:type_name -> ethereum.eth.v1alpha1.PayloadAttestation
-	13, // 11: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.parent_execution_requests:type_name -> ethereum.engine.v1.ExecutionRequestsGloas
+	4,  // 1: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.eth1_data:type_name -> ethereum.eth.v1alpha1.Eth1Data
+	5,  // 2: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.proposer_slashings:type_name -> ethereum.eth.v1alpha1.ProposerSlashing
+	6,  // 3: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.attester_slashings:type_name -> ethereum.eth.v1alpha1.AttesterSlashingGloas
+	7,  // 4: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.attestations:type_name -> ethereum.eth.v1alpha1.AttestationGloas
+	8,  // 5: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.deposits:type_name -> ethereum.eth.v1alpha1.Deposit
+	9,  // 6: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.voluntary_exits:type_name -> ethereum.eth.v1alpha1.SignedVoluntaryExit
+	10, // 7: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.sync_aggregate:type_name -> ethereum.eth.v1alpha1.SyncAggregate
+	11, // 8: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.bls_to_execution_changes:type_name -> ethereum.eth.v1alpha1.SignedBLSToExecutionChange
+	12, // 9: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.signed_execution_payload_bid:type_name -> ethereum.eth.v1alpha1.SignedExecutionPayloadBid
+	13, // 10: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.payload_attestations:type_name -> ethereum.eth.v1alpha1.PayloadAttestation
+	14, // 11: ethereum.eth.v1alpha1.BeaconBlockBodyHeze.parent_execution_requests:type_name -> ethereum.engine.v1.ExecutionRequestsGloas
 	0,  // 12: ethereum.eth.v1alpha1.SignedBeaconBlockHeze.block:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeze
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	0,  // 13: ethereum.eth.v1alpha1.BeaconBlockContentsHeze.block:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeze
+	15, // 14: ethereum.eth.v1alpha1.BeaconBlockContentsHeze.execution_payload_envelope:type_name -> ethereum.eth.v1alpha1.ExecutionPayloadEnvelope
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_proto_prysm_v1alpha1_heze_proto_init() }
@@ -485,7 +576,7 @@ func file_proto_prysm_v1alpha1_heze_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_prysm_v1alpha1_heze_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

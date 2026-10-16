@@ -240,3 +240,30 @@ func (b *BeaconBlockHeze) ToGeneric() (*eth.GenericBeaconBlock, error) {
 	}
 	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Heze{Heze: block}}, nil
 }
+
+// BlockContentsHezeFromConsensus converts a proto Heze block, envelope, and
+// blob data to the API struct.
+func BlockContentsHezeFromConsensus(block *eth.BeaconBlockHeze, envelope *eth.ExecutionPayloadEnvelope, kzgProofs [][]byte, blobs [][]byte) (*BlockContentsHeze, error) {
+	b, err := BeaconBlockHezeFromConsensus(block)
+	if err != nil {
+		return nil, err
+	}
+	env, err := ExecutionPayloadEnvelopeFromConsensus(envelope)
+	if err != nil {
+		return nil, err
+	}
+	encodedProofs := make([]string, len(kzgProofs))
+	for i, p := range kzgProofs {
+		encodedProofs[i] = hexutil.Encode(p)
+	}
+	encodedBlobs := make([]string, len(blobs))
+	for i, b := range blobs {
+		encodedBlobs[i] = hexutil.Encode(b)
+	}
+	return &BlockContentsHeze{
+		Block:                    b,
+		ExecutionPayloadEnvelope: env,
+		KzgProofs:                encodedProofs,
+		Blobs:                    encodedBlobs,
+	}, nil
+}

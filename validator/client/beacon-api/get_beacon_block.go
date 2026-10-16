@@ -92,7 +92,7 @@ func (c *beaconApiValidatorClient) beaconBlockV4(ctx context.Context, slot primi
 	var (
 		decodedData     []byte
 		decodedBlock    *ethpb.GenericBeaconBlock
-		decodedContents *ethpb.BeaconBlockContentsGloas
+		decodedContents blockContents
 	)
 	decode := func(data []byte, header http.Header) (*ethpb.GenericBeaconBlock, error) {
 		block, contents, err := decodeBlockV4Response(data, header, queryUrl)
@@ -119,8 +119,8 @@ func (c *beaconApiValidatorClient) beaconBlockV4(ctx context.Context, slot primi
 	}
 
 	// Cache the envelope only for the winning response.
-	if c.stateless && contents != nil && contents.ExecutionPayloadEnvelope != nil {
-		c.envelopeCache.Add(slot, contents.ExecutionPayloadEnvelope, contents.Blobs, contents.KzgProofs)
+	if c.stateless && contents != nil && contents.GetExecutionPayloadEnvelope() != nil {
+		c.envelopeCache.Add(slot, contents.GetExecutionPayloadEnvelope(), contents.GetBlobs(), contents.GetKzgProofs())
 	}
 
 	return block, nil
@@ -156,8 +156,15 @@ func decodeBlockV3Response(data []byte, header http.Header, queryUrl string) (*e
 	)
 }
 
+// blockContents is the payload data that a payload-included V4 response carries with the block.
+type blockContents interface {
+	GetExecutionPayloadEnvelope() *ethpb.ExecutionPayloadEnvelope
+	GetBlobs() [][]byte
+	GetKzgProofs() [][]byte
+}
+
 // decodeBlockV4Response turns a raw V4 response into a generic block.
-func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*ethpb.GenericBeaconBlock, *ethpb.BeaconBlockContentsGloas, error) {
+func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*ethpb.GenericBeaconBlock, blockContents, error) {
 	payloadIncluded := header.Get(api.ExecutionPayloadIncludedHeader) == "true"
 	isSSZ := strings.Contains(header.Get("Content-Type"), api.OctetStreamMediaType)
 
@@ -169,82 +176,85 @@ func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*e
 		return nil, nil, errors.Errorf("v4 payload-included response must be SSZ, got content-type %q", header.Get("Content-Type"))
 	}
 
-	// The VC echoes this back when publishing so the winning builder gets the signed block.
-	builderUrl := header.Get(api.BuilderUrlHeader)
-
-	// Early return for Heze blocks.
-	if header.Get(api.VersionHeader) == version.String(version.Heze) {
-		blk, err := decodeHezeBlockV4Response(data, isSSZ, payloadIncluded)
-		if err != nil {
-			return nil, nil, err
-		}
-		blk.BuilderUrl = builderUrl
-		return blk, nil, nil
+	var (
+		blk      *ethpb.GenericBeaconBlock
+		contents blockContents
+		err      error
+	)
+	switch header.Get(api.VersionHeader) {
+	case version.String(version.Heze):
+		blk, contents, err = decodeHezeBlockV4Response(data, isSSZ, payloadIncluded)
+	default:
+		blk, contents, err = decodeGloasBlockV4Response(data, isSSZ, payloadIncluded)
 	}
+	if err != nil {
+		return nil, nil, err
+	}
+	// The VC echoes this back when publishing so the winning builder gets the signed block.
+	blk.BuilderUrl = header.Get(api.BuilderUrlHeader)
+	return blk, contents, nil
+}
 
+// decodeGloasBlockV4Response decodes a Gloas block, and its contents when the payload is included, from a v4 response.
+func decodeGloasBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, blockContents, error) {
 	if isSSZ {
 		if payloadIncluded {
 			contents := &ethpb.BeaconBlockContentsGloas{}
 			if err := contents.UnmarshalSSZ(data); err != nil {
 				return nil, nil, fmt.Errorf("contents unmarshal SSZ: %w", err)
 			}
-
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: contents.Block}, BuilderUrl: builderUrl}, contents, nil
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: contents.Block}}, contents, nil
 		}
-
 		block := &ethpb.BeaconBlockGloas{}
 		if err := block.UnmarshalSSZ(data); err != nil {
 			return nil, nil, fmt.Errorf("block unmarshal SSZ: %w", err)
 		}
-
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: block}, BuilderUrl: builderUrl}, nil, nil
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: block}}, nil, nil
 	}
-
-	// JSON, payload not included: parse the bare block.
 	resp := structs.ProduceBlockV4Response{}
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, nil, fmt.Errorf("json unmarshal: %w", err)
 	}
-
 	block := &structs.BeaconBlockGloas{}
 	if err := json.Unmarshal(resp.Data, block); err != nil {
 		return nil, nil, fmt.Errorf("json unmarshal: %w", err)
 	}
-
 	blk, err := block.ToGeneric()
 	if err != nil {
 		return nil, nil, fmt.Errorf("to generic: %w", err)
 	}
-	blk.BuilderUrl = builderUrl
-
 	return blk, nil, nil
 }
 
-// decodeHezeBlockV4Response decodes a bare Heze block from a v4 response.
-func decodeHezeBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, error) {
-	if payloadIncluded {
-		return nil, errors.New("v4 payload-included responses are not supported for heze")
-	}
+// decodeHezeBlockV4Response decodes a Heze block, and its contents when the payload is included, from a v4 response.
+func decodeHezeBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, blockContents, error) {
 	if isSSZ {
+		if payloadIncluded {
+			contents := &ethpb.BeaconBlockContentsHeze{}
+			if err := contents.UnmarshalSSZ(data); err != nil {
+				return nil, nil, fmt.Errorf("contents unmarshal SSZ: %w", err)
+			}
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: contents.Block}}, contents, nil
+		}
 		block := &ethpb.BeaconBlockHeze{}
 		if err := block.UnmarshalSSZ(data); err != nil {
-			return nil, fmt.Errorf("block unmarshal SSZ: %w", err)
+			return nil, nil, fmt.Errorf("block unmarshal SSZ: %w", err)
 		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: block}}, nil
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: block}}, nil, nil
 	}
 	resp := structs.ProduceBlockV4Response{}
 	if err := json.Unmarshal(data, &resp); err != nil {
-		return nil, fmt.Errorf("json unmarshal: %w", err)
+		return nil, nil, fmt.Errorf("json unmarshal: %w", err)
 	}
 	block := &structs.BeaconBlockHeze{}
 	if err := json.Unmarshal(resp.Data, block); err != nil {
-		return nil, fmt.Errorf("json unmarshal: %w", err)
+		return nil, nil, fmt.Errorf("json unmarshal: %w", err)
 	}
 	blk, err := block.ToGeneric()
 	if err != nil {
-		return nil, fmt.Errorf("to generic: %w", err)
+		return nil, nil, fmt.Errorf("to generic: %w", err)
 	}
-	return blk, nil
+	return blk, nil, nil
 }
 
 // sszBlockCodec defines SSZ unmarshalers for a fork's block and blinded block types.

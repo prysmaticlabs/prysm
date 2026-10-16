@@ -620,6 +620,224 @@ func (c *BeaconBlockBodyHeze) ProgressiveHashTreeRootWith(hh *ssz.Hasher) (err e
 	return nil
 }
 
+func (c *BeaconBlockContentsHeze) SizeSSZ() int {
+	size := 16
+	if c.Block == nil {
+		c.Block = new(BeaconBlockHeze)
+	}
+	size += c.Block.SizeSSZ()
+	if c.ExecutionPayloadEnvelope == nil {
+		c.ExecutionPayloadEnvelope = new(ExecutionPayloadEnvelope)
+	}
+	size += c.ExecutionPayloadEnvelope.SizeSSZ()
+	size += len(c.KzgProofs) * 48
+	size += len(c.Blobs) * 131072
+	return size
+}
+
+func (c *BeaconBlockContentsHeze) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, c.SizeSSZ())
+	return c.MarshalSSZTo(buf[:0])
+}
+
+func (c *BeaconBlockContentsHeze) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := 16
+
+	// Field 0: Block
+	if c.Block == nil {
+		c.Block = new(BeaconBlockHeze)
+	}
+	dst = ssz.WriteOffset(dst, offset)
+	offset += c.Block.SizeSSZ()
+
+	// Field 1: ExecutionPayloadEnvelope
+	if c.ExecutionPayloadEnvelope == nil {
+		c.ExecutionPayloadEnvelope = new(ExecutionPayloadEnvelope)
+	}
+	dst = ssz.WriteOffset(dst, offset)
+	offset += c.ExecutionPayloadEnvelope.SizeSSZ()
+
+	// Field 2: KzgProofs
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.KzgProofs) * 48
+
+	// Field 3: Blobs
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.Blobs) * 131072
+
+	// Field 0: Block
+	if dst, err = c.Block.MarshalSSZTo(dst); err != nil {
+		return nil, fmt.Errorf("Block: %w", err)
+	}
+
+	// Field 1: ExecutionPayloadEnvelope
+	if dst, err = c.ExecutionPayloadEnvelope.MarshalSSZTo(dst); err != nil {
+		return nil, fmt.Errorf("ExecutionPayloadEnvelope: %w", err)
+	}
+
+	// Field 2: KzgProofs
+	if len(c.KzgProofs) > 33554432 {
+		return nil, ssz.ErrListTooBig
+	}
+	for _, o := range c.KzgProofs {
+		if len(o) != 48 {
+			return nil, ssz.ErrBytesLength
+		}
+		dst = append(dst, o...)
+	}
+
+	// Field 3: Blobs
+	if len(c.Blobs) > 4096 {
+		return nil, ssz.ErrListTooBig
+	}
+	for _, o := range c.Blobs {
+		if len(o) != 131072 {
+			return nil, ssz.ErrBytesLength
+		}
+		dst = append(dst, o...)
+	}
+	return dst, err
+}
+
+func (c *BeaconBlockContentsHeze) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 16 {
+		return ssz.ErrSize
+	}
+
+	sszVarOffset0 := ssz.ReadOffset(buf[0:4]) // c.Block
+	if sszVarOffset0 != 16 {
+		return ssz.ErrInvalidVariableOffset
+	}
+	if sszVarOffset0 > size {
+		return ssz.ErrOffset
+	}
+	sszVarOffset1 := ssz.ReadOffset(buf[4:8]) // c.ExecutionPayloadEnvelope
+	if sszVarOffset1 > size || sszVarOffset1 < sszVarOffset0 {
+		return ssz.ErrOffset
+	}
+	sszVarOffset2 := ssz.ReadOffset(buf[8:12]) // c.KzgProofs
+	if sszVarOffset2 > size || sszVarOffset2 < sszVarOffset1 {
+		return ssz.ErrOffset
+	}
+	sszVarOffset3 := ssz.ReadOffset(buf[12:16]) // c.Blobs
+	if sszVarOffset3 > size || sszVarOffset3 < sszVarOffset2 {
+		return ssz.ErrOffset
+	}
+	sszSlice0 := buf[sszVarOffset0:sszVarOffset1] // c.Block
+	sszSlice1 := buf[sszVarOffset1:sszVarOffset2] // c.ExecutionPayloadEnvelope
+	sszSlice2 := buf[sszVarOffset2:sszVarOffset3] // c.KzgProofs
+	sszSlice3 := buf[sszVarOffset3:]              // c.Blobs
+
+	// Field 0: Block
+	c.Block = new(BeaconBlockHeze)
+	if err = c.Block.UnmarshalSSZ(sszSlice0); err != nil {
+		return fmt.Errorf("Block: %w", err)
+	}
+
+	// Field 1: ExecutionPayloadEnvelope
+	c.ExecutionPayloadEnvelope = new(ExecutionPayloadEnvelope)
+	if err = c.ExecutionPayloadEnvelope.UnmarshalSSZ(sszSlice1); err != nil {
+		return fmt.Errorf("ExecutionPayloadEnvelope: %w", err)
+	}
+
+	// Field 2: KzgProofs
+	{
+		if len(sszSlice2)%48 != 0 {
+			return fmt.Errorf("misaligned bytes: c.KzgProofs length is %d, which is not a multiple of 48: %w", len(sszSlice2), ssz.ErrIncorrectListSize)
+		}
+		numElem := len(sszSlice2) / 48
+		if numElem > 33554432 {
+			return fmt.Errorf("ssz-max exceeded: c.KzgProofs has %d elements, ssz-max is 33554432: %w", numElem, ssz.ErrListTooBig)
+		}
+		c.KzgProofs = make([][]byte, numElem)
+		for i := 0; i < numElem; i++ {
+			var tmp []byte
+
+			tmpSlice := sszSlice2[i*48 : (1+i)*48]
+			tmp = make([]byte, 0, 48)
+			tmp = append(tmp, tmpSlice...)
+			c.KzgProofs[i] = tmp
+		}
+	}
+
+	// Field 3: Blobs
+	{
+		if len(sszSlice3)%131072 != 0 {
+			return fmt.Errorf("misaligned bytes: c.Blobs length is %d, which is not a multiple of 131072: %w", len(sszSlice3), ssz.ErrIncorrectListSize)
+		}
+		numElem := len(sszSlice3) / 131072
+		if numElem > 4096 {
+			return fmt.Errorf("ssz-max exceeded: c.Blobs has %d elements, ssz-max is 4096: %w", numElem, ssz.ErrListTooBig)
+		}
+		c.Blobs = make([][]byte, numElem)
+		for i := 0; i < numElem; i++ {
+			var tmp []byte
+
+			tmpSlice := sszSlice3[i*131072 : (1+i)*131072]
+			tmp = make([]byte, 0, 131072)
+			tmp = append(tmp, tmpSlice...)
+			c.Blobs[i] = tmp
+		}
+	}
+	return err
+}
+
+func (c *BeaconBlockContentsHeze) HashTreeRoot() ([32]byte, error) {
+	hh := ssz.DefaultHasherPool.Get()
+	if err := c.HashTreeRootWith(hh); err != nil {
+		ssz.DefaultHasherPool.Put(hh)
+		return [32]byte{}, err
+	}
+	root, err := hh.HashRoot()
+	ssz.DefaultHasherPool.Put(hh)
+	return root, err
+}
+
+func (c *BeaconBlockContentsHeze) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+	// Field 0: Block
+	if err := c.Block.HashTreeRootWith(hh); err != nil {
+		return fmt.Errorf("Block: %w", err)
+	}
+	// Field 1: ExecutionPayloadEnvelope
+	if err := c.ExecutionPayloadEnvelope.HashTreeRootWith(hh); err != nil {
+		return fmt.Errorf("ExecutionPayloadEnvelope: %w", err)
+	}
+	// Field 2: KzgProofs
+	{
+		if len(c.KzgProofs) > 33554432 {
+			return ssz.ErrListTooBig
+		}
+		subIndx := hh.Index()
+		for _, o := range c.KzgProofs {
+			if len(o) != 48 {
+				return ssz.ErrBytesLength
+			}
+			hh.PutBytes(o)
+		}
+		hh.MerkleizeWithMixin(subIndx, uint64(len(c.KzgProofs)), 33554432)
+	}
+	// Field 3: Blobs
+	{
+		if len(c.Blobs) > 4096 {
+			return ssz.ErrListTooBig
+		}
+		subIndx := hh.Index()
+		for _, o := range c.Blobs {
+			if len(o) != 131072 {
+				return ssz.ErrBytesLength
+			}
+			hh.PutBytes(o)
+		}
+		hh.MerkleizeWithMixin(subIndx, uint64(len(c.Blobs)), 4096)
+	}
+	hh.Merkleize(indx)
+	return nil
+}
+
 func (c *BeaconBlockHeze) SizeSSZ() int {
 	size := 84
 	if c.Body == nil {
