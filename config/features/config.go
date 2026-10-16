@@ -50,8 +50,10 @@ type Flags struct {
 	DisableDutiesV2                     bool // DisableDutiesV2 sets validator client to use the get Duties endpoint
 	EnableWeb                           bool // EnableWeb enables the webui on the validator client
 	EnableStateDiff                     bool // EnableStateDiff enables the experimental state diff feature for the beacon node.
+	EnableArchive                       bool // EnableArchive backfills blocks to the archive origin and regenerates all historical states into the state-diff tree.
 	ReorgLatePayloads                   bool // ReorgLatePayloads enables reorging late payloads in the beacon node.
 	SubmitBlacklistedBuilderBids        bool // SubmitBlacklistedBuilderBids skips the circuit breaker check when submitting a signed execution payload bid.
+	DisableBuilderRelayCircuitBreaker   bool // DisableBuilderRelayCircuitBreaker stops the circuit breaker from tracking and banning direct connection endpoints.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -179,7 +181,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	warnDeprecationUpcoming(ctx)
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(devModeFlag.Name) {
+	if ctx.Bool(DevModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
 	if err := configureTestnet(ctx); err != nil {
@@ -295,7 +297,14 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableTrackEquivocations)
 		cfg.TrackEquivocations = false
 	}
-	if ctx.IsSet(EnableStateDiff.Name) {
+	if ctx.Bool(EnableArchive.Name) {
+		logEnabled(EnableArchive)
+		cfg.EnableArchive = true
+	}
+	if ctx.IsSet(EnableStateDiff.Name) || cfg.EnableArchive {
+		if cfg.EnableArchive && !ctx.IsSet(EnableStateDiff.Name) {
+			log.Infof("--%s implies --%s", EnableArchive.Name, EnableStateDiff.Name)
+		}
 		logEnabled(EnableStateDiff)
 		cfg.EnableStateDiff = true
 
@@ -311,6 +320,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(submitBlacklistedBuilderBids.Name) {
 		logEnabled(submitBlacklistedBuilderBids)
 		cfg.SubmitBlacklistedBuilderBids = true
+	}
+	if ctx.Bool(disableBuilderRelayCircuitBreaker.Name) {
+		logEnabled(disableBuilderRelayCircuitBreaker)
+		cfg.DisableBuilderRelayCircuitBreaker = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
@@ -361,7 +374,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 		cfg.EnableMinimalSlashingProtection = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
-		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
 	}
 	if ctx.Bool(EnableBeaconRESTApi.Name) || ctx.IsSet(validatorflags.BeaconRESTApiProviderFlag.Name) {

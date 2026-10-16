@@ -184,7 +184,7 @@ func testSignedEnvelope(t *testing.T, blockRoot [32]byte, slot primitives.Slot, 
 				PrevRandao:    make([]byte, 32),
 				BaseFeePerGas: make([]byte, 32),
 				BlockHash:     blockHash,
-				Transactions:  [][]byte{},
+				Transactions:  &enginev1.ProgressiveTransactionList{},
 				Withdrawals:   []*enginev1.Withdrawal{},
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
@@ -346,7 +346,7 @@ func TestNotifyForkchoiceUpdateGloas_Valid(t *testing.T) {
 	blockHash := bytesutil.ToBytes32([]byte("hash1"))
 	attr := payloadattribute.EmptyWithVersion(version.Gloas)
 
-	retPid, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, attr)
+	retPid, _, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, attr)
 	require.NoError(t, err)
 	require.DeepEqual(t, pid, retPid)
 }
@@ -358,7 +358,7 @@ func TestNotifyForkchoiceUpdateGloas_Syncing(t *testing.T) {
 	ctx := t.Context()
 
 	blockHash := bytesutil.ToBytes32([]byte("hash1"))
-	_, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
+	_, _, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
 	require.NoError(t, err)
 }
 
@@ -369,7 +369,7 @@ func TestNotifyForkchoiceUpdateGloas_Invalid(t *testing.T) {
 	ctx := t.Context()
 
 	blockHash := bytesutil.ToBytes32([]byte("hash1"))
-	_, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
+	_, _, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
 	require.Equal(t, true, IsInvalidBlock(err))
 }
 
@@ -378,7 +378,7 @@ func TestNotifyForkchoiceUpdateGloas_NilAttributes(t *testing.T) {
 	ctx := t.Context()
 
 	blockHash := bytesutil.ToBytes32([]byte("hash1"))
-	_, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
+	_, _, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
 	require.NoError(t, err)
 }
 
@@ -389,7 +389,7 @@ func TestNotifyForkchoiceUpdateGloas_UndefinedError(t *testing.T) {
 	ctx := t.Context()
 
 	blockHash := bytesutil.ToBytes32([]byte("hash1"))
-	_, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
+	_, _, err := s.notifyForkchoiceUpdateGloas(ctx, blockHash, nil)
 	require.ErrorIs(t, err, ErrUndefinedExecutionEngineError)
 }
 
@@ -627,8 +627,8 @@ func TestShouldBuildOnFull(t *testing.T) {
 		service, root, blockSlot := setup(t, "ptc-late")
 		recordTestPayloadArrival(t, service, root, blockSlot, true)
 		setTestPTCVotes(service, root, false, false)
-		assertBuild(t, service, root, blockSlot+1, true, false, "ptc voted payload missing")
-		assertBuild(t, service, root, blockSlot+1, false, false, "ptc voted payload missing")
+		assertBuild(t, service, root, blockSlot+1, true, false, "ptc voted against payload")
+		assertBuild(t, service, root, blockSlot+1, false, false, "ptc voted against payload")
 	})
 
 	t.Run("ptc certification keeps even a late payload", func(t *testing.T) {
@@ -668,7 +668,15 @@ func TestShouldBuildOnFull(t *testing.T) {
 		service, root, blockSlot := setup(t, "late-unavailable")
 		recordTestPayloadArrival(t, service, root, blockSlot, false)
 		setTestPTCVotes(service, root, true, false)
-		assertBuild(t, service, root, blockSlot+1, true, false, "arrived late, betting on empty")
+		assertBuild(t, service, root, blockSlot+1, true, false, "ptc voted against payload")
+	})
+
+	t.Run("ptc data unavailable verdict reorgs an early payload", func(t *testing.T) {
+		service, root, blockSlot := setup(t, "early-unavailable")
+		recordTestPayloadArrival(t, service, root, blockSlot, true)
+		setTestPTCVotes(service, root, true, false)
+		assertBuild(t, service, root, blockSlot+1, true, false, "ptc voted against payload")
+		assertBuild(t, service, root, blockSlot+1, false, false, "ptc voted against payload")
 	})
 }
 
