@@ -100,9 +100,10 @@ func BuilderPendingWithdrawalFromConsensus(w *ethpb.BuilderPendingWithdrawal) *B
 func PTCWindowFromConsensus(window []*ethpb.PTCs) [][]string {
 	out := make([][]string, len(window))
 	for i, ptc := range window {
-		out[i] = make([]string, len(ptc.GetValidatorIndices()))
-		for j, idx := range ptc.GetValidatorIndices() {
-			out[i][j] = fmt.Sprintf("%d", idx)
+		ptcValidatorIndices := ptc.GetValidatorIndices()
+		out[i] = make([]string, len(ptcValidatorIndices))
+		for j, idx := range ptcValidatorIndices {
+			out[i][j] = strconv.FormatUint(uint64(idx), 10)
 		}
 	}
 	return out
