@@ -21,7 +21,7 @@ import (
 func SignedBeaconBlockHezeFromConsensus(b *eth.SignedBeaconBlockHeze) (*SignedBeaconBlockHeze, error) {
 	block, err := BeaconBlockHezeFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Heze block: %w", err)
 	}
 	return &SignedBeaconBlockHeze{
 		Message:   block,
@@ -64,7 +64,7 @@ func (b *SignedBeaconBlockHeze) ToGeneric() (*eth.GenericSignedBeaconBlock, erro
 	}
 	signed, err := b.ToConsensus()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert block to consensus: %w", err)
 	}
 	return &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Heze{Heze: signed},

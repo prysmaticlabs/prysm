@@ -253,39 +253,39 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		switch rawType := states[i].ToProtoUnsafe().(type) {
 		case *ethpb.BeaconState:
 			if err := s.processPhase0(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Phase0 state: %w", err)
 			}
 		case *ethpb.BeaconStateAltair:
 			if err := s.processAltair(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Altair state: %w", err)
 			}
 		case *ethpb.BeaconStateBellatrix:
 			if err := s.processBellatrix(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Bellatrix state: %w", err)
 			}
 		case *ethpb.BeaconStateCapella:
 			if err := s.processCapella(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Capella state: %w", err)
 			}
 		case *ethpb.BeaconStateDeneb:
 			if err := s.processDeneb(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Deneb state: %w", err)
 			}
 		case *ethpb.BeaconStateElectra:
 			if err := s.processElectra(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Electra state: %w", err)
 			}
 		case *ethpb.BeaconStateFulu:
 			if err := s.processFulu(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Fulu state: %w", err)
 			}
 		case *ethpb.BeaconStateGloas:
 			if err := s.processGloas(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Gloas state: %w", err)
 			}
 		case *ethpb.BeaconStateHeze:
 			if err := s.processHeze(ctx, rawType, rt[:], bucket, valIdxBkt, validatorKeys[i]); err != nil {
-				return err
+				return fmt.Errorf("save Heze state: %w", err)
 			}
 		default:
 			return errors.New("invalid state type")
@@ -304,14 +304,14 @@ func (s *Store) processPhase0(ctx context.Context, pbState *ethpb.BeaconState, r
 	rawObj, err := pbState.MarshalSSZ()
 	pbState.Validators = valEntries
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal Phase0 state: %w", err)
 	}
 	encodedState := snappy.Encode(nil, rawObj)
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -321,14 +321,14 @@ func (s *Store) processAltair(ctx context.Context, pbState *ethpb.BeaconStateAlt
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Altair, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Altair state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -338,14 +338,14 @@ func (s *Store) processBellatrix(ctx context.Context, pbState *ethpb.BeaconState
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Bellatrix, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Bellatrix state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -355,14 +355,14 @@ func (s *Store) processCapella(ctx context.Context, pbState *ethpb.BeaconStateCa
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Capella, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Capella state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -372,14 +372,14 @@ func (s *Store) processDeneb(ctx context.Context, pbState *ethpb.BeaconStateDene
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Deneb, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Deneb state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -389,14 +389,14 @@ func (s *Store) processElectra(ctx context.Context, pbState *ethpb.BeaconStateEl
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Electra, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Electra state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -406,14 +406,14 @@ func (s *Store) processFulu(ctx context.Context, pbState *ethpb.BeaconStateFulu,
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Fulu, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Fulu state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -423,14 +423,14 @@ func (s *Store) processGloas(ctx context.Context, pbState *ethpb.BeaconStateGloa
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Gloas, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Gloas state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -440,14 +440,14 @@ func (s *Store) processHeze(ctx context.Context, pbState *ethpb.BeaconStateHeze,
 	pbState.Validators = make([]*ethpb.Validator, 0)
 	encodedState, err := encodeProtoWithKey(version.Heze, pbState)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode Heze state: %w", err)
 	}
 	if err := bucket.Put(rootHash, encodedState); err != nil {
-		return err
+		return fmt.Errorf("put state: %w", err)
 	}
 	pbState.Validators = valEntries
 	if err := valIdxBkt.Put(rootHash, validatorKey); err != nil {
-		return err
+		return fmt.Errorf("put validator index key: %w", err)
 	}
 	return nil
 }
@@ -615,7 +615,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode snappy state: %w", err)
 	}
 
 	switch {
@@ -626,7 +626,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -639,7 +639,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -652,7 +652,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -665,7 +665,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -678,7 +678,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -692,7 +692,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -706,7 +706,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -720,7 +720,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries
@@ -734,7 +734,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		}
 		ok, err := s.isStateValidatorMigrationOver()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("check state validator migration: %w", err)
 		}
 		if ok {
 			protoState.Validators = validatorEntries

@@ -377,7 +377,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = altair.UpgradeToAltair(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Altair: %w", err)
 		}
 		upgraded = true
 	}
@@ -386,7 +386,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = execution.UpgradeToBellatrix(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Bellatrix: %w", err)
 		}
 		upgraded = true
 	}
@@ -395,7 +395,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = capella.UpgradeToCapella(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Capella: %w", err)
 		}
 		upgraded = true
 	}
@@ -404,7 +404,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = deneb.UpgradeToDeneb(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Deneb: %w", err)
 		}
 		upgraded = true
 	}
@@ -413,7 +413,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = electra.UpgradeToElectra(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Electra: %w", err)
 		}
 		upgraded = true
 	}
@@ -422,7 +422,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = fulu.UpgradeToFulu(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Fulu: %w", err)
 		}
 		upgraded = true
 	}
@@ -431,7 +431,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = gloas.UpgradeToGloas(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Gloas: %w", err)
 		}
 		upgraded = true
 	}
@@ -440,7 +440,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		state, err = heze.UpgradeToHeze(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, err
+			return nil, fmt.Errorf("upgrade state to Heze: %w", err)
 		}
 		upgraded = true
 	}

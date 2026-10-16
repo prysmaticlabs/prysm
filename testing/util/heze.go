@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+
 	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
@@ -78,7 +80,7 @@ func NewBeaconStateHeze(options ...func(state *ethpb.BeaconStateHeze) error) (st
 
 	for _, opt := range options {
 		if err := opt(seed); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 

@@ -564,152 +564,152 @@ func (b *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	case version.Phase0:
 		pb := &eth.SignedBeaconBlock{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
-			return err
+			return fmt.Errorf("unmarshal SignedBeaconBlock: %w", err)
 		}
 		var err error
 		newBlock, err = initSignedBlockFromProtoPhase0(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize signed Phase0 block: %w", err)
 		}
 	case version.Altair:
 		pb := &eth.SignedBeaconBlockAltair{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
-			return err
+			return fmt.Errorf("unmarshal SignedBeaconBlockAltair: %w", err)
 		}
 		var err error
 		newBlock, err = initSignedBlockFromProtoAltair(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize signed Altair block: %w", err)
 		}
 	case version.Bellatrix:
 		if b.IsBlinded() {
 			pb := &eth.SignedBlindedBeaconBlockBellatrix{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBlindedBeaconBlockBellatrix: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedSignedBlockFromProtoBellatrix(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed blinded Bellatrix block: %w", err)
 			}
 		} else {
 			pb := &eth.SignedBeaconBlockBellatrix{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBeaconBlockBellatrix: %w", err)
 			}
 			var err error
 			newBlock, err = initSignedBlockFromProtoBellatrix(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed Bellatrix block: %w", err)
 			}
 		}
 	case version.Capella:
 		if b.IsBlinded() {
 			pb := &eth.SignedBlindedBeaconBlockCapella{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBlindedBeaconBlockCapella: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedSignedBlockFromProtoCapella(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed blinded Capella block: %w", err)
 			}
 		} else {
 			pb := &eth.SignedBeaconBlockCapella{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBeaconBlockCapella: %w", err)
 			}
 			var err error
 			newBlock, err = initSignedBlockFromProtoCapella(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed Capella block: %w", err)
 			}
 		}
 	case version.Deneb:
 		if b.IsBlinded() {
 			pb := &eth.SignedBlindedBeaconBlockDeneb{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBlindedBeaconBlockDeneb: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedSignedBlockFromProtoDeneb(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed blinded Deneb block: %w", err)
 			}
 		} else {
 			pb := &eth.SignedBeaconBlockDeneb{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBeaconBlockDeneb: %w", err)
 			}
 			var err error
 			newBlock, err = initSignedBlockFromProtoDeneb(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed Deneb block: %w", err)
 			}
 		}
 	case version.Electra:
 		if b.IsBlinded() {
 			pb := &eth.SignedBlindedBeaconBlockElectra{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBlindedBeaconBlockElectra: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedSignedBlockFromProtoElectra(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed blinded Electra block: %w", err)
 			}
 		} else {
 			pb := &eth.SignedBeaconBlockElectra{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBeaconBlockElectra: %w", err)
 			}
 			var err error
 			newBlock, err = initSignedBlockFromProtoElectra(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed Electra block: %w", err)
 			}
 		}
 	case version.Fulu:
 		if b.IsBlinded() {
 			pb := &eth.SignedBlindedBeaconBlockFulu{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBlindedBeaconBlockFulu: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedSignedBlockFromProtoFulu(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed blinded Fulu block: %w", err)
 			}
 		} else {
 			pb := &eth.SignedBeaconBlockFulu{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal SignedBeaconBlockFulu: %w", err)
 			}
 			var err error
 			newBlock, err = initSignedBlockFromProtoFulu(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize signed Fulu block: %w", err)
 			}
 		}
 	case version.Gloas:
 		pb := &eth.SignedBeaconBlockGloas{}
 		err := pb.UnmarshalSSZ(buf)
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal SignedBeaconBlockGloas: %w", err)
 		}
 		newBlock, err = initSignedBlockFromProtoGloas(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize signed Gloas block: %w", err)
 		}
 	case version.Heze:
 		pb := &eth.SignedBeaconBlockHeze{}
 		err := pb.UnmarshalSSZ(buf)
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal SignedBeaconBlockHeze: %w", err)
 		}
 		newBlock, err = initSignedBlockFromProtoHeze(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize signed Heze block: %w", err)
 		}
 	default:
 		return errIncorrectBlockVersion
@@ -1001,152 +1001,152 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 	case version.Phase0:
 		pb := &eth.BeaconBlock{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
-			return err
+			return fmt.Errorf("unmarshal BeaconBlock: %w", err)
 		}
 		var err error
 		newBlock, err = initBlockFromProtoPhase0(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize Phase0 block: %w", err)
 		}
 	case version.Altair:
 		pb := &eth.BeaconBlockAltair{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
-			return err
+			return fmt.Errorf("unmarshal BeaconBlockAltair: %w", err)
 		}
 		var err error
 		newBlock, err = initBlockFromProtoAltair(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize Altair block: %w", err)
 		}
 	case version.Bellatrix:
 		if b.IsBlinded() {
 			pb := &eth.BlindedBeaconBlockBellatrix{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BlindedBeaconBlockBellatrix: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedBlockFromProtoBellatrix(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize blinded Bellatrix block: %w", err)
 			}
 		} else {
 			pb := &eth.BeaconBlockBellatrix{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BeaconBlockBellatrix: %w", err)
 			}
 			var err error
 			newBlock, err = initBlockFromProtoBellatrix(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize Bellatrix block: %w", err)
 			}
 		}
 	case version.Capella:
 		if b.IsBlinded() {
 			pb := &eth.BlindedBeaconBlockCapella{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BlindedBeaconBlockCapella: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedBlockFromProtoCapella(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize blinded Capella block: %w", err)
 			}
 		} else {
 			pb := &eth.BeaconBlockCapella{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BeaconBlockCapella: %w", err)
 			}
 			var err error
 			newBlock, err = initBlockFromProtoCapella(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize Capella block: %w", err)
 			}
 		}
 	case version.Deneb:
 		if b.IsBlinded() {
 			pb := &eth.BlindedBeaconBlockDeneb{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BlindedBeaconBlockDeneb: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedBlockFromProtoDeneb(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize blinded Deneb block: %w", err)
 			}
 		} else {
 			pb := &eth.BeaconBlockDeneb{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BeaconBlockDeneb: %w", err)
 			}
 			var err error
 			newBlock, err = initBlockFromProtoDeneb(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize Deneb block: %w", err)
 			}
 		}
 	case version.Electra:
 		if b.IsBlinded() {
 			pb := &eth.BlindedBeaconBlockElectra{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BlindedBeaconBlockElectra: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedBlockFromProtoElectra(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize blinded Electra block: %w", err)
 			}
 		} else {
 			pb := &eth.BeaconBlockElectra{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BeaconBlockElectra: %w", err)
 			}
 			var err error
 			newBlock, err = initBlockFromProtoElectra(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize Electra block: %w", err)
 			}
 		}
 	case version.Fulu:
 		if b.IsBlinded() {
 			pb := &eth.BlindedBeaconBlockFulu{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BlindedBeaconBlockFulu: %w", err)
 			}
 			var err error
 			newBlock, err = initBlindedBlockFromProtoFulu(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize blinded Fulu block: %w", err)
 			}
 		} else {
 			pb := &eth.BeaconBlockElectra{}
 			if err := pb.UnmarshalSSZ(buf); err != nil {
-				return err
+				return fmt.Errorf("unmarshal BeaconBlockElectra for Fulu: %w", err)
 			}
 			var err error
 			newBlock, err = initBlockFromProtoFulu(pb)
 			if err != nil {
-				return err
+				return fmt.Errorf("initialize Fulu block: %w", err)
 			}
 		}
 	case version.Gloas:
 		pb := &eth.BeaconBlockGloas{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
-			return err
+			return fmt.Errorf("unmarshal BeaconBlockGloas: %w", err)
 		}
 		var err error
 		newBlock, err = initBlockFromProtoGloas(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize Gloas block: %w", err)
 		}
 	case version.Heze:
 		pb := &eth.BeaconBlockHeze{}
 		if err := pb.UnmarshalSSZ(buf); err != nil {
-			return err
+			return fmt.Errorf("unmarshal BeaconBlockHeze: %w", err)
 		}
 		var err error
 		newBlock, err = initBlockFromProtoHeze(pb)
 		if err != nil {
-			return err
+			return fmt.Errorf("initialize Heze block: %w", err)
 		}
 	default:
 		return errIncorrectBlockVersion

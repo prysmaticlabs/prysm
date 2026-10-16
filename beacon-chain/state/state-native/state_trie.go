@@ -150,7 +150,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -229,7 +229,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -309,7 +309,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -393,7 +393,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -476,7 +476,7 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -568,7 +568,7 @@ func InitializeFromProtoUnsafeElectra(st *ethpb.BeaconStateElectra) (state.Beaco
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -673,7 +673,7 @@ func InitializeFromProtoUnsafeFulu(st *ethpb.BeaconStateFulu) (state.BeaconState
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -783,7 +783,7 @@ func InitializeFromProtoUnsafeGloas(st *ethpb.BeaconStateGloas) (state.BeaconSta
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}
@@ -896,7 +896,7 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 		}
 		trie, err := fieldtrie.NewFieldTrie(f, dt, nil, 0, promotionThresholdByField[f])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create field trie for %s: %w", f, err)
 		}
 		b.stateFieldLeaves[f] = trie
 	}

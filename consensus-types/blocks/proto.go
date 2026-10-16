@@ -774,7 +774,7 @@ func initSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlo
 
 	block, err := initBlockFromProtoPhase0(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Phase0 block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Phase0,
@@ -791,7 +791,7 @@ func initBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 
 	body, err := initBlockBodyFromProtoPhase0(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Phase0 block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Phase0,
@@ -834,7 +834,7 @@ func initSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBea
 
 	block, err := initBlockFromProtoAltair(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Altair block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Altair,
@@ -851,7 +851,7 @@ func initBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 
 	body, err := initBlockBodyFromProtoAltair(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Altair block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Altair,
@@ -895,7 +895,7 @@ func initSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*Sig
 
 	block, err := initBlockFromProtoBellatrix(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Bellatrix block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Bellatrix,
@@ -929,7 +929,7 @@ func initBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, er
 
 	body, err := initBlockBodyFromProtoBellatrix(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Bellatrix block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Bellatrix,
@@ -1025,7 +1025,7 @@ func initSignedBlockFromProtoCapella(pb *eth.SignedBeaconBlockCapella) (*SignedB
 
 	block, err := initBlockFromProtoCapella(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Capella block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Capella,
@@ -1059,7 +1059,7 @@ func initBlockFromProtoCapella(pb *eth.BeaconBlockCapella) (*BeaconBlock, error)
 
 	body, err := initBlockBodyFromProtoCapella(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Capella block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Capella,
@@ -1157,7 +1157,7 @@ func initSignedBlockFromProtoDeneb(pb *eth.SignedBeaconBlockDeneb) (*SignedBeaco
 
 	block, err := initBlockFromProtoDeneb(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Deneb block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Deneb,
@@ -1191,7 +1191,7 @@ func initBlockFromProtoDeneb(pb *eth.BeaconBlockDeneb) (*BeaconBlock, error) {
 
 	body, err := initBlockBodyFromProtoDeneb(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Deneb block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Deneb,
@@ -1291,7 +1291,7 @@ func initSignedBlockFromProtoElectra(pb *eth.SignedBeaconBlockElectra) (*SignedB
 
 	block, err := initBlockFromProtoElectra(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Electra block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Electra,
@@ -1325,7 +1325,7 @@ func initBlockFromProtoElectra(pb *eth.BeaconBlockElectra) (*BeaconBlock, error)
 
 	body, err := initBlockBodyFromProtoElectra(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Electra block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Electra,
@@ -1435,7 +1435,7 @@ func initSignedBlockFromProtoFulu(pb *eth.SignedBeaconBlockFulu) (*SignedBeaconB
 
 	block, err := initBlockFromProtoFulu(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Fulu block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Fulu,
@@ -1469,7 +1469,7 @@ func initBlockFromProtoFulu(pb *eth.BeaconBlockElectra) (*BeaconBlock, error) {
 
 	body, err := initBlockBodyFromProtoFulu(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Fulu block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Fulu,
@@ -1579,7 +1579,7 @@ func initSignedBlockFromProtoGloas(pb *eth.SignedBeaconBlockGloas) (*SignedBeaco
 
 	block, err := initBlockFromProtoGloas(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Gloas block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Gloas,
@@ -1596,7 +1596,7 @@ func initBlockFromProtoGloas(pb *eth.BeaconBlockGloas) (*BeaconBlock, error) {
 
 	body, err := initBlockBodyFromProtoGloas(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Gloas block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Gloas,
@@ -1648,7 +1648,7 @@ func initSignedBlockFromProtoHeze(pb *eth.SignedBeaconBlockHeze) (*SignedBeaconB
 
 	block, err := initBlockFromProtoHeze(pb.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Heze block: %w", err)
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Heze,
@@ -1665,7 +1665,7 @@ func initBlockFromProtoHeze(pb *eth.BeaconBlockHeze) (*BeaconBlock, error) {
 
 	body, err := initBlockBodyFromProtoHeze(pb.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Heze block body: %w", err)
 	}
 	b := &BeaconBlock{
 		version:       version.Heze,
