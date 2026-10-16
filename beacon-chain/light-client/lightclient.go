@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	consensus_types "github.com/OffchainLabs/prysm/v7/consensus-types"
@@ -478,6 +477,10 @@ func CreateDefaultLightClientUpdate(attestedBlock interfaces.ReadOnlySignedBeaco
 	return light_client.NewWrappedUpdate(m)
 }
 
+// ComputeTransactionsRoot returns the payload's transactions root. Headers and
+// Gloas payloads (whose serialized transaction list hashes itself) provide it
+// directly; pre-Gloas full payloads report ErrUnsupportedField and the root is
+// computed from the transactions.
 func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 	transactionsRoot, err := payload.TransactionsRoot()
 	if errors.Is(err, consensus_types.ErrUnsupportedField) {
@@ -485,12 +488,7 @@ func ComputeTransactionsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get transactions")
 		}
-		var transactionsRootArray [32]byte
-		if progressiveExecutionPayloadSSZEnabled(payload) {
-			transactionsRootArray, err = wrappers.TransactionsRootProgressive(transactions)
-		} else {
-			transactionsRootArray, err = wrappers.TransactionsRoot(transactions)
-		}
+		transactionsRootArray, err := wrappers.TransactionsRoot(transactions)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get transactions root")
 		}
@@ -525,7 +523,7 @@ func ComputeWithdrawalsRoot(payload interfaces.ExecutionData) ([]byte, error) {
 }
 
 func progressiveExecutionPayloadSSZEnabled(payload interfaces.ExecutionData) bool {
-	if payload == nil || !features.ProgressiveSSZEnabled(version.Gloas) {
+	if payload == nil {
 		return false
 	}
 	_, ok := payload.Proto().(*enginev1.ExecutionPayloadGloas)

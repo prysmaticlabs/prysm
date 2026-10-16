@@ -794,6 +794,33 @@ func TestAppendBuildersSweepWithdrawals(t *testing.T) {
 		require.Equal(t, expectedNext, nextBuilderIndex)
 	})
 
+	t.Run("subtracts prior withdrawals for the builder", func(t *testing.T) {
+		epoch := primitives.Epoch(3)
+		st := &BeaconState{
+			slot: slots.UnsafeEpochStart(epoch),
+			builders: []*ethpb.Builder{
+				{ExecutionAddress: []byte{0x01}, Balance: 100, WithdrawableEpoch: epoch},
+				{ExecutionAddress: []byte{0x02}, Balance: 50, WithdrawableEpoch: epoch},
+			},
+		}
+		withdrawals := []*enginev1.Withdrawal{
+			{Index: 10, ValidatorIndex: primitives.BuilderIndex(0).ToValidatorIndex(), Address: []byte{0x01}, Amount: 30},
+			{Index: 11, ValidatorIndex: primitives.BuilderIndex(1).ToValidatorIndex(), Address: []byte{0x02}, Amount: 50},
+		}
+
+		nextIndex, nextBuilderIndex, err := st.appendBuildersSweepWithdrawals(12, &withdrawals)
+		require.NoError(t, err)
+		require.Equal(t, uint64(13), nextIndex)
+		require.Equal(t, primitives.BuilderIndex(0), nextBuilderIndex)
+		require.Equal(t, 3, len(withdrawals))
+		require.DeepEqual(t, &enginev1.Withdrawal{
+			Index:          12,
+			ValidatorIndex: primitives.BuilderIndex(0).ToValidatorIndex(),
+			Address:        []byte{0x01},
+			Amount:         70,
+		}, withdrawals[2])
+	})
+
 	t.Run("stops when payload limit reached", func(t *testing.T) {
 		cfg := params.BeaconConfig()
 		limit := cfg.MaxWithdrawalsPerPayload - 1
@@ -1116,6 +1143,30 @@ func TestPayloadCommitteeReadOnly(t *testing.T) {
 		ptc, err := st.PayloadCommitteeReadOnly(slotsPerEpoch + 3)
 		require.NoError(t, err)
 		require.Equal(t, primitives.ValidatorIndex(4), ptc[0]) // window[3] has marker 4
+	})
+
+	t.Run("rejects pre-gloas slot at the fork epoch", func(t *testing.T) {
+		st := &BeaconState{
+			version:   version.Gloas,
+			slot:      slotsPerEpoch * 2,
+			fork:      &ethpb.Fork{CurrentVersion: params.BeaconConfig().GloasForkVersion, Epoch: 2},
+			ptcWindow: testPTCWindow(t),
+		}
+		_, err := st.PayloadCommitteeReadOnly(slotsPerEpoch + 3)
+		require.ErrorContains(t, "precedes the gloas fork epoch", err)
+		_, err = st.PayloadCommitteeReadOnly(slotsPerEpoch * 2)
+		require.NoError(t, err)
+	})
+
+	t.Run("allows previous epoch once past the fork epoch", func(t *testing.T) {
+		st := &BeaconState{
+			version:   version.Gloas,
+			slot:      slotsPerEpoch * 2,
+			fork:      &ethpb.Fork{CurrentVersion: params.BeaconConfig().GloasForkVersion, Epoch: 1},
+			ptcWindow: testPTCWindow(t),
+		}
+		_, err := st.PayloadCommitteeReadOnly(slotsPerEpoch + 3)
+		require.NoError(t, err)
 	})
 
 	t.Run("error on nil ptc slot", func(t *testing.T) {

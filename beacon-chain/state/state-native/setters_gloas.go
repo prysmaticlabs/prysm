@@ -1,6 +1,7 @@
 package state_native
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -126,23 +127,35 @@ func (b *BeaconState) SetExecutionPayloadBid(h interfaces.ROExecutionPayloadBid)
 	return nil
 }
 
-// ClearBuilderPendingPayment clears a builder pending payment at the specified index.
-func (b *BeaconState) ClearBuilderPendingPayment(index primitives.Slot) error {
+// ClearBuilderPendingPaymentsForProposer empties every pending payment recorded for proposerIdx.
+func (b *BeaconState) ClearBuilderPendingPaymentsForProposer(proposerIdx primitives.ValidatorIndex) error {
 	if b.version < version.Gloas {
-		return errNotSupported("ClearBuilderPendingPayment", b.version)
+		return nil
 	}
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if uint64(index) >= uint64(len(b.builderPendingPayments)) {
-		return fmt.Errorf("builder pending payments index %d out of range (len=%d)", index, len(b.builderPendingPayments))
+	cleared := false
+	for i, payment := range b.builderPendingPayments {
+		if payment == nil || payment.ProposerIndex != proposerIdx || isEmptyBuilderPendingPayment(payment) {
+			continue
+		}
+		b.builderPendingPayments[i] = emptyBuilderPendingPayment
+		cleared = true
 	}
-
-	b.builderPendingPayments[index] = emptyBuilderPendingPayment
-
-	b.markFieldAsDirty(types.BuilderPendingPayments)
+	if cleared {
+		b.markFieldAsDirty(types.BuilderPendingPayments)
+	}
 	return nil
+}
+
+func isEmptyBuilderPendingPayment(p *ethpb.BuilderPendingPayment) bool {
+	if p.Weight != 0 || p.ProposerIndex != 0 || p.Withdrawal == nil {
+		return false
+	}
+	w := p.Withdrawal
+	return w.Amount == 0 && w.BuilderIndex == 0 && bytes.Equal(w.FeeRecipient, emptyBuilderPendingPayment.Withdrawal.FeeRecipient)
 }
 
 func (b *BeaconState) QueueBuilderPaymentForSlot(parentSlot primitives.Slot) error {
@@ -688,13 +701,13 @@ func decreaseBalanceWithVal(currBalance, delta primitives.Gwei) primitives.Gwei 
 // OnboardBuildersFromPendingDeposits applies any pending builder deposits at the fork.
 // It mutates the state and prunes pending deposits accordingly.
 //
-//	<spec fn="onboard_builders_from_pending_deposits" fork="gloas" hash="49853afd">
+//	<spec fn="onboard_builders_from_pending_deposits" fork="gloas" hash="e09a82dc">
 //	def onboard_builders_from_pending_deposits(state: BeaconState) -> None:
 //	    """
 //	    Applies any pending deposit for builders, effectively
 //	    onboarding builders at the fork.
 //	    """
-//	    validator_pubkeys = [v.pubkey for v in state.validators]
+//	    validator_pubkeys = [validator.pubkey for validator in state.validators]
 //
 //	    pending_deposits = PendingDeposits()
 //	    for deposit in state.pending_deposits:
@@ -706,7 +719,7 @@ func decreaseBalanceWithVal(currBalance, delta primitives.Gwei) primitives.Gwei 
 //	        # Note that applying a deposit below can mutate the state and
 //	        # may add a builder to the registry. For this reason, the list
 //	        # of builder pubkeys must be recomputed each iteration.
-//	        builder_pubkeys = [b.pubkey for b in state.builders]
+//	        builder_pubkeys = [builder.pubkey for builder in state.builders]
 //
 //	        # Deposits for non-builders stay in the pending queue. If there is a
 //	        # valid pending deposit for a new validator with this pubkey, keep this

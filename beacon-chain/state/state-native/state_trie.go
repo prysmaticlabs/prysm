@@ -12,7 +12,6 @@ import (
 	customtypes "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native/custom-types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stateutil"
-	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -24,7 +23,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/proto/prysm/wrappers"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
-	"google.golang.org/protobuf/proto"
 )
 
 // promotionThresholdByField defines absolute overlay promotion thresholds
@@ -45,47 +43,47 @@ const (
 	denebSharedFieldRefCount     = 7
 	electraSharedFieldRefCount   = 10
 	fuluSharedFieldRefCount      = 11
-	gloasSharedFieldRefCount     = 14 // Adds Builders + BuilderPendingWithdrawals + PTCWindow to the shared-ref set and LatestExecutionPayloadHeader is removed
+	gloasSharedFieldRefCount     = 13 // Fulu 11 + Builders, BuilderPendingWithdrawals, PTCWindow - LatestExecutionPayloadHeaderDeneb
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
 func InitializeFromProtoPhase0(st *ethpb.BeaconState) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafePhase0(proto.Clone(st).(*ethpb.BeaconState))
+	return InitializeFromProtoUnsafePhase0(st.Copy())
 }
 
 // InitializeFromProtoAltair the beacon state from a protobuf representation.
 func InitializeFromProtoAltair(st *ethpb.BeaconStateAltair) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeAltair(proto.Clone(st).(*ethpb.BeaconStateAltair))
+	return InitializeFromProtoUnsafeAltair(st.Copy())
 }
 
 // InitializeFromProtoBellatrix the beacon state from a protobuf representation.
 func InitializeFromProtoBellatrix(st *ethpb.BeaconStateBellatrix) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeBellatrix(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
+	return InitializeFromProtoUnsafeBellatrix(st.Copy())
 }
 
 // InitializeFromProtoCapella the beacon state from a protobuf representation.
 func InitializeFromProtoCapella(st *ethpb.BeaconStateCapella) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeCapella(proto.Clone(st).(*ethpb.BeaconStateCapella))
+	return InitializeFromProtoUnsafeCapella(st.Copy())
 }
 
 // InitializeFromProtoDeneb the beacon state from a protobuf representation.
 func InitializeFromProtoDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeDeneb(proto.Clone(st).(*ethpb.BeaconStateDeneb))
+	return InitializeFromProtoUnsafeDeneb(st.Copy())
 }
 
 // InitializeFromProtoElectra the beacon state from a protobuf representation.
 func InitializeFromProtoElectra(st *ethpb.BeaconStateElectra) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeElectra(proto.Clone(st).(*ethpb.BeaconStateElectra))
+	return InitializeFromProtoUnsafeElectra(st.Copy())
 }
 
 // InitializeFromProtoFulu the beacon state from a protobuf representation.
 func InitializeFromProtoFulu(st *ethpb.BeaconStateFulu) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeFulu(proto.Clone(st).(*ethpb.BeaconStateFulu))
+	return InitializeFromProtoUnsafeFulu(st.Copy())
 }
 
 // InitializeFromProtoGloas the beacon state from a protobuf representation.
 func InitializeFromProtoGloas(st *ethpb.BeaconStateGloas) (state.BeaconState, error) {
-	return InitializeFromProtoUnsafeGloas(proto.Clone(st).(*ethpb.BeaconStateGloas))
+	return InitializeFromProtoUnsafeGloas(st.Copy())
 }
 
 // InitializeFromProtoUnsafePhase0 directly uses the beacon state protobuf fields
@@ -984,7 +982,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if features.ProgressiveSSZEnabled(b.version) {
+	if b.version >= version.Gloas {
 		return b.progressiveHashTreeRoot(ctx)
 	}
 	b.progressiveMerkleTree = nil
@@ -1273,7 +1271,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	_, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
 	span.SetAttributes(trace.StringAttribute("field", field.String()))
-	progressiveSSZ := features.ProgressiveSSZEnabled(b.version)
+	progressiveSSZ := b.version >= version.Gloas
 
 	switch field {
 	case types.GenesisTime:

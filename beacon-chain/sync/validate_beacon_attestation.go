@@ -250,7 +250,7 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 	}
 	subnet := helpers.ComputeSubnetForAttestation(valCount, a)
 	format := p2p.GossipTypeMapping[reflect.TypeFor[*eth.Attestation]()]
-	digest := params.ForkDigest(slots.ToEpoch(a.GetData().Slot))
+	digest := s.currentForkDigest()
 	expected := fmt.Sprintf(format, digest, subnet) + s.cfg.p2p.Encoding().ProtocolSuffix()
 	if t != expected {
 		return pubsub.ValidationReject, errors.New("attestation's subnet does not match with pubsub topic")
@@ -390,9 +390,7 @@ func (s *Service) validateGloasCommitteeIndex(data *eth.AttestationData) (pubsub
 			return pubsub.ValidationReject, errors.New("execution payload for attested block is invalid")
 		}
 		// [IGNORE] If index == 1, the execution payload for the block must have been seen.
-		// Request the payload envelope if not yet available.
 		if !s.cfg.chain.HasFullNode(blockRoot) {
-			go s.requestPayloadEnvelope(blockRoot)
 			return pubsub.ValidationIgnore, errors.New("execution payload for attested block has not been seen")
 		}
 	}

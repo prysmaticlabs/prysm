@@ -6,9 +6,11 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -17,6 +19,20 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 )
+
+func (s *Service) isValidDependentRoot(root [32]byte, epoch primitives.Epoch) bool {
+	tips, _ := s.cfg.chain.ChainHeads()
+	for _, tip := range tips {
+		if tip == root {
+			continue
+		}
+		depRoot, err := s.cfg.chain.DependentRootForEpoch(tip, epoch)
+		if err == nil && depRoot == root {
+			return true
+		}
+	}
+	return false
+}
 
 func (s *Service) validateSignedProposerPreferencesGossip(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	if pid == s.cfg.p2p.PeerID() {
@@ -82,37 +98,77 @@ func (s *Service) validateSignedProposerPreferencesGossip(ctx context.Context, p
 	if dependentEpoch > 0 {
 		dependentEpoch--
 	}
+
+	// [REJECT] the dependent block is not after compute_shuffling_dependent_slot(proposal_epoch).
+	dependentSlot, err := slots.ShufflingDependentSlot(proposalEpoch)
+	if err != nil {
+		return pubsub.ValidationIgnore, errors.Wrap(err, "shuffling dependent slot")
+	}
+	blockSlot, err := s.cfg.chain.RecentBlockSlot(dependentRoot)
+	if err != nil {
+		return pubsub.ValidationIgnore, errors.Wrap(err, "dependent root slot")
+	}
+	if blockSlot > dependentSlot {
+		return pubsub.ValidationReject, errors.Errorf("dependent block slot %d is after shuffling dependent slot %d", blockSlot, dependentSlot)
+	}
+
 	headRoot, err := s.cfg.chain.HeadRoot(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, errors.Wrap(err, "head root")
 	}
-	expected, err := s.cfg.chain.DependentRootForEpoch(bytesutil.ToBytes32(headRoot), dependentEpoch)
+	headDependentRoot, err := s.cfg.chain.DependentRootForEpoch(bytesutil.ToBytes32(headRoot), dependentEpoch)
 	if err != nil {
 		return pubsub.ValidationIgnore, errors.Wrap(err, "head dependent root")
 	}
-	if expected != dependentRoot {
-		return pubsub.ValidationIgnore, errors.Errorf("dependent_root %#x does not match head %#x", dependentRoot, expected)
-	}
 
-	st, err := s.cfg.chain.HeadStateReadOnly(ctx)
-	if err != nil {
-		return pubsub.ValidationIgnore, errors.Wrap(err, "head state")
+	var st state.ReadOnlyBeaconState
+	stateRoot := headRoot
+	if headDependentRoot == dependentRoot {
+		st, err = s.cfg.chain.HeadStateReadOnly(ctx)
+		if err != nil {
+			return pubsub.ValidationIgnore, errors.Wrap(err, "head state")
+		}
+	} else {
+		// [IGNORE] is_valid_dependent_root(store, preferences.dependent_root, lookahead_epoch).
+		if !s.isValidDependentRoot(dependentRoot, dependentEpoch) {
+			return pubsub.ValidationIgnore, errors.Errorf("dependent_root %#x is not a possible dependent block", dependentRoot)
+		}
+		// Off the head branch the lookahead comes from the dependent block's own state, never from a regeneration.
+		st = s.cfg.stateGen.StateByRootIfCachedNoCopy(dependentRoot)
+		if st == nil {
+			return pubsub.ValidationIgnore, errors.Errorf("state for dependent_root %#x is not cached", dependentRoot)
+		}
+		stateRoot = dependentRoot[:]
 	}
 	stateEpoch := slots.ToEpoch(st.Slot())
+	if proposalEpoch > stateEpoch.AddEpoch(2) {
+		return pubsub.ValidationIgnore, errors.Errorf("state epoch %d cannot verify proposal epoch %d", stateEpoch, proposalEpoch)
+	}
 
-	// Sole permitted slot advance: next-epoch preference at the boundary before
-	// the head processes a block in the new epoch (proposalEpoch == stateEpoch+2).
+	// [REJECT] signed_proposer_preferences.signature is valid with respect to the
+	// validator's public key.
+	//
+	// The signature needs only the validator's public key and the genesis
+	// validators root, neither of which changes when slots are advanced, so it
+	// is checked against the un-advanced state. A forged message is rejected
+	// here before it can trigger the epoch transition below, and it is never
+	// cached, so this is the only place that bounds the work it can cause.
+	if err := v.VerifySignature(st); err != nil {
+		return pubsub.ValidationReject, err
+	}
+
+	// Sole permitted slot advance: up to the lookahead epoch boundary, which bounds
+	// the work a single message can cause. Only a message with a valid signature
+	// reaches this point.
 	if proposalEpoch == stateEpoch.AddEpoch(2) {
 		boundarySlot, err := slots.EpochStart(dependentEpoch)
 		if err != nil {
 			return pubsub.ValidationIgnore, errors.Wrap(err, "compute boundary slot")
 		}
-		st, err = transition.ProcessSlotsIfNeeded(ctx, st, headRoot, boundarySlot)
+		st, err = transition.ProcessSlotsIfNeeded(ctx, st, stateRoot, boundarySlot)
 		if err != nil {
-			return pubsub.ValidationIgnore, errors.Wrap(err, "advance head state to boundary")
+			return pubsub.ValidationIgnore, errors.Wrap(err, "advance state to boundary")
 		}
-	} else if proposalEpoch > stateEpoch.AddEpoch(1) {
-		return pubsub.ValidationIgnore, errors.Errorf("head epoch %d cannot verify proposal epoch %d", stateEpoch, proposalEpoch)
 	}
 
 	// [REJECT] is_valid_proposal_slot(state, preferences) returns True, where state
@@ -122,17 +178,12 @@ func (s *Service) validateSignedProposerPreferencesGossip(ctx context.Context, p
 		return pubsub.ValidationReject, err
 	}
 
-	// [REJECT] signed_proposer_preferences.signature is valid with respect to the
-	// validator's public key.
-	if err := v.VerifySignature(st); err != nil {
-		return pubsub.ValidationReject, err
-	}
-
 	s.proposerPreferencesCache.Add(cache.ProposerPreference{
 		DependentRoot:  dependentRoot,
 		ValidatorIndex: signedPreferences.Message.ValidatorIndex,
 		FeeRecipient:   bytesutil.ToBytes20(signedPreferences.Message.FeeRecipient),
 		TargetGasLimit: signedPreferences.Message.TargetGasLimit,
+		Signature:      bytesutil.ToBytes96(signedPreferences.Signature),
 	}, slot)
 	msg.ValidatorData = signedPreferences
 	return pubsub.ValidationAccept, nil

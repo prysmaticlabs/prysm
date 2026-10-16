@@ -21,7 +21,7 @@ import (
 // Actual state mutations are deferred to process_parent_execution_payload in
 // the next block.
 //
-//	<spec fn="verify_execution_payload_envelope" fork="gloas" hash="450a2b1c">
+//	<spec fn="verify_execution_payload_envelope" fork="gloas" hash="ba960f77">
 //	def verify_execution_payload_envelope(
 //	    state: BeaconState,
 //	    signed_envelope: SignedExecutionPayloadEnvelope,
@@ -34,7 +34,7 @@ import (
 //	    assert verify_execution_payload_envelope_signature(state, signed_envelope)
 //
 //	    # Verify consistency with the beacon block
-//	    header = copy(state.latest_block_header)
+//	    header = state.latest_block_header.copy()
 //	    header.state_root = hash_tree_root(state)
 //	    assert envelope.beacon_block_root == hash_tree_root(header)
 //	    assert envelope.parent_beacon_block_root == state.latest_block_header.parent_root
@@ -50,15 +50,18 @@ import (
 //	    # Verify the execution payload is valid
 //	    assert payload.slot_number == state.slot
 //	    assert payload.parent_hash == state.latest_block_hash
-//	    assert payload.timestamp == compute_time_at_slot(state, state.slot)
+//	    assert payload.timestamp == compute_time_at_slot(state.genesis_time, state.slot)
 //	    assert hash_tree_root(payload.withdrawals) == hash_tree_root(state.payload_expected_withdrawals)
+//
+//	    # Compute versioned hashes
+//	    versioned_hashes = VersionedHashes()
+//	    for commitment in bid.blob_kzg_commitments:
+//	        versioned_hashes.append(kzg_commitment_to_versioned_hash(commitment))
+//
 //	    assert execution_engine.verify_and_notify_new_payload(
 //	        NewPayloadRequest(
 //	            execution_payload=payload,
-//	            versioned_hashes=[
-//	                kzg_commitment_to_versioned_hash(commitment)
-//	                for commitment in bid.blob_kzg_commitments
-//	            ],
+//	            versioned_hashes=versioned_hashes,
 //	            parent_beacon_block_root=envelope.parent_beacon_block_root,
 //	            execution_requests=envelope.execution_requests,
 //	        )
@@ -108,13 +111,13 @@ func VerifyExecutionPayloadEnvelopeWithDeferredSig(
 // validatePayloadConsistency checks that the envelope and payload are consistent
 // with the beacon block header, the committed bid, and the current state.
 func validatePayloadConsistency(ctx context.Context, st state.BeaconState, envelope interfaces.ROExecutionPayloadEnvelope) error {
-	if envelope.Slot() != st.Slot() {
-		return errors.Errorf("envelope slot does not match state slot: envelope=%d, state=%d", envelope.Slot(), st.Slot())
-	}
-
 	header := st.LatestBlockHeader()
 	if header == nil {
 		return errors.New("latest block header is nil")
+	}
+	// Checkpoint states can advance across empty slots after their latest block.
+	if envelope.Slot() != header.Slot {
+		return errors.Errorf("envelope slot does not match latest block header slot: envelope=%d, block=%d", envelope.Slot(), header.Slot)
 	}
 	envelopeParent := envelope.ParentBeaconBlockRoot()
 	if !bytes.Equal(envelopeParent[:], header.ParentRoot) {
@@ -181,7 +184,7 @@ func validatePayloadConsistency(ctx context.Context, st state.BeaconState, envel
 		return errors.Errorf("payload parent hash does not match state latest block hash: payload=%#x, state=%#x", payload.ParentHash(), latestBlockHash)
 	}
 
-	t, err := slots.StartTime(st.GenesisTime(), st.Slot())
+	t, err := slots.StartTime(st.GenesisTime(), header.Slot)
 	if err != nil {
 		return errors.Wrap(err, "could not compute timestamp")
 	}

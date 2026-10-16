@@ -2,15 +2,20 @@ package blockchain
 
 import (
 	"testing"
+	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -129,6 +134,99 @@ func Test_setupForkchoiceTree_Head(t *testing.T) {
 	require.Equal(t, 3, service.cfg.ForkChoiceStore.NodeCount())
 }
 
+func gloasChainBlock(t *testing.T, slot primitives.Slot, parentRoot [32]byte, parentBlockHash, blockHash []byte) *forkchoicetypes.BlockAndCheckpoints {
+	t.Helper()
+	bid := util.HydrateSignedExecutionPayloadBid(&ethpb.SignedExecutionPayloadBid{
+		Message: &ethpb.ExecutionPayloadBid{
+			BlockHash:       blockHash,
+			ParentBlockHash: parentBlockHash,
+		},
+	})
+	blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+		Block: &ethpb.BeaconBlockGloas{
+			Slot:       slot,
+			ParentRoot: parentRoot[:],
+			Body:       &ethpb.BeaconBlockBodyGloas{SignedExecutionPayloadBid: bid},
+		},
+	})
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	return &forkchoicetypes.BlockAndCheckpoints{Block: roblock}
+}
+
+func gloasEnvelope(blockRoot [32]byte, blockHash []byte) *ethpb.SignedExecutionPayloadEnvelope {
+	return &ethpb.SignedExecutionPayloadEnvelope{
+		Message: &ethpb.ExecutionPayloadEnvelope{
+			Payload: &enginev1.ExecutionPayloadGloas{
+				ParentHash:    make([]byte, 32),
+				FeeRecipient:  make([]byte, 20),
+				StateRoot:     make([]byte, 32),
+				ReceiptsRoot:  make([]byte, 32),
+				LogsBloom:     make([]byte, 256),
+				PrevRandao:    make([]byte, 32),
+				BaseFeePerGas: make([]byte, 32),
+				BlockHash:     blockHash,
+			},
+			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
+			BeaconBlockRoot:       blockRoot[:],
+			ParentBeaconBlockRoot: make([]byte, 32),
+		},
+		Signature: make([]byte, 96),
+	}
+}
+
+func Test_resolveChainPayloadStatus(t *testing.T) {
+	hashA := bytesutil.PadTo([]byte("a"), 32)
+	hashB := bytesutil.PadTo([]byte("b"), 32)
+
+	newGloasChain := func(t *testing.T) []*forkchoicetypes.BlockAndCheckpoints {
+		first := gloasChainBlock(t, 1, [32]byte{}, make([]byte, 32), hashA)
+		second := gloasChainBlock(t, 2, first.Block.Root(), hashA, hashB)
+		return []*forkchoicetypes.BlockAndCheckpoints{first, second}
+	}
+
+	t.Run("last block payload in db", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		ctx := tr.ctx
+		chain := newGloasChain(t)
+		require.NoError(t, service.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, gloasEnvelope(chain[1].Block.Root(), hashB)))
+		service.resolveChainPayloadStatus(ctx, chain)
+		require.Equal(t, true, chain[0].HasPayload)
+		require.Equal(t, true, chain[1].HasPayload)
+	})
+
+	t.Run("last block payload not in db", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		chain := newGloasChain(t)
+		service.resolveChainPayloadStatus(tr.ctx, chain)
+		require.Equal(t, true, chain[0].HasPayload)
+		require.Equal(t, false, chain[1].HasPayload)
+	})
+
+	t.Run("pre-Gloas last block", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		blk := util.HydrateSignedBeaconBlockDeneb(&ethpb.SignedBeaconBlockDeneb{})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		chain := []*forkchoicetypes.BlockAndCheckpoints{{Block: roblock}}
+		service.resolveChainPayloadStatus(tr.ctx, chain)
+		require.Equal(t, false, chain[0].HasPayload)
+	})
+
+	t.Run("empty chain", func(t *testing.T) {
+		service, tr := minimalTestService(t)
+		service.resolveChainPayloadStatus(tr.ctx, nil)
+	})
+}
+
 // Regression test: the justified checkpoint in the DB references a root whose
 // block is absent (BeaconDB.Block returns nil, nil for it). Startup must fall
 // back to the finalized block as head instead of panicking on the nil block.
@@ -166,4 +264,55 @@ func Test_setupForkchoiceTree_MissingHeadBlock(t *testing.T) {
 	require.NoError(t, service.setupForkchoiceTree(st))
 	require.LogsContain(t, hook, "starting with finalized block as head")
 	require.Equal(t, 1, service.cfg.ForkChoiceStore.NodeCount())
+}
+
+func Test_setupForkchoice_UnfinalizedOrigin(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
+	const originEpoch = primitives.Epoch(100)
+	const justifiedEpoch = primitives.Epoch(10)
+
+	originSlot, err := slots.EpochStart(originEpoch)
+	require.NoError(t, err)
+	currentSlot, err := slots.EpochStart(originEpoch + 2)
+	require.NoError(t, err)
+	service.genesisTime = time.Now().Add(-params.SlotsDuration(currentSlot, params.BeaconConfig()))
+
+	st, _ := util.DeterministicGenesisState(t, 64)
+	require.NoError(t, st.SetSlot(originSlot))
+	require.NoError(t, st.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+		Epoch: justifiedEpoch,
+		Root:  bytesutil.PadTo([]byte("justified"), 32),
+	}))
+	require.NoError(t, st.SetFinalizedCheckpoint(&ethpb.Checkpoint{
+		Epoch: justifiedEpoch - 2,
+		Root:  bytesutil.PadTo([]byte("finalized"), 32),
+	}))
+
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = originSlot
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	originRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, originRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, originRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveOriginCheckpointBlockRoot(ctx, originRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: justifiedEpoch, Root: originRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: originEpoch, Root: originRoot[:]}))
+	service.originBlockRoot = originRoot
+
+	require.NoError(t, service.setupForkchoice(st))
+
+	head, err := service.cfg.ForkChoiceStore.Head(ctx)
+	require.NoError(t, err)
+	require.Equal(t, originRoot, head)
+
+	optimistic, err := service.cfg.ForkChoiceStore.IsOptimistic(originRoot)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
 }
