@@ -370,9 +370,10 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	var err error
 
 	slot := state.Slot()
+	cfg := params.BeaconConfig()
 	upgraded := false
 
-	if time.CanUpgradeToAltair(slot) {
+	if time.CanUpgradeTo(slot, cfg.AltairForkEpoch) {
 		state, err = altair.UpgradeToAltair(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -381,7 +382,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToBellatrix(slot) {
+	if time.CanUpgradeTo(slot, cfg.BellatrixForkEpoch) {
 		state, err = execution.UpgradeToBellatrix(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -390,7 +391,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToCapella(slot) {
+	if time.CanUpgradeTo(slot, cfg.CapellaForkEpoch) {
 		state, err = capella.UpgradeToCapella(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -399,7 +400,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToDeneb(slot) {
+	if time.CanUpgradeTo(slot, cfg.DenebForkEpoch) {
 		state, err = deneb.UpgradeToDeneb(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -408,7 +409,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToElectra(slot) {
+	if time.CanUpgradeTo(slot, cfg.ElectraForkEpoch) {
 		state, err = electra.UpgradeToElectra(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -417,7 +418,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToFulu(slot) {
+	if time.CanUpgradeTo(slot, cfg.FuluForkEpoch) {
 		state, err = fulu.UpgradeToFulu(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -426,7 +427,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToGloas(slot) {
+	if time.CanUpgradeTo(slot, cfg.GloasForkEpoch) {
 		state, err = gloas.UpgradeToGloas(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -435,7 +436,7 @@ func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconSta
 		upgraded = true
 	}
 
-	if time.CanUpgradeToHeze(slot) {
+	if time.CanUpgradeTo(slot, cfg.HezeForkEpoch) {
 		state, err = heze.UpgradeToHeze(state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
