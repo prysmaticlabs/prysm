@@ -317,7 +317,7 @@ func (s *Service) startDecoupled(ctx context.Context, tip, finalized [32]byte, v
 	return nil
 }
 
-// The first decoupled proposal needs an engine before any decoupled block exists, so the last pre-fork slot's 2Δ starts one from the legacy head with the canonical pre-fork chain as its nodes. AC messages begin at the fork, so a node synced by then has observed all of them since that slot's start and joins at the fork, a later activation observes a full slot first.
+// activateDecoupled switches fork choice to Goldilocks at 2Δ of the last pre-fork slot.
 func (s *Service) activateDecoupled(ctx context.Context, slot primitives.Slot) error {
 	cfg := params.BeaconConfig()
 	forkSlot, err := slots.EpochStart(cfg.DecoupledForkEpoch)

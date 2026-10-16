@@ -7,7 +7,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 )
 
-// Vote is an AC vote: validator, slot, head.
+// Vote is an individual AC head vote. The caller verifies its signature.
 type Vote struct {
 	Validator primitives.ValidatorIndex
 	Slot      primitives.Slot
@@ -47,7 +47,15 @@ type lock struct {
 	deadline time.Time
 }
 
-// Lock is a lock without tree pointers, for callers outside the store.
+// The duty inputs captured at their instants: the vote head at Δ, the FG source and head at the action slot's 2Δ.
+type duty struct {
+	voteSlot     primitives.Slot
+	vote         *Node
+	fgSlot       primitives.Slot
+	source, head *Node
+}
+
+// Lock is a copy of a stored lock.
 type Lock struct {
 	Root     [32]byte
 	Slot     primitives.Slot

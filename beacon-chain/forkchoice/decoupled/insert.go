@@ -66,3 +66,27 @@ func (st *Store) JustifiedHeight() primitives.Height { return st.hJ }
 
 // FinalizedHeight returns the FG height of accepted F.
 func (st *Store) FinalizedHeight() primitives.Height { return st.hF }
+
+// CommitteeSize returns the denominator for fast-lock and unlock thresholds.
+func (st *Store) CommitteeSize() uint64 { return st.committeeSize }
+
+// Joined reports whether observation began by the previous slot's start.
+func (st *Store) Joined(slot primitives.Slot) bool { return st.joined(slot) }
+
+// Voters counts distinct voters, including equivocators and votes for unknown blocks.
+func (st *Store) Voters(slot primitives.Slot) int {
+	if b := st.pool[slot]; b != nil {
+		return len(b.byValidator)
+	}
+	return 0
+}
+
+// Locks copies stored entries without filtering expiry or tree membership.
+// Call OnTick first to discard stale entries.
+func (st *Store) Locks() []Lock {
+	out := make([]Lock, 0, len(st.locks))
+	for _, l := range st.locks {
+		out = append(out, Lock{Root: l.block.Root, Slot: l.block.Slot, Deadline: l.deadline})
+	}
+	return out
+}

@@ -440,12 +440,20 @@ func (s *Service) validateStatusMessage(ctx context.Context, genericMsg any) err
 	if maxEpoch > 2 {
 		maxFinalizedEpoch = maxEpoch - 2
 	}
+	// Decoupled finalizes inside the current epoch.
+	if maxEpoch >= params.BeaconConfig().DecoupledForkEpoch {
+		maxFinalizedEpoch = maxEpoch
+	}
 	if msg.FinalizedEpoch > maxFinalizedEpoch {
 		return p2ptypes.ErrInvalidEpoch
 	}
 	// Exit early if the peer's finalized epoch
 	// is less than that of the remote peer's.
 	if finalizedEpoch < msg.FinalizedEpoch {
+		return nil
+	}
+	// A peer ahead within the same epoch finalized a block our fork choice still holds.
+	if maxEpoch >= params.BeaconConfig().DecoupledForkEpoch && s.cfg.chain.InForkchoice(bytesutil.ToBytes32(msg.FinalizedRoot)) {
 		return nil
 	}
 	finalizedAtGenesis := msg.FinalizedEpoch == 0
