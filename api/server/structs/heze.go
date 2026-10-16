@@ -40,3 +40,6 @@ func (s *SignedBeaconBlockHeze) MessageRawJson() ([]byte, error) {
 func (s *SignedBeaconBlockHeze) SigString() string {
 	return s.Signature
 }
+
+// BeaconStateHeze matches BeaconStateGloas until the Heze state diverges.
+type BeaconStateHeze BeaconStateGloas
