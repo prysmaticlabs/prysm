@@ -13,6 +13,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -70,6 +71,10 @@ func gloasBidClient(t *testing.T, status int, contentType string, body []byte) *
 }
 
 func TestClient_GetExecutionPayloadBid(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
 	ctx := t.Context()
 	slot := primitives.Slot(123)
 	var parentHash, parentRoot [32]byte
@@ -166,6 +171,23 @@ func TestClient_GetExecutionPayloadBid(t *testing.T) {
 		got, err := c.GetExecutionPayloadBid(dctx, slot, parentHash, parentRoot, pubkey, testBuilderRequestAuth())
 		require.NoError(t, err)
 		require.NotNil(t, got)
+	})
+
+	t.Run("heze slot sends heze consensus version", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.HezeForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.NoError(t, r.Body.Close())
+				require.Equal(t, "heze", r.Header.Get(api.VersionHeader))
+				return &http.Response{StatusCode: http.StatusNoContent, Header: http.Header{}, Body: io.NopCloser(bytes.NewReader(nil)), Request: r}, nil
+			}),
+		}
+		c := &Client{hc: hc, baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"}}
+		_, err := c.GetExecutionPayloadBid(ctx, slot, parentHash, parentRoot, pubkey, testBuilderRequestAuth())
+		require.NoError(t, err)
 	})
 
 	t.Run("unexpected content type errors with status and body", func(t *testing.T) {
