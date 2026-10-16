@@ -269,5 +269,6 @@ func (st *BeaconStateGloas) Copy() *BeaconStateGloas {
 	cp.LatestExecutionPayloadBid = st.LatestExecutionPayloadBid.Copy()
 	cp.PayloadExpectedWithdrawals = CopySlice(st.PayloadExpectedWithdrawals)
 	cp.PtcWindow = CopyPTCWindow(st.PtcWindow)
+	cp.ValidatorSweepThresholds = slices.Clone(st.ValidatorSweepThresholds)
 	return &cp
 }

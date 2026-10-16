@@ -422,6 +422,7 @@ func TestBeaconStateGloas_FieldParity(t *testing.T) {
 		"LatestExecutionPayloadBid *eth.ExecutionPayloadBid",
 		"PayloadExpectedWithdrawals []*enginev1.Withdrawal ssz-max",
 		"PtcWindow []*eth.PTCs ssz-size",
+		"ValidatorSweepThresholds []uint64 ssz-max",
 	})
 }
 

@@ -15,6 +15,7 @@ go_library(
         "payload_attestation.go",
         "pending_payment.go",
         "proposer_lookahead.go",
+        "sweep_threshold.go",
         "upgrade.go",
         "withdrawals.go",
     ],

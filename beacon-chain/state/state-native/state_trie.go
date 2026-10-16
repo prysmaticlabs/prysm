@@ -765,6 +765,7 @@ func InitializeFromProtoUnsafeGloas(st *ethpb.BeaconStateGloas) (state.BeaconSta
 	b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 	b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 	b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
+	b.validatorSweepThresholdsMultiValue = NewMultiValueSweepThresholds(st.ValidatorSweepThresholds)
 	b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, gloasSharedFieldRefCount)
 
 	for _, f := range gloasFields {
@@ -857,17 +858,18 @@ func (b *BeaconState) Copy() state.BeaconState {
 		ptcWindow:                 b.ptcWindow,
 
 		// Large arrays, increases over time.
-		balancesMultiValue:         b.balancesMultiValue,
-		historicalRoots:            b.historicalRoots,
-		historicalSummaries:        b.historicalSummaries,
-		validatorsMultiValue:       b.validatorsMultiValue,
-		previousEpochParticipation: b.previousEpochParticipation,
-		currentEpochParticipation:  b.currentEpochParticipation,
-		inactivityScoresMultiValue: b.inactivityScoresMultiValue,
-		pendingDeposits:            b.pendingDeposits,
-		pendingPartialWithdrawals:  b.pendingPartialWithdrawals,
-		pendingConsolidations:      b.pendingConsolidations,
-		builders:                   b.builders,
+		balancesMultiValue:                 b.balancesMultiValue,
+		historicalRoots:                    b.historicalRoots,
+		historicalSummaries:                b.historicalSummaries,
+		validatorsMultiValue:               b.validatorsMultiValue,
+		previousEpochParticipation:         b.previousEpochParticipation,
+		currentEpochParticipation:          b.currentEpochParticipation,
+		inactivityScoresMultiValue:         b.inactivityScoresMultiValue,
+		validatorSweepThresholdsMultiValue: b.validatorSweepThresholdsMultiValue,
+		pendingDeposits:                    b.pendingDeposits,
+		pendingPartialWithdrawals:          b.pendingPartialWithdrawals,
+		pendingConsolidations:              b.pendingConsolidations,
+		builders:                           b.builders,
 
 		// Everything else, too small to be concerned about, constant size.
 		genesisValidatorsRoot:               b.genesisValidatorsRoot,
@@ -910,6 +912,9 @@ func (b *BeaconState) Copy() state.BeaconState {
 	b.balancesMultiValue.Copy(b, dst)
 	if b.version > version.Phase0 {
 		b.inactivityScoresMultiValue.Copy(b, dst)
+	}
+	if b.version >= version.Gloas {
+		b.validatorSweepThresholdsMultiValue.Copy(b, dst)
 	}
 	b.validatorsMultiValue.Copy(b, dst)
 
@@ -1417,6 +1422,8 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.PayloadExpectedWithdrawalsRoot(b.version, b.payloadExpectedWithdrawals)
 	case types.PTCWindow:
 		return stateutil.PTCWindowRoot(b.ptcWindow)
+	case types.ValidatorSweepThresholds:
+		return stateutil.Uint64ListRoot(b.version, b.validatorSweepThresholdsVal())
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }
@@ -1493,6 +1500,9 @@ func finalizerCleanup(b *BeaconState) {
 	}
 	if b.inactivityScoresMultiValue != nil {
 		b.inactivityScoresMultiValue.Detach(b)
+	}
+	if b.validatorSweepThresholdsMultiValue != nil {
+		b.validatorSweepThresholdsMultiValue.Detach(b)
 	}
 	if b.validatorsMultiValue != nil {
 		b.validatorsMultiValue.Detach(b)

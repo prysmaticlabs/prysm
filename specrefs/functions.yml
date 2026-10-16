@@ -7344,7 +7344,7 @@
     - file: beacon-chain/core/helpers/validators.go
       search: func IsFullyWithdrawableValidator(
     - file: beacon-chain/core/helpers/validators.go
-      search: if fork >= version.Electra {
+      search: return val.HasExecutionWithdrawalCredentials() && val.WithdrawableEpoch() <= epoch
   spec: |
     <spec fn="is_fully_withdrawable_validator" fork="electra" hash="0db6f143">
     def is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: Epoch) -> bool:
