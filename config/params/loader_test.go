@@ -48,8 +48,7 @@ var placeholderFields = []string{
 	"INCLUSION_LIST_COMMITTEE_SIZE", // Configured as a constant in config/fieldparams/mainnet.go
 	"INCLUSION_LIST_SUBMISSION_DEADLINE",
 	"KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH", // Configured in proto/ssz_proto_library.bzl
-	"MIN_BLOB_DATA_RETENTION_MS",
-	"NUMBER_OF_COLUMNS", // Configured as a constant in config/fieldparams/mainnet.go
+	"NUMBER_OF_COLUMNS",                     // Configured as a constant in config/fieldparams/mainnet.go
 	"SLOT_DURATION_MS_EIP8198",
 	"TARGET_NUMBER_OF_PEERS",
 	"UPDATE_TIMEOUT",

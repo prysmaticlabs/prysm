@@ -90,7 +90,7 @@ func (v *validator) SubmitInclusionList(ctx context.Context, slot primitives.Slo
 		return
 	}
 
-	if !v.beforeSlotComponent(slot, params.BeaconConfig().InclusionListDueBPS) {
+	if !v.beforeSlotComponent(slot, params.InclusionListDue) {
 		validatorInclusionListSubmissionTotal.WithLabelValues(inclusionListSkippedLate).Inc()
 		log.WithField("slot", slot).Warn("Skipping inclusion list: past the inclusion list due point")
 		return

@@ -140,8 +140,7 @@ func (s *Service) OnInclusionList(ctx context.Context, signed *ethpb.SignedInclu
 		if err != nil {
 			return errors.Wrap(err, "time into slot")
 		}
-		cfg := params.BeaconConfig()
-		timely = intoSlot < cfg.SlotComponentDuration(cfg.InclusionListDueBPS)
+		timely = intoSlot < params.BeaconConfig().SlotComponentDurationAt(params.InclusionListDue, currentSlot)
 	}
 
 	s.cfg.InclusionListStore.Process(signed, timely)

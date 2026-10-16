@@ -99,6 +99,7 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
 	config.SlotDurationMilliseconds = 120
+	config.SlotDurationMillisHeze = 100
 	config.MinAttestationInclusionDelay = 26
 	config.SlotsPerEpoch = 27
 	config.MinSeedLookahead = 28
@@ -248,7 +249,7 @@ func TestGetSpec(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	data, ok := resp.Data.(map[string]any)
 	require.Equal(t, true, ok)
-	assert.Equal(t, 226, len(data))
+	assert.Equal(t, 228, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -364,6 +365,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "25", v)
 			case "SLOT_DURATION_MS":
 				assert.Equal(t, "120", v)
+			case "SLOT_DURATION_MS_HEZE":
+				assert.Equal(t, "100", v)
 			case "MIN_ATTESTATION_INCLUSION_DELAY":
 				assert.Equal(t, "26", v)
 			case "SLOTS_PER_EPOCH":
@@ -656,6 +659,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "8", v)
 			case "MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS":
 				assert.Equal(t, "4096", v)
+			case "MIN_BLOB_DATA_RETENTION_MS":
+				assert.Equal(t, "1572864000", v)
 			case "MAX_BLOB_COMMITMENTS_PER_BLOCK":
 				assert.Equal(t, "94", v)
 			case "MAX_REQUEST_PAYLOADS":
