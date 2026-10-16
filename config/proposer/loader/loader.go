@@ -715,12 +715,16 @@ func mergeCurrentProposerSettings(merged, loaded, db *validatorpb.ProposerSettin
 	}
 	merged.ProposerConfig = selectProposerConfig(db, loaded)
 
-	// Per-key gas limits, which the keymanager API also writes, keep winning over the flag.
 	if gasLimitOnly != nil {
 		if merged.DefaultConfig == nil {
 			merged.DefaultConfig = &validatorpb.ProposerOptionPayload{}
 		}
 		merged.DefaultConfig.GasLimit = *gasLimitOnly
+		for _, option := range merged.ProposerConfig {
+			if option != nil {
+				option.GasLimit = *gasLimitOnly
+			}
+		}
 	}
 
 	if builderFlagsSet && merged.DefaultConfig != nil && len(merged.DefaultConfig.Builder.GetBuilders()) > 0 {

@@ -502,7 +502,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "gas limit flag overrides the default gas limit in a v2 file",
+			name: "gas limit flag overrides every gas limit in a v2 file",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-v2-proposer-config.json",
@@ -520,7 +520,7 @@ func TestProposerSettingsLoader(t *testing.T) {
 							FeeRecipientConfig: &proposer.FeeRecipientConfig{
 								FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							},
-							GasLimit: 40000000,
+							GasLimit: 200000000,
 							BuilderConfig: &proposer.BuilderConfig{
 								MinBid: u64(500000000),
 								Builders: []*proposer.BuilderEntry{
@@ -2306,7 +2306,7 @@ func Test_mergeProposerSettings_CreatesDefaultFromGasLimitFlag(t *testing.T) {
 	require.Equal(t, gl, merged.DefaultConfig.Builder.GasLimit)
 }
 
-func Test_mergeProposerSettings_V2GasLimitSetsDefaultOnly(t *testing.T) {
+func Test_mergeProposerSettings_V2GasLimitCreatesDefault(t *testing.T) {
 	gl := validator.Uint64(12345678)
 	merged := mergeProposerSettings(
 		nil,
@@ -2497,7 +2497,7 @@ func Test_mergeProposerSettings_V2LoadedOverridesDB(t *testing.T) {
 	})
 }
 
-func Test_mergeProposerSettings_V2GasLimitKeepsPerKeyOptions(t *testing.T) {
+func Test_mergeProposerSettings_V2GasLimitOverridesOptions(t *testing.T) {
 	gl := validator.Uint64(12345678)
 	db := &validatorpb.ProposerSettingsPayload{
 		Version:       proposer.SchemaV2,
@@ -2508,7 +2508,7 @@ func Test_mergeProposerSettings_V2GasLimitKeepsPerKeyOptions(t *testing.T) {
 	}
 	merged := mergeProposerSettings(nil, db, &flagOptions{gasLimit: &gl})
 	require.Equal(t, gl, merged.DefaultConfig.GasLimit)
-	require.Equal(t, validator.Uint64(2), merged.ProposerConfig["0xkey"].GasLimit)
+	require.Equal(t, gl, merged.ProposerConfig["0xkey"].GasLimit)
 	require.IsNil(t, merged.DefaultConfig.Builder)
 }
 
