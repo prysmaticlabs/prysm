@@ -216,7 +216,6 @@ func (b *BeaconState) ToProtoUnsafe() any {
 			PendingConsolidations:         b.pendingConsolidations,
 		}
 	case version.Fulu:
-
 		return &ethpb.BeaconStateFulu{
 			GenesisTime:                   b.genesisTime,
 			GenesisValidatorsRoot:         gvrCopy[:],
@@ -258,7 +257,6 @@ func (b *BeaconState) ToProtoUnsafe() any {
 			ProposerLookahead:             b.proposerLookahead,
 		}
 	case version.Gloas:
-
 		return &ethpb.BeaconStateGloas{
 			GenesisTime:                   b.genesisTime,
 			GenesisValidatorsRoot:         gvrCopy[:],
@@ -308,7 +306,6 @@ func (b *BeaconState) ToProtoUnsafe() any {
 			PtcWindow:                     b.ptcWindow,
 		}
 	case version.Heze:
-
 		return &ethpb.BeaconStateHeze{
 			GenesisTime:                   b.genesisTime,
 			GenesisValidatorsRoot:         gvrCopy[:],
@@ -564,7 +561,6 @@ func (b *BeaconState) ToProto() any {
 			PendingConsolidations:         b.pendingConsolidationsVal(),
 		}
 	case version.Fulu:
-
 		return &ethpb.BeaconStateFulu{
 			GenesisTime:                   b.genesisTime,
 			GenesisValidatorsRoot:         gvrCopy[:],
@@ -606,7 +602,6 @@ func (b *BeaconState) ToProto() any {
 			ProposerLookahead:             b.proposerLookaheadVal(),
 		}
 	case version.Gloas:
-
 		return &ethpb.BeaconStateGloas{
 			GenesisTime:                   b.genesisTime,
 			GenesisValidatorsRoot:         gvrCopy[:],
@@ -656,7 +651,6 @@ func (b *BeaconState) ToProto() any {
 			PtcWindow:                     b.ptcWindowVal(),
 		}
 	case version.Heze:
-
 		return &ethpb.BeaconStateHeze{
 			GenesisTime:                   b.genesisTime,
 			GenesisValidatorsRoot:         gvrCopy[:],
