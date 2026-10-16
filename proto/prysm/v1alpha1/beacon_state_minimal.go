@@ -293,8 +293,7 @@ type BeaconStateGloas struct {
 	PtcWindow                     []*PTCs                `ssz-size:"24"`
 }
 
-// BeaconStateHeze is the Heze SSZ state. I
-// TODO(heze): It matches BeaconStateGloas until the Heze EIPs are implemented.
+// BeaconStateHeze is the Heze SSZ state.
 type BeaconStateHeze struct {
 	GenesisTime                   uint64
 	GenesisValidatorsRoot         []byte `ssz-size:"32"`

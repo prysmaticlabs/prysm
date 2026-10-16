@@ -255,7 +255,6 @@ func gloasGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execu
 }
 
 // hezeGenesisBlock is gloasGenesisBlock for a Heze state.
-// TODO(heze): Implement the Heze-specific genesis block logic if it differs from the Gloas genesis block.
 func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.ExecutionPayloadBid) *ethpb.BeaconBlockHeze {
 	g := gloasGenesisBlock(root, latestBid)
 	return &ethpb.BeaconBlockHeze{

@@ -10,7 +10,6 @@ import (
 )
 
 // UpgradeToHeze upgrades a Gloas state to a Heze state with the Heze fork version.
-// TODO(heze): Every field is copied as is, because the Heze state matches the Gloas state until the Heze EIPs are implemented.
 func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 	pre, err := state_native.ProtobufBeaconStateGloas(beaconState.ToProto())
 	if err != nil {

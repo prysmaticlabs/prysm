@@ -2,7 +2,6 @@ package structs
 
 import "encoding/json"
 
-// TODO(heze): BeaconBlockBodyHeze matches BeaconBlockBodyGloas until the Heze EIPs are implemented.
 type BeaconBlockBodyHeze struct {
 	RandaoReveal              string                        `json:"randao_reveal"`
 	Eth1Data                  *Eth1Data                     `json:"eth1_data"`

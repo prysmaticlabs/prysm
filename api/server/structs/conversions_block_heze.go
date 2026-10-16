@@ -16,7 +16,6 @@ import (
 
 // ----------------------------------------------------------------------------
 // Heze
-// TODO(heze): Implement the Heze-specific conversions between consensus and API server structs.
 // ----------------------------------------------------------------------------
 
 func SignedBeaconBlockHezeFromConsensus(b *eth.SignedBeaconBlockHeze) (*SignedBeaconBlockHeze, error) {

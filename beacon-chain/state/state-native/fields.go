@@ -141,7 +141,6 @@ func init() {
 	}
 	gloasFields = gloasProgressiveSchema.fields
 
-	// TODO(heze): Heze keeps the Gloas fields until EIP-8015 removes the eth1 fields; only the bid type changes.
 	hezeProgressiveSchema, err = newProgressiveStateFieldsSchema(
 		slices.Concat(
 			altairFields,

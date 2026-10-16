@@ -33,7 +33,6 @@ message BeaconBlockHeze {
 }
 
 // BeaconBlockBodyHeze represents the body of a beacon block in the Heze fork.
-// TODO(heze): It matches BeaconBlockBodyGloas until the Heze EIPs are implemented.
 message BeaconBlockBodyHeze {
   bytes randao_reveal = 1 [ (ethereum.eth.ext.ssz_size) = "96" ];
   Eth1Data eth1_data = 2;
