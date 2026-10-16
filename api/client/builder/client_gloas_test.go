@@ -15,6 +15,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
@@ -284,6 +285,27 @@ func TestClient_SubmitSignedBeaconBlock_SSZFallback(t *testing.T) {
 	require.NoError(t, c.SubmitSignedBeaconBlock(ctx, sb))
 	require.Equal(t, 2, reqCount)
 	require.Equal(t, true, c.sszRejected.Load())
+}
+
+func TestJSONSignedBeaconBlock(t *testing.T) {
+	gloas, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockGloas())
+	require.NoError(t, err)
+	heze, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockHeze())
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		name string
+		sb   interfaces.ReadOnlySignedBeaconBlock
+		into any
+	}{
+		{name: "gloas", sb: gloas, into: &structs.SignedBeaconBlockGloas{}},
+		{name: "heze", sb: heze, into: &structs.SignedBeaconBlockHeze{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := jsonSignedBeaconBlock(tc.sb)
+			require.NoError(t, err)
+			require.NoError(t, json.Unmarshal(body, tc.into))
+		})
+	}
 }
 
 func TestClient_SubmitBuilderPreferences_SSZFallback(t *testing.T) {

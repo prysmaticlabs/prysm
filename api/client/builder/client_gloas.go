@@ -180,11 +180,15 @@ func jsonSignedBeaconBlock(sb interfaces.ReadOnlySignedBeaconBlock) ([]byte, err
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get protobuf block")
 	}
-	gloasBlock, ok := pb.(*ethpb.SignedBeaconBlockGloas)
-	if !ok {
+	var jsonBlock any
+	switch b := pb.(type) {
+	case *ethpb.SignedBeaconBlockGloas:
+		jsonBlock, err = structs.SignedBeaconBlockGloasFromConsensus(b)
+	case *ethpb.SignedBeaconBlockHeze:
+		jsonBlock, err = structs.SignedBeaconBlockHezeFromConsensus(b)
+	default:
 		return nil, errors.Errorf("unexpected block type %T for builder json submission", pb)
 	}
-	jsonBlock, err := structs.SignedBeaconBlockGloasFromConsensus(gloasBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block for json encoding")
 	}
