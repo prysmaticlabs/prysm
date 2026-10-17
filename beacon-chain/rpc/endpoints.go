@@ -1241,6 +1241,7 @@ func (s *Service) prysmBeaconEndpoints(
 		TimeFetcher:           s.cfg.GenesisTimeFetcher,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		CanonicalHistory:      ch,
+		StateGen:              s.cfg.StateGen,
 		BeaconDB:              s.cfg.BeaconDB,
 		Stater:                stater,
 		Blocker:               blocker,
@@ -1253,6 +1254,16 @@ func (s *Service) prysmBeaconEndpoints(
 
 	const namespace = "prysm.beacon"
 	return []endpoint{
+		{
+			template: "/prysm/v1/beacon/decoupled/blocks/{block_id}",
+			name:     namespace + ".GetDecoupledBlockSummary",
+			middleware: []middleware.Middleware{
+				middleware.AcceptHeaderHandler([]string{api.JsonMediaType}),
+				middleware.AcceptEncodingHeaderHandler(),
+			},
+			handler: server.GetDecoupledBlockSummary,
+			methods: []string{http.MethodGet},
+		},
 		{
 			template: "/prysm/v1/beacon/weak_subjectivity",
 			name:     namespace + ".GetWeakSubjectivity",

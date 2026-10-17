@@ -16,6 +16,7 @@ type Server struct {
 	TimeFetcher           blockchain.TimeFetcher
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	CanonicalHistory      *stategen.CanonicalHistory
+	StateGen              stategen.StateManager
 	BeaconDB              beacondb.ReadOnlyDatabase
 	Stater                lookup.Stater
 	Blocker               lookup.Blocker

@@ -136,6 +136,35 @@ type DecoupledForkChoiceVoters struct {
 	Count string `json:"count"`
 }
 
+// GetDecoupledBlockSummaryResponse wraps a block summary.
+type GetDecoupledBlockSummaryResponse struct {
+	Data *DecoupledBlockSummary `json:"data"`
+}
+
+// DecoupledBlockSummary is a block's post-state FG values. J and F are the block's claim.
+type DecoupledBlockSummary struct {
+	Slot                string                             `json:"slot"`
+	Root                string                             `json:"root"`
+	Height              string                             `json:"height"`
+	Entry               *CheckpointDecoupled               `json:"entry"`
+	EntryDeferred       bool                               `json:"entry_deferred"`
+	TargetParticipation string                             `json:"target_participation"`
+	Progress            string                             `json:"progress"`
+	ValidatorCount      string                             `json:"validator_count"`
+	JustifiedHeight     string                             `json:"justified_height"`
+	Justified           *CheckpointDecoupled               `json:"justified"`
+	FinalizedHeight     string                             `json:"finalized_height"`
+	Finalized           *CheckpointDecoupled               `json:"finalized"`
+	PendingFinality     []*DecoupledPendingFinalitySummary `json:"pending_finality"`
+}
+
+// DecoupledPendingFinalitySummary is a pending finality pair.
+type DecoupledPendingFinalitySummary struct {
+	Height        string               `json:"height"`
+	Target        *CheckpointDecoupled `json:"target"`
+	Participation string               `json:"participation"`
+}
+
 type GetForkChoiceDumpV2Response struct {
 	JustifiedCheckpoint *Checkpoint              `json:"justified_checkpoint"`
 	FinalizedCheckpoint *Checkpoint              `json:"finalized_checkpoint"`
