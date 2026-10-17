@@ -48,6 +48,31 @@ type FastConfirmationEvent struct {
 	CurrentSlot string `json:"current_slot"`
 }
 
+// DecoupledEvent is the per-slot fork choice view.
+type DecoupledEvent struct {
+	Slot                string                `json:"slot"`
+	Joined              bool                  `json:"joined"`
+	HeadRoot            string                `json:"head_root"`
+	ConfirmedRoot       string                `json:"confirmed_root"`
+	LatestConfirmedRoot string                `json:"latest_confirmed_root"`
+	JustifiedRoot       string                `json:"justified_root"`
+	JustifiedSlot       string                `json:"justified_slot"`
+	JustifiedHeight     string                `json:"justified_height"`
+	FinalizedRoot       string                `json:"finalized_root"`
+	FinalizedSlot       string                `json:"finalized_slot"`
+	FinalizedHeight     string                `json:"finalized_height"`
+	MaxHeight           string                `json:"max_height"`
+	CommitteeSize       string                `json:"committee_size"`
+	Locks               []*DecoupledEventLock `json:"locks"`
+}
+
+// DecoupledEventLock is a lock.
+type DecoupledEventLock struct {
+	Root     string `json:"root"`
+	Slot     string `json:"slot"`
+	Deadline string `json:"deadline"`
+}
+
 type DataColumnGossipEvent struct {
 	Slot           string   `json:"slot"`
 	Index          string   `json:"index"`

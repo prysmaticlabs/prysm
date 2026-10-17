@@ -66,6 +66,8 @@ const (
 	PayloadAttributesTopic = "payload_attributes"
 	// FastConfirmationTopic is emitted after every run of the fast confirmation rule.
 	FastConfirmationTopic = "fast_confirmation"
+	// DecoupledTopic fires at 2Δ of every slot after the fork.
+	DecoupledTopic = "decoupled"
 	// BlobSidecarTopic represents a new blob sidecar event topic
 	BlobSidecarTopic = "blob_sidecar"
 	// ProposerSlashingTopic represents a new proposer slashing event topic
@@ -147,6 +149,7 @@ var stateFeedEventTopics = map[feed.EventType]string{
 	statefeed.ExecutionPayloadAvailable:   ExecutionPayloadAvailableTopic,
 	statefeed.ExecutionPayloadProcessed:   ExecutionPayloadTopic,
 	statefeed.FastConfirmation:            FastConfirmationTopic,
+	statefeed.DecoupledTick:               DecoupledTopic,
 }
 
 var topicsForStateFeed = topicsForFeed(stateFeedEventTopics)
@@ -513,6 +516,8 @@ func topicForEvent(event *feed.Event) string {
 		return ExecutionPayloadTopic
 	case *statefeed.FastConfirmationData:
 		return FastConfirmationTopic
+	case *statefeed.DecoupledTickData:
+		return DecoupledTopic
 	case *operation.ExecutionPayloadGossipReceivedData:
 		return ExecutionPayloadGossipTopic
 	default:
@@ -738,6 +743,33 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 				Block:       hexutil.Encode(v.BlockRoot[:]),
 				Slot:        fmt.Sprintf("%d", v.Slot),
 				CurrentSlot: fmt.Sprintf("%d", v.CurrentSlot),
+			})
+		}, nil
+	case *statefeed.DecoupledTickData:
+		return func() io.Reader {
+			locks := make([]*structs.DecoupledEventLock, len(v.Locks))
+			for i, l := range v.Locks {
+				locks[i] = &structs.DecoupledEventLock{
+					Root:     hexutil.Encode(l.Root[:]),
+					Slot:     fmt.Sprintf("%d", l.Slot),
+					Deadline: fmt.Sprintf("%d", l.Deadline.Unix()),
+				}
+			}
+			return jsonMarshalReader(eventName, &structs.DecoupledEvent{
+				Slot:                fmt.Sprintf("%d", v.Slot),
+				Joined:              v.Joined,
+				HeadRoot:            hexutil.Encode(v.HeadRoot[:]),
+				ConfirmedRoot:       hexutil.Encode(v.ConfirmedRoot[:]),
+				LatestConfirmedRoot: hexutil.Encode(v.LatestConfirmedRoot[:]),
+				JustifiedRoot:       hexutil.Encode(v.JustifiedRoot[:]),
+				JustifiedSlot:       fmt.Sprintf("%d", v.JustifiedSlot),
+				JustifiedHeight:     fmt.Sprintf("%d", v.JustifiedHeight),
+				FinalizedRoot:       hexutil.Encode(v.FinalizedRoot[:]),
+				FinalizedSlot:       fmt.Sprintf("%d", v.FinalizedSlot),
+				FinalizedHeight:     fmt.Sprintf("%d", v.FinalizedHeight),
+				MaxHeight:           fmt.Sprintf("%d", v.MaxHeight),
+				CommitteeSize:       fmt.Sprintf("%d", v.CommitteeSize),
+				Locks:               locks,
 			})
 		}, nil
 	case *statefeed.ExecutionPayloadProcessedData:

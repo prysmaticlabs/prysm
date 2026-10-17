@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//api:go_default_library",
         "//async/event:go_default_library",
+        "//beacon-chain/forkchoice/decoupled:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
     ],

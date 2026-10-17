@@ -5,6 +5,7 @@ package state
 
 import (
 	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/decoupled"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 )
@@ -40,6 +41,8 @@ const (
 	ExecutionPayloadProcessed
 	// FastConfirmation is sent after every run of the fast confirmation rule.
 	FastConfirmation
+	// DecoupledTick fires at 2Δ of every slot after the fork.
+	DecoupledTick
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.
@@ -71,6 +74,17 @@ type FastConfirmationData struct {
 	Slot        primitives.Slot
 	BlockRoot   [32]byte
 	CurrentSlot primitives.Slot
+}
+
+// DecoupledTickData is the store's accepted values, not a block's claim.
+type DecoupledTickData struct {
+	Slot                                                                       primitives.Slot
+	Joined                                                                     bool
+	HeadRoot, ConfirmedRoot, LatestConfirmedRoot, JustifiedRoot, FinalizedRoot [32]byte
+	JustifiedSlot, FinalizedSlot                                               primitives.Slot
+	JustifiedHeight, FinalizedHeight, MaxHeight                                primitives.Height
+	CommitteeSize                                                              uint64
+	Locks                                                                      []decoupled.Lock
 }
 
 // ExecutionPayloadProcessedData is the data sent with ExecutionPayloadProcessed events.
