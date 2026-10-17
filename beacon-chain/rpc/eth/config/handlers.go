@@ -196,6 +196,7 @@ func prepareConfigSpec() (map[string]any, error) {
 	data["MAX_PAYLOAD_ATTESTATIONS"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxPayloadAttestations)), "MAX_PAYLOAD_ATTESTATIONS")
 	data["BUILDER_REGISTRY_LIMIT"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.BuilderRegistryLimit)), "BUILDER_REGISTRY_LIMIT")
 	data["BUILDER_PENDING_WITHDRAWALS_LIMIT"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.BuilderPendingWithdrawalsLimit)), "BUILDER_PENDING_WITHDRAWALS_LIMIT")
+	data["MAX_PENDING_FINALITY"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxPendingFinality)), "MAX_PENDING_FINALITY")
 	// Gloas type-specific SSZ bounds.
 	data["MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxSignedAggregateAndProofSize)), "MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE")
 	data["MAX_ATTESTER_SLASHING_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxAttesterSlashingSize)), "MAX_ATTESTER_SLASHING_SIZE")
