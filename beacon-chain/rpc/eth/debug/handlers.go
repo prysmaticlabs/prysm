@@ -206,6 +206,10 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "debug.GetForkChoice")
 	defer span.End()
 
+	if d, ok := s.ForkchoiceFetcher.DecoupledForkChoiceDump(); ok {
+		httputil.WriteJson(w, decoupledForkChoiceResponse(d))
+		return
+	}
 	dump, err := s.ForkchoiceFetcher.ForkChoiceDump(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not get forkchoice dump: "+err.Error(), http.StatusInternalServerError)
@@ -253,6 +257,10 @@ func (s *Server) GetForkChoiceV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "debug.GetForkChoiceV2")
 	defer span.End()
 
+	if d, ok := s.ForkchoiceFetcher.DecoupledForkChoiceDump(); ok {
+		httputil.WriteJson(w, decoupledForkChoiceResponse(d))
+		return
+	}
 	dump, err := s.ForkchoiceFetcher.ForkChoiceDumpV2(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not get forkchoice dump: "+err.Error(), http.StatusInternalServerError)

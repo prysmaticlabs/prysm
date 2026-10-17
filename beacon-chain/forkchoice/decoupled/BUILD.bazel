@@ -4,6 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "confirmation.go",
+        "doc.go",
+        "dump.go",
         "filter.go",
         "forkchoice.go",
         "forkchoice_getters.go",

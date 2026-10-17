@@ -57,6 +57,85 @@ type ForkChoiceNodeExtraData struct {
 	Target                   string `json:"target"`
 }
 
+// DecoupledForkChoiceDumpResponse is the fork choice dump after the fork.
+type DecoupledForkChoiceDumpResponse struct {
+	JustifiedCheckpoint *Checkpoint                       `json:"justified_checkpoint"`
+	FinalizedCheckpoint *Checkpoint                       `json:"finalized_checkpoint"`
+	ForkChoiceNodes     []*DecoupledForkChoiceNode        `json:"fork_choice_nodes"`
+	ExtraData           *DecoupledForkChoiceDumpExtraData `json:"extra_data"`
+}
+
+// DecoupledForkChoiceNode is a block in the dump.
+type DecoupledForkChoiceNode struct {
+	Slot               string                            `json:"slot"`
+	BlockRoot          string                            `json:"block_root"`
+	ParentRoot         string                            `json:"parent_root"`
+	JustifiedEpoch     string                            `json:"justified_epoch"`
+	FinalizedEpoch     string                            `json:"finalized_epoch"`
+	Weight             string                            `json:"weight"`
+	Validity           string                            `json:"validity"`
+	ExecutionBlockHash string                            `json:"execution_block_hash"`
+	ExtraData          *DecoupledForkChoiceNodeExtraData `json:"extra_data"`
+}
+
+// DecoupledForkChoiceNodeExtraData is a node's heights, counts and flags.
+type DecoupledForkChoiceNodeExtraData struct {
+	TargetHeight    string `json:"target_height"`
+	TargetRoot      string `json:"target_root"`
+	JustifiedHeight string `json:"justified_height"`
+	JustifiedRoot   string `json:"justified_root"`
+	FinalizedHeight string `json:"finalized_height"`
+	FinalizedRoot   string `json:"finalized_root"`
+	Votes           string `json:"votes"`
+	SupportVotes    string `json:"support_votes"`
+	Viable          bool   `json:"viable"`
+	Confirmed       bool   `json:"confirmed"`
+	Locked          bool   `json:"locked"`
+	Processed       string `json:"processed"`
+}
+
+// DecoupledForkChoiceDumpExtraData is the store's head, confirmation, finality and locks.
+type DecoupledForkChoiceDumpExtraData struct {
+	Decoupled           bool                         `json:"decoupled"`
+	Joined              bool                         `json:"joined"`
+	Slot                string                       `json:"slot"`
+	RestartTime         string                       `json:"restart_time"`
+	HeadRoot            string                       `json:"head_root"`
+	ConfirmedRoot       string                       `json:"confirmed_root"`
+	LatestConfirmedRoot string                       `json:"latest_confirmed_root"`
+	JustifiedHeight     string                       `json:"justified_height"`
+	JustifiedSlot       string                       `json:"justified_slot"`
+	FinalizedHeight     string                       `json:"finalized_height"`
+	FinalizedSlot       string                       `json:"finalized_slot"`
+	MaxHeight           string                       `json:"max_height"`
+	FrameRoot           string                       `json:"frame_root"`
+	Floor               string                       `json:"floor"`
+	CommitteeSize       string                       `json:"committee_size"`
+	Locks               []*DecoupledForkChoiceLock   `json:"locks"`
+	FastConfirmed       []string                     `json:"fast_confirmed"`
+	Saved               []*DecoupledForkChoiceSaved  `json:"saved"`
+	Voters              []*DecoupledForkChoiceVoters `json:"voters"`
+}
+
+// DecoupledForkChoiceLock is a lock.
+type DecoupledForkChoiceLock struct {
+	Root     string `json:"root"`
+	Slot     string `json:"slot"`
+	Deadline string `json:"deadline"`
+}
+
+// DecoupledForkChoiceSaved is a slot's saved confirmation.
+type DecoupledForkChoiceSaved struct {
+	Slot string `json:"slot"`
+	Root string `json:"root"`
+}
+
+// DecoupledForkChoiceVoters is a slot's voter count.
+type DecoupledForkChoiceVoters struct {
+	Slot  string `json:"slot"`
+	Count string `json:"count"`
+}
+
 type GetForkChoiceDumpV2Response struct {
 	JustifiedCheckpoint *Checkpoint              `json:"justified_checkpoint"`
 	FinalizedCheckpoint *Checkpoint              `json:"finalized_checkpoint"`

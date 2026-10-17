@@ -783,6 +783,10 @@ func (s *ChainService) DecoupledFinalityData(primitives.Slot) (*ethpb.FinalityAt
 	return nil, false
 }
 
+func (s *ChainService) DecoupledForkChoiceDump() (*decoupled.Dump, bool) {
+	return nil, false
+}
+
 func (s *ChainService) ReceiveAvailableAttestation(context.Context, *ethpb.AvailableAttestationMessage) error {
 	return nil
 }

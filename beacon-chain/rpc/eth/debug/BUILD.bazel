@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "handlers.go",
+        "handlers_decoupled.go",
         "server.go",
     ],
     importpath = "github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/debug",
@@ -13,6 +14,7 @@ go_library(
         "//api/server/structs:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/forkchoice/decoupled:go_default_library",
         "//beacon-chain/rpc/core:go_default_library",
         "//beacon-chain/rpc/eth/helpers:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
@@ -25,6 +27,7 @@ go_library(
         "//monitoring/tracing/trace:go_default_library",
         "//network/httputil:go_default_library",
         "//runtime/version:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
