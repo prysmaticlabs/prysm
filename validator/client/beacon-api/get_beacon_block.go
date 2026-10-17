@@ -188,7 +188,7 @@ func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*e
 		blk, contents, err = decodeGloasBlockV4Response(data, isSSZ, payloadIncluded)
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("decode V4 block response for %s: %w", queryUrl, err)
 	}
 	// The VC echoes this back when publishing so the winning builder gets the signed block.
 	blk.BuilderUrl = header.Get(api.BuilderUrlHeader)

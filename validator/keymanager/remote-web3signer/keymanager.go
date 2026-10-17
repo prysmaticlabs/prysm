@@ -362,10 +362,10 @@ func handleBlockAltair(ctx context.Context, validator *validator.Validate, reque
 func handleBlockV2(ctx context.Context, ver int, blinded bool, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
 	signReq, err := types.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create %s block sign request: %w", version.String(ver), err)
 	}
 	if err = validator.StructCtx(ctx, signReq); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate %s block sign request: %w", version.String(ver), err)
 	}
 	remoteBlockSignRequestsTotal.WithLabelValues(version.String(ver), strconv.FormatBool(blinded)).Inc()
 	return json.Marshal(signReq)

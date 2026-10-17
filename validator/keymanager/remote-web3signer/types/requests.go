@@ -375,15 +375,15 @@ func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValid
 	}
 	b, err := blocks.NewBeaconBlock(pb)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize %s block: %w", version.String(ver), err)
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("map %s block fork info: %w", version.String(ver), err)
 	}
 	beaconBlockHeader, err := interfaces.BeaconBlockHeaderFromBlockInterface(b)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create %s block header: %w", version.String(ver), err)
 	}
 	return &BlockV2BlindedSignRequest{
 		Type:        "BLOCK_V2",

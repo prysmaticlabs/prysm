@@ -246,11 +246,11 @@ func (b *BeaconBlockHeze) ToGeneric() (*eth.GenericBeaconBlock, error) {
 func BlockContentsHezeFromConsensus(block *eth.BeaconBlockHeze, envelope *eth.ExecutionPayloadEnvelope, kzgProofs [][]byte, blobs [][]byte) (*BlockContentsHeze, error) {
 	b, err := BeaconBlockHezeFromConsensus(block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Heze block: %w", err)
 	}
 	env, err := ExecutionPayloadEnvelopeFromConsensus(envelope)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert execution payload envelope: %w", err)
 	}
 	encodedProofs := make([]string, len(kzgProofs))
 	for i, p := range kzgProofs {

@@ -1205,7 +1205,7 @@ func BeaconStateGloasFromConsensus(st beaconState.BeaconState) (*BeaconStateGloa
 func BeaconStateHezeFromConsensus(st beaconState.BeaconState) (*BeaconStateHeze, error) {
 	s, err := BeaconStateGloasFromConsensus(st)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Heze state: %w", err)
 	}
 	return (*BeaconStateHeze)(s), nil
 }
