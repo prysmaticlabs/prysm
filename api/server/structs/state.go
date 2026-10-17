@@ -270,3 +270,30 @@ type BeaconStateGloas struct {
 	PayloadExpectedWithdrawals    []*Withdrawal               `json:"payload_expected_withdrawals"`
 	PtcWindow                     []*PTCs                     `json:"ptc_window"`
 }
+
+// CheckpointDecoupled is a slot and a root.
+type CheckpointDecoupled struct {
+	Slot string `json:"slot"`
+	Root string `json:"root"`
+}
+
+// PendingFinality is a justified pair awaiting finality.
+type PendingFinality struct {
+	Height        string               `json:"height"`
+	Target        *CheckpointDecoupled `json:"target"`
+	Participation string               `json:"participation"`
+}
+
+// BeaconStateDecoupled embeds Gloas so the fields marshal in SSZ order.
+type BeaconStateDecoupled struct {
+	BeaconStateGloas
+	Height              string               `json:"height"`
+	Entry               *CheckpointDecoupled `json:"entry"`
+	TargetParticipation string               `json:"target_participation"`
+	Progress            string               `json:"progress"`
+	JustifiedHeight     string               `json:"justified_height"`
+	Justified           *CheckpointDecoupled `json:"justified"`
+	FinalizedHeight     string               `json:"finalized_height"`
+	Finalized           *CheckpointDecoupled `json:"finalized"`
+	PendingFinality     []*PendingFinality   `json:"pending_finality"`
+}

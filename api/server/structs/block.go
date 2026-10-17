@@ -586,6 +586,81 @@ func (s *SignedBeaconBlockGloas) SigString() string {
 	return s.Signature
 }
 
+// AvailableAttestationData is an AC vote's data.
+type AvailableAttestationData struct {
+	Slot            string `json:"slot"`
+	BeaconBlockRoot string `json:"beacon_block_root"`
+}
+
+// AvailableAttestation is an aggregated AC vote.
+type AvailableAttestation struct {
+	AggregationBits string                    `json:"aggregation_bits"`
+	Data            *AvailableAttestationData `json:"data"`
+	Signature       string                    `json:"signature"`
+}
+
+// AttestationDataDecoupled is an FG vote's data.
+type AttestationDataDecoupled struct {
+	Height         string `json:"height"`
+	Target         string `json:"target"`
+	Timeout        bool   `json:"timeout"`
+	FinalityHeight string `json:"finality_height"`
+	FinalityTarget string `json:"finality_target"`
+}
+
+// IndexedAttestationDecoupled is an FG row with its signer indices.
+type IndexedAttestationDecoupled struct {
+	AttestingIndices []string                  `json:"attesting_indices"`
+	Data             *AttestationDataDecoupled `json:"data"`
+	Signature        string                    `json:"signature"`
+}
+
+// BeaconBlockBodyDecoupled is the Gloas body plus FG rows, AC votes and support bits.
+type BeaconBlockBodyDecoupled struct {
+	RandaoReveal              string                         `json:"randao_reveal"`
+	Eth1Data                  *Eth1Data                      `json:"eth1_data"`
+	Graffiti                  string                         `json:"graffiti"`
+	ProposerSlashings         []*ProposerSlashing            `json:"proposer_slashings"`
+	AttesterSlashings         []*AttesterSlashingElectra     `json:"attester_slashings"`
+	FinalityAttestations      []*IndexedAttestationDecoupled `json:"finality_attestations"`
+	Deposits                  []*Deposit                     `json:"deposits"`
+	VoluntaryExits            []*SignedVoluntaryExit         `json:"voluntary_exits"`
+	SyncAggregate             *SyncAggregate                 `json:"sync_aggregate"`
+	BLSToExecutionChanges     []*SignedBLSToExecutionChange  `json:"bls_to_execution_changes"`
+	SignedExecutionPayloadBid *SignedExecutionPayloadBid     `json:"signed_execution_payload_bid"`
+	PayloadAttestations       []*PayloadAttestation          `json:"payload_attestations"`
+	ParentExecutionRequests   *ExecutionRequestsGloas        `json:"parent_execution_requests"`
+	AvailableAttestations     []*AvailableAttestation        `json:"available_attestations"`
+	SupportVotes              string                         `json:"support_votes"`
+}
+
+// BeaconBlockDecoupled is a Decoupled block.
+type BeaconBlockDecoupled struct {
+	Slot          string                    `json:"slot"`
+	ProposerIndex string                    `json:"proposer_index"`
+	ParentRoot    string                    `json:"parent_root"`
+	StateRoot     string                    `json:"state_root"`
+	Body          *BeaconBlockBodyDecoupled `json:"body"`
+}
+
+// SignedBeaconBlockDecoupled is a signed Decoupled block.
+type SignedBeaconBlockDecoupled struct {
+	Message   *BeaconBlockDecoupled `json:"message"`
+	Signature string                `json:"signature"`
+}
+
+var _ SignedMessageJsoner = &SignedBeaconBlockDecoupled{}
+
+// MessageRawJson marshals the block message.
+func (s *SignedBeaconBlockDecoupled) MessageRawJson() ([]byte, error) {
+	return json.Marshal(s.Message)
+}
+
+// SigString returns the signature as hex.
+func (s *SignedBeaconBlockDecoupled) SigString() string {
+	return s.Signature
+}
+
 type BlockContentsGloas struct {
 	Block                    *BeaconBlockGloas         `json:"block"`
 	ExecutionPayloadEnvelope *ExecutionPayloadEnvelope `json:"execution_payload_envelope"`
