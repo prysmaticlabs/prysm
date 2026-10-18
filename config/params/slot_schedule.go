@@ -1,6 +1,7 @@
 package params
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"time"
@@ -22,7 +23,7 @@ const (
 	// maxMs bounds millisecond totals so their time.Duration conversion cannot overflow int64.
 	maxMs = uint64(math.MaxInt64 / int64(time.Millisecond))
 
-	// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#time-parameters
+	// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R120
 	slotDurationGranularityMillis = 1000
 )
 
@@ -40,86 +41,107 @@ const (
 )
 
 // SinceGenesis returns the duration from genesis to the start of the given slot.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-compute_time_at_slot_ms
 func (s SlotSchedule) SinceGenesis(slot primitives.Slot, slotsPerEpoch primitives.Slot) (time.Duration, error) {
-	totalMs := uint64(0)
-	end := slot
-	for i, entry := range slices.Backward(s) {
-		start := s.startSlot(i, slotsPerEpoch)
-		if start >= end {
-			continue
-		}
-
-		ms, err := (end - start).SafeMul(entry.SlotDurationMillis)
-		if err != nil || uint64(ms) > maxMs-totalMs {
-			return 0, errors.Errorf("slot %d is in the far distant future", slot)
-		}
-
-		totalMs += uint64(ms)
-		end = start
+	timeMs, err := s.timeAtSlotMs(0, slot, slotsPerEpoch)
+	if err != nil || timeMs > maxMs {
+		return 0, errors.Errorf("slot %d is in the far distant future", slot)
 	}
 
-	return time.Duration(totalMs) * time.Millisecond, nil
+	return time.Duration(timeMs) * time.Millisecond, nil
 }
 
 // SlotAt returns the slot at the given time.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-compute_slot_at_time_ms
 func (s SlotSchedule) SlotAt(genesis, tm time.Time, slotsPerEpoch primitives.Slot) primitives.Slot {
 	if tm.Before(genesis) {
 		return 0
 	}
 
-	return s.slotAfter(tm.Sub(genesis), slotsPerEpoch)
+	// Slot durations are whole milliseconds, so flooring the elapsed time to milliseconds does not change the slot.
+	return s.slotAtTimeMs(0, uint64(tm.Sub(genesis).Milliseconds()), slotsPerEpoch)
 }
 
-// durationAt returns the duration of the given slot, which is the slot duration of the era containing it.
-// The spec takes an epoch instead of a slot, the result is the same for every slot of an epoch.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#new-get_slot_duration_ms
+// durationAt returns the duration of the given slot.
 func (s SlotSchedule) durationAt(slot primitives.Slot, slotsPerEpoch primitives.Slot) time.Duration {
-	return time.Duration(s.entryFor(slot, slotsPerEpoch).SlotDurationMillis) * time.Millisecond
+	return time.Duration(s.slotDurationMs(computeEpochAtSlot(slot, slotsPerEpoch))) * time.Millisecond
 }
 
-// entryFor returns the entry of the era containing the given slot.
-func (s SlotSchedule) entryFor(slot primitives.Slot, slotsPerEpoch primitives.Slot) SlotScheduleEntry {
-	return s.entryForEpoch(primitives.Epoch(slot / slotsPerEpoch))
+// slotDurationMs returns the slot duration in effect at the given epoch, in milliseconds.
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R319
+func (s SlotSchedule) slotDurationMs(epoch primitives.Epoch) uint64 {
+	slotDurationMs := uint64(0)
+	for _, entry := range s {
+		if epoch >= entry.Epoch {
+			slotDurationMs = entry.SlotDurationMillis
+		}
+	}
+
+	return slotDurationMs
 }
 
-// entryForEpoch returns the entry of the era containing the given epoch, which is the last entry starting at or before it.
-func (s SlotSchedule) entryForEpoch(epoch primitives.Epoch) SlotScheduleEntry {
+// timeAtSlotMs returns the Unix time in milliseconds at the start of the given slot.
+// It returns an error if the time does not fit in an uint64.
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R332
+func (s SlotSchedule) timeAtSlotMs(genesisTimeMs uint64, slot, slotsPerEpoch primitives.Slot) (uint64, error) {
+	endSlot := slot
+	timeMs := genesisTimeMs
 	for _, entry := range slices.Backward(s) {
-		if entry.Epoch <= epoch {
-			return entry
+		forkSlot := computeStartSlotAtEpoch(entry.Epoch, slotsPerEpoch)
+		if forkSlot < endSlot {
+			slots := endSlot - forkSlot
+			ms, err := slots.SafeMul(entry.SlotDurationMillis)
+			if err != nil || uint64(ms) > math.MaxUint64-timeMs {
+				return 0, errors.Errorf("time at slot %d overflows", slot)
+			}
+
+			timeMs += uint64(ms)
+			endSlot = forkSlot
 		}
 	}
 
-	return s[0]
+	return timeMs, nil
 }
 
-// startSlot assumes the config passed validateSlotDurations, which bounds epoch*slotsPerEpoch.
-func (s SlotSchedule) startSlot(i int, slotsPerEpoch primitives.Slot) primitives.Slot {
-	return primitives.Slot(uint64(s[i].Epoch) * uint64(slotsPerEpoch))
-}
-
-// slotAfter returns the slot in progress the given duration after genesis.
-func (s SlotSchedule) slotAfter(elapsed time.Duration, slotsPerEpoch primitives.Slot) primitives.Slot {
-	for i, entry := range slices.Backward(s) {
-		forkSlot := s.startSlot(i, slotsPerEpoch)
-		forkTime, err := s.SinceGenesis(forkSlot, slotsPerEpoch)
-
-		// An era start too far to represent as a duration is necessarily after elapsed.
-		if err != nil || elapsed < forkTime {
-			continue
-		}
-
-		duration := time.Duration(entry.SlotDurationMillis) * time.Millisecond
-		return forkSlot + primitives.Slot((elapsed-forkTime)/duration)
+// slotAtTimeMs returns the slot at the given Unix time in milliseconds.
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R351
+func (s SlotSchedule) slotAtTimeMs(genesisTimeMs, timeMs uint64, slotsPerEpoch primitives.Slot) primitives.Slot {
+	if timeMs < genesisTimeMs {
+		return 0
 	}
 
-	return 0
+	startSlot, startTimeMs, slotDurationMs := primitives.Slot(0), genesisTimeMs, uint64(0)
+	for _, entry := range s {
+		forkSlot := computeStartSlotAtEpoch(entry.Epoch, slotsPerEpoch)
+		forkTimeMs, err := s.timeAtSlotMs(genesisTimeMs, forkSlot, slotsPerEpoch)
+		if err != nil {
+			// This fork and the next ones start too late to be represented, so after the given time.
+			break
+		}
+
+		if timeMs >= forkTimeMs {
+			startSlot = forkSlot
+			startTimeMs = forkTimeMs
+			slotDurationMs = entry.SlotDurationMillis
+		}
+	}
+
+	timeDiffMs := timeMs - startTimeMs
+	slots := primitives.Slot(timeDiffMs / slotDurationMs)
+	return startSlot + slots
+}
+
+// computeStartSlotAtEpoch returns the start slot of the given epoch.
+// It assumes the product does not overflow, which validateSlotDurations ensures for slot duration eras.
+func computeStartSlotAtEpoch(epoch primitives.Epoch, slotsPerEpoch primitives.Slot) primitives.Slot {
+	return primitives.Slot(uint64(epoch) * uint64(slotsPerEpoch))
+}
+
+// computeEpochAtSlot returns the epoch of the given slot.
+func computeEpochAtSlot(slot, slotsPerEpoch primitives.Slot) primitives.Epoch {
+	return primitives.Epoch(slot / slotsPerEpoch)
 }
 
 // SlotDurations returns the slot duration eras derived from the fork configuration, skipping unscheduled forks.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#new-get_slot_durations
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R298
 func (b *BeaconChainConfig) SlotDurations() SlotSchedule {
 	schedule := SlotSchedule{{Epoch: b.GenesisEpoch, SlotDurationMillis: b.SlotDurationMillis()}}
 	if b.HezeForkEpoch != b.FarFutureEpoch {
@@ -134,6 +156,36 @@ func (b *BeaconChainConfig) HasSlotDurationChange() bool {
 	return len(b.SlotDurations()) > 1
 }
 
+// ShortestSlotDuration returns the shortest scheduled slot duration.
+func (b *BeaconChainConfig) ShortestSlotDuration() time.Duration {
+	shortest := uint64(math.MaxUint64)
+	for _, e := range b.SlotDurations() {
+		shortest = min(shortest, e.SlotDurationMillis)
+	}
+
+	return time.Duration(shortest) * time.Millisecond
+}
+
+// LongestSlotDuration returns the longest scheduled slot duration.
+func (b *BeaconChainConfig) LongestSlotDuration() time.Duration {
+	longest := uint64(0)
+	for _, e := range b.SlotDurations() {
+		longest = max(longest, e.SlotDurationMillis)
+	}
+
+	return time.Duration(longest) * time.Millisecond
+}
+
+// ShortestEpochDuration returns the duration of one epoch at the shortest scheduled slot duration.
+func (b *BeaconChainConfig) ShortestEpochDuration() time.Duration {
+	return time.Duration(b.SlotsPerEpoch) * b.ShortestSlotDuration()
+}
+
+// LongestEpochDuration returns the duration of one epoch at the longest scheduled slot duration.
+func (b *BeaconChainConfig) LongestEpochDuration() time.Duration {
+	return time.Duration(b.SlotsPerEpoch) * b.LongestSlotDuration()
+}
+
 // SinceGenesis returns the duration from genesis to the start of the given slot.
 func (b *BeaconChainConfig) SinceGenesis(slot primitives.Slot) (time.Duration, error) {
 	return b.SlotDurations().SinceGenesis(slot, b.SlotsPerEpoch)
@@ -145,9 +197,9 @@ func (b *BeaconChainConfig) SlotDurationAt(slot primitives.Slot) time.Duration {
 }
 
 // SlotDurationMillisAtEpoch returns the slot duration in effect at the given epoch, in milliseconds.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#new-get_slot_duration_ms
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R319
 func (b *BeaconChainConfig) SlotDurationMillisAtEpoch(epoch primitives.Epoch) uint64 {
-	return b.SlotDurations().entryForEpoch(epoch).SlotDurationMillis
+	return b.SlotDurations().slotDurationMs(epoch)
 }
 
 // SlotFractionAt returns the given basis-point fraction of the slot's duration.
@@ -158,45 +210,86 @@ func (b *BeaconChainConfig) SlotFractionAt(bp primitives.BP, slot primitives.Slo
 
 // SlotComponentDurationAt returns the offset of the given deadline into the given slot.
 // From Heze, the basis points apply to SLOT_DURATION_MS_HEZE, which is the duration of every Heze slot.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/fork-choice.md#modified-get_slot_component_duration_ms
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-2bd43b6a1876bf339bd0464c2ee6557f41c72eca7e57b8383aeeab962cd8b9ecR90
 func (b *BeaconChainConfig) SlotComponentDurationAt(c SlotComponent, slot primitives.Slot) time.Duration {
 	return b.SlotFractionAt(b.slotComponentBPS(c, slot), slot)
 }
 
-// BlobDataRetentionStartEpoch returns the earliest epoch of the data column retention window at the given epoch.
-// Before Heze, the window is the given number of epochs. From Heze, it keeps MIN_BLOB_DATA_RETENTION_MS of wall-clock
-// time across slot duration changes, or the given number of epochs at the genesis slot duration if that is longer.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/p2p-interface.md#new-compute_blob_data_retention_start_epoch
-func (b *BeaconChainConfig) BlobDataRetentionStartEpoch(current, epochs primitives.Epoch) primitives.Epoch {
-	fallback := primitives.Epoch(0)
-	if current > epochs {
-		fallback = current - epochs
-	}
-
+// BlobDataRetentionStartEpoch returns the earliest epoch of the data column serve range at the given epoch.
+// Before Heze, the window is MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS epochs. From Heze, that config value is
+// deprecated and the window is MIN_BLOB_DATA_RETENTION_MS of wall-clock time across slot duration changes.
+func (b *BeaconChainConfig) BlobDataRetentionStartEpoch(current primitives.Epoch) (primitives.Epoch, error) {
 	if current < b.HezeForkEpoch {
-		return fallback
+		return epochsBefore(current, b.MinEpochsForDataColumnSidecarsRequest), nil
 	}
 
-	s, spe := b.SlotDurations(), b.SlotsPerEpoch
-
-	// If the window cannot be expressed as a duration, it is counted in epochs.
-	genesisMs := b.SlotDurationMillisAtEpoch(b.GenesisEpoch)
-	if uint64(epochs) > maxMs/uint64(spe)/genesisMs || b.MinBlobDataRetentionMillis > maxMs {
-		return fallback
-	}
-	windowMs := max(b.MinBlobDataRetentionMillis, uint64(epochs)*uint64(spe)*genesisMs)
-	window := time.Duration(windowMs) * time.Millisecond
-
-	currentStart, err := s.SinceGenesis(primitives.Slot(current)*spe, spe)
+	start, err := b.blobDataRetentionStartEpoch(current, b.MinBlobDataRetentionMillis)
 	if err != nil {
-		return fallback
+		return 0, fmt.Errorf("blob data retention start epoch at epoch %d: %w", current, err)
 	}
 
-	if currentStart < window {
-		return 0
+	return start, nil
+}
+
+// DataColumnRetentionStartEpoch returns the earliest epoch of the data column storage window at the given epoch.
+// Before Heze, the window is the given number of epochs. From Heze, it is the longest of the serve range and the given
+// number of epochs counted at SLOT_DURATION_MS, so that a retention configured in epochs keeps its wall-clock length
+// across slot duration changes.
+func (b *BeaconChainConfig) DataColumnRetentionStartEpoch(current, epochs primitives.Epoch) (primitives.Epoch, error) {
+	if current < b.HezeForkEpoch {
+		return epochsBefore(current, epochs), nil
 	}
 
-	return primitives.Epoch(s.slotAfter(currentStart-window, spe) / spe)
+	start, err := b.BlobDataRetentionStartEpoch(current)
+	if err != nil {
+		return 0, fmt.Errorf("blob data retention start epoch: %w", err)
+	}
+
+	// A window of epochs too long to be expressed in milliseconds reaches back past genesis.
+	baseMs := b.SlotDurationMillis()
+	if uint64(epochs) > math.MaxUint64/uint64(b.SlotsPerEpoch)/baseMs {
+		return b.GenesisEpoch, nil
+	}
+
+	epochsStart, err := b.blobDataRetentionStartEpoch(current, uint64(epochs)*uint64(b.SlotsPerEpoch)*baseMs)
+	if err != nil {
+		return 0, fmt.Errorf("retention start epoch of %d epochs at epoch %d: %w", epochs, current, err)
+	}
+
+	return min(start, epochsStart), nil
+}
+
+// blobDataRetentionStartEpoch returns the start epoch of the blob data retention window of the given length,
+// preserving its wall-clock length across slot duration changes.
+// It returns an error if the start of the given epoch does not fit in uint64 milliseconds.
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-021eb38195386e46ad74febe9ccad8bb62eed4248f49ff998be1cb73d69a5955R167
+func (b *BeaconChainConfig) blobDataRetentionStartEpoch(epoch primitives.Epoch, windowMs uint64) (primitives.Epoch, error) {
+	s, slotsPerEpoch := b.SlotDurations(), b.SlotsPerEpoch
+	if uint64(epoch) > math.MaxUint64/uint64(slotsPerEpoch) {
+		return 0, errors.Errorf("start slot of epoch %d overflows", epoch)
+	}
+
+	currentStartSlot := computeStartSlotAtEpoch(epoch, slotsPerEpoch)
+	currentStartMs, err := s.timeAtSlotMs(0, currentStartSlot, slotsPerEpoch)
+	if err != nil {
+		return 0, fmt.Errorf("time at slot %d: %w", currentStartSlot, err)
+	}
+
+	if currentStartMs < windowMs {
+		return b.GenesisEpoch, nil
+	}
+
+	windowStartMs := currentStartMs - windowMs
+	return computeEpochAtSlot(s.slotAtTimeMs(0, windowStartMs, slotsPerEpoch), slotsPerEpoch), nil
+}
+
+// epochsBefore returns the given number of epochs before current, floored at the genesis epoch.
+func epochsBefore(current, epochs primitives.Epoch) primitives.Epoch {
+	if current > epochs {
+		return current - epochs
+	}
+
+	return 0
 }
 
 // validateSlotDurations checks the slot durations derived from the fork configuration.

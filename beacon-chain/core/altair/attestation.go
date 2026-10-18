@@ -179,7 +179,7 @@ func AddValidatorFlag(flag, flagPosition uint8) (uint8, error) {
 }
 
 // EpochParticipation sets and returns the proposer reward numerator and epoch participation.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-process_attestation
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R702
 func EpochParticipation(beaconState state.ReadOnlyBeaconState, indices []uint64, epochParticipation []byte, participatedFlags map[uint8]bool, totalBalance uint64, targetEpoch primitives.Epoch) (uint64, []byte, error) {
 	cfg := params.BeaconConfig()
 	sourceFlagIndex := cfg.TimelySourceFlagIndex

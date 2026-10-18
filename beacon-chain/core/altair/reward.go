@@ -13,7 +13,7 @@ import (
 )
 
 // BaseReward returns the base reward of the validator at the given index, priced at the slot duration in effect at the given epoch.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-get_base_reward
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R437
 func BaseReward(ctx context.Context, s state.ReadOnlyBeaconState, index primitives.ValidatorIndex, epoch primitives.Epoch) (uint64, error) {
 	totalBalance, err := helpers.TotalActiveBalance(ctx, s)
 	if err != nil {
@@ -48,13 +48,13 @@ func BaseRewardWithTotalBalance(s state.ReadOnlyBeaconState, index primitives.Va
 
 // BaseRewardPerIncrement returns the base reward per increment, priced at the slot duration in
 // effect at “epoch“.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-get_base_reward_per_increment
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R415
 func BaseRewardPerIncrement(activeBalance uint64, epoch primitives.Epoch) (uint64, error) {
 	if activeBalance == 0 {
 		return 0, errors.New("active balance can't be 0")
 	}
 
 	cfg := params.BeaconConfig()
-	scaled := cfg.EffectiveBalanceIncrement * cfg.BaseRewardFactor * cfg.SlotDurationMillisAtEpoch(epoch) / cfg.SlotDurationMillisAtEpoch(cfg.GenesisEpoch)
+	scaled := cfg.EffectiveBalanceIncrement * cfg.BaseRewardFactor * cfg.SlotDurationMillisAtEpoch(epoch) / cfg.SlotDurationMillis()
 	return scaled / math.CachedSquareRoot(activeBalance), nil
 }

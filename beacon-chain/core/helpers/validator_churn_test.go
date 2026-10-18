@@ -99,4 +99,16 @@ func TestGloasChurnLimits_SlotDurationChange(t *testing.T) {
 			assert.Equal(t, tc.limit(version.Fulu, activeBalance, 9), tc.limit(version.Fulu, activeBalance, 10))
 		})
 	}
+
+	t.Run("heze at genesis", func(t *testing.T) {
+		// Scaling is relative to SLOT_DURATION_MS, so a network starting at Heze is scaled too.
+		afterFork := helpers.ExitChurnLimitForVersion(version.Gloas, activeBalance, 10)
+
+		genesisCfg := cfg.Copy()
+		genesisCfg.HezeForkEpoch = 0
+		params.OverrideBeaconConfig(genesisCfg)
+		defer params.OverrideBeaconConfig(cfg)
+
+		assert.Equal(t, afterFork, helpers.ExitChurnLimitForVersion(version.Gloas, activeBalance, 0))
+	})
 }

@@ -179,9 +179,9 @@ func TestShouldOverrideFCU(t *testing.T) {
 
 	require.Equal(t, primitives.Slot(2), service.CurrentSlot())
 	require.Equal(t, true, service.shouldOverrideFCU(headRoot, 2))
-	require.LogsDoNotContain(t, hook, "12s into the slot")
+	require.LogsDoNotContain(t, hook, `aborted due to attestations"`)
 	require.Equal(t, false, service.shouldOverrideFCU(parentRoot, 2))
-	require.LogsContain(t, hook, "12s into the slot")
+	require.LogsContain(t, hook, `aborted due to attestations"`)
 
 	head, err := fcs.Head(ctx)
 	require.NoError(t, err)

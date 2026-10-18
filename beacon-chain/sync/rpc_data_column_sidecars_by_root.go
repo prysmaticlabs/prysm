@@ -181,7 +181,11 @@ func dataColumnsRPCMinValidSlot(currentSlot primitives.Slot) (primitives.Slot, e
 
 	cfg := params.BeaconConfig()
 	currentEpoch := slots.ToEpoch(currentSlot)
-	retentionStartEpoch := cfg.BlobDataRetentionStartEpoch(currentEpoch, cfg.MinEpochsForDataColumnSidecarsRequest)
+	retentionStartEpoch, err := cfg.BlobDataRetentionStartEpoch(currentEpoch)
+	if err != nil {
+		return 0, fmt.Errorf("blob data retention start epoch at epoch %d: %w", currentEpoch, err)
+	}
+
 	minStartEpoch := max(cfg.FuluForkEpoch, retentionStartEpoch)
 
 	epochStart, err := slots.EpochStart(minStartEpoch)

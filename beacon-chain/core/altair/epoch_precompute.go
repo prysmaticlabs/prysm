@@ -273,7 +273,7 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 
 	// Deltas pay for the previous epoch.
 	slotDurationMs := cfg.SlotDurationMillisAtEpoch(prevEpoch)
-	baseDurationMs := cfg.SlotDurationMillisAtEpoch(cfg.GenesisEpoch)
+	baseDurationMs := cfg.SlotDurationMillis()
 	baseRewardMultiplier := increment * factor * slotDurationMs / baseDurationMs / math.CachedSquareRoot(bal.ActiveCurrentEpoch)
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 

@@ -213,7 +213,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	timeout := s.EventWriteTimeout
 	if timeout == 0 {
-		timeout = params.BeaconConfig().SlotDuration()
+		timeout = params.BeaconConfig().LongestSlotDuration()
 	}
 	ka := s.KeepAliveInterval
 	if ka == 0 {

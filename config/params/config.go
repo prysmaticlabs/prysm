@@ -826,16 +826,22 @@ func GloasEnabled() bool {
 }
 
 // WithinDAPeriod checks if the block epoch is within the data availability retention period.
-func WithinDAPeriod(block, current primitives.Epoch) bool {
+func WithinDAPeriod(block, current primitives.Epoch) (bool, error) {
 	cfg := BeaconConfig()
 	if block >= cfg.FuluForkEpoch {
-		return block >= cfg.BlobDataRetentionStartEpoch(current, cfg.MinEpochsForDataColumnSidecarsRequest)
+		start, err := cfg.BlobDataRetentionStartEpoch(current)
+		if err != nil {
+			return false, fmt.Errorf("blob data retention start epoch: %w", err)
+		}
+
+		return block >= start, nil
 	}
 
-	return block+cfg.MinEpochsForBlobsSidecarsRequest >= current
+	return block+cfg.MinEpochsForBlobsSidecarsRequest >= current, nil
 }
 
-// EpochsDuration returns the time duration of the given number of epochs.
+// EpochsDuration returns the time duration of the given number of epochs at the genesis slot duration.
+// Use slots.EpochsDurationFrom for the wall-clock span of actual epochs.
 func EpochsDuration(count primitives.Epoch, b *BeaconChainConfig) time.Duration {
 	return SlotsDuration(SlotsForEpochs(count, b), b)
 }
@@ -845,31 +851,23 @@ func SlotsForEpochs(count primitives.Epoch, b *BeaconChainConfig) primitives.Slo
 	return primitives.Slot(count) * b.SlotsPerEpoch
 }
 
-// SlotsDuration returns the time duration of the given number of slots.
+// SlotsDuration returns the time duration of the given number of slots at the genesis slot duration.
+// Use slots.SlotsDurationFrom for the wall-clock span of actual slots.
 func SlotsDuration(count primitives.Slot, b *BeaconChainConfig) time.Duration {
 	return time.Duration(count) * b.SlotDuration()
 }
 
-// SecondsPerSlot returns the time duration of a single slot.
-func SecondsPerSlot(b *BeaconChainConfig) time.Duration {
-	return b.SlotDuration()
-}
-
-// SlotDuration returns the configured slot duration as a time.Duration.
+// SlotDuration returns the genesis slot duration (SLOT_DURATION_MS) as a time.Duration.
+// It ignores slot duration changes, use SlotDurationAt for the duration of a given slot.
 func (b *BeaconChainConfig) SlotDuration() time.Duration {
 	return time.Duration(b.SlotDurationMillis()) * time.Millisecond
 }
 
-// SlotDurationMillis returns the configured slot duration in milliseconds.
+// SlotDurationMillis returns the genesis slot duration (SLOT_DURATION_MS) in milliseconds.
+// It ignores slot duration changes, use SlotDurationMillisAtEpoch for the duration in effect at a given epoch.
 func (b *BeaconChainConfig) SlotDurationMillis() uint64 {
 	if b.SlotDurationMilliseconds > 0 {
 		return b.SlotDurationMilliseconds
 	}
 	return b.SecondsPerSlot * 1000
-}
-
-// SlotComponentDuration returns the duration representing the given portion (in basis points) of a slot.
-func (b *BeaconChainConfig) SlotComponentDuration(bp primitives.BP) time.Duration {
-	ms := uint64(bp) * b.SlotDurationMillis() / uint64(BasisPoints)
-	return time.Duration(ms) * time.Millisecond
 }

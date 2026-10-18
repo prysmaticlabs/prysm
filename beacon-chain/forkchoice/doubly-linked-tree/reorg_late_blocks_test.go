@@ -126,7 +126,7 @@ func TestForkChoice_GetProposerHead(t *testing.T) {
 	headRoot, err := f.Head(ctx)
 	require.NoError(t, err)
 	require.Equal(t, blk.Root(), headRoot)
-	orphanLateBlockFirstThreshold := params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().AttestationDueBPS)
+	orphanLateBlockFirstThreshold := params.BeaconConfig().SlotFractionAt(params.BeaconConfig().AttestationDueBPS, 0)
 	fn := f.store.fullNodeByRoot[f.store.headNode.root]
 	fn.timestamp = fn.timestamp.Add(-1 * (params.BeaconConfig().SlotDuration() - orphanLateBlockFirstThreshold))
 	t.Run("head is weak", func(t *testing.T) {
@@ -263,7 +263,7 @@ func TestForkChoice_GetProposerHead_EpochBoundary(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, head.Root(), headRoot)
 
-	orphanLateBlockFirstThreshold := params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().AttestationDueBPS)
+	orphanLateBlockFirstThreshold := params.BeaconConfig().SlotFractionAt(params.BeaconConfig().AttestationDueBPS, 0)
 	fn := f.store.fullNodeByRoot[f.store.headNode.root]
 	fn.timestamp = fn.timestamp.Add(-1 * (params.BeaconConfig().SlotDuration() - orphanLateBlockFirstThreshold))
 

@@ -88,7 +88,7 @@ func ptcRetrySetup(t *testing.T, validator *validator, validatorKey bls.SecretKe
 	cfg.SlotDurationMilliseconds = 200
 	params.OverrideBeaconConfig(cfg)
 
-	lead := cfg.SlotComponentDuration(cfg.PayloadAttestationDueBPS)
+	lead := cfg.SlotFractionAt(cfg.PayloadAttestationDueBPS, 1)
 	// Place genesis so that slot 1 starts now and its deadline is lead away.
 	validator.genesisTime = time.Now().Add(-time.Duration(cfg.SlotDurationMilliseconds) * time.Millisecond)
 

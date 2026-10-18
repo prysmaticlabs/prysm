@@ -505,7 +505,7 @@ func (vs *Server) submitBlockToBuilder(block interfaces.ReadOnlySignedBeaconBloc
 	if vs.BlockBuilder == nil || builderURL == "" {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), params.BeaconConfig().SlotDuration())
+	ctx, cancel := context.WithTimeout(context.Background(), params.BeaconConfig().SlotDurationAt(block.Block().Slot()))
 	defer cancel()
 	if err := vs.BlockBuilder.SubmitSignedBeaconBlock(ctx, builderURL, block); err != nil {
 		// Quoted: the url is caller-supplied and may fail validation for containing control bytes.

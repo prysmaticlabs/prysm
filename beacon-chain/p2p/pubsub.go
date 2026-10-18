@@ -221,13 +221,8 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 func setPubSubParameters() {
 	cfg := params.BeaconConfig()
 
-	// The longest era keeps the two epoch window intact when the cache straddles a slot duration change.
-	slotDuration := cfg.SlotDuration()
-	for _, e := range cfg.SlotDurations() {
-		slotDuration = max(slotDuration, time.Duration(e.SlotDurationMillis)*time.Millisecond)
-	}
-
-	pubsub.TimeCacheDuration = 2 * time.Duration(cfg.SlotsPerEpoch) * slotDuration
+	// The longest slot duration keeps the two epoch window intact when the cache straddles a slot duration change.
+	pubsub.TimeCacheDuration = 2 * cfg.LongestEpochDuration()
 }
 
 // convert from libp2p's internal schema to a compatible prysm protobuf format.

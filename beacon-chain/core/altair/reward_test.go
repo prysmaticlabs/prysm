@@ -213,4 +213,15 @@ func Test_BaseRewardPerIncrement_SlotDurationChange(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, cfg.EffectiveBalanceIncrement*cfg.BaseRewardFactor/mathutil.IntegerSquareRoot(activeBalance), before)
 	require.Equal(t, before/2, after)
+
+	t.Run("heze at genesis", func(t *testing.T) {
+		// Scaling is relative to SLOT_DURATION_MS, so a network starting at Heze is scaled too.
+		cfg := cfg.Copy()
+		cfg.HezeForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		got, err := altair.BaseRewardPerIncrement(activeBalance, 0)
+		require.NoError(t, err)
+		require.Equal(t, after, got)
+	})
 }
