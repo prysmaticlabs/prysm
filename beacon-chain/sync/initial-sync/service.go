@@ -248,7 +248,11 @@ func (s *Service) fetchOriginSidecars(peers []peer.ID) error {
 	currentSlot, blockSlot := s.clock.CurrentSlot(), block.Block().Slot()
 	currentEpoch, blockEpoch := slots.ToEpoch(currentSlot), slots.ToEpoch(blockSlot)
 
-	if !params.WithinDAPeriod(blockEpoch, currentEpoch) {
+	withinDAPeriod, err := params.WithinDAPeriod(blockEpoch, currentEpoch)
+	if err != nil {
+		return fmt.Errorf("within DA period: %w", err)
+	}
+	if !withinDAPeriod {
 		return nil
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/container/slice"
@@ -50,7 +51,7 @@ func (s *Service) processDataColumnSidecarsFromReconstruction(ctx context.Contex
 		}
 
 		// Randomly choose value before starting reconstruction.
-		timeIntoSlot := s.computeRandomDelay(slotStartTime)
+		timeIntoSlot := s.computeRandomDelay(slot)
 		broadcastTime := slotStartTime.Add(timeIntoSlot)
 		waitingTime := time.Until(broadcastTime)
 
@@ -159,11 +160,14 @@ func (s *Service) shouldReconstruct(root [fieldparams.RootLength]byte) bool {
 	return storedColumnsCount >= peerdas.MinimumColumnCountToReconstruct() && storedColumnsCount != fieldparams.NumberOfColumns
 }
 
-// computeRandomDelay computes a random delay duration to wait before reconstructing data column sidecars.
-func (s *Service) computeRandomDelay(slotStartTime time.Time) time.Duration {
-	const maxReconstructionDelaySec = 2.
+// maxReconstructionDelayBPS bounds the random delay into the slot before reconstruction, 2 seconds of a 12 second slot.
+const maxReconstructionDelayBPS = primitives.BP(1667)
+
+// computeRandomDelay computes a random delay duration into the given slot to wait before reconstructing data column sidecars.
+func (s *Service) computeRandomDelay(slot primitives.Slot) time.Duration {
+	maxDelay := params.BeaconConfig().SlotFractionAt(maxReconstructionDelayBPS, slot)
 
 	randFloat := s.reconstructionRandGen.Float64()
-	timeIntoSlot := time.Duration(maxReconstructionDelaySec * randFloat * float64(time.Second))
+	timeIntoSlot := time.Duration(randFloat * float64(maxDelay))
 	return timeIntoSlot
 }

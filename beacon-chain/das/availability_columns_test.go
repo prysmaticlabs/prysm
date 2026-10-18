@@ -23,7 +23,8 @@ import (
 
 func mockShouldRetain(current primitives.Epoch) RetentionChecker {
 	return func(slot primitives.Slot) bool {
-		return params.WithinDAPeriod(slots.ToEpoch(slot), current)
+		within, err := params.WithinDAPeriod(slots.ToEpoch(slot), current)
+		return err == nil && within
 	}
 }
 

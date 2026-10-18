@@ -16,6 +16,7 @@ import (
 	e2e "github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
 	"github.com/OffchainLabs/prysm/v7/testing/endtoend/policies"
 	e2etypes "github.com/OffchainLabs/prysm/v7/testing/endtoend/types"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -135,7 +136,6 @@ func finishedSyncing(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) e
 func waitForMidEpoch(ctx context.Context, conn *grpc.ClientConn) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	slotDuration := params.BeaconConfig().SlotDuration()
 	midEpochSlot := slotsPerEpoch / 2
 
 	for {
@@ -150,21 +150,21 @@ func waitForMidEpoch(ctx context.Context, conn *grpc.ClientConn) error {
 		// If we're at least halfway into the epoch, we're safe
 		if slotInEpoch >= midEpochSlot {
 			// Wait 3/4 into the slot to ensure block propagation
-			if err := sleepWithContext(ctx, slotDuration*3/4); err != nil {
+			if err := sleepWithContext(ctx, params.BeaconConfig().SlotDurationAt(chainHead.HeadSlot)*3/4); err != nil {
 				return err
 			}
 			return nil
 		}
 		// Wait for the remaining slots until mid-epoch
 		slotsToWait := midEpochSlot - slotInEpoch
-		if err := sleepWithContext(ctx, time.Duration(slotsToWait)*slotDuration); err != nil {
+		if err := sleepWithContext(ctx, slots.SlotsDurationFrom(chainHead.HeadSlot, slotsToWait)); err != nil {
 			return err
 		}
 	}
 }
 
 func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
-	ctx, cancel := context.WithTimeout(context.Background(), params.EpochsDuration(2, params.BeaconConfig()))
+	ctx, cancel := context.WithTimeout(context.Background(), 2*params.BeaconConfig().LongestEpochDuration())
 	defer cancel()
 	// Wait until we're at least halfway into the epoch to avoid race conditions
 	// at epoch boundaries where nodes may report different epochs.

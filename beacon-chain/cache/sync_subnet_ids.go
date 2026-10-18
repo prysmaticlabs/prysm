@@ -21,7 +21,8 @@ type syncSubnetIDs struct {
 var SyncSubnetIDs = newSyncSubnetIDs()
 
 func newSyncSubnetIDs() *syncSubnetIDs {
-	epochDuration := params.EpochsDuration(1, params.BeaconConfig())
+	// One epoch, at the longest scheduled slot duration so entries never expire early.
+	epochDuration := params.BeaconConfig().LongestEpochDuration()
 	// Set the default duration of a sync subnet index as the whole sync committee period.
 	subLength := epochDuration * time.Duration(params.BeaconConfig().EpochsPerSyncCommitteePeriod)
 	persistentCache := cache.New(subLength, epochDuration)

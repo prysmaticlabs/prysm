@@ -148,7 +148,7 @@ func (s *Service) fetchPayloadEnvelope(root [32]byte) {
 			log.WithError(err).Debug("Could not wrap requested payload envelope")
 			continue
 		}
-		ctx, cancel := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDuration())
+		ctx, cancel := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDurationAt(s.cfg.clock.CurrentSlot()))
 		err = s.cfg.chain.ReceiveExecutionPayloadEnvelope(ctx, wrapped)
 		cancel()
 		if err != nil {

@@ -18,8 +18,8 @@ import (
 const (
 	// defaultPrunableBatchSize is the number of slots that can be pruned at once.
 	defaultPrunableBatchSize = 32
-	// defaultPruningWindow is the duration of one pruning window.
-	defaultPruningWindow = time.Second * 3
+	// pruningWindowBPS is the duration of one pruning window, 3 seconds of a 12 second slot.
+	pruningWindowBPS = primitives.BP(2500)
 	// defaultNumBatchesToPrune is the number of batches to prune in one pruning window.
 	defaultNumBatchesToPrune = 15
 	// defaultPrunableStateDiffEntries is the number of state-diff tree entries deleted at once.
@@ -186,8 +186,11 @@ func (p *Service) prune(slot primitives.Slot) error {
 		"pruneUpto": pruneUpto,
 	}).Debug("Pruning chain data")
 
+	// The pruning budget is a fraction of the current slot.
+	window := params.BeaconConfig().SlotFractionAt(pruningWindowBPS, slot)
+
 	tt := time.Now()
-	numBatches, err := p.pruneBatches(pruneUpto - 1)
+	numBatches, err := p.pruneBatches(pruneUpto-1, window)
 	if err != nil {
 		return errors.Wrap(err, "failed to prune batches")
 	}
@@ -202,7 +205,7 @@ func (p *Service) prune(slot primitives.Slot) error {
 		return errors.Wrap(err, "update earliest available slot")
 	}
 
-	deletedStateDiffKeys, err := p.pruneStateDiff(pruneUpto)
+	deletedStateDiffKeys, err := p.pruneStateDiff(pruneUpto, window)
 	if err != nil {
 		return fmt.Errorf("prune state diff: %w", err)
 	}
@@ -222,8 +225,8 @@ func (p *Service) prune(slot primitives.Slot) error {
 
 // pruneStateDiff deletes the state-diff entries up to pruneUpto.
 // The work is spread over batches, and over as many pruning runs as needed.
-func (p *Service) pruneStateDiff(pruneUpto primitives.Slot) (int, error) {
-	ctx, cancel := context.WithTimeout(p.ctx, defaultPruningWindow)
+func (p *Service) pruneStateDiff(pruneUpto primitives.Slot, window time.Duration) (int, error) {
+	ctx, cancel := context.WithTimeout(p.ctx, window)
 	defer cancel()
 
 	deleted := 0
@@ -271,8 +274,8 @@ func (p *Service) updateEarliestAvailableSlot(earliestAvailableSlot, currentSlot
 	return nil
 }
 
-func (p *Service) pruneBatches(pruneUpto primitives.Slot) (int, error) {
-	ctx, cancel := context.WithTimeout(p.ctx, defaultPruningWindow)
+func (p *Service) pruneBatches(pruneUpto primitives.Slot, window time.Duration) (int, error) {
+	ctx, cancel := context.WithTimeout(p.ctx, window)
 	defer cancel()
 
 	numBatches := 0

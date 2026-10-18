@@ -88,7 +88,7 @@ func ptcRetrySetup(t *testing.T, validator *validator, validatorKey bls.SecretKe
 	cfg.SlotDurationMilliseconds = 200
 	params.OverrideBeaconConfig(cfg)
 
-	lead := cfg.SlotComponentDuration(cfg.PayloadAttestationDueBPS)
+	lead := cfg.SlotFractionAt(cfg.PayloadAttestationDueBPS, 1)
 	// Place genesis so that slot 1 starts now and its deadline is lead away.
 	validator.genesisTime = time.Now().Add(-time.Duration(cfg.SlotDurationMilliseconds) * time.Millisecond)
 
@@ -205,7 +205,7 @@ func TestPayloadAttestationDataWithRetry_ResponseCrossesDeadline(t *testing.T) {
 	// Start the slot after mock setup to preserve the pre-deadline window.
 	cfg := params.BeaconConfig()
 	v.genesisTime = time.Now().Add(-cfg.SlotDuration())
-	deadline, err := v.slotComponentDeadline(slot, cfg.PayloadAttestationDueBPS)
+	deadline, err := v.slotComponentDeadline(slot, params.PayloadAttestationDue)
 	require.NoError(t, err)
 
 	got, retried, err := v.payloadAttestationDataWithRetry(t.Context(), slot)

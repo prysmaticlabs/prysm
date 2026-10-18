@@ -42,7 +42,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "p2p.Broadcast")
 	defer span.End()
 
-	twoSlots := 2 * params.BeaconConfig().SlotDuration()
+	twoSlots := slots.SlotsDurationFrom(slots.CurrentSlot(s.genesisTime), 2)
 	ctx, cancel := context.WithTimeout(ctx, twoSlots)
 	defer cancel()
 
@@ -72,7 +72,7 @@ func (s *Service) BroadcastForEpoch(ctx context.Context, msg proto.Message, epoc
 	ctx, span := trace.StartSpan(ctx, "p2p.BroadcastForEpoch")
 	defer span.End()
 
-	twoSlots := 2 * params.BeaconConfig().SlotDuration()
+	twoSlots := slots.SlotsDurationFrom(slots.CurrentSlot(s.genesisTime), 2)
 	ctx, cancel := context.WithTimeout(ctx, twoSlots)
 	defer cancel()
 
@@ -137,7 +137,7 @@ func (s *Service) internalBroadcastAttestation(ctx context.Context, subnet uint6
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
-	oneEpoch := params.EpochsDuration(1, params.BeaconConfig())
+	oneEpoch := slots.EpochsDurationFrom(slots.ToEpoch(slots.CurrentSlot(s.genesisTime)), 1)
 	ctx, cancel := context.WithTimeout(ctx, oneEpoch)
 	defer cancel()
 
@@ -191,7 +191,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
-	oneSlot := params.BeaconConfig().SlotDuration()
+	oneSlot := params.BeaconConfig().SlotDurationAt(slots.CurrentSlot(s.genesisTime))
 	ctx, cancel := context.WithTimeout(ctx, oneSlot)
 	defer cancel()
 
@@ -264,7 +264,7 @@ func (s *Service) internalBroadcastBlob(ctx context.Context, subnet uint64, blob
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
-	oneSlot := params.BeaconConfig().SlotDuration()
+	oneSlot := params.BeaconConfig().SlotDurationAt(slots.CurrentSlot(s.genesisTime))
 	ctx, cancel := context.WithTimeout(ctx, oneSlot)
 	defer cancel()
 
@@ -313,7 +313,7 @@ func (s *Service) BroadcastLightClientOptimisticUpdate(ctx context.Context, upda
 		return err
 	}
 	timeSinceSlotStart := time.Since(slotStart)
-	expectedDelay := params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().SyncMessageDueBPS)
+	expectedDelay := params.BeaconConfig().SlotComponentDurationAt(params.SyncMessageDue, update.SignatureSlot())
 	if timeSinceSlotStart < expectedDelay {
 		waitDuration := expectedDelay - timeSinceSlotStart
 		<-time.After(waitDuration)
@@ -347,7 +347,7 @@ func (s *Service) BroadcastLightClientFinalityUpdate(ctx context.Context, update
 		return err
 	}
 	timeSinceSlotStart := time.Since(slotStart)
-	expectedDelay := params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().SyncMessageDueBPS)
+	expectedDelay := params.BeaconConfig().SlotComponentDurationAt(params.SyncMessageDue, update.SignatureSlot())
 	if timeSinceSlotStart < expectedDelay {
 		waitDuration := expectedDelay - timeSinceSlotStart
 		<-time.After(waitDuration)

@@ -7,7 +7,6 @@ import (
 
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	payloadattribute "github.com/OffchainLabs/prysm/v7/consensus-types/payload-attribute"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -120,10 +119,10 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 			return true
 		}
 		log.WithFields(logrus.Fields{
-			"root":   fmt.Sprintf("%#x", newHeadRoot),
-			"weight": headWeight,
-		}).Infof("Attempted late block reorg aborted due to attestations at %s into the slot",
-			params.BeaconConfig().SlotDuration())
+			"root":      fmt.Sprintf("%#x", newHeadRoot),
+			"weight":    headWeight,
+			"threshold": doublylinkedtree.ProcessAttestationsThreshold(currentSlot),
+		}).Info("Attempted late block reorg aborted due to attestations")
 		lateBlockFailedAttemptSecondThreshold.Inc()
 	} else {
 		if s.cfg.ForkChoiceStore.ShouldOverrideFCU() {
@@ -133,12 +132,13 @@ func (s *Service) shouldOverrideFCU(newHeadRoot [32]byte, proposingSlot primitiv
 		if err != nil {
 			log.WithError(err).Error("Could not compute seconds since slot start")
 		}
-		if sss >= doublylinkedtree.ProcessAttestationsThreshold {
+		threshold := doublylinkedtree.ProcessAttestationsThreshold(currentSlot)
+		if sss >= threshold {
 			log.WithFields(logrus.Fields{
 				"root":           fmt.Sprintf("%#x", newHeadRoot),
 				"weight":         headWeight,
 				"sinceSlotStart": sss,
-				"threshold":      doublylinkedtree.ProcessAttestationsThreshold,
+				"threshold":      threshold,
 			}).Info("Attempted late block reorg aborted due to attestations after threshold")
 			lateBlockFailedAttemptFirstThreshold.Inc()
 		}
