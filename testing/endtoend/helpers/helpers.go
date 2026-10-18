@@ -18,10 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v7/config/params"
 	e2e "github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
 	e2etypes "github.com/OffchainLabs/prysm/v7/testing/endtoend/types"
-	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -346,15 +344,6 @@ func ComponentsStarted(ctx context.Context, comps []e2etypes.ComponentRunner) er
 		}
 	}
 	return nil
-}
-
-// EpochTickerStartTime calculates the best time to start epoch ticker for a given genesis time.
-func EpochTickerStartTime(genesisTime time.Time) time.Time {
-	halfEpoch := params.EpochsDuration(1, params.BeaconConfig()) / 2
-	// Adding a half slot here to ensure the requests are in the middle of an epoch.
-	middleOfEpoch := halfEpoch + slots.DivideSlotBy(2 /* half a slot */)
-	// Offsetting the ticker from genesis so it ticks in the middle of an epoch, in order to keep results consistent.
-	return genesisTime.Add(middleOfEpoch)
 }
 
 // WaitOnNodes waits on nodes to complete execution, accepts function that will be called when all nodes are ready.

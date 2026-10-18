@@ -35,6 +35,7 @@ import (
 	e2e "github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
 	e2etypes "github.com/OffchainLabs/prysm/v7/testing/endtoend/types"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -133,8 +134,7 @@ func (r *testRunner) scenarioRunner() {
 }
 
 func (r *testRunner) waitExtra(ctx context.Context, e primitives.Epoch, conn *grpc.ClientConn, extra primitives.Epoch) error {
-	spe := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	dl := time.Now().Add(time.Second * time.Duration(uint64(extra)*spe))
+	dl := time.Now().Add(slots.EpochsDurationFrom(e, extra))
 
 	beaconClient := eth.NewBeaconChainClient(conn)
 	ctx, cancel := context.WithDeadline(ctx, dl)
@@ -154,7 +154,7 @@ func (r *testRunner) waitExtra(ctx context.Context, e primitives.Epoch, conn *gr
 			}
 			if chainHead.HeadEpoch == e {
 				// wait until halfway into the epoch to give other nodes time to catch up
-				time.Sleep(time.Second * time.Duration(spe/2))
+				time.Sleep(slots.EpochsDurationFrom(e, 1) / 2)
 				return nil
 			}
 		}
@@ -194,10 +194,9 @@ func (r *testRunner) postStartConfigure() {
 }
 
 // runEvaluators executes assigned evaluators.
-func (r *testRunner) runEvaluators(ec *e2etypes.EvaluationContext, conns []*grpc.ClientConn, tickingStartTime time.Time) error {
+func (r *testRunner) runEvaluators(ec *e2etypes.EvaluationContext, conns []*grpc.ClientConn, genesisTime time.Time) error {
 	t, config := r.t, r.config
-	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	ticker := helpers.NewEpochTicker(genesisTime)
 	for currentEpoch := range ticker.C() {
 		if config.EvalInterceptor(ec, currentEpoch, conns) {
 			continue
@@ -368,7 +367,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
-	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
+	conns []*grpc.ClientConn, genesisTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	ethNode := eth1.NewNode(index, minerEnr)
@@ -404,10 +403,9 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 		return errors.Wrap(err, "cannot sync beacon node")
 	}
 
-	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	// Only execute in the middle of an epoch to prevent race conditions around slot 0.
-	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	ticker := helpers.NewEpochTicker(genesisTime)
 	<-ticker.C()
 	ticker.Done()
 	for _, evaluator := range syncEvaluators {
@@ -516,11 +514,11 @@ func (r *testRunner) defaultEndToEndRun() error {
 	nodeClient := eth.NewNodeClient(conns[0])
 	genesis, err := nodeClient.GetGenesis(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
-	tickingStartTime := helpers.EpochTickerStartTime(time.Unix(genesis.GenesisTime.Seconds, 0))
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds, 0)
 
 	ec := e2etypes.NewEvaluationContext(r.depositor.History())
 	// Run assigned evaluators.
-	if err := r.runEvaluators(ec, conns, tickingStartTime); err != nil {
+	if err := r.runEvaluators(ec, conns, genesisTime); err != nil {
 		return errors.Wrap(err, "one or more evaluators failed")
 	}
 	// Test execution request processing in electra.
@@ -539,7 +537,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	if config.TestSync {
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
+		if err := r.testBeaconChainSync(ctx, g, conns, genesisTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
 		index += 1
@@ -615,11 +613,11 @@ func (r *testRunner) scenarioRun() error {
 	nodeClient := eth.NewNodeClient(conns[0])
 	genesis, err := nodeClient.GetGenesis(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
-	tickingStartTime := helpers.EpochTickerStartTime(time.Unix(genesis.GenesisTime.Seconds, 0))
+	genesisTime := time.Unix(genesis.GenesisTime.Seconds, 0)
 
 	ec := e2etypes.NewEvaluationContext(r.depositor.History())
 	// Run assigned evaluators.
-	return r.runEvaluators(ec, conns, tickingStartTime)
+	return r.runEvaluators(ec, conns, genesisTime)
 }
 
 func (r *testRunner) addEvent(ev func() error) {

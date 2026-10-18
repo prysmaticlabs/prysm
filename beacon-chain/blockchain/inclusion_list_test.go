@@ -180,8 +180,7 @@ func TestOnInclusionList_Checks(t *testing.T) {
 
 func TestOnInclusionList_Timeliness(t *testing.T) {
 	due := func() time.Duration {
-		cfg := params.BeaconConfig()
-		return cfg.SlotComponentDuration(cfg.InclusionListDueBPS)
+		return params.BeaconConfig().SlotComponentDurationAt(params.InclusionListDue, ilCurrentSlot)
 	}
 	tests := []struct {
 		name       string

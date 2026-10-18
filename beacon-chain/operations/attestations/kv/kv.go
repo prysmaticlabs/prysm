@@ -32,7 +32,8 @@ type AttCaches struct {
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of attestations.
 func NewAttCaches() *AttCaches {
-	epochDuration := params.EpochsDuration(1, params.BeaconConfig())
+	// One epoch, at the longest scheduled slot duration so entries never expire early.
+	epochDuration := params.BeaconConfig().LongestEpochDuration()
 	c := cache.New(2*epochDuration, 2*epochDuration)
 	pool := &AttCaches{
 		unAggregatedAtt:   make(map[attestation.Id]ethpb.Att),

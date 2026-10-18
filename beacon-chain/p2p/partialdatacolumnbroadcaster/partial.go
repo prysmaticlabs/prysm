@@ -32,6 +32,13 @@ import (
 
 const TTLInSlots = 3
 
+// groupTTLTicks returns the number of cleanup ticks a group lives for.
+func groupTTLTicks() int8 {
+	cfg := params.BeaconConfig()
+	shortest, longest := cfg.ShortestSlotDuration(), cfg.LongestSlotDuration()
+	return int8((TTLInSlots*longest + shortest - 1) / shortest)
+}
+
 const logPackage = "beacon-chain/p2p/partialdatacolumnbroadcaster"
 
 var errInvalidHeader = errors.New("invalid header")
@@ -467,7 +474,7 @@ var (
 )
 
 func (p *PartialColumnBroadcaster) loop() {
-	cleanup := time.NewTicker(params.BeaconConfig().SlotDuration())
+	cleanup := time.NewTicker(params.BeaconConfig().ShortestSlotDuration())
 	for {
 		select {
 		case req := <-p.incomingReq:
@@ -783,7 +790,7 @@ func (p *PartialColumnBroadcaster) handleIncomingRPC(rpc incomingPartialRPC) err
 			p.partialMsgStore[topicID] = topicStore
 		}
 		topicStore[string(groupID)] = verifier
-		p.groupTTL[string(groupID)] = TTLInSlots
+		p.groupTTL[string(groupID)] = groupTTLTicks()
 
 		ourVerifier = verifier
 		shouldRepublish = true
@@ -1104,7 +1111,7 @@ func (p *PartialColumnBroadcaster) publish(topicsAndColumns iter.Seq2[string, bl
 		}
 		ourColummn := verifier.Column
 
-		p.groupTTL[string(groupIDBytes)] = TTLInSlots
+		p.groupTTL[string(groupIDBytes)] = groupTTLTicks()
 		// Mark the topic as locally published so incoming parts-requests on it are
 		// accepted even without a subscription (see publishedTopics). Cleared when the
 		// topic's last group is evicted.

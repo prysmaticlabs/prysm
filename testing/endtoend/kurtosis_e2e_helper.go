@@ -14,6 +14,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/testing/endtoend/kurtosis"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 )
 
@@ -87,7 +88,7 @@ func (k *KurtosisTestSuites) Run(t *testing.T) {
 
 	// Set deadline for assertoor.
 	genesisTime := fetchGenesisTime(t, ctx, client)
-	deadline := genesisTime.Add(params.EpochsDuration(primitives.Epoch(k.epochsToRun), params.BeaconConfig()) + ASSERTOOR_GRACE_PERIOD)
+	deadline := genesisTime.Add(slots.EpochsDurationFrom(0, primitives.Epoch(k.epochsToRun)) + ASSERTOOR_GRACE_PERIOD)
 	t.Logf("Assertoor registration at genesis+%s, deadline at genesis+%s", time.Since(genesisTime), deadline.Sub(genesisTime))
 
 	// Register Assertoor playbooks and wait for them to complete.

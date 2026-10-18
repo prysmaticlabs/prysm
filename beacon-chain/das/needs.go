@@ -127,8 +127,14 @@ func (n SyncNeeds) DataColumnRetentionChecker() RetentionChecker {
 }
 
 // The column window keeps its wall-clock length across slot duration changes, matching what peers are served.
+// If it cannot be computed, it falls back to the given number of epochs.
 func columnRetentionStart(current primitives.Slot, retention primitives.Epoch) primitives.Slot {
-	start := params.BeaconConfig().BlobDataRetentionStartEpoch(slots.ToEpoch(current), retention)
+	start, err := params.BeaconConfig().DataColumnRetentionStartEpoch(slots.ToEpoch(current), retention)
+	if err != nil {
+		log.WithError(err).WithField("slot", current).Error("Could not compute the data column retention start epoch, falling back to the retention epochs")
+		return syncEpochOffset(current, retention)
+	}
+
 	return max(slots.UnsafeEpochStart(start), 1)
 }
 

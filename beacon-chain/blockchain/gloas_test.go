@@ -564,7 +564,7 @@ func recordTestPayloadArrival(t *testing.T, service *Service, root [32]byte, slo
 	t.Helper()
 	slotStart, err := slots.StartTime(service.genesisTime, slot)
 	require.NoError(t, err)
-	due := slotStart.Add(params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().PayloadDueBPS))
+	due := slotStart.Add(params.BeaconConfig().SlotFractionAt(params.BeaconConfig().PayloadDueBPS, slot))
 	if early {
 		service.recordPayloadArrival(root, slot, due.Add(-time.Millisecond))
 		return

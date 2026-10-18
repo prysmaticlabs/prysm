@@ -601,7 +601,7 @@ func TestService_BroadcastLightClientOptimisticUpdate(t *testing.T) {
 
 		slotStartTime, err := slots.StartTime(p.genesisTime, msg.SignatureSlot())
 		require.NoError(t, err)
-		expectedDelay := params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().SyncMessageDueBPS)
+		expectedDelay := params.BeaconConfig().SlotFractionAt(params.BeaconConfig().SyncMessageDueBPS, msg.SignatureSlot())
 		if time.Now().Before(slotStartTime.Add(expectedDelay)) {
 			t.Errorf("Message received too early, now %v, expected at least %v", time.Now(), slotStartTime.Add(expectedDelay))
 		}
@@ -678,7 +678,7 @@ func TestService_BroadcastLightClientFinalityUpdate(t *testing.T) {
 
 		slotStartTime, err := slots.StartTime(p.genesisTime, msg.SignatureSlot())
 		require.NoError(t, err)
-		expectedDelay := params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().SyncMessageDueBPS)
+		expectedDelay := params.BeaconConfig().SlotFractionAt(params.BeaconConfig().SyncMessageDueBPS, msg.SignatureSlot())
 		if time.Now().Before(slotStartTime.Add(expectedDelay)) {
 			t.Errorf("Message received too early, now %v, expected at least %v", time.Now(), slotStartTime.Add(expectedDelay))
 		}

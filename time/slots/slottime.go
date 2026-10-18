@@ -38,15 +38,13 @@ func EpochsSinceGenesis(genesis time.Time) primitives.Epoch {
 	return primitives.Epoch(CurrentSlot(genesis) / params.BeaconConfig().SlotsPerEpoch)
 }
 
-// DivideSlotBy divides the SECONDS_PER_SLOT configuration
-// parameter by a specified number. It returns a value of time.Duration
-// in milliseconds, useful for dividing values such as 1 second into
-// millisecond-based durations.
+// DivideSlotBy divides the shortest scheduled slot duration by the given number.
+// It is meant for fixed polling periods, which then never fall behind the chain across slot duration changes.
 func DivideSlotBy(timesPerSlot int64) time.Duration {
 	if timesPerSlot == 0 {
 		return 0
 	}
-	return params.BeaconConfig().SlotDuration() / time.Duration(timesPerSlot)
+	return params.BeaconConfig().ShortestSlotDuration() / time.Duration(timesPerSlot)
 }
 
 // AbsoluteValueSlotDifference between two slots.
@@ -230,14 +228,6 @@ func At(genesis, tm time.Time) primitives.Slot {
 	return primitives.Slot(tm.Sub(genesis) / cfg.SlotDuration())
 }
 
-// Duration computes the span of time between two instants, represented as Slots.
-func Duration(start, end time.Time) primitives.Slot {
-	if end.Before(start) {
-		return 0
-	}
-	return primitives.Slot((end.Sub(start)) / params.BeaconConfig().SlotDuration())
-}
-
 // ValidateClock validates a provided slot against the local
 // clock to ensure slots that are unreasonable are returned with
 // an error.
@@ -370,22 +360,33 @@ func SecondsUntilNextEpochStart(genesis time.Time) (uint64, error) {
 
 // EpochsDurationFrom returns the wall-clock span of count epochs starting at start, following the slot durations derived from the fork configuration.
 func EpochsDurationFrom(start, count primitives.Epoch) time.Duration {
-	zero := time.Unix(0, 0)
 	from, err := EpochStart(start)
 	if err != nil {
 		return params.EpochsDuration(count, params.BeaconConfig())
 	}
-	to, err := EpochStart(start + count)
+
+	return SlotsDurationFrom(from, primitives.Slot(count)*params.BeaconConfig().SlotsPerEpoch)
+}
+
+// SlotsDurationFrom returns the wall-clock span of count slots starting at start, following the slot durations derived from the fork configuration.
+func SlotsDurationFrom(start, count primitives.Slot) time.Duration {
+	cfg := params.BeaconConfig()
+	fallback := params.SlotsDuration(count, cfg)
+
+	end, err := start.SafeAdd(uint64(count))
 	if err != nil {
-		return params.EpochsDuration(count, params.BeaconConfig())
+		return fallback
 	}
-	fromTime, err := StartTime(zero, from)
+
+	from, err := cfg.SinceGenesis(start)
 	if err != nil {
-		return params.EpochsDuration(count, params.BeaconConfig())
+		return fallback
 	}
-	toTime, err := StartTime(zero, to)
+
+	to, err := cfg.SinceGenesis(end)
 	if err != nil {
-		return params.EpochsDuration(count, params.BeaconConfig())
+		return fallback
 	}
-	return toTime.Sub(fromTime)
+
+	return to - from
 }

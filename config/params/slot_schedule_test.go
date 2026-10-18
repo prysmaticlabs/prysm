@@ -1,6 +1,7 @@
 package params
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -138,6 +139,26 @@ func TestHasSlotDurationChange(t *testing.T) {
 	require.Equal(t, true, hezeAtEpoch10(t).HasSlotDurationChange())
 }
 
+func TestShortestSlotDuration(t *testing.T) {
+	require.Equal(t, 12*time.Second, MainnetConfig().ShortestSlotDuration())
+	require.Equal(t, 6*time.Second, hezeAtEpoch10(t).ShortestSlotDuration())
+}
+
+func TestLongestSlotDuration(t *testing.T) {
+	require.Equal(t, 12*time.Second, MainnetConfig().LongestSlotDuration())
+	require.Equal(t, 12*time.Second, hezeAtEpoch10(t).LongestSlotDuration())
+}
+
+func TestShortestEpochDuration(t *testing.T) {
+	require.Equal(t, 32*12*time.Second, MainnetConfig().ShortestEpochDuration())
+	require.Equal(t, 32*6*time.Second, hezeAtEpoch10(t).ShortestEpochDuration())
+}
+
+func TestLongestEpochDuration(t *testing.T) {
+	require.Equal(t, 32*12*time.Second, MainnetConfig().LongestEpochDuration())
+	require.Equal(t, 32*12*time.Second, hezeAtEpoch10(t).LongestEpochDuration())
+}
+
 func TestSlotDurationMillisAtEpoch(t *testing.T) {
 	t.Run("heze at epoch 10", func(t *testing.T) {
 		cfg := hezeAtEpoch10(t)
@@ -152,14 +173,15 @@ func TestSlotDurationMillisAtEpoch(t *testing.T) {
 	})
 
 	t.Run("heze at genesis", func(t *testing.T) {
-		// The Heze entry shadows the genesis one, so the genesis baseline is the Heze duration too.
+		// The Heze entry shadows the genesis one.
 		cfg := MainnetConfig().Copy()
 		cfg.HezeForkEpoch = 0
-		require.Equal(t, uint64(10000), cfg.SlotDurationMillisAtEpoch(cfg.GenesisEpoch))
+		cfg.SlotDurationMillisHeze = 6000
+		require.Equal(t, uint64(6000), cfg.SlotDurationMillisAtEpoch(cfg.GenesisEpoch))
 
 		since, err := cfg.SinceGenesis(10)
 		require.NoError(t, err)
-		require.Equal(t, 100*time.Second, since)
+		require.Equal(t, 60*time.Second, since)
 	})
 }
 
@@ -190,34 +212,75 @@ func TestSlotComponentDurationAt(t *testing.T) {
 func TestBlobDataRetentionStartEpoch(t *testing.T) {
 	t.Run("heze unscheduled", func(t *testing.T) {
 		plain := MainnetConfig().Copy()
-		require.Equal(t, primitives.Epoch(0), plain.BlobDataRetentionStartEpoch(3, 5))
-		require.Equal(t, primitives.Epoch(95), plain.BlobDataRetentionStartEpoch(100, 5))
+		plain.MinEpochsForDataColumnSidecarsRequest = 5
+		require.Equal(t, primitives.Epoch(0), noErr(t)(plain.BlobDataRetentionStartEpoch(3)))
+		require.Equal(t, primitives.Epoch(95), noErr(t)(plain.BlobDataRetentionStartEpoch(100)))
 	})
 
 	t.Run("heze at epoch 10", func(t *testing.T) {
 		cfg := hezeAtEpoch10(t)
+		cfg.MinEpochsForDataColumnSidecarsRequest = 5
 		// 5 epochs of 12s.
 		cfg.MinBlobDataRetentionMillis = 5 * 32 * 12000
 
-		// Before Heze the window is the plain epoch count.
-		require.Equal(t, primitives.Epoch(4), cfg.BlobDataRetentionStartEpoch(9, 5))
-		require.Equal(t, primitives.Epoch(0), cfg.BlobDataRetentionStartEpoch(2, 5))
+		// Before Heze the window is MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS.
+		require.Equal(t, primitives.Epoch(4), noErr(t)(cfg.BlobDataRetentionStartEpoch(9)))
+		require.Equal(t, primitives.Epoch(0), noErr(t)(cfg.BlobDataRetentionStartEpoch(2)))
 		// Epoch 12 starts 2 epochs of 6s after the change, 1 epoch of 12s wall clock, so 4 more 12s epochs reach back to epoch 6.
-		require.Equal(t, primitives.Epoch(6), cfg.BlobDataRetentionStartEpoch(12, 5))
+		require.Equal(t, primitives.Epoch(6), noErr(t)(cfg.BlobDataRetentionStartEpoch(12)))
 		// Fully inside the 6s era 5 epochs of 12s wall clock span 10 epochs of 6s.
-		require.Equal(t, primitives.Epoch(10), cfg.BlobDataRetentionStartEpoch(20, 5))
+		require.Equal(t, primitives.Epoch(10), noErr(t)(cfg.BlobDataRetentionStartEpoch(20)))
 		// Epoch 22 starts 12 epochs of 6s after the change, the 10 epoch window ends 2 epochs of 6s in.
-		require.Equal(t, primitives.Epoch(12), cfg.BlobDataRetentionStartEpoch(22, 5))
+		require.Equal(t, primitives.Epoch(12), noErr(t)(cfg.BlobDataRetentionStartEpoch(22)))
 	})
 
-	t.Run("longest window wins", func(t *testing.T) {
+	t.Run("epoch config deprecated from heze", func(t *testing.T) {
+		cfg := hezeAtEpoch10(t)
+		cfg.MinBlobDataRetentionMillis = 5 * 32 * 12000
+
+		// 10 epochs of 12s are longer than MIN_BLOB_DATA_RETENTION_MS, but only the latter applies from Heze.
+		cfg.MinEpochsForDataColumnSidecarsRequest = 10
+		require.Equal(t, primitives.Epoch(10), noErr(t)(cfg.BlobDataRetentionStartEpoch(20)))
+	})
+
+	t.Run("overflow", func(t *testing.T) {
+		cfg := hezeAtEpoch10(t)
+
+		// The start slot of the epoch overflows.
+		_, err := cfg.BlobDataRetentionStartEpoch(primitives.Epoch(math.MaxUint64 / 32))
+		require.ErrorContains(t, "overflows", err)
+	})
+}
+
+func TestDataColumnRetentionStartEpoch(t *testing.T) {
+	t.Run("before heze", func(t *testing.T) {
+		cfg := hezeAtEpoch10(t)
+		cfg.MinEpochsForDataColumnSidecarsRequest = 5
+
+		// The window is the given number of epochs.
+		require.Equal(t, primitives.Epoch(8), noErr(t)(cfg.DataColumnRetentionStartEpoch(9, 1)))
+		require.Equal(t, primitives.Epoch(2), noErr(t)(cfg.DataColumnRetentionStartEpoch(9, 7)))
+		require.Equal(t, primitives.Epoch(0), noErr(t)(cfg.DataColumnRetentionStartEpoch(3, 7)))
+	})
+
+	t.Run("from heze", func(t *testing.T) {
 		cfg := hezeAtEpoch10(t)
 		cfg.MinBlobDataRetentionMillis = 5 * 32 * 12000
 
 		// MIN_BLOB_DATA_RETENTION_MS is longer than 1 epoch.
-		require.Equal(t, primitives.Epoch(10), cfg.BlobDataRetentionStartEpoch(20, 1))
+		require.Equal(t, primitives.Epoch(10), noErr(t)(cfg.DataColumnRetentionStartEpoch(20, 1)))
 		// 10 epochs of 12s are longer than MIN_BLOB_DATA_RETENTION_MS, epoch 20 starts 15 epochs of 12s after genesis.
-		require.Equal(t, primitives.Epoch(5), cfg.BlobDataRetentionStartEpoch(20, 10))
+		require.Equal(t, primitives.Epoch(5), noErr(t)(cfg.DataColumnRetentionStartEpoch(20, 10)))
+		// A window of epochs too long to be expressed in milliseconds reaches back to genesis.
+		require.Equal(t, primitives.Epoch(0), noErr(t)(cfg.DataColumnRetentionStartEpoch(20, math.MaxUint64)))
+	})
+
+	t.Run("overflow", func(t *testing.T) {
+		cfg := hezeAtEpoch10(t)
+
+		// The start slot of the epoch overflows.
+		_, err := cfg.DataColumnRetentionStartEpoch(primitives.Epoch(math.MaxUint64/32), 1)
+		require.ErrorContains(t, "overflows", err)
 	})
 }
 
@@ -261,4 +324,13 @@ func TestSlotDurationsConfigYamlRoundTrip(t *testing.T) {
 	cfg.SlotDurationMillisHeze = 6500
 	_, err = UnmarshalConfig(ConfigToYaml(cfg), MainnetConfig().Copy())
 	require.ErrorContains(t, "positive multiple of 1000", err)
+}
+
+// noErr returns a function requiring the error to be nil and returning the epoch.
+func noErr(t *testing.T) func(primitives.Epoch, error) primitives.Epoch {
+	return func(epoch primitives.Epoch, err error) primitives.Epoch {
+		t.Helper()
+		require.NoError(t, err)
+		return epoch
+	}
 }

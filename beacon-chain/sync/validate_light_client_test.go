@@ -83,7 +83,7 @@ func TestValidateLightClientOptimisticUpdate(t *testing.T) {
 		},
 		{
 			name:             "not enough time passed",
-			genesisDrift:     -int(math.Ceil(float64(params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().SyncMessageDueBPS)) / float64(time.Second))),
+			genesisDrift:     -int(math.Ceil(float64(params.BeaconConfig().SlotFractionAt(params.BeaconConfig().SyncMessageDueBPS, 0)) / float64(time.Second))),
 			oldUpdateOptions: []util.LightClientOption{},
 			newUpdateOptions: []util.LightClientOption{},
 			expectedResult:   pubsub.ValidationIgnore,
@@ -213,7 +213,7 @@ func TestValidateLightClientFinalityUpdate(t *testing.T) {
 		},
 		{
 			name:             "not enough time passed",
-			genesisDrift:     -int(math.Ceil(float64(params.BeaconConfig().SlotComponentDuration(params.BeaconConfig().SyncMessageDueBPS)) / float64(time.Second))),
+			genesisDrift:     -int(math.Ceil(float64(params.BeaconConfig().SlotFractionAt(params.BeaconConfig().SyncMessageDueBPS, 0)) / float64(time.Second))),
 			oldUpdateOptions: []util.LightClientOption{},
 			newUpdateOptions: []util.LightClientOption{},
 			expectedResult:   pubsub.ValidationIgnore,

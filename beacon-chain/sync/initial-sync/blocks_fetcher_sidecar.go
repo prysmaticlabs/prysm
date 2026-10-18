@@ -168,21 +168,28 @@ func columnFetchBlocks(
 
 	seen := make(map[[32]byte]bool, len(postFulu))
 	roBlocks := make([]blocks.ROBlock, 0, len(postFulu))
-	add := func(b blocks.ROBlock) {
+	add := func(b blocks.ROBlock) error {
 		root := b.Root()
 		if seen[root] {
-			return
+			return nil
 		}
-		if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), currentEpoch) {
-			return
+		withinDAPeriod, err := params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), currentEpoch)
+		if err != nil {
+			return fmt.Errorf("within DA period: %w", err)
+		}
+		if !withinDAPeriod {
+			return nil
 		}
 		seen[root] = true
 		roBlocks = append(roBlocks, b)
+		return nil
 	}
 
 	for i := range postFulu {
 		if postFulu[i].Block.Version() < version.Gloas {
-			add(postFulu[i].Block)
+			if err := add(postFulu[i].Block); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -199,7 +206,9 @@ func columnFetchBlocks(
 				continue
 			}
 		}
-		add(b)
+		if err := add(b); err != nil {
+			return nil, err
+		}
 	}
 
 	return roBlocks, nil

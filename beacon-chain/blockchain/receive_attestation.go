@@ -23,10 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// reorgLateBlockCountAttestations is the time until the end of the slot in which we count
-// attestations to see if we will reorg the incoming block
-const reorgLateBlockCountAttestations = 2 * time.Second
-
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
 type AttestationStateFetcher interface {
@@ -160,9 +156,10 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	start := time.Now()
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	// This function is only called at 10 seconds or 0 seconds into the slot
+	// This function is only called at the attestation processing threshold or at the start of the slot.
+	// Attestations up to the end of the slot are counted to see if we will reorg the incoming block.
 	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
-	disparity += reorgLateBlockCountAttestations
+	disparity += doublylinkedtree.ProcessAttestationsBeforeSlotEnd(s.CurrentSlot())
 
 	s.processAttestations(ctx, disparity)
 

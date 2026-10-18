@@ -25,7 +25,7 @@ func TestSlotComponentDeadline(t *testing.T) {
 
 	startTime, err := slots.StartTime(v.genesisTime, slot)
 	require.NoError(t, err)
-	expected := startTime.Add(cfg.SlotComponentDuration(cfg.AttestationDueBPS))
+	expected := startTime.Add(cfg.SlotFractionAt(cfg.AttestationDueBPS, slot))
 
 	require.Equal(t, expected, got)
 }

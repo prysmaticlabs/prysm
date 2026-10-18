@@ -56,12 +56,12 @@ func ConsolidationChurnLimit(activeBalance primitives.Gwei) primitives.Gwei {
 // Per-epoch churn is a rate, so it scales with the slot duration in effect at the epoch (EIP-8198).
 func scaleChurnBySlotDuration(churn uint64, epoch primitives.Epoch) uint64 {
 	cfg := params.BeaconConfig()
-	return churn * cfg.SlotDurationMillisAtEpoch(epoch) / cfg.SlotDurationMillisAtEpoch(cfg.GenesisEpoch)
+	return churn * cfg.SlotDurationMillisAtEpoch(epoch) / cfg.SlotDurationMillis()
 }
 
 // activationChurnLimitGloas returns the per-epoch activation churn limit, capped by
 // MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS. New in Gloas EIP-8061, scaled in EIP-8198.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-get_activation_churn_limit
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R525
 func activationChurnLimitGloas(activeBalance primitives.Gwei, epoch primitives.Epoch) primitives.Gwei {
 	cfg := params.BeaconConfig()
 	churn := max(cfg.MinPerEpochChurnLimitElectra, uint64(activeBalance)/cfg.ChurnLimitQuotientGloas)
@@ -72,7 +72,7 @@ func activationChurnLimitGloas(activeBalance primitives.Gwei, epoch primitives.E
 
 // exitChurnLimitGloas returns the per-epoch exit churn limit. Uncapped in Gloas EIP-8061
 // so that exits scale with total stake, scaled in EIP-8198.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-get_exit_churn_limit
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R550
 func exitChurnLimitGloas(activeBalance primitives.Gwei, epoch primitives.Epoch) primitives.Gwei {
 	cfg := params.BeaconConfig()
 	churn := max(cfg.MinPerEpochChurnLimitElectra, uint64(activeBalance)/cfg.ChurnLimitQuotientGloas)
@@ -83,7 +83,7 @@ func exitChurnLimitGloas(activeBalance primitives.Gwei, epoch primitives.Epoch) 
 // consolidationChurnLimitGloas returns the per-epoch consolidation churn limit, derived
 // independently from total active balance via CONSOLIDATION_CHURN_LIMIT_QUOTIENT.
 // New in Gloas EIP-8061, scaled in EIP-8198.
-// https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md#modified-get_consolidation_churn_limit
+// https://github.com/ethereum/consensus-specs/pull/5718/files#diff-d86ff035f381a7179bbf845cda1b9d9ced9e070ee8cd5501dab6fc79ba233051R574
 func consolidationChurnLimitGloas(activeBalance primitives.Gwei, epoch primitives.Epoch) primitives.Gwei {
 	cfg := params.BeaconConfig()
 	churn := uint64(activeBalance) / cfg.ConsolidationChurnLimitQuotient

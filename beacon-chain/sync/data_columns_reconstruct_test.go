@@ -240,15 +240,13 @@ func TestComputeRandomDelay(t *testing.T) {
 		seed     = 42
 		expected = 746056722 * time.Nanosecond // = 0.746056722 seconds
 	)
-	slotStartTime := time.Date(2020, 12, 30, 0, 0, 0, 0, time.UTC)
-
 	service := NewService(
 		t.Context(),
 		WithP2P(p2ptest.NewTestP2P(t)),
 		WithReconstructionRandGen(rand.New(rand.NewSource(seed))),
 	)
 
-	waitingTime := service.computeRandomDelay(slotStartTime)
+	waitingTime := service.computeRandomDelay(0)
 	fmt.Print(waitingTime)
 	require.Equal(t, expected, waitingTime)
 }

@@ -618,7 +618,12 @@ func (dcs *DataColumnStorage) prune() {
 	highestStoredEpoch := dcs.cache.HighestEpoch()
 
 	// The retention start epoch itself must still be served, so prune strictly before it.
-	retentionStart := params.BeaconConfig().BlobDataRetentionStartEpoch(highestStoredEpoch, dcs.retentionEpochs)
+	retentionStart, err := params.BeaconConfig().DataColumnRetentionStartEpoch(highestStoredEpoch, dcs.retentionEpochs)
+	if err != nil {
+		log.WithError(err).WithField("epoch", highestStoredEpoch).Error("Could not compute the data column retention start epoch, skipping pruning")
+		return
+	}
+
 	if retentionStart == 0 {
 		return
 	}

@@ -8,12 +8,17 @@ import (
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
-const processAttestationsBeforeSlotEnd = 2 * time.Second
+// processAttestationsBeforeSlotEndBPS is how long before the end of the slot attestations are processed, 2 seconds of a 12 second slot.
+const processAttestationsBeforeSlotEndBPS = primitives.BP(1667)
+
+// ProcessAttestationsBeforeSlotEnd is how long before the end of the slot we process attestations for the current slot.
+func ProcessAttestationsBeforeSlotEnd(slot primitives.Slot) time.Duration {
+	return params.BeaconConfig().SlotFractionAt(processAttestationsBeforeSlotEndBPS, slot)
+}
 
 // ProcessAttestationsThreshold is the time into the slot after which we process attestations for the current slot.
 func ProcessAttestationsThreshold(slot primitives.Slot) time.Duration {
-	d := params.BeaconConfig().SlotDurationAt(slot)
-	return max(d-processAttestationsBeforeSlotEnd, d/2)
+	return params.BeaconConfig().SlotDurationAt(slot) - ProcessAttestationsBeforeSlotEnd(slot)
 }
 
 // viableForHead returns true if the node is viable to head.
