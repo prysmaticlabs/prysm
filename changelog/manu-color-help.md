@@ -1,0 +1,2 @@
+### Changed
+- Prettify `--help`.

@@ -690,6 +690,8 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 }
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
+	helpers.ClearCache()
+	t.Cleanup(helpers.ClearCache)
 	committeeSize := uint64(16)
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(committeeSize))
 	for i := range validators {
@@ -706,6 +708,8 @@ func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	require.NoError(t, err)
 	_, err = helpers.BeaconCommitteeFromState(t.Context(), state, 1 /* previous epoch */, 0)
 	require.NoError(t, err)
+	// The committee cache is filled in the background.
+	helpers.CommitteeCache().Wg.Wait()
 
 	// Verify previous epoch is cached
 	seed, err := helpers.Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
@@ -758,6 +762,7 @@ func TestCommitteeIndices(t *testing.T) {
 }
 
 func TestAttestationCommitteesFromState(t *testing.T) {
+	helpers.ClearCache()
 	ctx := t.Context()
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().TargetCommitteeSize))
