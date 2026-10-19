@@ -67,5 +67,5 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		PayloadExpectedWithdrawals:    pre.PayloadExpectedWithdrawals,
 		PtcWindow:                     pre.PtcWindow,
 	}
-	return state_native.InitializeFromProtoUnsafeHeze(s)
+	return state_native.NewUnsafe(s)
 }
