@@ -37,6 +37,7 @@ func TestBeaconBlockBodyHeze_ToConsensus_NilFields(t *testing.T) {
 		{name: "nil Eth1Data", field: "Eth1Data", clear: func(b *BeaconBlockBodyHeze) { b.Eth1Data = nil }},
 		{name: "nil SyncAggregate", field: "SyncAggregate", clear: func(b *BeaconBlockBodyHeze) { b.SyncAggregate = nil }},
 		{name: "nil SignedExecutionPayloadBid", field: "SignedExecutionPayloadBid", clear: func(b *BeaconBlockBodyHeze) { b.SignedExecutionPayloadBid = nil }},
+		{name: "nil Deposits element", field: "Deposits.[0]", clear: func(b *BeaconBlockBodyHeze) { b.Deposits = []*Deposit{nil} }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
