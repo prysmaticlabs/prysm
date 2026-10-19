@@ -182,8 +182,8 @@ func UnionInt64(s ...[]int64) []int64 {
 	return set
 }
 
-// NotInt64 returns the int64 in slice a that are
-// not in slice b with time complexity of approximately
+// NotInt64 returns the int64 in slice b that are
+// not in slice a with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
 func NotInt64(a, b []int64) []int64 {

@@ -30,7 +30,7 @@ func BytesToSlotBigEndian(b []byte) primitives.Slot {
 	return primitives.Slot(BytesToUint64BigEndian(b))
 }
 
-// ZeroRoot returns whether or not a root is of proper length and non-zero hash.
+// ZeroRoot reports whether root has length fieldparams.RootLength and contains only zero bytes.
 func ZeroRoot(root []byte) bool {
 	return string(make([]byte, fieldparams.RootLength)) == string(root)
 }
