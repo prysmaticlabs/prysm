@@ -1377,7 +1377,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		})
 		require.NoError(t, err)
 		// Ensure the state is at the correct slot relative to genesis.
-		require.Equal(t, currentWallEpoch, slots.EpochsSinceGenesis(time.Unix(int64(bs.GenesisTime()), 0)))
+		require.Equal(t, currentWallEpoch, slots.EpochsSinceGenesis(bs.GenesisTime()))
 
 		broadcaster := &p2pMock.MockBroadcaster{}
 		s := &Server{
