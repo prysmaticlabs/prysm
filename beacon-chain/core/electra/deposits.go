@@ -398,7 +398,7 @@ func batchProcessNewPendingDeposits(ctx context.Context, state state.BeaconState
 		}
 
 		// Do not create validators with BLS withdrawal credentials. [New in Heze:EIP8365]
-		if disallowsNewBLSValidators(state) && hasBLSWithdrawalPrefix(pd.WithdrawalCredentials) {
+		if state.Version() >= version.Heze && hasBLSWithdrawalPrefix(pd.WithdrawalCredentials) {
 			continue
 		}
 
@@ -458,7 +458,7 @@ func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *eth
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(deposit.PublicKey))
 	if !ok {
 		// Do not create validators with BLS withdrawal credentials. [New in Heze:EIP8365]
-		if disallowsNewBLSValidators(st) && hasBLSWithdrawalPrefix(deposit.WithdrawalCredentials) {
+		if st.Version() >= version.Heze && hasBLSWithdrawalPrefix(deposit.WithdrawalCredentials) {
 			return nil
 		}
 		verified, err := helpers.IsValidDepositSignature(&ethpb.Deposit_Data{
@@ -479,12 +479,6 @@ func ApplyPendingDeposit(ctx context.Context, st state.BeaconState, deposit *eth
 		return nil
 	}
 	return helpers.IncreaseBalance(st, index, deposit.Amount)
-}
-
-// disallowsNewBLSValidators reports whether the state is at or past the Heze fork.
-// TODO(heze): Use st.Version() >= version.Heze once the Heze state exists.
-func disallowsNewBLSValidators(st state.ReadOnlyBeaconState) bool {
-	return slots.ToEpoch(st.Slot()) >= params.BeaconConfig().HezeForkEpoch
 }
 
 // hasBLSWithdrawalPrefix reports whether the withdrawal credentials carry the BLS

@@ -669,12 +669,17 @@ func TestApplyPendingDeposit_InvalidSignature(t *testing.T) {
 	require.Equal(t, 0, len(st.Balances()))
 }
 
-// activateHeze schedules the Heze fork at genesis so that EIP-8365 applies to the test states.
-func activateHeze(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig().Copy()
-	cfg.HezeForkEpoch = 0
-	params.OverrideBeaconConfig(cfg)
+// hezeStateWithActiveBalanceETH is stateWithActiveBalanceETH for a Heze state, where EIP-8365 applies.
+func hezeStateWithActiveBalanceETH(t *testing.T, balETH uint64) state.BeaconState {
+	base := stateWithActiveBalanceETH(t, balETH)
+	st, err := util.NewBeaconStateHeze(func(s *eth.BeaconStateHeze) error {
+		s.Slot = base.Slot()
+		s.Validators = base.Validators()
+		s.Balances = base.Balances()
+		return nil
+	})
+	require.NoError(t, err)
+	return st
 }
 
 func TestApplyPendingDeposit_EIP8365(t *testing.T) {
@@ -682,8 +687,7 @@ func TestApplyPendingDeposit_EIP8365(t *testing.T) {
 	blsCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
 
 	t.Run("new validator with BLS credentials is not created", func(t *testing.T) {
-		activateHeze(t)
-		st := stateWithActiveBalanceETH(t, 0)
+		st := hezeStateWithActiveBalanceETH(t, 0)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
 		// The signature is valid, so the deposit can only be skipped by the EIP-8365 check.
@@ -694,9 +698,8 @@ func TestApplyPendingDeposit_EIP8365(t *testing.T) {
 	})
 
 	t.Run("top-up to existing validator with BLS credentials is applied", func(t *testing.T) {
-		activateHeze(t)
 		excessBalance := uint64(100)
-		st := stateWithActiveBalanceETH(t, 32)
+		st := hezeStateWithActiveBalanceETH(t, 32)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
 		validators := st.Validators()
@@ -738,8 +741,7 @@ func TestProcessPendingDeposits_EIP8365(t *testing.T) {
 	}
 
 	t.Run("new validator with BLS credentials is not created", func(t *testing.T) {
-		activateHeze(t)
-		st := stateWithActiveBalanceETH(t, 0)
+		st := hezeStateWithActiveBalanceETH(t, 0)
 		blsKey, err := bls.RandKey()
 		require.NoError(t, err)
 		execKey, err := bls.RandKey()
@@ -754,8 +756,7 @@ func TestProcessPendingDeposits_EIP8365(t *testing.T) {
 	})
 
 	t.Run("BLS credential top-up to a validator created earlier in the epoch is applied", func(t *testing.T) {
-		activateHeze(t)
-		st := stateWithActiveBalanceETH(t, 0)
+		st := hezeStateWithActiveBalanceETH(t, 0)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
 		topUpAmount := uint64(1_000_000_000)
