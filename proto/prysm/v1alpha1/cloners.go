@@ -160,7 +160,6 @@ func copySignedExecutionPayloadBid(header *SignedExecutionPayloadBid) *SignedExe
 			ExecutionPayment:      header.Message.ExecutionPayment,
 			BlobKzgCommitments:    bytesutil.SafeCopy2dBytes(header.Message.BlobKzgCommitments),
 			ExecutionRequestsRoot: bytesutil.SafeCopyBytes(header.Message.ExecutionRequestsRoot),
-			PayloadChunksRoot:     bytesutil.SafeCopyBytes(header.Message.PayloadChunksRoot),
 		}
 	}
 	return copied

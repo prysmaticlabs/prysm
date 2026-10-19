@@ -26,4 +26,14 @@ types:
       Builders:                   {type: "ProgressiveList"}
       BuilderPendingWithdrawals:  {type: "ProgressiveList"}
       PayloadExpectedWithdrawals: {type: "ProgressiveList"}
+  - name: "ExecutionPayloadBidHeze"
+    progressive: {}
+    fields:
+      BlobKzgCommitments: {type: "ProgressiveList"}
+  - name: "SignedExecutionPayloadBidHeze"
+  - name: "ExecutionPayloadEnvelopeHeze"
+    progressive: {}
+  - name: "SignedExecutionPayloadEnvelopeHeze"
+  - name: "SignedExecutionPayloadEnvelopeContentsHeze"
+  - name: "PayloadChunk"
   - name: "SignedBeaconBlockHeze"

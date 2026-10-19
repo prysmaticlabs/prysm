@@ -67,7 +67,6 @@ types:
       CellsPresentBitmap: {type: "ProgressiveBitlist"}
       PartialColumn:      {type: "ProgressiveList"}
       KzgProofs:          {type: "ProgressiveList"}
-  - name: "PayloadChunk"
   - name: "PayloadAttestation"
     progressive: {}
   - name: "PayloadAttestationData"

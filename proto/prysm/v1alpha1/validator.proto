@@ -26,6 +26,7 @@ import "proto/prysm/v1alpha1/beacon_core_types.proto";
 import "proto/prysm/v1alpha1/sync_committee.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/gloas.proto";
+import "proto/prysm/v1alpha1/heze.proto";
 import "proto/prysm/v1alpha1/gloas_builder_api.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
@@ -527,6 +528,22 @@ service BeaconNodeValidator {
   // of ExecutionPayloadGloas.transactions. The V1 method now fails with
   // FAILED_PRECONDITION.
   rpc PublishExecutionPayloadEnvelopeV2(GenericSignedExecutionPayloadEnvelope)
+      returns (google.protobuf.Empty) {
+    option deprecated = true;
+  }
+
+  // GetExecutionPayloadEnvelopeV3 is the Heze (EIP-8411) variant: the envelope
+  // container carries no beacon block root, so the binding is checked against
+  // the request's beacon_block_root and returned out of band.
+  rpc GetExecutionPayloadEnvelopeV3(ExecutionPayloadEnvelopeRequest)
+      returns (ExecutionPayloadEnvelopeHezeResponse) {
+    option deprecated = true;
+  }
+
+  // PublishExecutionPayloadEnvelopeV3 is the Heze (EIP-8411) variant: the
+  // beacon node reveals the envelope as PayloadChunk messages on the
+  // execution_payload_chunks topic.
+  rpc PublishExecutionPayloadEnvelopeV3(GenericSignedExecutionPayloadEnvelopeHeze)
       returns (google.protobuf.Empty) {
     option deprecated = true;
   }
@@ -1547,6 +1564,15 @@ message ExecutionPayloadEnvelopeResponse {
 
   // The execution payload envelope for the requested slot.
   ExecutionPayloadEnvelope envelope = 1;
+}
+
+// ExecutionPayloadEnvelopeHezeResponse is the Heze variant of
+// ExecutionPayloadEnvelopeResponse.
+message ExecutionPayloadEnvelopeHezeResponse {
+  option deprecated = true;
+
+  // The execution payload envelope for the requested slot.
+  ExecutionPayloadEnvelopeHeze envelope = 1;
 }
 
 // PayloadAttestationDataRequest is the request for retrieving payload

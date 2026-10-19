@@ -35,7 +35,6 @@ option go_package = "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1;eth";
 //     execution_payment: Gwei
 //     blob_kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
 //     execution_requests_root: Root
-//     payload_chunks_root: Root  # [New in EIP-8411]
 message ExecutionPayloadBid {
   bytes parent_block_hash = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
   bytes parent_block_root = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
@@ -63,7 +62,6 @@ message ExecutionPayloadBid {
     (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"
   ];
   bytes execution_requests_root = 12 [ (ethereum.eth.ext.ssz_size) = "32" ];
-  bytes payload_chunks_root = 13 [ (ethereum.eth.ext.ssz_size) = "32" ];
 }
 
 // SignedExecutionPayloadBid wraps an execution payload bid with a signature.
@@ -379,16 +377,15 @@ message DataColumnSidecarGloas {
 //     payload: ExecutionPayload
 //     execution_requests: ExecutionRequests
 //     builder_index: BuilderIndex
+//     beacon_block_root: Root
 //     parent_beacon_block_root: Root
-//
-// Note: beacon_block_root was removed by EIP-8411 because the envelope bytes
-// are committed via the bid's payload_chunks_root before the block exists.
 message ExecutionPayloadEnvelope {
   ethereum.engine.v1.ExecutionPayloadGloas payload = 1;
   ethereum.engine.v1.ExecutionRequestsGloas execution_requests = 2;
   uint64 builder_index = 3 [ (ethereum.eth.ext.cast_type) =
                                  "github.com/OffchainLabs/prysm/v7/"
                                  "consensus-types/primitives.BuilderIndex" ];
+  bytes beacon_block_root = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
   bytes parent_beacon_block_root = 5 [ (ethereum.eth.ext.ssz_size) = "32" ];
 }
 
@@ -438,39 +435,6 @@ message GenericSignedExecutionPayloadEnvelope {
     SignedExecutionPayloadEnvelopeContents contents = 1;
     SignedExecutionPayloadEnvelope signed_envelope = 2;
   }
-  // beacon_block_root carries the root of the beacon block the envelope
-  // belongs to. EIP-8411 removed the root from the SSZ envelope itself, so the
-  // publish API transports it out of band.
-  bytes beacon_block_root = 3;
-}
-
-// PayloadChunk is one of TOTAL_EXECUTION_PAYLOAD_CHUNKS slices of a serialized
-// ExecutionPayloadEnvelope, gossiped on the execution_payload_chunks topic.
-// Each chunk is independently verifiable against the bid's payload_chunks_root
-// via a Merkle inclusion proof over sha256(chunk) leaves.
-//
-// Spec (EIP-8411):
-// class PayloadChunk(Container):
-//     payload_chunks_root: Root
-//     index: ChunkIndex
-//     chunk: Chunk
-//     chunk_inclusion_proof: Vector[Bytes32, CHUNK_INCLUSION_PROOF_DEPTH]
-//     slot: Slot
-//     beacon_block_root: Root
-//
-// slot and beacon_block_root are unauthenticated routing hints: they sit
-// outside the inclusion proof and MUST NOT be trusted beyond routing.
-message PayloadChunk {
-  bytes payload_chunks_root = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
-  uint64 index = 2;
-  bytes chunk = 3 [ (ethereum.eth.ext.ssz_max) = "max_payload_chunk_size.size" ];
-  repeated bytes chunk_inclusion_proof = 4
-      [ (ethereum.eth.ext.ssz_size) = "chunk_inclusion_proof_depth.size,32" ];
-  uint64 slot = 5 [
-    (ethereum.eth.ext.cast_type) =
-        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
-  ];
-  bytes beacon_block_root = 6 [ (ethereum.eth.ext.ssz_size) = "32" ];
 }
 
 // Builder represents a builder in the Gloas fork.

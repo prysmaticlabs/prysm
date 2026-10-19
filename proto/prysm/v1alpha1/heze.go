@@ -44,7 +44,7 @@ func copyBeaconBlockBodyHeze(body *BeaconBlockBodyHeze) *BeaconBlockBodyHeze {
 		Deposits:                  CopySlice(body.Deposits),
 		VoluntaryExits:            CopySlice(body.VoluntaryExits),
 		BlsToExecutionChanges:     CopySlice(body.BlsToExecutionChanges),
-		SignedExecutionPayloadBid: copySignedExecutionPayloadBid(body.SignedExecutionPayloadBid),
+		SignedExecutionPayloadBid: copySignedExecutionPayloadBidHeze(body.SignedExecutionPayloadBid),
 		PayloadAttestations:       copyPayloadAttestations(body.PayloadAttestations),
 		ParentExecutionRequests:   CopyExecutionRequestsGloas(body.ParentExecutionRequests),
 	}
@@ -52,4 +52,37 @@ func copyBeaconBlockBodyHeze(body *BeaconBlockBodyHeze) *BeaconBlockBodyHeze {
 		copied.SyncAggregate = body.SyncAggregate.Copy()
 	}
 	return copied
+}
+
+// Copy creates a deep copy of ExecutionPayloadBidHeze.
+func (header *ExecutionPayloadBidHeze) Copy() *ExecutionPayloadBidHeze {
+	if header == nil {
+		return nil
+	}
+	return &ExecutionPayloadBidHeze{
+		ParentBlockHash:       bytesutil.SafeCopyBytes(header.ParentBlockHash),
+		ParentBlockRoot:       bytesutil.SafeCopyBytes(header.ParentBlockRoot),
+		BlockHash:             bytesutil.SafeCopyBytes(header.BlockHash),
+		PrevRandao:            bytesutil.SafeCopyBytes(header.PrevRandao),
+		FeeRecipient:          bytesutil.SafeCopyBytes(header.FeeRecipient),
+		GasLimit:              header.GasLimit,
+		BuilderIndex:          header.BuilderIndex,
+		Slot:                  header.Slot,
+		Value:                 header.Value,
+		ExecutionPayment:      header.ExecutionPayment,
+		BlobKzgCommitments:    bytesutil.SafeCopy2dBytes(header.BlobKzgCommitments),
+		ExecutionRequestsRoot: bytesutil.SafeCopyBytes(header.ExecutionRequestsRoot),
+		PayloadChunksRoot:     bytesutil.SafeCopyBytes(header.PayloadChunksRoot),
+	}
+}
+
+// copySignedExecutionPayloadBidHeze copies the provided signed Heze execution payload bid.
+func copySignedExecutionPayloadBidHeze(header *SignedExecutionPayloadBidHeze) *SignedExecutionPayloadBidHeze {
+	if header == nil {
+		return nil
+	}
+	return &SignedExecutionPayloadBidHeze{
+		Message:   header.Message.Copy(),
+		Signature: bytesutil.SafeCopyBytes(header.Signature),
+	}
 }

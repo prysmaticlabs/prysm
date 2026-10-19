@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ethereum.eth.v1alpha1;
 
+import "proto/engine/v1/execution_engine.proto";
 import "proto/engine/v1/gloas.proto";
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
@@ -49,7 +50,7 @@ message BeaconBlockBodyHeze {
   SyncAggregate sync_aggregate = 9;
   repeated SignedBLSToExecutionChange bls_to_execution_changes = 10
       [ (ethereum.eth.ext.ssz_max) = "16" ];
-  SignedExecutionPayloadBid signed_execution_payload_bid = 11;
+  SignedExecutionPayloadBidHeze signed_execution_payload_bid = 11;
   repeated PayloadAttestation payload_attestations = 12
       [ (ethereum.eth.ext.ssz_max) = "payload_attestation.size" ];
   ethereum.engine.v1.ExecutionRequestsGloas parent_execution_requests = 13;
@@ -66,7 +67,7 @@ message SignedBeaconBlockHeze {
 // when include_payload=true.
 message BeaconBlockContentsHeze {
   BeaconBlockHeze block = 1;
-  ExecutionPayloadEnvelope execution_payload_envelope = 2;
+  ExecutionPayloadEnvelopeHeze execution_payload_envelope = 2;
   repeated bytes kzg_proofs = 3 [
     (ethereum.eth.ext.ssz_size) = "?,48",
     (ethereum.eth.ext.ssz_max) = "max_cell_proofs_length.size"
@@ -75,4 +76,123 @@ message BeaconBlockContentsHeze {
     (ethereum.eth.ext.ssz_size) = "?,blob.size",
     (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"
   ];
+}
+
+// =============================================================================
+// EIP-8411: fast execution payload broadcast
+// =============================================================================
+
+// ExecutionPayloadBidHeze is the Gloas bid plus the EIP-8411 chunk commitment.
+//
+// Spec:
+// class ExecutionPayloadBid(Container):
+//     ... Gloas fields ...
+//     payload_chunks_root: Root  # [New in EIP-8411]
+message ExecutionPayloadBidHeze {
+  bytes parent_block_hash = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes parent_block_root = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes block_hash = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes prev_randao = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes fee_recipient = 5 [ (ethereum.eth.ext.ssz_size) = "20" ];
+  uint64 gas_limit = 6;
+  uint64 builder_index = 7 [ (ethereum.eth.ext.cast_type) =
+                                 "github.com/OffchainLabs/prysm/v7/"
+                                 "consensus-types/primitives.BuilderIndex" ];
+  uint64 slot = 8 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  uint64 value = 9 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  uint64 execution_payment = 10 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  repeated bytes blob_kzg_commitments = 11 [
+    (ethereum.eth.ext.ssz_size) = "?,48",
+    (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"
+  ];
+  bytes execution_requests_root = 12 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes payload_chunks_root = 13 [ (ethereum.eth.ext.ssz_size) = "32" ];
+}
+
+// SignedExecutionPayloadBidHeze wraps a Heze execution payload bid with a signature.
+message SignedExecutionPayloadBidHeze {
+  ExecutionPayloadBidHeze message = 1;
+  bytes signature = 2 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}
+
+// ExecutionPayloadEnvelopeHeze is the Gloas envelope without beacon_block_root:
+// EIP-8411 commits to the envelope bytes in the bid before the block exists, so
+// the root cannot be part of the serialization and travels out of band.
+message ExecutionPayloadEnvelopeHeze {
+  ethereum.engine.v1.ExecutionPayloadGloas payload = 1;
+  ethereum.engine.v1.ExecutionRequestsGloas execution_requests = 2;
+  uint64 builder_index = 3 [ (ethereum.eth.ext.cast_type) =
+                                 "github.com/OffchainLabs/prysm/v7/"
+                                 "consensus-types/primitives.BuilderIndex" ];
+  bytes parent_beacon_block_root = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
+}
+
+// SignedExecutionPayloadEnvelopeHeze wraps a Heze envelope with a signature.
+// On gossip the envelope travels as chunks and carries no signature (the zero
+// sentinel marks chunk authentication); the signed form serves the local
+// publish API and req/resp.
+message SignedExecutionPayloadEnvelopeHeze {
+  ExecutionPayloadEnvelopeHeze message = 1;
+  bytes signature = 2 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}
+
+// SignedExecutionPayloadEnvelopeContentsHeze is the Heze stateless publish body.
+message SignedExecutionPayloadEnvelopeContentsHeze {
+  SignedExecutionPayloadEnvelopeHeze signed_execution_payload_envelope = 1;
+  repeated bytes kzg_proofs = 2 [
+    (ethereum.eth.ext.ssz_size) = "?,48",
+    (ethereum.eth.ext.ssz_max) = "max_cell_proofs_length.size"
+  ];
+  repeated bytes blobs = 3 [
+    (ethereum.eth.ext.ssz_size) = "?,blob.size",
+    (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"
+  ];
+}
+
+// GenericSignedExecutionPayloadEnvelopeHeze carries either Heze publish form,
+// plus the out-of-band beacon block root the envelope belongs to.
+message GenericSignedExecutionPayloadEnvelopeHeze {
+  oneof envelope {
+    SignedExecutionPayloadEnvelopeContentsHeze contents = 1;
+    SignedExecutionPayloadEnvelopeHeze signed_envelope = 2;
+  }
+  bytes beacon_block_root = 3;
+}
+
+// PayloadChunk is one of TOTAL_EXECUTION_PAYLOAD_CHUNKS slices of a serialized
+// ExecutionPayloadEnvelopeHeze, gossiped on the execution_payload_chunks topic.
+// Each chunk is independently verifiable against the bid's payload_chunks_root
+// via a Merkle inclusion proof over sha256(chunk) leaves.
+//
+// Spec (EIP-8411):
+// class PayloadChunk(Container):
+//     payload_chunks_root: Root
+//     index: ChunkIndex
+//     chunk: Chunk
+//     chunk_inclusion_proof: Vector[Bytes32, CHUNK_INCLUSION_PROOF_DEPTH]
+//     slot: Slot
+//     beacon_block_root: Root
+//
+// slot and beacon_block_root are unauthenticated routing hints: they sit
+// outside the inclusion proof and MUST NOT be trusted beyond routing.
+message PayloadChunk {
+  bytes payload_chunks_root = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  uint64 index = 2;
+  bytes chunk = 3 [ (ethereum.eth.ext.ssz_max) = "max_payload_chunk_size.size" ];
+  repeated bytes chunk_inclusion_proof = 4
+      [ (ethereum.eth.ext.ssz_size) = "chunk_inclusion_proof_depth.size,32" ];
+  uint64 slot = 5 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  bytes beacon_block_root = 6 [ (ethereum.eth.ext.ssz_size) = "32" ];
 }

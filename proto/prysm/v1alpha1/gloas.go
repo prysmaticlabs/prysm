@@ -27,7 +27,6 @@ func (header *ExecutionPayloadBid) Copy() *ExecutionPayloadBid {
 		ExecutionPayment:      header.ExecutionPayment,
 		BlobKzgCommitments:    bytesutil.SafeCopy2dBytes(header.BlobKzgCommitments),
 		ExecutionRequestsRoot: bytesutil.SafeCopyBytes(header.ExecutionRequestsRoot),
-		PayloadChunksRoot:     bytesutil.SafeCopyBytes(header.PayloadChunksRoot),
 	}
 }
 
