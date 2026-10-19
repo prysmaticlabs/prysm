@@ -831,6 +831,13 @@ func readChunkedDataColumnSidecar(
 		return nil, errors.Wrap(err, "new read only data column")
 	}
 
+	if slotVersion := slots.ToForkVersion(roDataColumn.Slot()); slotVersion != msgVersion {
+		return nil, errors.Errorf(
+			"context bytes version %s does not match sidecar slot %d fork %s",
+			version.String(msgVersion), roDataColumn.Slot(), version.String(slotVersion),
+		)
+	}
+
 	// Run validation functions.
 	for _, validationFunction := range validationFunctions {
 		if err := validationFunction(roDataColumn); err != nil {

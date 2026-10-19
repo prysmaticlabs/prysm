@@ -1496,6 +1496,13 @@ func TestIsSidecarIndexRootRequested(t *testing.T) {
 }
 
 func TestReadChunkedDataColumnSidecar(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.FuluForkEpoch = 0
+	cfg.GloasForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+	gloasSlot := params.BeaconConfig().SlotsPerEpoch
+
 	t.Run("non nil status code", func(t *testing.T) {
 		const reason = "a dummy reason"
 
@@ -1703,6 +1710,7 @@ func TestReadChunkedDataColumnSidecar(t *testing.T) {
 
 		expected := &ethpb.DataColumnSidecarGloas{
 			Index:           7,
+			Slot:            gloasSlot,
 			Column:          [][]byte{make([]byte, 2048)},
 			KzgProofs:       [][]byte{make([]byte, 48)},
 			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
@@ -1731,6 +1739,46 @@ func TestReadChunkedDataColumnSidecar(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = p1.Encoding().EncodeWithMaxLength(stream, expected)
+		require.NoError(t, err)
+
+		if util.WaitTimeout(&wg, time.Minute) {
+			t.Fatal("Did not receive stream within 1 sec")
+		}
+	})
+
+	t.Run("context bytes do not match sidecar slot", func(t *testing.T) {
+		p1, p2 := p2ptest.NewTestP2P(t), p2ptest.NewTestP2P(t)
+
+		// A Fulu-slot sidecar sent in the Gloas encoding under the Gloas context.
+		sidecar := &ethpb.DataColumnSidecarGloas{
+			Index:           7,
+			Slot:            0,
+			Column:          [][]byte{make([]byte, 2048)},
+			KzgProofs:       [][]byte{make([]byte, 48)},
+			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		p2.SetStreamHandler(p2p.RPCDataColumnSidecarsByRootTopicV1, func(stream network.Stream) {
+			defer wg.Done()
+
+			_, err := readChunkedDataColumnSidecar(stream, p2, ContextByteVersions{[4]byte{1, 2, 3, 4}: version.Gloas})
+			require.ErrorContains(t, "context bytes version gloas does not match sidecar slot 0 fork fulu", err)
+		})
+
+		p1.Connect(p2)
+
+		stream, err := p1.BHost.NewStream(t.Context(), p2.PeerID(), p2p.RPCDataColumnSidecarsByRootTopicV1)
+		require.NoError(t, err)
+
+		_, err = stream.Write([]byte{responseCodeSuccess})
+		require.NoError(t, err)
+
+		err = writeContextToStream([]byte{1, 2, 3, 4}, stream)
+		require.NoError(t, err)
+
+		_, err = p1.Encoding().EncodeWithMaxLength(stream, sidecar)
 		require.NoError(t, err)
 
 		if util.WaitTimeout(&wg, time.Minute) {
