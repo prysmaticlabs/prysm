@@ -271,6 +271,20 @@ func TestBeaconBlock(t *testing.T) {
 		},
 	}
 	blockOnlyResp := &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Gloas{Gloas: gloasBlock}}
+	hezeBlock := util.NewBeaconBlockHeze().Block
+	hezeContentsResp := &eth.GenericBeaconBlock{
+		Block: &eth.GenericBeaconBlock_HezeContents{
+			HezeContents: &eth.BeaconBlockContentsHeze{
+				Block: hezeBlock,
+				ExecutionPayloadEnvelope: &eth.ExecutionPayloadEnvelope{
+					Payload:         &enginev1.ExecutionPayloadGloas{SlotNumber: slot},
+					BeaconBlockRoot: blockRoot[:],
+				},
+				Blobs:     [][]byte{[]byte("blob")},
+				KzgProofs: [][]byte{[]byte("proof")},
+			},
+		},
+	}
 
 	tests := []struct {
 		name      string
@@ -289,6 +303,22 @@ func TestBeaconBlock(t *testing.T) {
 				require.Equal(t, true, ok)
 				require.Equal(t, gloasBlock, gloas.Gloas)
 				// The publisher's envelope + blobs were cached under the request slot.
+				cachedEnv, blobs, proofs := vc.envelopeCache.Peek(slot)
+				require.NotNil(t, cachedEnv)
+				require.Equal(t, slot, cachedEnv.Payload.SlotNumber)
+				require.Equal(t, 1, len(blobs))
+				require.Equal(t, 1, len(proofs))
+			},
+		},
+		{
+			name:      "stateless heze contents are cached and unwrapped to a block-only response",
+			stateless: true,
+			resp:      hezeContentsResp,
+			verify: func(t *testing.T, vc *grpcValidatorClient, got *eth.GenericBeaconBlock, err error) {
+				require.NoError(t, err)
+				heze, ok := got.GetBlock().(*eth.GenericBeaconBlock_Heze)
+				require.Equal(t, true, ok)
+				require.Equal(t, hezeBlock, heze.Heze)
 				cachedEnv, blobs, proofs := vc.envelopeCache.Peek(slot)
 				require.NotNil(t, cachedEnv)
 				require.Equal(t, slot, cachedEnv.Payload.SlotNumber)
@@ -363,7 +393,7 @@ func TestGetExecutionPayloadEnvelope(t *testing.T) {
 			name: "cache miss fetches envelope from the beacon node",
 			root: matchingRoot,
 			prepare: func(_ *grpcValidatorClient, client *mock2.MockBeaconNodeValidatorClient) {
-				client.EXPECT().GetExecutionPayloadEnvelope(gomock.Any(), &eth.ExecutionPayloadEnvelopeRequest{Slot: slot}).Return(
+				client.EXPECT().GetExecutionPayloadEnvelopeV2(gomock.Any(), &eth.ExecutionPayloadEnvelopeRequest{Slot: slot}).Return(
 					&eth.ExecutionPayloadEnvelopeResponse{Envelope: cachedEnvelope}, nil)
 			},
 		},
@@ -371,7 +401,7 @@ func TestGetExecutionPayloadEnvelope(t *testing.T) {
 			name: "cache miss with mismatched root errors",
 			root: requestedRoot,
 			prepare: func(_ *grpcValidatorClient, client *mock2.MockBeaconNodeValidatorClient) {
-				client.EXPECT().GetExecutionPayloadEnvelope(gomock.Any(), gomock.Any()).Return(
+				client.EXPECT().GetExecutionPayloadEnvelopeV2(gomock.Any(), gomock.Any()).Return(
 					&eth.ExecutionPayloadEnvelopeResponse{Envelope: cachedEnvelope}, nil)
 			},
 			wantErr: "execution payload envelope beacon_block_root does not match",
@@ -411,7 +441,7 @@ func TestPublishExecutionPayloadEnvelope_ArmSelection(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-		client.EXPECT().PublishExecutionPayloadEnvelope(gomock.Any(), gomock.Any()).DoAndReturn(
+		client.EXPECT().PublishExecutionPayloadEnvelopeV2(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, in *eth.GenericSignedExecutionPayloadEnvelope, _ ...grpc.CallOption) (*emptypb.Empty, error) {
 				require.NotNil(t, in.GetContents())
 				require.Equal(t, 1, len(in.GetContents().Blobs))
@@ -427,7 +457,7 @@ func TestPublishExecutionPayloadEnvelope_ArmSelection(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-		client.EXPECT().PublishExecutionPayloadEnvelope(gomock.Any(), gomock.Any()).DoAndReturn(
+		client.EXPECT().PublishExecutionPayloadEnvelopeV2(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, in *eth.GenericSignedExecutionPayloadEnvelope, _ ...grpc.CallOption) (*emptypb.Empty, error) {
 				require.IsNil(t, in.GetContents())
 				require.NotNil(t, in.GetSignedEnvelope())

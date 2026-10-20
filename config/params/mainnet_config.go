@@ -34,6 +34,8 @@ const (
 	mainnetFuluForkEpoch = 411392 // December 3, 2025, 09:49:11pm UTC
 	// Gloas Fork Epoch for mainnet config
 	mainnetGloasForkEpoch = math.MaxUint64
+	// Heze Fork Epoch for mainnet config
+	mainnetHezeForkEpoch = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -227,6 +229,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateElectraFieldCount:   37,
 	BeaconStateFuluFieldCount:      38,
 	BeaconStateGloasFieldCount:     46,
+	BeaconStateHezeFieldCount:      46,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -253,6 +256,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	FuluForkEpoch:        mainnetFuluForkEpoch,
 	GloasForkVersion:     []byte{7, 0, 0, 0},
 	GloasForkEpoch:       mainnetGloasForkEpoch,
+	HezeForkVersion:      []byte{8, 0, 0, 0},
+	HezeForkEpoch:        mainnetHezeForkEpoch,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -315,6 +320,10 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BuilderFailureBackOffPeriod:    5,
 	BuilderCriticalFailedBuilders:  7,
 	BuilderFailureWeightThreshold:  60,
+	BuilderRelayBlacklistPeriod:    32,
+	BuilderRelayAssociationTTL:     64,
+	BuilderMaxTrackedRelays:        64,
+	BuilderMaxIndicesPerRelay:      16,
 	BuilderBidTimeout:              BuilderBidTolerance,
 
 	// Execution engine timeout value
@@ -427,6 +436,7 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.ElectraForkVersion = make([]byte, fieldparams.VersionLength)
 	c.FuluForkVersion = make([]byte, fieldparams.VersionLength)
 	c.GloasForkVersion = make([]byte, fieldparams.VersionLength)
+	c.HezeForkVersion = make([]byte, fieldparams.VersionLength)
 
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
 	c.AltairForkVersion[fieldparams.VersionLength-1] = b
@@ -436,6 +446,7 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.ElectraForkVersion[fieldparams.VersionLength-1] = b
 	c.FuluForkVersion[fieldparams.VersionLength-1] = b
 	c.GloasForkVersion[fieldparams.VersionLength-1] = b
+	c.HezeForkVersion[fieldparams.VersionLength-1] = b
 
 	c.GenesisForkVersion[0] = 0
 	c.AltairForkVersion[0] = 1
@@ -445,4 +456,5 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.ElectraForkVersion[0] = 5
 	c.FuluForkVersion[0] = 6
 	c.GloasForkVersion[0] = 7
+	c.HezeForkVersion[0] = 8
 }

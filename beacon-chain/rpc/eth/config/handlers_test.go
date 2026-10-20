@@ -87,6 +87,8 @@ func TestGetSpec(t *testing.T) {
 	config.FuluForkEpoch = 109
 	config.GloasForkVersion = []byte("GloasForkVersion")
 	config.GloasForkEpoch = 110
+	config.HezeForkVersion = []byte("HezeForkVersion")
+	config.HezeForkEpoch = 133
 	config.MinBuilderWithdrawabilityDelay = 111
 	config.MaxBuildersPerWithdrawalsSweep = 112
 	config.MaxBuilderDepositRequestsPerPayload = 113
@@ -329,6 +331,10 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "0x"+hex.EncodeToString([]byte("GloasForkVersion")), v)
 			case "GLOAS_FORK_EPOCH":
 				assert.Equal(t, "110", v)
+			case "HEZE_FORK_VERSION":
+				assert.Equal(t, "0x"+hex.EncodeToString([]byte("HezeForkVersion")), v)
+			case "HEZE_FORK_EPOCH":
+				assert.Equal(t, "133", v)
 			case "MIN_BUILDER_WITHDRAWABILITY_DELAY":
 				assert.Equal(t, "111", v)
 			case "MAX_BUILDERS_PER_WITHDRAWALS_SWEEP":
@@ -703,10 +709,6 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxSignedAggregateAndProofSize), 10), v)
 			case "MAX_ATTESTER_SLASHING_SIZE":
 				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxAttesterSlashingSize), 10), v)
-			case "MAX_DATA_COLUMN_SIDECAR_SIZE":
-				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxDataColumnSidecarSize), 10), v)
-			case "MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE":
-				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxPartialDataColumnSidecarSize), 10), v)
 			case "MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE":
 				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxSignedExecutionPayloadBidSize), 10), v)
 			default:

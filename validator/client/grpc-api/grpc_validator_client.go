@@ -213,15 +213,22 @@ func (c *grpcValidatorClient) BeaconBlock(ctx context.Context, in *ethpb.BlockRe
 	}
 	// Stateless self-build: cache the bundled envelope + blobs for the publisher and hand the
 	// proposer the block alone, matching the non-stateless response shape.
-	contents, ok := resp.GetBlock().(*ethpb.GenericBeaconBlock_GloasContents)
-	if !ok {
+	switch b := resp.GetBlock().(type) {
+	case *ethpb.GenericBeaconBlock_GloasContents:
+		gc := b.GloasContents
+		if c.stateless && gc.GetExecutionPayloadEnvelope() != nil {
+			c.envelopeCache.Add(in.Slot, gc.ExecutionPayloadEnvelope, gc.Blobs, gc.KzgProofs)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: gc.Block}}, nil
+	case *ethpb.GenericBeaconBlock_HezeContents:
+		hc := b.HezeContents
+		if c.stateless && hc.GetExecutionPayloadEnvelope() != nil {
+			c.envelopeCache.Add(in.Slot, hc.ExecutionPayloadEnvelope, hc.Blobs, hc.KzgProofs)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: hc.Block}}, nil
+	default:
 		return resp, nil
 	}
-	gc := contents.GloasContents
-	if c.stateless && gc.GetExecutionPayloadEnvelope() != nil {
-		c.envelopeCache.Add(in.Slot, gc.ExecutionPayloadEnvelope, gc.Blobs, gc.KzgProofs)
-	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: gc.Block}}, nil
 }
 
 func (c *grpcValidatorClient) SyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
@@ -396,11 +403,11 @@ func (c *grpcValidatorClient) GetExecutionPayloadEnvelope(ctx context.Context, s
 	req := &ethpb.ExecutionPayloadEnvelopeRequest{
 		Slot: slot,
 	}
-	resp, err := c.getClient().GetExecutionPayloadEnvelope(ctx, req)
+	resp, err := c.getClient().GetExecutionPayloadEnvelopeV2(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(
 			client.ErrConnectionIssue,
-			errors.Wrap(err, "GetExecutionPayloadEnvelope").Error(),
+			errors.Wrap(err, "GetExecutionPayloadEnvelopeV2").Error(),
 		)
 	}
 	if resp.Envelope == nil {
@@ -434,7 +441,7 @@ func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Contex
 			},
 		}
 	}
-	return c.getClient().PublishExecutionPayloadEnvelope(ctx, generic)
+	return c.getClient().PublishExecutionPayloadEnvelopeV2(ctx, generic)
 }
 
 func (c *grpcValidatorClient) PayloadAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.PayloadAttestationData, error) {
