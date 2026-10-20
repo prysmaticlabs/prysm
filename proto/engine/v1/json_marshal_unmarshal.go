@@ -788,9 +788,10 @@ func (p *PayloadAttributesV4) UnmarshalJSON(enc []byte) error {
 }
 
 type payloadStatusJSON struct {
-	LatestValidHash *common.Hash `json:"latestValidHash"`
-	Status          string       `json:"status"`
-	ValidationError *string      `json:"validationError"`
+	LatestValidHash        *common.Hash `json:"latestValidHash"`
+	Status                 string       `json:"status"`
+	ValidationError        *string      `json:"validationError"`
+	InclusionListSatisfied *bool        `json:"inclusionListSatisfied"`
 }
 
 // MarshalJSON --
@@ -801,9 +802,10 @@ func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
 		latestHash = &hash
 	}
 	return json.Marshal(payloadStatusJSON{
-		LatestValidHash: latestHash,
-		Status:          p.Status.String(),
-		ValidationError: &p.ValidationError,
+		LatestValidHash:        latestHash,
+		Status:                 p.Status.String(),
+		ValidationError:        &p.ValidationError,
+		InclusionListSatisfied: p.InclusionListSatisfied,
 	})
 }
 
@@ -821,6 +823,7 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 	if dec.ValidationError != nil {
 		p.ValidationError = *dec.ValidationError
 	}
+	p.InclusionListSatisfied = dec.InclusionListSatisfied
 	return nil
 }
 

@@ -17,6 +17,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
@@ -68,6 +69,8 @@ const (
 	NewPayloadMethodV4 = "engine_newPayloadV4"
 	// NewPayloadMethodV5 is the engine_newPayloadVX method added at Gloas.
 	NewPayloadMethodV5 = "engine_newPayloadV5"
+	// NewPayloadMethodV6 is the engine_newPayloadVX method added at Heze.
+	NewPayloadMethodV6 = "engine_newPayloadV6"
 	// ForkchoiceUpdatedMethod v1 request string for JSON-RPC.
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
@@ -170,6 +173,57 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	default:
 		return nil, errors.New("unknown execution data type")
 	}
+	return newPayloadStatusResult(result, parentBlockRoot)
+}
+
+// NewPayloadWithInclusionList calls engine_newPayloadV6 for a Heze payload.
+// The returned inclusionListSatisfied is nil unless the status is VALID and the EL set it.
+func (s *Service) NewPayloadWithInclusionList(
+	ctx context.Context,
+	payload interfaces.ExecutionData,
+	versionedHashes []common.Hash,
+	parentBlockRoot *common.Hash,
+	executionRequests pb.ExecutionRequester,
+	inclusionListTransactions [][]byte,
+) ([]byte, *bool, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayloadWithInclusionList")
+	defer span.End()
+	defer func(start time.Time) {
+		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}(time.Now())
+
+	d := time.Now().Add(time.Duration(params.BeaconConfig().ExecutionEngineTimeoutValue) * time.Second)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
+
+	payloadPb, ok := payload.Proto().(*pb.ExecutionPayloadGloas)
+	if !ok {
+		return nil, nil, errors.Errorf("unexpected execution data type %T for %s", payload.Proto(), NewPayloadMethodV6)
+	}
+	if executionRequests == nil {
+		return nil, nil, errors.New("nil execution requests")
+	}
+	flattenedRequests, err := executionRequests.FlattenRequests()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to encode execution requests")
+	}
+	ilTxs := make([]hexutil.Bytes, len(inclusionListTransactions))
+	for i, tx := range inclusionListTransactions {
+		ilTxs[i] = tx
+	}
+	result := &pb.PayloadStatus{}
+	if err := s.rpcClient.CallContext(ctx, result, NewPayloadMethodV6, payloadPb, versionedHashes, parentBlockRoot, flattenedRequests, ilTxs); err != nil {
+		return nil, nil, handleRPCError(err)
+	}
+	lvh, err := newPayloadStatusResult(result, parentBlockRoot)
+	if err != nil || result.Status != pb.PayloadStatus_VALID {
+		return lvh, nil, err
+	}
+	return lvh, result.InclusionListSatisfied, nil
+}
+
+// newPayloadStatusResult maps a newPayload status to the latest valid hash and an error.
+func newPayloadStatusResult(result *pb.PayloadStatus, parentBlockRoot *common.Hash) ([]byte, error) {
 	if result.ValidationError != "" {
 		log.WithField("status", result.Status.String()).
 			WithField("parentRoot", fmt.Sprintf("%#x", parentBlockRoot)).
