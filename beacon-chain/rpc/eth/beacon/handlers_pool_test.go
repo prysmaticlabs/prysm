@@ -17,6 +17,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	blockchainmock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	prysmtime "github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
@@ -1212,7 +1213,11 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 			ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 			VoluntaryExitsPool: &mock.PoolMock{},
 			Broadcaster:        broadcaster,
+			OperationNotifier:  &blockchainmock.MockOperationNotifier{},
 		}
+		opChannel := make(chan *feed.Event, 1)
+		opSub := s.OperationNotifier.OperationFeed().Subscribe(opChannel)
+		defer opSub.Unsubscribe()
 
 		var body bytes.Buffer
 		_, err = body.WriteString(exit1)
@@ -1228,6 +1233,13 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(pendingExits))
 		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+
+		require.Equal(t, 1, len(opChannel))
+		e := <-opChannel
+		require.Equal(t, feed.EventType(operation.ExitReceived), e.Type)
+		data, ok := e.Data.(*operation.ExitReceivedData)
+		require.Equal(t, true, ok)
+		assert.DeepEqual(t, pendingExits[0], data.Exit)
 	})
 	t.Run("across fork", func(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
@@ -1244,6 +1256,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 			ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
 			VoluntaryExitsPool: &mock.PoolMock{},
 			Broadcaster:        broadcaster,
+			OperationNotifier:  &blockchainmock.MockOperationNotifier{},
 		}
 
 		var body bytes.Buffer
