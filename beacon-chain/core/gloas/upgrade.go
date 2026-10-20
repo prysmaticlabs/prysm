@@ -1,0 +1,353 @@
+package gloas
+
+import (
+	"context"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
+	"github.com/pkg/errors"
+)
+
+// UpgradeToGloas updates inputs a generic state to return the version Gloas state.
+//
+//	<spec fn="upgrade_to_gloas" fork="gloas" hash="6c7b259e">
+//	def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
+//	    epoch = fulu.get_current_epoch(pre)
+//
+//	    post = BeaconState(
+//	        genesis_time=pre.genesis_time,
+//	        genesis_validators_root=pre.genesis_validators_root,
+//	        slot=pre.slot,
+//	        fork=Fork(
+//	            previous_version=pre.fork.current_version,
+//	            # [Modified in Gloas]
+//	            current_version=GLOAS_FORK_VERSION,
+//	            epoch=epoch,
+//	        ),
+//	        latest_block_header=pre.latest_block_header,
+//	        block_roots=pre.block_roots,
+//	        state_roots=pre.state_roots,
+//	        historical_roots=pre.historical_roots,
+//	        eth1_data=pre.eth1_data,
+//	        eth1_data_votes=pre.eth1_data_votes,
+//	        eth1_deposit_index=pre.eth1_deposit_index,
+//	        # [Modified in Gloas:EIP7688]
+//	        validators=Validators(data=pre.validators),
+//	        # [Modified in Gloas:EIP7688]
+//	        balances=Balances(data=pre.balances),
+//	        randao_mixes=pre.randao_mixes,
+//	        slashings=pre.slashings,
+//	        # [Modified in Gloas:EIP7688]
+//	        previous_epoch_participation=EpochParticipation(data=pre.previous_epoch_participation),
+//	        # [Modified in Gloas:EIP7688]
+//	        current_epoch_participation=EpochParticipation(data=pre.current_epoch_participation),
+//	        justification_bits=pre.justification_bits,
+//	        previous_justified_checkpoint=pre.previous_justified_checkpoint,
+//	        current_justified_checkpoint=pre.current_justified_checkpoint,
+//	        finalized_checkpoint=pre.finalized_checkpoint,
+//	        # [Modified in Gloas:EIP7688]
+//	        inactivity_scores=InactivityScores(data=pre.inactivity_scores),
+//	        current_sync_committee=pre.current_sync_committee,
+//	        next_sync_committee=pre.next_sync_committee,
+//	        # [Modified in Gloas:EIP7732]
+//	        # Removed `latest_execution_payload_header`
+//	        # [New in Gloas:EIP7732]
+//	        latest_block_hash=pre.latest_execution_payload_header.block_hash,
+//	        next_withdrawal_index=pre.next_withdrawal_index,
+//	        next_withdrawal_validator_index=pre.next_withdrawal_validator_index,
+//	        historical_summaries=pre.historical_summaries,
+//	        deposit_requests_start_index=pre.deposit_requests_start_index,
+//	        deposit_balance_to_consume=pre.deposit_balance_to_consume,
+//	        exit_balance_to_consume=pre.exit_balance_to_consume,
+//	        earliest_exit_epoch=pre.earliest_exit_epoch,
+//	        consolidation_balance_to_consume=pre.consolidation_balance_to_consume,
+//	        earliest_consolidation_epoch=pre.earliest_consolidation_epoch,
+//	        # [Modified in Gloas:EIP7688]
+//	        pending_deposits=PendingDeposits(data=pre.pending_deposits),
+//	        # [Modified in Gloas:EIP7688]
+//	        pending_partial_withdrawals=PendingPartialWithdrawals(data=pre.pending_partial_withdrawals),
+//	        # [Modified in Gloas:EIP7688]
+//	        pending_consolidations=PendingConsolidations(data=pre.pending_consolidations),
+//	        proposer_lookahead=pre.proposer_lookahead,
+//	        # [New in Gloas:EIP7732]
+//	        builders=Builders(),
+//	        # [New in Gloas:EIP7732]
+//	        next_withdrawal_builder_index=BuilderIndex(0),
+//	        # [New in Gloas:EIP7732]
+//	        execution_payload_availability=ExecutionPayloadAvailability(
+//	            data=[0b1 for _ in range(SLOTS_PER_HISTORICAL_ROOT)]
+//	        ),
+//	        # [New in Gloas:EIP7732]
+//	        builder_pending_payments=BuilderPendingPayments(),
+//	        # [New in Gloas:EIP7732]
+//	        builder_pending_withdrawals=BuilderPendingWithdrawals(),
+//	        # [New in Gloas:EIP7732]
+//	        latest_execution_payload_bid=ExecutionPayloadBid(
+//	            parent_block_hash=pre.latest_execution_payload_header.parent_hash,
+//	            parent_block_root=pre.latest_block_header.parent_root,
+//	            block_hash=pre.latest_execution_payload_header.block_hash,
+//	            prev_randao=pre.latest_execution_payload_header.prev_randao,
+//	            fee_recipient=ExecutionAddress(),
+//	            gas_limit=pre.latest_execution_payload_header.gas_limit,
+//	            builder_index=BUILDER_INDEX_SELF_BUILD,
+//	            slot=pre.latest_block_header.slot,
+//	            value=Gwei(0),
+//	            execution_payment=Gwei(0),
+//	            blob_kzg_commitments=BlobKZGCommitments(),
+//	            execution_requests_root=hash_tree_root(ExecutionRequests.empty()),
+//	        ),
+//	        # [New in Gloas:EIP7732]
+//	        payload_expected_withdrawals=Withdrawals(),
+//	        # [New in Gloas:EIP7732]
+//	        ptc_window=PayloadTimelinessCommitteeWindow(),
+//	    )
+//
+//	    # [New in Gloas:EIP7732]
+//	    post.ptc_window = initialize_ptc_window(post)
+//
+//	    # [New in Gloas:EIP7732]
+//	    onboard_builders_from_pending_deposits(post)
+//
+//	    return post
+//	</spec>
+func UpgradeToGloas(ctx context.Context, beaconState state.BeaconState) (state.BeaconState, error) {
+	s, err := upgradeToGloas(beaconState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert to gloas")
+	}
+	ptcWindow, err := initializePTCWindow(ctx, s)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to initialize ptc window")
+	}
+	if err := s.SetPTCWindow(ptcWindow); err != nil {
+		return nil, errors.Wrap(err, "failed to set ptc window")
+	}
+	if err := s.OnboardBuildersFromPendingDeposits(); err != nil {
+		return nil, errors.Wrap(err, "failed to onboard builders from pending deposits")
+	}
+	return s, nil
+}
+
+// initializePTCWindow builds the initial PTC window for the Gloas fork upgrade.
+//
+//	<spec fn="initialize_ptc_window" fork="gloas" hash="a02bea8d">
+//	def initialize_ptc_window(
+//	    state: BeaconState,
+//	) -> PayloadTimelinessCommitteeWindow:
+//	    """
+//	    Return the cached PTC window starting from the current epoch.
+//	    Used to initialize the ``ptc_window`` field in the beacon state at genesis and after forks.
+//	    """
+//	    empty_previous_epoch = [
+//	        PayloadTimelinessCommittee(data=[ValidatorIndex(0) for _ in range(PTC_SIZE)])
+//	        for _ in range(SLOTS_PER_EPOCH)
+//	    ]
+//
+//	    ptcs = []
+//	    current_epoch = get_current_epoch(state)
+//	    for e in range(1 + MIN_SEED_LOOKAHEAD):
+//	        epoch = current_epoch + e
+//	        start_slot = compute_start_slot_at_epoch(epoch)
+//	        ptcs += [compute_ptc(state, start_slot + index) for index in range(SLOTS_PER_EPOCH)]
+//
+//	    return PayloadTimelinessCommitteeWindow(data=empty_previous_epoch + ptcs)
+//	</spec>
+func initializePTCWindow(ctx context.Context, st state.ReadOnlyBeaconState) ([]*ethpb.PTCs, error) {
+	currentEpoch := slots.ToEpoch(st.Slot())
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	windowSize := slotsPerEpoch.Mul(uint64(2 + params.BeaconConfig().MinSeedLookahead))
+	window := make([]*ethpb.PTCs, 0, windowSize)
+
+	// Previous epoch has no cached data at fork time — fill with empty slots.
+	for range slotsPerEpoch {
+		window = append(window, &ethpb.PTCs{
+			ValidatorIndices: make([]primitives.ValidatorIndex, fieldparams.PTCSize),
+		})
+	}
+
+	// Compute PTC for current epoch through lookahead.
+	startSlot, err := slots.EpochStart(currentEpoch)
+	if err != nil {
+		return nil, err
+	}
+	totalSlots := slotsPerEpoch.Mul(uint64(1 + params.BeaconConfig().MinSeedLookahead))
+	for i := range totalSlots {
+		ptc, err := computePTC(ctx, st, startSlot+i)
+		if err != nil {
+			return nil, err
+		}
+		window = append(window, &ethpb.PTCs{ValidatorIndices: ptc})
+	}
+
+	return window, nil
+}
+
+func upgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
+	currentSyncCommittee, err := beaconState.CurrentSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+	nextSyncCommittee, err := beaconState.NextSyncCommittee()
+	if err != nil {
+		return nil, err
+	}
+	prevEpochParticipation, err := beaconState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	currentEpochParticipation, err := beaconState.CurrentEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	inactivityScores, err := beaconState.InactivityScores()
+	if err != nil {
+		return nil, err
+	}
+	payloadHeader, err := beaconState.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	wi, err := beaconState.NextWithdrawalIndex()
+	if err != nil {
+		return nil, err
+	}
+	vi, err := beaconState.NextWithdrawalValidatorIndex()
+	if err != nil {
+		return nil, err
+	}
+	summaries, err := beaconState.HistoricalSummaries()
+	if err != nil {
+		return nil, err
+	}
+	depositRequestsStartIndex, err := beaconState.DepositRequestsStartIndex()
+	if err != nil {
+		return nil, err
+	}
+	depositBalanceToConsume, err := beaconState.DepositBalanceToConsume()
+	if err != nil {
+		return nil, err
+	}
+	exitBalanceToConsume, err := beaconState.ExitBalanceToConsume()
+	if err != nil {
+		return nil, err
+	}
+	earliestExitEpoch, err := beaconState.EarliestExitEpoch()
+	if err != nil {
+		return nil, err
+	}
+	consolidationBalanceToConsume, err := beaconState.ConsolidationBalanceToConsume()
+	if err != nil {
+		return nil, err
+	}
+	earliestConsolidationEpoch, err := beaconState.EarliestConsolidationEpoch()
+	if err != nil {
+		return nil, err
+	}
+	pendingDeposits, err := beaconState.PendingDeposits()
+	if err != nil {
+		return nil, err
+	}
+	pendingPartialWithdrawals, err := beaconState.PendingPartialWithdrawals()
+	if err != nil {
+		return nil, err
+	}
+	pendingConsolidations, err := beaconState.PendingConsolidations()
+	if err != nil {
+		return nil, err
+	}
+	proposerLookahead, err := beaconState.ProposerLookahead()
+	if err != nil {
+		return nil, err
+	}
+
+	executionPayloadAvailability := make([]byte, int((params.BeaconConfig().SlotsPerHistoricalRoot+7)/8))
+	for i := range executionPayloadAvailability {
+		executionPayloadAvailability[i] = 0xff
+	}
+
+	builderPendingPayments := make([]*ethpb.BuilderPendingPayment, int(params.BeaconConfig().SlotsPerEpoch*2))
+	for i := range builderPendingPayments {
+		builderPendingPayments[i] = &ethpb.BuilderPendingPayment{
+			Withdrawal: &ethpb.BuilderPendingWithdrawal{
+				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			},
+		}
+	}
+
+	emptyExecutionRequestsRoot, err := enginev1.EmptyExecutionRequestsHashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute empty execution requests root")
+	}
+
+	latestBlockHeader := beaconState.LatestBlockHeader()
+
+	s := &ethpb.BeaconStateGloas{
+		GenesisTime:           uint64(beaconState.GenesisTime().Unix()),
+		GenesisValidatorsRoot: beaconState.GenesisValidatorsRoot(),
+		Slot:                  beaconState.Slot(),
+		Fork: &ethpb.Fork{
+			PreviousVersion: beaconState.Fork().CurrentVersion,
+			CurrentVersion:  params.BeaconConfig().GloasForkVersion,
+			Epoch:           time.CurrentEpoch(beaconState),
+		},
+		LatestBlockHeader:           latestBlockHeader,
+		BlockRoots:                  beaconState.BlockRoots(),
+		StateRoots:                  beaconState.StateRoots(),
+		HistoricalRoots:             beaconState.HistoricalRoots(),
+		Eth1Data:                    beaconState.Eth1Data(),
+		Eth1DataVotes:               beaconState.Eth1DataVotes(),
+		Eth1DepositIndex:            beaconState.Eth1DepositIndex(),
+		Validators:                  beaconState.Validators(),
+		Balances:                    beaconState.Balances(),
+		RandaoMixes:                 beaconState.RandaoMixes(),
+		Slashings:                   beaconState.Slashings(),
+		PreviousEpochParticipation:  prevEpochParticipation,
+		CurrentEpochParticipation:   currentEpochParticipation,
+		JustificationBits:           beaconState.JustificationBits(),
+		PreviousJustifiedCheckpoint: beaconState.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  beaconState.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         beaconState.FinalizedCheckpoint(),
+		InactivityScores:            inactivityScores,
+		CurrentSyncCommittee:        currentSyncCommittee,
+		NextSyncCommittee:           nextSyncCommittee,
+		LatestExecutionPayloadBid: &ethpb.ExecutionPayloadBid{
+			ParentBlockHash:       payloadHeader.ParentHash(),
+			ParentBlockRoot:       latestBlockHeader.ParentRoot,
+			BlockHash:             payloadHeader.BlockHash(),
+			PrevRandao:            payloadHeader.PrevRandao(),
+			FeeRecipient:          make([]byte, fieldparams.FeeRecipientLength),
+			GasLimit:              payloadHeader.GasLimit(),
+			BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
+			Slot:                  latestBlockHeader.Slot,
+			ExecutionRequestsRoot: emptyExecutionRequestsRoot[:],
+		},
+		NextWithdrawalIndex:           wi,
+		NextWithdrawalValidatorIndex:  vi,
+		HistoricalSummaries:           summaries,
+		DepositRequestsStartIndex:     depositRequestsStartIndex,
+		DepositBalanceToConsume:       depositBalanceToConsume,
+		ExitBalanceToConsume:          exitBalanceToConsume,
+		EarliestExitEpoch:             earliestExitEpoch,
+		ConsolidationBalanceToConsume: consolidationBalanceToConsume,
+		EarliestConsolidationEpoch:    earliestConsolidationEpoch,
+		PendingDeposits:               pendingDeposits,
+		PendingPartialWithdrawals:     pendingPartialWithdrawals,
+		PendingConsolidations:         pendingConsolidations,
+		ProposerLookahead:             proposerLookahead,
+		Builders:                      []*ethpb.Builder{},
+		NextWithdrawalBuilderIndex:    primitives.BuilderIndex(0),
+		ExecutionPayloadAvailability:  executionPayloadAvailability,
+		BuilderPendingPayments:        builderPendingPayments,
+		BuilderPendingWithdrawals:     []*ethpb.BuilderPendingWithdrawal{},
+		LatestBlockHash:               payloadHeader.BlockHash(),
+		PayloadExpectedWithdrawals:    []*enginev1.Withdrawal{},
+	}
+	return state_native.InitializeFromProtoUnsafeGloas(s)
+}

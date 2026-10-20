@@ -52,7 +52,6 @@ var appFlags = []cli.Flag{
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
-	flags.HTTPModules,
 	flags.HTTPServerHost,
 	flags.HTTPServerPort,
 	flags.HTTPServerCorsDomain,
@@ -65,7 +64,6 @@ var appFlags = []cli.Flag{
 	flags.BlobBatchLimitBurstFactor,
 	flags.DataColumnBatchLimit,
 	flags.DataColumnBatchLimitBurstFactor,
-	flags.InteropMockEth1DataVotesFlag,
 	flags.SlotsPerArchivedPoint,
 	flags.DisableDebugRPCEndpoints,
 	flags.SubscribeToAllSubnets,
@@ -89,9 +87,18 @@ var appFlags = []cli.Flag{
 	flags.LocalBlockValueBoost,
 	flags.MinBuilderBid,
 	flags.MinBuilderDiff,
+	flags.BuilderHeaderTimeout,
+	flags.BuilderAllowedFailures,
+	flags.BuilderCriticalFailures,
+	flags.BuilderBlacklistPeriod,
+	flags.BuilderCriticalBlacklistPeriod,
+	flags.BuilderRelayBlacklistPeriod,
+	flags.BuilderFailureBackOffPeriod,
+	flags.BuilderCriticalFailedBuilders,
+	flags.BuilderBidTimeout,
 	flags.BeaconDBPruning,
 	flags.PrunerRetentionEpochs,
-	flags.EnableBuilderSSZ,
+	flags.DisableBuilderSSZ,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,
@@ -125,6 +132,7 @@ var appFlags = []cli.Flag{
 	cmd.ClearDB,
 	cmd.ForceClearDB,
 	cmd.LogFormat,
+	cmd.DisableLogColor,
 	cmd.MaxGoroutines,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
@@ -151,6 +159,7 @@ var appFlags = []cli.Flag{
 	flags.SlasherFlag,
 	flags.JwtId,
 	flags.DisableGetBlobsV2,
+	flags.PostponeShutdownForProposals,
 	storage.BlobStoragePathFlag,
 	storage.DataColumnStoragePathFlag,
 	storage.BlobStorageLayout,
@@ -161,7 +170,10 @@ var appFlags = []cli.Flag{
 	dasFlags.BlobRetentionEpochFlag,
 	flags.BatchVerifierLimit,
 	flags.StateDiffExponents,
+	flags.ArchiveOriginState,
 	flags.DisableEphemeralLogFile,
+	flags.DisablePartialDataColumns,
+	flags.DisableGraffitiClientAppend,
 }
 
 func init() {
@@ -188,8 +200,8 @@ func before(ctx *cli.Context) error {
 		return errors.Wrap(err, "failed to parse log vmodule")
 	}
 
-	// set the global logging level to allow for the highest verbosity requested
-	logs.SetLoggingLevel(max(verbosityLevel, maxLevel))
+	// set the global logging level and data
+	logs.SetLoggingLevelAndData(verbosityLevel, vmodule, maxLevel, ctx.Bool(flags.DisableEphemeralLogFile.Name))
 
 	format := ctx.String(cmd.LogFormat.Name)
 	switch format {
@@ -203,6 +215,7 @@ func before(ctx *cli.Context) error {
 		formatter.FullTimestamp = true
 		formatter.ForceFormatting = true
 		formatter.ForceColors = true
+		formatter.DisableColors = ctx.Bool(cmd.DisableLogColor.Name)
 		formatter.VModule = vmodule
 		formatter.BaseVerbosity = verbosityLevel
 
@@ -210,21 +223,36 @@ func before(ctx *cli.Context) error {
 			Formatter:     formatter,
 			Writer:        os.Stderr,
 			AllowedLevels: logrus.AllLevels[:max(verbosityLevel, maxLevel)+1],
+			Identifier:    logs.LogTargetUser,
 		})
 	case "fluentd":
-		f := joonix.NewFormatter()
+		// disabling logrus default output so we can control it via hooks
+		logrus.SetOutput(io.Discard)
 
+		f := joonix.NewFormatter()
 		if err := joonix.DisableTimestampFormat(f); err != nil {
 			panic(err) // lint:nopanic -- This shouldn't happen, but crashing immediately at startup is OK.
 		}
 
-		logrus.SetFormatter(f)
+		logrus.AddHook(&logs.WriterHook{
+			Formatter:     f,
+			Writer:        os.Stderr,
+			AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+			Identifier:    logs.LogTargetUser,
+		})
 	case "json":
-		logrus.SetFormatter(&logrus.JSONFormatter{
-			TimestampFormat: "2006-01-02 15:04:05.00",
+		// disabling logrus default output so we can control it via hooks
+		logrus.SetOutput(io.Discard)
+		logrus.AddHook(&logs.WriterHook{
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: "2006-01-02 15:04:05.00",
+			},
+			Writer:        os.Stderr,
+			AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+			Identifier:    logs.LogTargetUser,
 		})
 	case "journald":
-		if err := journald.Enable(); err != nil {
+		if err := journald.Enable(verbosityLevel); err != nil {
 			return err
 		}
 	default:
@@ -277,8 +305,9 @@ func main() {
 	// note other instances of ctx in this func are *cli.Context.
 	rctx, cancel := context.WithCancel(context.Background())
 	app := cli.App{
-		Name:  "beacon-chain",
-		Usage: "this is a beacon chain implementation for Ethereum",
+		Name:    "beacon-chain",
+		Usage:   "Ethereum beacon node",
+		Authors: cmd.Authors,
 		Action: func(ctx *cli.Context) error {
 			if err := startNode(ctx, cancel); err != nil {
 				log.Fatal(err.Error())
@@ -367,17 +396,8 @@ func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 		backfill.BeaconNodeOptions,
 		das.BeaconNodeOptions,
 	}
-	for _, of := range optFuncs {
-		ofo, err := of(ctx)
-		if err != nil {
-			return err
-		}
-		if ofo != nil {
-			opts = append(opts, ofo...)
-		}
-	}
 
-	beacon, err := node.New(ctx, cancel, opts...)
+	beacon, err := node.New(ctx, cancel, optFuncs, opts...)
 	if err != nil {
 		return fmt.Errorf("unable to start beacon node: %w", err)
 	}

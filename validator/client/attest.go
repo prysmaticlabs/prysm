@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -21,7 +20,6 @@ import (
 	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
 	prysmTime "github.com/OffchainLabs/prysm/v7/time"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -40,7 +38,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 	v.waitUntilAttestationDueOrValidBlock(ctx, slot)
 
 	var b strings.Builder
-	if err := b.WriteByte(byte(iface.RoleAttester)); err != nil {
+	if err := b.WriteByte(byte(roleAttester)); err != nil {
 		log.WithError(err).Error("Could not write role byte for lock key")
 		tracing.AnnotateError(span, err)
 		return
@@ -192,19 +190,15 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 
 // Given the validator public key, this gets the validator assignment.
 func (v *validator) duty(pubKey [fieldparams.BLSPubkeyLength]byte) (*ethpb.ValidatorDuty, error) {
-	v.dutiesLock.RLock()
-	defer v.dutiesLock.RUnlock()
-	if v.duties == nil {
+	snap := v.duties.snapshot()
+	if !snap.isInitialized() {
 		return nil, errors.New("no duties for validators")
 	}
-
-	for _, duty := range v.duties.CurrentEpochDuties {
-		if bytes.Equal(pubKey[:], duty.PublicKey) {
-			return duty, nil
-		}
+	d, ok := snap.currentDuty(pubKey)
+	if !ok {
+		return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
 	}
-
-	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
+	return d, nil
 }
 
 // Given validator's public key, this function returns the signature of an attestation data and its signing root.
@@ -259,6 +253,12 @@ func (v *validator) setHighestSlot(slot primitives.Slot) {
 	}
 }
 
+// attestationDueComponent returns the slot-component basis points for the
+// attestation due time.
+func attestationDueComponent(slot primitives.Slot) primitives.BP {
+	return params.BeaconConfig().AttestationDueBPSAtSlot(slot)
+}
+
 // waitUntilAttestationDueOrValidBlock waits until (a) or (b) whichever comes first:
 //
 //	(a) the validator has received a valid block that is the same slot as input slot
@@ -272,12 +272,7 @@ func (v *validator) waitUntilAttestationDueOrValidBlock(ctx context.Context, slo
 		return
 	}
 
-	cfg := params.BeaconConfig()
-	component := cfg.AttestationDueBPS
-	if slots.ToEpoch(slot) >= cfg.GloasForkEpoch {
-		component = cfg.AttestationDueBPSGloas
-	}
-	finalTime, err := v.slotComponentDeadline(slot, component)
+	finalTime, err := v.slotComponentDeadline(slot, attestationDueComponent(slot))
 	if err != nil {
 		log.WithError(err).WithField("slot", slot).Error("Slot overflows, unable to wait for attestation deadline")
 		return

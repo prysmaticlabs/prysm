@@ -29,6 +29,8 @@ var (
 	errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
 	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
 	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
+	// errWSBlockNotCanonical is returned when a block is in the DB but not part of the finalized canonical chain.
+	errWSBlockNotCanonical = errors.New("weak subjectivity root is not canonical")
 	// ErrNotDescendantOfFinalized is returned when a block is not a descendant of the finalized checkpoint
 	ErrNotDescendantOfFinalized = errors.New("not descendant of finalized checkpoint")
 	// ErrNotCheckpoint is returned when a given checkpoint is not a
@@ -40,6 +42,8 @@ var (
 	errNotGenesisRoot = errors.New("root is not the genesis block root")
 	// errBlacklistedBlock is returned when a block is blacklisted as invalid.
 	errBlacklistedRoot = verification.AsVerificationFailure(errors.New("block root is blacklisted"))
+	// errBatchEnvelopeMismatch is returned when a batch carries envelopes that do not line up with its blocks.
+	errBatchEnvelopeMismatch = errors.New("batch envelopes do not correspond to the batch blocks")
 	// errMaxBlobsExceeded is returned when the number of blobs in a block exceeds the maximum allowed.
 	errMaxBlobsExceeded = verification.AsVerificationFailure(errors.New("expected commitments in block exceeds MAX_BLOBS_PER_BLOCK"))
 	// errMaxDataColumnsExceeded is returned when the number of data columns exceeds the maximum allowed.

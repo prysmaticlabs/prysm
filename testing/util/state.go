@@ -12,6 +12,7 @@ import (
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -103,13 +104,13 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafePhase0(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Phase0 state: %w", err)
 	}
 
 	return st, nil
@@ -158,13 +159,13 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeAltair(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Altair state: %w", err)
 	}
 
 	return st, nil
@@ -225,13 +226,13 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeBellatrix(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Bellatrix state: %w", err)
 	}
 
 	return st, nil
@@ -293,13 +294,13 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeCapella(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Capella state: %w", err)
 	}
 
 	return st, nil
@@ -361,13 +362,13 @@ func NewBeaconStateDeneb(options ...func(state *ethpb.BeaconStateDeneb) error) (
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeDeneb(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Deneb state: %w", err)
 	}
 
 	return st, nil
@@ -429,13 +430,13 @@ func NewBeaconStateElectra(options ...func(state *ethpb.BeaconStateElectra) erro
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeElectra(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Electra state: %w", err)
 	}
 
 	return st, nil
@@ -492,19 +493,19 @@ func NewBeaconStateFulu(options ...func(state *ethpb.BeaconStateFulu) error) (st
 			TransactionsRoot: make([]byte, 32),
 			WithdrawalsRoot:  make([]byte, 32),
 		},
-		ProposerLookahead: make([]uint64, 64),
+		ProposerLookahead: make([]primitives.ValidatorIndex, 64),
 	}
 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeFulu(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Fulu state: %w", err)
 	}
 
 	return st, nil
@@ -523,6 +524,13 @@ func NewBeaconStateGloas(options ...func(state *ethpb.BeaconStateGloas) error) (
 			Withdrawal: &ethpb.BuilderPendingWithdrawal{
 				FeeRecipient: make([]byte, 20),
 			},
+		}
+	}
+
+	ptcWindow := make([]*ethpb.PTCs, 3*params.BeaconConfig().SlotsPerEpoch)
+	for i := range ptcWindow {
+		ptcWindow[i] = &ethpb.PTCs{
+			ValidatorIndices: make([]primitives.ValidatorIndex, fieldparams.PTCSize),
 		}
 	}
 
@@ -557,14 +565,15 @@ func NewBeaconStateGloas(options ...func(state *ethpb.BeaconStateGloas) error) (
 			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
-		ProposerLookahead: make([]uint64, 64),
+		ProposerLookahead: make([]primitives.ValidatorIndex, 64),
 		LatestExecutionPayloadBid: &ethpb.ExecutionPayloadBid{
-			ParentBlockHash:        make([]byte, 32),
-			ParentBlockRoot:        make([]byte, 32),
-			BlockHash:              make([]byte, 32),
-			PrevRandao:             make([]byte, 32),
-			FeeRecipient:           make([]byte, 20),
-			BlobKzgCommitmentsRoot: make([]byte, 32),
+			ParentBlockHash:       make([]byte, 32),
+			ParentBlockRoot:       make([]byte, 32),
+			BlockHash:             make([]byte, 32),
+			PrevRandao:            make([]byte, 32),
+			FeeRecipient:          make([]byte, 20),
+			BlobKzgCommitments:    [][]byte{make([]byte, 48)},
+			ExecutionRequestsRoot: make([]byte, 32),
 		},
 		Builders:                     make([]*ethpb.Builder, 0),
 		ExecutionPayloadAvailability: make([]byte, 1024),
@@ -572,18 +581,19 @@ func NewBeaconStateGloas(options ...func(state *ethpb.BeaconStateGloas) error) (
 		BuilderPendingWithdrawals:    make([]*ethpb.BuilderPendingWithdrawal, 0),
 		LatestBlockHash:              make([]byte, 32),
 		PayloadExpectedWithdrawals:   make([]*enginev1.Withdrawal, 0),
+		PtcWindow:                    ptcWindow,
 	}
 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeGloas(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Gloas state: %w", err)
 	}
 
 	return st, nil

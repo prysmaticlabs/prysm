@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	bitfield "github.com/OffchainLabs/go-bitfield"
+	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
+
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	consensus_types "github.com/OffchainLabs/prysm/v7/consensus-types"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
@@ -15,7 +17,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
-	ssz "github.com/prysmaticlabs/fastssz"
 )
 
 func Test_BeaconBlockIsNil(t *testing.T) {
@@ -164,14 +165,26 @@ func Test_SignedBeaconBlock_Header(t *testing.T) {
 	assert.DeepEqual(t, expectedHTR[:], h.Header.BodyRoot)
 }
 
-func Test_SignedBeaconBlock_PbGenericBlockGloasUnsupported(t *testing.T) {
-	sb := &SignedBeaconBlock{
-		version: version.Gloas,
-		block:   &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}},
+func Test_SignedBeaconBlock_PbGenericBlockGloas(t *testing.T) {
+	blk := &eth.SignedBeaconBlockGloas{
+		Block: &eth.BeaconBlockGloas{
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
+			Body: &eth.BeaconBlockBodyGloas{
+				RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+				Graffiti:     make([]byte, fieldparams.RootLength),
+			},
+		},
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
+	sb, err := NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
 
-	_, err := sb.PbGenericBlock()
-	require.ErrorContains(t, "Gloas blocks don't support GenericSignedBeaconBlock conversion", err)
+	generic, err := sb.PbGenericBlock()
+	require.NoError(t, err)
+	require.NotNil(t, generic)
+	_, ok := generic.Block.(*eth.GenericSignedBeaconBlock_Gloas)
+	require.Equal(t, true, ok)
 }
 
 func Test_SignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
@@ -380,6 +393,19 @@ func Test_BeaconBlockBody_ElectraAttestations(t *testing.T) {
 	require.DeepEqual(t, a[0].GetSignature(), []byte("electra"))
 }
 
+func Test_BeaconBlockBody_GloasAttestations(t *testing.T) {
+	bb := &SignedBeaconBlock{
+		block: &BeaconBlock{body: &BeaconBlockBody{
+			version: version.Gloas,
+			attestationsGloas: []*eth.AttestationGloas{{
+				Signature: []byte("gloas"),
+			}},
+		}}}
+	a := bb.Block().Body().Attestations()
+	require.Equal(t, 1, len(a))
+	require.DeepEqual(t, a[0].GetSignature(), []byte("gloas"))
+}
+
 func Test_BeaconBlockBody_Deposits(t *testing.T) {
 	d := make([]*eth.Deposit, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
@@ -425,6 +451,77 @@ func Test_BeaconBlockBody_SignedExecutionPayloadBid(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(t, bid, got)
 	})
+}
+
+func Test_BeaconBlockBody_BlobKzgCommitments(t *testing.T) {
+	commitments := [][]byte{bytesutil.PadTo([]byte{0x01}, fieldparams.BLSPubkeyLength)}
+
+	tests := []struct {
+		name       string
+		body       *BeaconBlockBody
+		want       [][]byte
+		wantErr    error
+		wantErrMsg string
+	}{
+		{
+			name: "gloas returns commitments from bid",
+			body: &BeaconBlockBody{
+				version: version.Gloas,
+				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{
+					Message: &eth.ExecutionPayloadBid{BlobKzgCommitments: commitments},
+				},
+			},
+			want: commitments,
+		},
+		{
+			name:       "gloas nil signed bid",
+			body:       &BeaconBlockBody{version: version.Gloas, signedExecutionPayloadBid: nil},
+			wantErrMsg: "nil execution payload bid or bid message",
+		},
+		{
+			name: "gloas nil bid message",
+			body: &BeaconBlockBody{
+				version:                   version.Gloas,
+				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{Message: nil},
+			},
+			wantErrMsg: "nil execution payload bid or bid message",
+		},
+		{
+			name: "deneb returns commitments",
+			body: &BeaconBlockBody{version: version.Deneb, blobKzgCommitments: commitments},
+			want: commitments,
+		},
+		{
+			name: "fulu returns commitments",
+			body: &BeaconBlockBody{version: version.Fulu, blobKzgCommitments: commitments},
+			want: commitments,
+		},
+		{
+			name:    "unsupported before deneb",
+			body:    &BeaconBlockBody{version: version.Capella},
+			wantErr: consensus_types.ErrUnsupportedField,
+		},
+		{
+			name:    "incorrect block version below phase0",
+			body:    &BeaconBlockBody{version: version.Phase0 - 1},
+			wantErr: errIncorrectBlockVersion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.body.BlobKzgCommitments()
+			switch {
+			case tt.wantErr != nil:
+				require.ErrorIs(t, err, tt.wantErr)
+			case tt.wantErrMsg != "":
+				require.ErrorContains(t, tt.wantErrMsg, err)
+			default:
+				require.NoError(t, err)
+				require.DeepEqual(t, tt.want, got)
+			}
+		})
+	}
 }
 
 func Test_BeaconBlockBody_VoluntaryExits(t *testing.T) {
@@ -649,6 +746,19 @@ func hydrateBeaconBlockBodyCapella() *eth.BeaconBlockBodyCapella {
 	}
 }
 
+func hydrateBeaconBlockBodyHeze() *eth.BeaconBlockBodyHeze {
+	g := hydrateBeaconBlockBodyGloas()
+	return &eth.BeaconBlockBodyHeze{
+		RandaoReveal:              g.RandaoReveal,
+		Eth1Data:                  g.Eth1Data,
+		Graffiti:                  g.Graffiti,
+		SyncAggregate:             g.SyncAggregate,
+		SignedExecutionPayloadBid: g.SignedExecutionPayloadBid,
+		ParentExecutionRequests:   g.ParentExecutionRequests,
+		PayloadAttestations:       g.PayloadAttestations,
+	}
+}
+
 func hydrateBeaconBlockBodyGloas() *eth.BeaconBlockBodyGloas {
 	bits := bitfield.NewBitvector512()
 	bits.SetBitAt(0, true)
@@ -666,15 +776,17 @@ func hydrateBeaconBlockBodyGloas() *eth.BeaconBlockBodyGloas {
 		},
 		SignedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{
 			Message: &eth.ExecutionPayloadBid{
-				ParentBlockHash:        make([]byte, fieldparams.RootLength),
-				ParentBlockRoot:        make([]byte, fieldparams.RootLength),
-				BlockHash:              make([]byte, fieldparams.RootLength),
-				PrevRandao:             make([]byte, fieldparams.RootLength),
-				FeeRecipient:           make([]byte, 20),
-				BlobKzgCommitmentsRoot: make([]byte, fieldparams.RootLength),
+				ParentBlockHash:       make([]byte, fieldparams.RootLength),
+				ParentBlockRoot:       make([]byte, fieldparams.RootLength),
+				BlockHash:             make([]byte, fieldparams.RootLength),
+				PrevRandao:            make([]byte, fieldparams.RootLength),
+				FeeRecipient:          make([]byte, 20),
+				BlobKzgCommitments:    [][]byte{make([]byte, fieldparams.BLSPubkeyLength)},
+				ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
 			},
 			Signature: make([]byte, fieldparams.BLSSignatureLength),
 		},
+		ParentExecutionRequests: &pb.ExecutionRequestsGloas{},
 		PayloadAttestations: []*eth.PayloadAttestation{
 			{
 				AggregationBits: bits,

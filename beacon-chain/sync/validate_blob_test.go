@@ -68,8 +68,7 @@ func TestValidateBlob_InvalidMessageType(t *testing.T) {
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*eth.SignedBeaconBlock]()]
-	digest, err := s.currentForkDigest()
-	require.NoError(t, err)
+	digest := s.currentForkDigest()
 	topic = s.addDigestToTopic(topic, digest)
 	result, err := s.validateBlob(ctx, "", &pubsub.Message{
 		Message: &pb.Message{
@@ -127,9 +126,8 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*eth.BlobSidecar]()]
-	digest, err := s.currentForkDigest()
-	require.NoError(t, err)
-	topic = s.addDigestAndIndexToTopic(topic, digest, 0)
+	digest := s.currentForkDigest()
+	topic = s.addDigestAndIndexToTopic(topic, digest, 0) + p.Encoding().ProtocolSuffix()
 
 	s.setSeenBlobIndex(sc.Slot(), sc.SignedBlockHeader.Header.ProposerIndex, 0)
 	result, err := s.validateBlob(ctx, "", &pubsub.Message{
@@ -157,9 +155,8 @@ func TestValidateBlob_InvalidTopicIndex(t *testing.T) {
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*eth.BlobSidecar]()]
-	digest, err := s.currentForkDigest()
-	require.NoError(t, err)
-	topic = s.addDigestAndIndexToTopic(topic, digest, 1)
+	digest := s.currentForkDigest()
+	topic = s.addDigestAndIndexToTopic(topic, digest, 1) + p.Encoding().ProtocolSuffix()
 	result, err := s.validateBlob(ctx, "", &pubsub.Message{
 		Message: &pb.Message{
 			Data:  buf.Bytes(),
@@ -260,6 +257,7 @@ func TestValidateBlob_ErrorPathsWithMock(t *testing.T) {
 			p := p2ptest.NewTestP2P(t)
 			chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
 			s := &Service{
+				ctx:               ctx,
 				seenBlobCache:     lruwrpr.New(10),
 				seenPendingBlocks: make(map[[32]byte]bool),
 				cfg:               &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
@@ -272,9 +270,8 @@ func TestValidateBlob_ErrorPathsWithMock(t *testing.T) {
 			require.NoError(t, err)
 
 			topic := p2p.GossipTypeMapping[reflect.TypeFor[*eth.BlobSidecar]()]
-			digest, err := s.currentForkDigest()
-			require.NoError(t, err)
-			topic = s.addDigestAndIndexToTopic(topic, digest, 0)
+			digest := s.currentForkDigest()
+			topic = s.addDigestAndIndexToTopic(topic, digest, 0) + p.Encoding().ProtocolSuffix()
 			result, err := s.validateBlob(ctx, "", &pubsub.Message{
 				Message: &pb.Message{
 					Data:  buf.Bytes(),

@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
+	"sync"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/iface"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
@@ -21,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	prombolt "github.com/prysmaticlabs/prombbolt"
+	logrus "github.com/sirupsen/logrus"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -66,6 +70,30 @@ var (
 		Name: "db_beacon_state_saving_milliseconds",
 		Help: "Milliseconds it takes to save a beacon state to the DB",
 	})
+	stateDiffGetAnchorStateCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "state_diff_get_anchor_state_cache_hit_total",
+		Help: "The total number of state diff getAnchorState cache hits.",
+	})
+	stateDiffGetAnchorStateCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "state_diff_get_anchor_state_cache_miss_total",
+		Help: "The total number of state diff getAnchorState cache misses.",
+	})
+	stateDiffGetAnchorStateCacheHitReadTime = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "state_diff_get_anchor_state_cache_hit_read_milliseconds",
+		Help: "Milliseconds it takes to read the anchor state from cache in getAnchorState in case of cache hit.",
+	})
+	stateDiffGetAnchorStateCacheMissTime = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "state_diff_get_anchor_state_cache_miss_milliseconds",
+		Help: "Milliseconds it takes for state diff anchor's cache to return in case of cache miss.",
+	})
+	stateDiffGetAnchorStateDBReadTime = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name: "state_diff_get_anchor_state_db_read_milliseconds",
+		Help: "Milliseconds it takes to read the anchor state from the database in getAnchorState.",
+	})
+	stateDiffAnchorCacheBytes = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "state_diff_anchor_cache_bytes",
+		Help: "The size in bytes of each state diff anchor cache level.",
+	}, []string{"level"})
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
@@ -92,6 +120,8 @@ type Store struct {
 	validatorEntryCache *ristretto.Cache[[]byte, *ethpb.Validator]
 	stateSummaryCache   *stateSummaryCache
 	stateDiffCache      *stateDiffCache
+	archiveStatus       *ArchiveStatus
+	archiveLock         sync.RWMutex
 	ctx                 context.Context
 }
 
@@ -114,6 +144,8 @@ var Buckets = [][]byte{
 	lightClientBootstrapBucket,
 	lightClientSyncCommitteeBucket,
 	stateDiffBucket,
+	hotStateSnapshotsBucket,
+	archiveResumeSnapshotsBucket,
 	// Indices buckets.
 	blockSlotIndicesBucket,
 	stateSlotIndicesBucket,
@@ -123,9 +155,9 @@ var Buckets = [][]byte{
 	// Migrations
 	migrationsBucket,
 
-	feeRecipientBucket,
-	registrationBucket,
 	custodyBucket,
+	executionPayloadEnvelopesBucket,
+	executionPayloadEnvelopeBlockHashBucket,
 }
 
 // KVStoreOption is a functional option that modifies a kv.Store.
@@ -216,6 +248,20 @@ func (kv *Store) startStateDiff(ctx context.Context) error {
 	if !features.Get().EnableStateDiff {
 		return nil
 	}
+	// Load the archive status before anything can write to the tree, so the frontier guard in
+	// saveStateByDiff is armed for the whole run.
+	as, err := kv.ArchiveStatus(ctx)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	if as != nil {
+		kv.setArchiveStatus(as)
+		log.WithFields(logrus.Fields{
+			"originSlot":             as.OriginSlot,
+			"regeneratedThroughSlot": as.RegeneratedThroughSlot,
+			"complete":               as.Complete,
+		}).Info("Archive state regeneration status loaded")
+	}
 	// Check if offset already exists (existing state-diff database).
 	hasOffset, err := kv.hasStateDiffOffset()
 	if err != nil {
@@ -223,8 +269,45 @@ func (kv *Store) startStateDiff(ctx context.Context) error {
 	}
 
 	if hasOffset {
-		// Existing state-diff database - restarts not yet supported.
-		return errors.New("restarting with existing state-diff database not yet supported")
+		storedExponents, err := kv.loadStateDiffExponents()
+		if err != nil {
+			if errors.Is(err, errExponentsMetadataMissing) {
+				return fmt.Errorf("%w: database has state-diff offset but no exponents metadata. "+
+					"This may indicate the database was created by an older software version that predates exponent storage. "+
+					"Delete database and re-sync from genesis/checkpoint", ErrStateDiffCorrupted)
+			}
+			return fmt.Errorf("%w: state-diff exponents metadata corrupted: %v", ErrStateDiffCorrupted, err)
+		}
+		currentExponents := flags.Get().StateDiffExponents
+		if !slices.Equal(storedExponents, currentExponents) {
+			return errors.Wrapf(
+				ErrStateDiffExponentMismatch,
+				"state-diff exponents changed; database incompatible. "+
+					"Database was initialized with: %v. "+
+					"Current configuration: %v. "+
+					"Options: use original exponents (--state-diff-exponents=%s) or delete database and re-sync from genesis/checkpoint.",
+				storedExponents,
+				currentExponents,
+				formatStateDiffExponents(storedExponents),
+			)
+		}
+		offset, err := kv.loadOffset()
+		if err != nil {
+			return err
+		}
+		cache, err := populateStateDiffCacheFromDB(kv, offset)
+		if err != nil {
+			return err
+		}
+		kv.stateDiffCache = cache
+		if err := validateStateDiffCache(ctx, kv, cache); err != nil {
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"offset":    offset,
+			"exponents": storedExponents,
+		}).Info("State-diff cache initialized from existing database")
+		return nil
 	}
 
 	// Check if this is a new database (no head block).
@@ -262,6 +345,15 @@ func (s *Store) ClearDB() error {
 // Close closes the underlying BoltDB database.
 func (s *Store) Close() error {
 	prometheus.Unregister(createBoltCollector(s.db))
+	// Clear cache references after close so shutdown releases memory promptly.
+	if s.blockCache != nil {
+		s.blockCache.Close()
+		s.blockCache = nil
+	}
+	if s.validatorEntryCache != nil {
+		s.validatorEntryCache.Close()
+		s.validatorEntryCache = nil
+	}
 
 	// Before DB closes, we should dump the cached state summary objects to DB.
 	if err := s.saveCachedStateSummariesDB(s.ctx); err != nil {

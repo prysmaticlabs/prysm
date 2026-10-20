@@ -21,8 +21,9 @@ func (s *Service) maintainCustodyInfo() error {
 	// Rationale of slot choice:
 	// - If syncing with an empty DB from genesis, then justifiedSlot = finalizedSlot = 0,
 	//   and the node starts to sync from slot 0 ==> Using justifiedSlot is correct.
-	// - If syncing with an empty DB from a checkpoint, then justifiedSlot = finalizedSlot = checkpointSlot,
-	//   and the node starts to sync from checkpointSlot ==> Using justifiedSlot is correct.
+	// - If syncing with an empty DB from a checkpoint, then finalizedSlot = checkpointSlot and
+	//   justifiedSlot <= finalizedSlot, and the node starts to sync from checkpointSlot
+	//   ==> Using finalizedSlot is correct.
 	// - If syncing with a non-empty DB, then justifiedSlot > finalizedSlot,
 	//   and the node starts to sync from justifiedSlot + 1 ==> Using justifiedSlot + 1 is correct.
 	const interval = 1 * time.Minute
@@ -55,7 +56,7 @@ func (s *Service) maintainCustodyInfo() error {
 		return errors.Wrap(err, "epoch start for justified slot")
 	}
 
-	slot := justifiedSlot
+	slot := max(justifiedSlot, finalizedSlot)
 	if justifiedSlot > finalizedSlot {
 		slot++
 	}
@@ -171,13 +172,13 @@ func (s *Service) custodyGroupCount(context.Context) (uint64, error) {
 }
 
 // validatorsCustodyRequirements computes the custody requirements based on the
-// finalized state and the tracked validators.
+// finalized state and the validators attached to this beacon node (per
+// beacon_committee_subscriptions).
 func (s *Service) validatorsCustodyRequirement() (uint64, error) {
-	if s.trackedValidatorsCache == nil {
+	if s.subscribedValidatorsCache == nil {
 		return 0, nil
 	}
-	// Get the indices of the tracked validators.
-	indices := s.trackedValidatorsCache.Indices()
+	indices := s.subscribedValidatorsCache.Indices()
 
 	// Return early if no validators are tracked.
 	if len(indices) == 0 {
@@ -185,7 +186,7 @@ func (s *Service) validatorsCustodyRequirement() (uint64, error) {
 	}
 
 	// Retrieve the finalized state.
-	finalizedState := s.cfg.stateGen.FinalizedState()
+	finalizedState := s.cfg.stateGen.FinalizedReadOnlyBalances()
 	if finalizedState == nil || finalizedState.IsNil() {
 		return 0, nilFinalizedStateError
 	}

@@ -1,20 +1,22 @@
 package beacon
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/lookup"
 	"github.com/OffchainLabs/prysm/v7/encoding/ssz/query"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	"github.com/OffchainLabs/prysm/v7/network/httputil"
 	sszquerypb "github.com/OffchainLabs/prysm/v7/proto/ssz_query"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	ssz "github.com/prysmaticlabs/fastssz"
 )
 
 // QueryBeaconState handles SSZ Query request for BeaconState.
@@ -53,13 +55,7 @@ func (s *Server) QueryBeaconState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stateRoot, err := s.Stater.StateRoot(ctx, []byte(stateID))
-	if err != nil {
-		var rootNotFoundErr *lookup.StateRootNotFoundError
-		if errors.As(err, &rootNotFoundErr) {
-			httputil.HandleError(w, "State root not found: "+rootNotFoundErr.Error(), http.StatusNotFound)
-			return
-		}
-		httputil.HandleError(w, "Could not get state root: "+err.Error(), http.StatusInternalServerError)
+	if !shared.WriteStateRootFetchError(w, err) {
 		return
 	}
 
@@ -83,21 +79,32 @@ func (s *Server) QueryBeaconState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, offset, length, err := query.CalculateOffsetAndLength(info, path)
+	finalInfo, offset, length, err := query.CalculateOffsetAndLength(info, path)
 	if err != nil {
 		httputil.HandleError(w, "Could not calculate offset and length for path '"+req.Query+"': "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	encodedState, err := st.MarshalSSZ()
-	if err != nil {
-		httputil.HandleError(w, "Could not marshal state to SSZ: "+err.Error(), http.StatusInternalServerError)
-		return
+	var result []byte
+	if path.Length {
+		n, err := finalInfo.LengthValue()
+		if err != nil {
+			httputil.HandleError(w, "Invalid query '"+req.Query+"': "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		result = binary.LittleEndian.AppendUint64(nil, n)
+	} else {
+		encodedState, err := st.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal state to SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result = encodedState[offset : offset+length]
 	}
 
 	response := &sszquerypb.SSZQueryResponse{
 		Root:   stateRoot,
-		Result: encodedState[offset : offset+length],
+		Result: result,
 	}
 
 	responseSsz, err := response.MarshalSSZ()
@@ -110,7 +117,7 @@ func (s *Server) QueryBeaconState(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteSsz(w, responseSsz)
 }
 
-// QueryBeaconState handles SSZ Query request for BeaconState.
+// QueryBeaconBlock handles SSZ Query request for BeaconBlock.
 // Returns as bytes serialized SSZQueryResponse.
 func (s *Server) QueryBeaconBlock(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.QueryBeaconBlock")
@@ -168,15 +175,9 @@ func (s *Server) QueryBeaconBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, offset, length, err := query.CalculateOffsetAndLength(info, path)
+	finalInfo, offset, length, err := query.CalculateOffsetAndLength(info, path)
 	if err != nil {
 		httputil.HandleError(w, "Could not calculate offset and length for path '"+req.Query+"': "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	encodedBlock, err := signedBlock.Block().MarshalSSZ()
-	if err != nil {
-		httputil.HandleError(w, "Could not marshal block to SSZ: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -186,17 +187,63 @@ func (s *Server) QueryBeaconBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := &sszquerypb.SSZQueryResponse{
-		Root:   blockRoot[:],
-		Result: encodedBlock[offset : offset+length],
+	var result []byte
+	if path.Length {
+		n, err := finalInfo.LengthValue()
+		if err != nil {
+			httputil.HandleError(w, "Invalid query '"+req.Query+"': "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		result = binary.LittleEndian.AppendUint64(nil, n)
+	} else {
+		encodedBlock, err := signedBlock.Block().MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal block to SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result = encodedBlock[offset : offset+length]
 	}
 
+	var response ssz.Marshaler
+	if req.IncludeProof {
+		proof, err := getSSZQueryProof(info, path)
+		if err != nil {
+			httputil.HandleError(w, "Could not compute merkle proofs: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		response = &sszquerypb.SSZQueryResponseWithProof{
+			Root:   blockRoot[:],
+			Result: result,
+			Proof: &sszquerypb.SSZQueryProof{
+				Leaf:   proof.Leaf,
+				Gindex: uint64(proof.Index),
+				Proofs: proof.Hashes,
+			},
+		}
+	} else {
+		response = &sszquerypb.SSZQueryResponse{
+			Root:   blockRoot[:],
+			Result: result,
+		}
+	}
 	responseSsz, err := response.MarshalSSZ()
 	if err != nil {
 		httputil.HandleError(w, "Could not marshal response to SSZ: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set(api.VersionHeader, version.String(signedBlock.Version()))
 	httputil.WriteSsz(w, responseSsz)
+}
+
+// getSSZQueryProof retrieves Merkle proof for a given SSZInfo object and query path
+func getSSZQueryProof(info *query.SszInfo, path query.Path) (*ssz.Proof, error) {
+	gi, err := query.GetGeneralizedIndexFromPath(info, path)
+	if err != nil {
+		return nil, fmt.Errorf("get generalized index: %w", err)
+	}
+	proof, err := info.Prove(gi)
+	if err != nil {
+		return nil, fmt.Errorf("prove gindex %d: %w", gi, err)
+	}
+	return proof, nil
 }

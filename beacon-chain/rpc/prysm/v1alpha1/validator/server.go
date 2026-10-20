@@ -20,6 +20,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/blstoexec"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/payloadattestation"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/synccommittee"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/voluntaryexits"
@@ -27,7 +28,8 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	prysmSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
@@ -44,45 +46,52 @@ import (
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
-	Ctx                     context.Context
-	PayloadIDCache          *cache.PayloadIDCache
-	TrackedValidatorsCache  *cache.TrackedValidatorsCache
-	HeadFetcher             blockchain.HeadFetcher
-	ForkFetcher             blockchain.ForkFetcher
-	ForkchoiceFetcher       blockchain.ForkchoiceFetcher
-	GenesisFetcher          blockchain.GenesisFetcher
-	FinalizationFetcher     blockchain.FinalizationFetcher
-	TimeFetcher             blockchain.TimeFetcher
-	BlockFetcher            execution.POWBlockFetcher
-	DepositFetcher          cache.DepositFetcher
-	ChainStartFetcher       execution.ChainStartFetcher
-	Eth1InfoFetcher         execution.ChainInfoFetcher
-	OptimisticModeFetcher   blockchain.OptimisticModeFetcher
-	SyncChecker             sync.Checker
-	StateNotifier           statefeed.Notifier
-	BlockNotifier           blockfeed.Notifier
-	P2P                     p2p.Broadcaster
-	AttestationCache        *cache.AttestationCache
-	AttPool                 attestations.Pool
-	SlashingsPool           slashings.PoolManager
-	ExitPool                voluntaryexits.PoolManager
-	SyncCommitteePool       synccommittee.Pool
-	BlockReceiver           blockchain.BlockReceiver
-	BlobReceiver            blockchain.BlobReceiver
-	DataColumnReceiver      blockchain.DataColumnReceiver
-	MockEth1Votes           bool
-	Eth1BlockFetcher        execution.POWBlockFetcher
-	PendingDepositsFetcher  depositsnapshot.PendingDepositsFetcher
-	OperationNotifier       opfeed.Notifier
-	StateGen                stategen.StateManager
-	ReplayerBuilder         stategen.ReplayerBuilder
-	BeaconDB                db.HeadAccessDatabase
-	ExecutionEngineCaller   execution.EngineCaller
-	BlockBuilder            builder.BlockBuilder
-	BLSChangesPool          blstoexec.PoolManager
-	ClockWaiter             startup.ClockWaiter
-	CoreService             *core.Service
-	AttestationStateFetcher blockchain.AttestationStateFetcher
+	Ctx                              context.Context
+	PayloadIDCache                   *cache.PayloadIDCache
+	ProposerPreferencesCache         *cache.ProposerPreferencesCache
+	SubscribedValidatorsCache        *cache.SubscribedValidatorsCache
+	HighestBidCache                  *cache.HighestExecutionPayloadBidCache
+	BuilderCircuitBreaker            *cache.BuilderCircuitBreaker
+	ExecutionPayloadEnvelopeCache    *cache.ExecutionPayloadEnvelopeCache
+	HeadFetcher                      blockchain.HeadFetcher
+	ForkFetcher                      blockchain.ForkFetcher
+	ForkchoiceFetcher                blockchain.ForkchoiceFetcher
+	GenesisFetcher                   blockchain.GenesisFetcher
+	FinalizationFetcher              blockchain.FinalizationFetcher
+	TimeFetcher                      blockchain.TimeFetcher
+	BlockFetcher                     execution.POWBlockFetcher
+	DepositFetcher                   cache.DepositFetcher
+	Eth1InfoFetcher                  execution.ChainInfoFetcher
+	OptimisticModeFetcher            blockchain.OptimisticModeFetcher
+	SyncChecker                      prysmSync.Checker
+	StateNotifier                    statefeed.Notifier
+	BlockNotifier                    blockfeed.Notifier
+	P2P                              p2p.Broadcaster
+	AttestationCache                 *cache.AttestationCache
+	AttPool                          attestations.Pool
+	PayloadAttestationPool           payloadattestation.PoolManager
+	SlashingsPool                    slashings.PoolManager
+	ExitPool                         voluntaryexits.PoolManager
+	SyncCommitteePool                synccommittee.Pool
+	BlockReceiver                    blockchain.BlockReceiver
+	PayloadAttestationReceiver       blockchain.PayloadAttestationReceiver
+	ExecutionPayloadEnvelopeReceiver blockchain.ExecutionPayloadEnvelopeReceiver
+	BlobReceiver                     blockchain.BlobReceiver
+	DataColumnReceiver               blockchain.DataColumnReceiver
+	Eth1BlockFetcher                 execution.POWBlockFetcher
+	PendingDepositsFetcher           depositsnapshot.PendingDepositsFetcher
+	OperationNotifier                opfeed.Notifier
+	StateGen                         stategen.StateManager
+	ReplayerBuilder                  stategen.ReplayerBuilder
+	BeaconDB                         db.HeadAccessDatabase
+	ExecutionEngineCaller            execution.EngineCaller
+	BlockBuilder                     builder.BlockBuilder
+	BLSChangesPool                   blstoexec.PoolManager
+	ClockWaiter                      startup.ClockWaiter
+	CoreService                      *core.Service
+	AttestationStateFetcher          blockchain.AttestationStateFetcher
+	NewExecutionPayloadBidVerifier   verification.NewExecutionPayloadBidVerifier
+	GraffitiInfo                     *execution.GraffitiInfo
 }
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
@@ -106,7 +115,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 		return status.Errorf(codes.Internal, "Could not send response over stream: %v", err)
 	}
 
-	waitTime := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	waitTime := params.BeaconConfig().SlotDuration()
 	ticker := time.NewTicker(waitTime)
 	defer ticker.Stop()
 
@@ -187,10 +196,7 @@ func computeDomainData(domain [4]byte, epoch primitives.Epoch, fork *ethpb.Fork)
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
 //
-// WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
-// has started its runtime and validators begin their responsibilities. If it has not, it then
-// subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
-// occur in the Deposit Contract on ETH 1.0.
+// WaitForChainStart returns the genesis time and validators root once the node clock is set.
 func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
 	head, err := vs.HeadFetcher.HeadStateReadOnly(stream.Context())
 	if err != nil {

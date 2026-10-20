@@ -29,12 +29,14 @@ go_library(
         "//math:go_default_library",
         "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@org_golang_x_sync//errgroup:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = [
+        "analyzer_test.go",
         "generalized_index_test.go",
         "merkle_proof_test.go",
         "path_test.go",

@@ -6,11 +6,12 @@ package sync
 
 import (
 	"context"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/async"
-	"github.com/OffchainLabs/prysm/v7/async/abool"
 	"github.com/OffchainLabs/prysm/v7/async/event"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
@@ -24,6 +25,7 @@ import (
 	lightClient "github.com/OffchainLabs/prysm/v7/beacon-chain/light-client"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/blstoexec"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/payloadattestation"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/synccommittee"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/voluntaryexits"
@@ -38,9 +40,11 @@ import (
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	payloadattestationtypes "github.com/OffchainLabs/prysm/v7/consensus-types/payload-attestation"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
 	"github.com/OffchainLabs/prysm/v7/crypto/rand"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime"
 	prysmTime "github.com/OffchainLabs/prysm/v7/time"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
@@ -59,24 +63,26 @@ import (
 var _ runtime.Service = (*Service)(nil)
 
 const (
-	rangeLimit               uint64 = 1024
-	seenBlockSize                   = 1000
-	seenDataColumnSize              = seenBlockSize * 128 // Each block can have max 128 data columns.
-	seenUnaggregatedAttSize         = 20000
-	seenAggregatedAttSize           = 16384
-	seenSyncMsgSize                 = 1000 // Maximum of 512 sync committee members, 1000 is a safe amount.
-	seenSyncContributionSize        = 512  // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
-	seenExitSize                    = 100
-	seenProposerSlashingSize        = 100
-	badBlockSize                    = 1000
-	syncMetricsInterval             = 10 * time.Second
+	rangeLimit                  = 1024
+	seenBlockSize               = 1000
+	seenPayloadEnvelopeSize     = 1000
+	seenExecutionPayloadBidSize = 1000
+	seenDataColumnSize          = seenBlockSize * 128 // Each block can have max 128 data columns.
+	seenUnaggregatedAttSize     = 20000
+	seenAggregatedAttSize       = 16384
+	seenSyncMsgSize             = 1000 // Maximum of 512 sync committee members, 1000 is a safe amount.
+	seenSyncContributionSize    = 512  // Maximum of SYNC_COMMITTEE_SIZE as specified by the spec.
+	seenExitSize                = 100
+	seenProposerSlashingSize    = 100
+	badBlockSize                = 1000
+	syncMetricsInterval         = 10 * time.Second
 )
 
 var (
 	// Seconds in one epoch.
-	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	pendingBlockExpTime = params.EpochsDuration(1, params.BeaconConfig())
 	// time to allow processing early blocks.
-	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
+	earlyBlockProcessingTolerance = params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	// time to allow processing early attestations.
 	earlyAttestationProcessingTolerance = params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	errWrongMessage                     = errors.New("wrong pubsub message")
@@ -110,6 +116,7 @@ type config struct {
 	blobStorage             *filesystem.BlobStorage
 	dataColumnStorage       *filesystem.DataColumnStorage
 	batchVerifierLimit      int
+	payloadAttestationPool  payloadattestation.PoolManager
 }
 
 // This defines the interface for interacting with block chain service
@@ -117,10 +124,12 @@ type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.BlobReceiver
 	blockchain.DataColumnReceiver
+	blockchain.ExecutionPayloadEnvelopeReceiver
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
 	blockchain.ForkFetcher
 	blockchain.AttestationReceiver
+	blockchain.PayloadAttestationReceiver
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
@@ -132,73 +141,104 @@ type blockchainService interface {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                              *config
-	ctx                              context.Context
-	cancel                           context.CancelFunc
-	slotToPendingBlocks              *gcache.Cache
-	seenPendingBlocks                map[[32]byte]bool
-	blkRootToPendingAtts             map[[32]byte][]any
-	subHandler                       *subTopicHandler
-	pendingAttsLock                  sync.RWMutex
-	pendingQueueLock                 sync.RWMutex
-	chainStarted                     *abool.AtomicBool
-	validateBlockLock                sync.RWMutex
-	rateLimiter                      *limiter
-	seenBlockLock                    sync.RWMutex
-	seenBlockCache                   *lru.Cache
-	seenBlobLock                     sync.RWMutex
-	seenBlobCache                    *lru.Cache
-	seenDataColumnCache              *slotAwareCache
-	seenAggregatedAttestationLock    sync.RWMutex
-	seenAggregatedAttestationCache   *lru.Cache
-	seenUnAggregatedAttestationLock  sync.RWMutex
-	seenUnAggregatedAttestationCache *lru.Cache
-	seenExitLock                     sync.RWMutex
-	seenExitCache                    *lru.Cache
-	seenProposerSlashingLock         sync.RWMutex
-	seenProposerSlashingCache        *lru.Cache
-	seenAttesterSlashingLock         sync.RWMutex
-	seenAttesterSlashingCache        map[uint64]bool
-	seenSyncMessageLock              sync.RWMutex
-	seenSyncMessageCache             *lru.Cache
-	seenSyncContributionLock         sync.RWMutex
-	seenSyncContributionCache        *lru.Cache
-	badBlockCache                    *lru.Cache
-	badBlockLock                     sync.RWMutex
-	syncContributionBitsOverlapLock  sync.RWMutex
-	syncContributionBitsOverlapCache *lru.Cache
-	signatureChan                    chan *signatureVerifier
-	clockWaiter                      startup.ClockWaiter
-	initialSyncComplete              chan struct{}
-	verifierWaiter                   *verification.InitializerWaiter
-	newBlobVerifier                  verification.NewBlobVerifier
-	newColumnsVerifier               verification.NewDataColumnsVerifier
-	columnSidecarsExecSingleFlight   singleflight.Group
-	reconstructionSingleFlight       singleflight.Group
-	availableBlocker                 coverage.AvailableBlocker
-	reconstructionRandGen            *rand.Rand
-	trackedValidatorsCache           *cache.TrackedValidatorsCache
-	ctxMap                           ContextByteVersions
-	slasherEnabled                   bool
-	lcStore                          *lightClient.Store
-	dataColumnLogCh                  chan dataColumnLogEntry
-	digestActions                    perDigestSet
-	subscriptionSpawner              func(func()) // see Service.spawn for details
+	cfg                                  *config
+	ctx                                  context.Context
+	cancel                               context.CancelFunc
+	slotToPendingBlocks                  *gcache.Cache
+	seenPendingBlocks                    map[[32]byte]bool
+	blkRootToPendingAtts                 map[[32]byte][]any
+	subHandler                           *subTopicHandler
+	pendingAttsLock                      sync.RWMutex
+	pendingQueueLock                     sync.RWMutex
+	chainStarted                         *atomic.Bool
+	orphanedOriginStreak                 *atomic.Int64
+	validateBlockLock                    sync.RWMutex
+	validateEnvelopeLock                 sync.Mutex
+	rateLimiter                          *limiter
+	seenBlockLock                        sync.RWMutex
+	seenBlockCache                       *lru.Cache
+	seenPayloadEnvelopeCache             *lru.Cache
+	seenExecutionPayloadBidCache         *slotAwareCache
+	highestExecutionPayloadBidCache      *cache.HighestExecutionPayloadBidCache
+	seenBlobLock                         sync.RWMutex
+	seenBlobCache                        *lru.Cache
+	seenDataColumnCache                  *slotAwareCache
+	pendingGloasColumnsLock              sync.RWMutex
+	pendingGloasColumns                  map[[32]byte]*pendingGloasEntry
+	seenAggregatedAttestationLock        sync.RWMutex
+	seenAggregatedAttestationCache       *lru.Cache
+	seenUnAggregatedAttestationLock      sync.RWMutex
+	seenUnAggregatedAttestationCache     *lru.Cache
+	seenExitLock                         sync.RWMutex
+	seenExitCache                        *lru.Cache
+	seenProposerSlashingLock             sync.RWMutex
+	seenProposerSlashingCache            *lru.Cache
+	seenAttesterSlashingLock             sync.RWMutex
+	seenAttesterSlashingCache            map[uint64]bool
+	seenSyncMessageLock                  sync.RWMutex
+	seenSyncMessageCache                 *lru.Cache
+	seenSyncContributionLock             sync.RWMutex
+	seenSyncContributionCache            *lru.Cache
+	badBlockCache                        *lru.Cache
+	badBlockLock                         sync.RWMutex
+	badPayloadCache                      *lru.Cache
+	badPayloadLock                       sync.RWMutex
+	syncContributionBitsOverlapLock      sync.RWMutex
+	syncContributionBitsOverlapCache     *lru.Cache
+	signatureChan                        chan *signatureVerifier
+	clockWaiter                          startup.ClockWaiter
+	initialSyncComplete                  chan struct{}
+	verifierWaiter                       *verification.InitializerWaiter
+	newBlobVerifier                      verification.NewBlobVerifier
+	newColumnsVerifier                   verification.NewDataColumnsVerifier
+	newPayloadAttestationVerifier        verification.NewPayloadAttestationMsgVerifier
+	newSignedProposerPreferencesVerifier verification.NewSignedProposerPreferencesVerifier
+	newExecutionPayloadBidVerifier       verification.NewExecutionPayloadBidVerifier
+	columnSidecarsExecSingleFlight       singleflight.Group
+	reconstructionSingleFlight           singleflight.Group
+	payloadEnvelopeRequestSingleFlight   singleflight.Group
+	availableBlocker                     coverage.AvailableBlocker
+	reconstructionRandGen                *rand.Rand
+	ctxMap                               ContextByteVersions
+	slasherEnabled                       bool
+	lcStore                              *lightClient.Store
+	dataColumnLogCh                      chan dataColumnLogEntry
+	payloadAttestationCache              *cache.PayloadAttestationCache
+	proposerPreferencesCache             *cache.ProposerPreferencesCache
+	subscribedValidatorsCache            *cache.SubscribedValidatorsCache
+	builderCircuitBreaker                *cache.BuilderCircuitBreaker
+	digestActions                        perDigestSet
+	subscriptionSpawner                  func(func()) // see Service.spawn for details
+	newExecutionPayloadEnvelopeVerifier  verification.NewExecutionPayloadEnvelopeVerifier
+	pendingPayloadEnvelopes              map[[32]byte]map[uint64]*ethpb.SignedExecutionPayloadEnvelope
+	pendingEnvelopeLock                  sync.RWMutex
+	selfBuildSigFailures                 int
+	selfBuildSlot                        primitives.Slot
+	selfBuildSeenProposers               map[primitives.ValidatorIndex]struct{}
+	pendingPayloadAttestations           map[[32]byte][]*ethpb.PayloadAttestationMessage
+	pendingPayloadAttestationLock        sync.RWMutex
 }
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
-		ctx:                   ctx,
-		cancel:                cancel,
-		chainStarted:          abool.New(),
-		cfg:                   &config{clock: startup.NewClock(time.Unix(0, 0), [32]byte{})},
-		slotToPendingBlocks:   gcache.New(pendingBlockExpTime /* exp time */, 0 /* disable janitor */),
-		seenPendingBlocks:     make(map[[32]byte]bool),
-		blkRootToPendingAtts:  make(map[[32]byte][]any),
-		dataColumnLogCh:       make(chan dataColumnLogEntry, 1000),
-		reconstructionRandGen: rand.NewGenerator(),
+		ctx:                        ctx,
+		cancel:                     cancel,
+		chainStarted:               &atomic.Bool{},
+		orphanedOriginStreak:       &atomic.Int64{},
+		cfg:                        &config{clock: startup.NewClock(time.Unix(0, 0), [32]byte{})},
+		slotToPendingBlocks:        gcache.New(pendingBlockExpTime /* exp time */, 0 /* disable janitor */),
+		seenPendingBlocks:          make(map[[32]byte]bool),
+		blkRootToPendingAtts:       make(map[[32]byte][]any),
+		pendingGloasColumns:        make(map[[32]byte]*pendingGloasEntry),
+		dataColumnLogCh:            make(chan dataColumnLogEntry, 1000),
+		reconstructionRandGen:      rand.NewGenerator(),
+		payloadAttestationCache:    &cache.PayloadAttestationCache{},
+		proposerPreferencesCache:   cache.NewProposerPreferencesCache(),
+		pendingPayloadEnvelopes:    make(map[[32]byte]map[uint64]*ethpb.SignedExecutionPayloadEnvelope),
+		selfBuildSeenProposers:     make(map[primitives.ValidatorIndex]struct{}),
+		pendingPayloadAttestations: make(map[[32]byte][]*ethpb.PayloadAttestationMessage),
 	}
 
 	for _, opt := range opts {
@@ -250,6 +290,24 @@ func newDataColumnsVerifierFromInitializer(ini *verification.Initializer) verifi
 	}
 }
 
+func newPayloadAttestationMessageFromInitializer(ini *verification.Initializer) verification.NewPayloadAttestationMsgVerifier {
+	return func(pa payloadattestationtypes.ROMessage, reqs []verification.Requirement) verification.PayloadAttestationMsgVerifier {
+		return ini.NewPayloadAttestationMsgVerifier(pa, reqs)
+	}
+}
+
+func newSignedProposerPreferencesVerifierFromInitializer(ini *verification.Initializer) verification.NewSignedProposerPreferencesVerifier {
+	return func(p *ethpb.SignedProposerPreferences, reqs []verification.Requirement) verification.SignedProposerPreferencesVerifier {
+		return ini.NewSignedProposerPreferencesVerifier(p, reqs)
+	}
+}
+
+func newExecutionPayloadBidVerifierFromInitializer(ini *verification.Initializer) verification.NewExecutionPayloadBidVerifier {
+	return func(b interfaces.ROSignedExecutionPayloadBid, reqs []verification.Requirement) verification.ExecutionPayloadBidVerifier {
+		return ini.NewExecutionPayloadBidVerifier(b, reqs)
+	}
+}
+
 // Start the regular sync service.
 func (s *Service) Start() {
 	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
@@ -259,19 +317,30 @@ func (s *Service) Start() {
 	}
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
 	s.newColumnsVerifier = newDataColumnsVerifierFromInitializer(v)
+	s.newPayloadAttestationVerifier = newPayloadAttestationMessageFromInitializer(v)
+	s.newSignedProposerPreferencesVerifier = newSignedProposerPreferencesVerifierFromInitializer(v)
+	s.newExecutionPayloadBidVerifier = newExecutionPayloadBidVerifierFromInitializer(v)
+	s.newExecutionPayloadEnvelopeVerifier = newPayloadVerifierFromInitializer(v)
 
 	go s.verifierRoutine()
+
+	if broadcaster := s.cfg.p2p.PartialColumnBroadcaster(); broadcaster != nil {
+		go broadcaster.Start(&partialColumnCallbacks{service: s})
+	}
+
 	go s.startDiscoveryAndSubscriptions()
 	go s.processDataColumnLogs()
 
 	s.cfg.p2p.AddConnectionHandler(s.reValidatePeer, s.sendGoodbye)
-	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, _ peer.ID) error {
-		// no-op
+	s.cfg.p2p.AddDisconnectionHandler(func(_ context.Context, id peer.ID) error {
+		s.rateLimiter.removePeer(id)
 		return nil
 	})
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 
 	s.processPendingBlocksQueue()
+	s.processPendingPayloadEnvelopeQueue()
+	go s.runLatePayloadRequest()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
 
@@ -281,6 +350,9 @@ func (s *Service) Start() {
 	// Prune data column cache periodically on finalization.
 	async.RunEvery(s.ctx, 30*time.Second, s.pruneDataColumnCache)
 
+	go s.prunePendingGloasColumns()
+	go s.processPendingGloasColumnsRoutine()
+
 	if !params.FuluEnabled() {
 		return
 	}
@@ -288,7 +360,6 @@ func (s *Service) Start() {
 	if err := s.maintainCustodyInfo(); err != nil {
 		log.WithError(err).Error("Failed to maintain custody info")
 	}
-
 }
 
 // Stop the regular sync service.
@@ -307,15 +378,13 @@ func (s *Service) Stop() error {
 
 	// Use WaitGroup to ensure all goodbye messages complete
 	var wg sync.WaitGroup
-	for _, peerID := range s.cfg.p2p.Peers().Connected() {
-		if s.cfg.p2p.Host().Network().Connectedness(peerID) == network.Connected {
-			wg.Add(1)
-			go func(pid peer.ID) {
-				defer wg.Done()
+	for _, pid := range s.cfg.p2p.Peers().Connected() {
+		if s.cfg.p2p.Host().Network().Connectedness(pid) == network.Connected {
+			wg.Go(func() {
 				if err := s.sendGoodByeAndDisconnect(goodbyeCtx, p2ptypes.GoodbyeCodeClientShutdown, pid); err != nil {
 					log.WithError(err).WithField("peerID", pid).Error("Failed to send goodbye message")
 				}
-			}(peerID)
+			})
 		}
 	}
 	wg.Wait()
@@ -328,11 +397,15 @@ func (s *Service) Stop() error {
 	for _, t := range s.cfg.p2p.PubSub().GetTopics() {
 		s.unSubscribeFromTopic(t)
 	}
+
 	return nil
 }
 
 // Status of the currently running regular sync service.
 func (s *Service) Status() error {
+	if s.orphanedOriginStreak != nil && s.orphanedOriginStreak.Load() >= orphanedOriginStreakThreshold {
+		return errOrphanedOrigin
+	}
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
 	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.clock.CurrentSlot()) &&
@@ -342,10 +415,19 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// HighestExecutionPayloadBidCache exposes sync's cache to the proposer RPC.
+// Sync is the sole writer (gossip); the proposer is a reader.
+func (s *Service) HighestExecutionPayloadBidCache() *cache.HighestExecutionPayloadBidCache {
+	return s.highestExecutionPayloadBidCache
+}
+
 // This initializes the caches to update seen beacon objects coming in from the wire
 // and prevent DoS.
 func (s *Service) initCaches() {
 	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenPayloadEnvelopeCache = lruwrpr.New(seenPayloadEnvelopeSize)
+	s.seenExecutionPayloadBidCache = newSlotAwareCache(seenExecutionPayloadBidSize)
+	s.highestExecutionPayloadBidCache = cache.NewHighestExecutionPayloadBidCache()
 	s.seenBlobCache = lruwrpr.New(seenBlockSize * params.BeaconConfig().DeprecatedMaxBlobsPerBlockElectra)
 	s.seenDataColumnCache = newSlotAwareCache(seenDataColumnSize)
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
@@ -357,6 +439,7 @@ func (s *Service) initCaches() {
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
 	s.badBlockCache = lruwrpr.New(badBlockSize)
+	s.badPayloadCache = lruwrpr.New(badBlockSize)
 }
 
 func (s *Service) waitForChainStart() {
@@ -397,6 +480,99 @@ func (s *Service) waitForChainStart() {
 	s.markForChainStart()
 }
 
+// partialColumnCallbacks implements the callbacks the partial column broadcaster uses to verify and handle partial messages.
+type partialColumnCallbacks struct {
+	service *Service
+}
+
+// PartialVerifierFromHeader returns a partial column verifier seeded from an untrusted partial data column header.
+func (c *partialColumnCallbacks) PartialVerifierFromHeader(col *blocks.PartialDataColumn) (*verification.PartialColumnVerifier, pubsub.ValidationResult, error) {
+	return c.service.validatePartialDataColumnHeader(c.service.ctx, col)
+}
+
+// PartialVerifierFromTrustedColumn returns a partial column verifier seeded from a trusted data column.
+func (c *partialColumnCallbacks) PartialVerifierFromTrustedColumn(col *blocks.PartialDataColumn) (*verification.PartialColumnVerifier, error) {
+	return c.service.partialVerifierFromTrustedColumn(c.service.ctx, col)
+}
+
+// ValidateGloasGroupID validates a Gloas partial-column group ID against local block state.
+// https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/partial-columns/p2p-interface.md#the-gossip-domain-gossipsub
+func (c *partialColumnCallbacks) ValidateGloasGroupID(slot primitives.Slot, root [32]byte) pubsub.ValidationResult {
+	// [IGNORE] The group ID's block has been seen (via gossip or non-gossip sources)
+	if c.service.cfg.chain == nil || !c.service.cfg.chain.HasBlock(c.service.ctx, root) {
+		return pubsub.ValidationIgnore
+	}
+
+	blockSlot, err := c.service.cfg.chain.RecentBlockSlot(root)
+	if err != nil {
+		return pubsub.ValidationIgnore
+	}
+	// [REJECT] The group ID's slot matches the slot of the block
+	if blockSlot != slot {
+		return pubsub.ValidationReject
+	}
+	return pubsub.ValidationAccept
+}
+
+// ValidateColumn verifies the KZG proofs for the given cells.
+func (c *partialColumnCallbacks) ValidateColumn(cellsToVerify []blocks.CellProofBundle) error {
+	return peerdas.VerifyDataColumnsCellsKZGProofs(cellsToVerify)
+}
+
+// HandleColumn handles a data column completed from a partial message.
+func (c *partialColumnCallbacks) HandleColumn(topic string, col blocks.VerifiedRODataColumn) {
+	ctx, cancel := context.WithTimeout(c.service.ctx, pubsubMessageTimeout)
+	defer cancel()
+
+	commitments, err := col.KzgCommitments()
+	if err != nil {
+		log.WithError(err).Error("Failed to get KZG commitments from data column")
+		return
+	}
+	if len(commitments) == 0 {
+		return
+	}
+
+	if col.IsGloas() {
+		if c.service.hasSeenDataColumnRootIndex(col.BlockRoot(), col.Index()) {
+			return
+		}
+		c.service.setSeenDataColumnRootIndex(col.BlockRoot(), col.Index(), col.Slot())
+	} else {
+		proposerIndex, err := col.ProposerIndex()
+		if err != nil {
+			log.WithError(err).Error("Failed to get proposer index from data column")
+			return
+		}
+		if c.service.hasSeenDataColumnIndex(col.Slot(), proposerIndex, col.Index()) {
+			return
+		}
+		c.service.setSeenDataColumnIndex(col.Slot(), proposerIndex, col.Index())
+	}
+
+	// This column was completed from a partial message.
+	partialMessageColumnCompletionsTotal.WithLabelValues(strconv.FormatUint(col.Index(), 10)).Inc()
+	if err := c.service.verifiedRODataColumnSubscriber(ctx, col); err != nil {
+		log.WithError(err).Error("Failed to handle verified RO data column subscriber")
+	}
+}
+
+// HandleHeader handles a received partial data column header.
+func (c *partialColumnCallbacks) HandleHeader(header *ethpb.PartialDataColumnHeader, groupID string) {
+	ctx, cancel := context.WithTimeout(c.service.ctx, pubsubMessageTimeout)
+	defer cancel()
+	source, err := peerdas.PopulateFromPartialHeader(header)
+	if err != nil {
+		log.WithError(err).Error("Failed to populate from partial data column header")
+		return
+	}
+	log.WithField("slot", source.Slot()).Debug("Received data column header")
+	err = c.service.processDataColumnSidecarsFromExecution(ctx, source)
+	if err != nil {
+		log.WithError(err).Error("Failed to process partial data column header")
+	}
+}
+
 func (s *Service) startDiscoveryAndSubscriptions() {
 	// Wait for the chain to start.
 	s.waitForChainStart()
@@ -420,7 +596,7 @@ func (s *Service) setRateCollector(topic string, c *leakybucket.Collector) {
 
 // marks the chain as having started.
 func (s *Service) markForChainStart() {
-	s.chainStarted.Set()
+	s.chainStarted.Store(true)
 }
 
 // pruneDataColumnCache removes entries from the data column cache that are older than the finalized slot.
@@ -442,16 +618,7 @@ func (s *Service) pruneDataColumnCache() {
 }
 
 func (s *Service) chainIsStarted() bool {
-	return s.chainStarted.IsSet()
-}
-
-func (s *Service) waitForInitialSync(ctx context.Context) error {
-	select {
-	case <-s.initialSyncComplete:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	return s.chainStarted.Load()
 }
 
 // UpdateCustodyInfoInDB updates the custody information in the database.
@@ -545,4 +712,10 @@ type Checker interface {
 	Synced() bool
 	Status() error
 	Resync() error
+}
+
+func newPayloadVerifierFromInitializer(ini *verification.Initializer) verification.NewExecutionPayloadEnvelopeVerifier {
+	return func(e interfaces.ROSignedExecutionPayloadEnvelope, reqs []verification.Requirement) verification.ExecutionPayloadEnvelopeVerifier {
+		return ini.NewPayloadEnvelopeVerifier(e, reqs)
+	}
 }

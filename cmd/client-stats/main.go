@@ -36,9 +36,10 @@ func init() {
 func main() {
 	app := cli.App{}
 	app.Name = "client-stats"
-	app.Usage = "daemon to scrape client-stats from prometheus and ship to a remote endpoint"
+	app.Usage = "Ethereum client stats collector"
 	app.Action = run
 	app.Version = version.Version()
+	app.Authors = cmd.Authors
 
 	app.Flags = appFlags
 
@@ -77,7 +78,7 @@ func main() {
 				TimestampFormat: "2006-01-02 15:04:05.00",
 			})
 		case "journald":
-			if err := journald.Enable(); err != nil {
+			if err := journald.Enable(level); err != nil {
 				return err
 			}
 		default:

@@ -5,7 +5,13 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
+
+	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
+	libp2pcore "github.com/libp2p/go-libp2p/core"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/OffchainLabs/prysm/v7/async"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
@@ -19,25 +25,18 @@ import (
 	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	prysmTime "github.com/OffchainLabs/prysm/v7/time"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	libp2pcore "github.com/libp2p/go-libp2p/core"
-	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/sirupsen/logrus"
 )
+
+const maxFutureStatusHeadSlot = 1
 
 // maintainPeerStatuses maintains peer statuses by polling peers for their latest status twice per epoch.
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
-	interval := time.Duration(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	interval := params.SlotsDuration(params.BeaconConfig().SlotsPerEpoch.Div(2), params.BeaconConfig())
 	async.RunEvery(s.ctx, interval, func() {
 		wg := new(sync.WaitGroup)
-		for _, pid := range s.cfg.p2p.Peers().Connected() {
-			wg.Add(1)
-			go func(id peer.ID) {
-				defer wg.Done()
-
+		for _, id := range s.cfg.p2p.Peers().Connected() {
+			wg.Go(func() {
 				log := log.WithFields(logrus.Fields{
 					"peer":  id,
 					"agent": agentString(id, s.cfg.p2p.Host()),
@@ -73,11 +72,12 @@ func (s *Service) maintainPeerStatuses() {
 						log.WithError(err).Debug("Cannot re-validate peer")
 					}
 				}
-			}(pid)
+			})
 		}
 		// Wait for all status checks to finish and then proceed onwards to
 		// pruning excess peers.
 		wg.Wait()
+		s.detectOrphanedOrigin(s.ctx)
 		peerIds := s.cfg.p2p.Peers().PeersToPrune()
 		peerIds = s.filterNeededPeers(peerIds)
 		for _, id := range peerIds {
@@ -96,9 +96,8 @@ func (s *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers
 // by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
-	millisecondsPerEpoch := params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot)
 	// Run sixteen times per epoch.
-	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
+	interval := params.EpochsDuration(1, params.BeaconConfig()) / 16
 	async.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
@@ -144,10 +143,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, peer peer.ID) error 
 		return errors.Wrap(err, "chain head root")
 	}
 
-	forkDigest, err := s.currentForkDigest()
-	if err != nil {
-		return errors.Wrap(err, "current fork digest")
-	}
+	forkDigest := s.currentForkDigest()
 
 	// Compute the current epoch.
 	currentSlot := s.cfg.clock.CurrentSlot()
@@ -265,7 +261,6 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg any, stream libp2pco
 			respCode = responseCodeServerError
 		case errors.Is(err, p2ptypes.ErrWrongForkDigestVersion):
 			// Respond with our status and disconnect with the peer.
-			s.cfg.p2p.Peers().SetChainState(remotePeer, m)
 			if err := s.respondWithStatus(ctx, stream); err != nil {
 				return err
 			}
@@ -309,10 +304,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 		return errors.Wrap(err, "chain head root")
 	}
 
-	forkDigest, err := s.currentForkDigest()
-	if err != nil {
-		return errors.Wrap(err, "current fork digest")
-	}
+	forkDigest := s.currentForkDigest()
 
 	cp := s.cfg.chain.FinalizedCheckpt()
 	status, err := s.buildStatusFromStream(ctx, stream, forkDigest, cp.Root, cp.Epoch, headRoot)
@@ -430,10 +422,11 @@ func (s *Service) validateStatusMessage(ctx context.Context, genericMsg any) err
 		return errors.Wrap(err, "status data")
 	}
 
-	forkDigest, err := s.currentForkDigest()
-	if err != nil {
-		return err
+	if msg.HeadSlot > s.cfg.clock.CurrentSlot()+maxFutureStatusHeadSlot {
+		return errors.Wrap(p2ptypes.ErrInvalidRequest, "head slot too far in the future")
 	}
+
+	forkDigest := s.currentForkDigest()
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
 		return fmt.Errorf("mismatch fork digest: expected %#x, got %#x: %w", forkDigest[:], msg.ForkDigest, p2ptypes.ErrWrongForkDigestVersion)
 	}
@@ -459,6 +452,10 @@ func (s *Service) validateStatusMessage(ctx context.Context, genericMsg any) err
 	rootIsEqual := bytes.Equal(params.BeaconConfig().ZeroHash[:], msg.FinalizedRoot)
 	// If peer is at genesis with the correct genesis root hash we exit.
 	if finalizedAtGenesis && rootIsEqual {
+		return nil
+	}
+	// We hold no blocks below our origin, so this checkpoint is neither provable nor refutable.
+	if s.predatesEarliestBlock(ctx, msg.FinalizedEpoch) {
 		return nil
 	}
 	if !s.cfg.chain.IsFinalized(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
@@ -498,6 +495,21 @@ func (s *Service) validateStatusMessage(ctx context.Context, genericMsg any) err
 		return nil
 	}
 	return p2ptypes.ErrInvalidEpoch
+}
+
+func (s *Service) predatesEarliestBlock(ctx context.Context, epoch primitives.Epoch) bool {
+	if s.cfg.beaconDB == nil {
+		return false
+	}
+	bf, err := s.cfg.beaconDB.BackfillStatus(ctx)
+	if err != nil || bf == nil || bf.LowSlot == 0 {
+		return false
+	}
+	startSlot, err := slots.EpochStart(epoch)
+	if err != nil {
+		return false
+	}
+	return uint64(startSlot) < bf.LowSlot
 }
 
 func statusV2(msg any) (*pb.StatusV2, error) {

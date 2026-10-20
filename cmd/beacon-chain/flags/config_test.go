@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/urfave/cli/v2"
 )
@@ -26,6 +27,10 @@ func TestValidateStateDiffExponents(t *testing.T) {
 		{exponents: []int{}, wantErr: true, errMsg: "between 1 and 15 values"},
 		{exponents: []int{30, 18, 16, 13, 11, 9, 5}, wantErr: false},
 		{exponents: []int{31, 18, 16, 13, 11, 9, 5}, wantErr: true, errMsg: "<= 30"},
+		// Rejecting these here is what lets the rest of the code shift by an exponent without
+		// checking that it fits in a uint64 first.
+		{exponents: []int{64, 18, 16, 13, 11, 9, 5}, wantErr: true, errMsg: "<= 30"},
+		{exponents: []int{64}, wantErr: true, errMsg: "<= 30"},
 	}
 
 	for i, tt := range tests {
@@ -92,4 +97,22 @@ func TestConfigureGlobalFlags_SupernodeMutualExclusivity(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --archive-origin-state only means something in archive mode; a silent no-op would be a footgun.
+func TestConfigureGlobalFlags_ArchiveOriginStateRequiresArchive(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{})
+	defer resetCfg()
+
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.String(ArchiveOriginState.Name, "", "")
+	set.Var(cli.NewIntSlice(11, 9, 5), StateDiffExponents.Name, "")
+	require.NoError(t, set.Set(ArchiveOriginState.Name, "/tmp/state.ssz"))
+	err := ConfigureGlobalFlags(cli.NewContext(app, set, nil))
+	require.ErrorContains(t, "requires --enable-archive", err)
+
+	resetArchive := features.InitWithReset(&features.Flags{EnableArchive: true, EnableStateDiff: true})
+	defer resetArchive()
+	require.NoError(t, ConfigureGlobalFlags(cli.NewContext(app, set, nil)))
 }

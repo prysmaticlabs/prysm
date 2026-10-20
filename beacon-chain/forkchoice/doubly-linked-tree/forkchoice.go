@@ -3,6 +3,8 @@ package doublylinkedtree
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice"
@@ -17,6 +19,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,9 +34,10 @@ func New() *ForkChoice {
 		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
 		proposerBoostRoot:             [32]byte{},
-		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
-		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
+		emptyNodeByRoot:               make(map[[fieldparams.RootLength]byte]*PayloadNode),
+		fullNodeByRoot:                make(map[[fieldparams.RootLength]byte]*PayloadNode),
 		slashedIndices:                make(map[primitives.ValidatorIndex]bool),
+		blockRootsBySlotProposer:      make(map[proposerSlotKey][][32]byte),
 		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]primitives.Slot{},
 	}
 
@@ -44,7 +48,7 @@ func New() *ForkChoice {
 
 // NodeCount returns the current number of nodes in the Store.
 func (f *ForkChoice) NodeCount() int {
-	return len(f.store.nodeByRoot)
+	return len(f.store.emptyNodeByRoot)
 }
 
 // Head returns the head root from fork choice store.
@@ -65,14 +69,15 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply proposer boost score")
 	}
 
-	if err := f.store.treeRootNode.applyWeightChanges(ctx); err != nil {
+	if err := f.store.applyWeightChangesConsensusNode(ctx, f.store.treeRootNode); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
+	f.store.removeProposerBoostFromParent()
 
 	jc := f.JustifiedCheckpoint()
 	fc := f.FinalizedCheckpoint()
 	currentEpoch := slots.EpochsSinceGenesis(f.store.genesisTime)
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch, currentEpoch); err != nil {
+	if err := f.store.updateBestDescendantConsensusNode(ctx, f.store.treeRootNode, jc.Epoch, fc.Epoch, currentEpoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 	return f.store.head(ctx)
@@ -80,9 +85,20 @@ func (f *ForkChoice) Head(
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
-func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch primitives.Epoch) {
+func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, slot primitives.Slot, payloadStatus bool) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
+
+	// Same-slot attestations cannot vote payload present (validate_on_attestation).
+	if payloadStatus && slots.ToEpoch(slot) >= params.BeaconConfig().GloasForkEpoch {
+		if en, ok := f.store.emptyNodeByRoot[blockRoot]; ok && en.node != nil && en.node.slot == slot {
+			log.WithFields(logrus.Fields{
+				"slot":            slot,
+				"beaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:])),
+			}).Debug("Skipping same-slot payload-present attestation")
+			return
+		}
+	}
 
 	for _, index := range validatorIndices {
 		// Validator indices will grow the vote cache.
@@ -90,14 +106,16 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 			f.votes = append(f.votes, Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
 		}
 
-		// Newly allocated vote if the root fields are untouched.
-		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash &&
-			f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
+		vote := &f.votes[index]
+		targetEpoch := slots.ToEpoch(slot)
+		nextEpoch := slots.ToEpoch(vote.nextSlot)
 
-		// Vote gets updated if it's newly allocated or high target epoch.
-		if newVote || targetEpoch > f.votes[index].nextEpoch {
-			f.votes[index].nextEpoch = targetEpoch
-			f.votes[index].nextRoot = blockRoot
+		// A zero next root means no prior message, spec update_latest_messages semantics.
+		firstVote := vote.nextRoot == params.BeaconConfig().ZeroHash
+		if firstVote || targetEpoch > nextEpoch {
+			vote.nextSlot = slot
+			vote.nextRoot = blockRoot
+			vote.nextPayloadStatus = payloadStatus
 		}
 	}
 
@@ -114,19 +132,35 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errInvalidNilCheckpoint
 	}
 	justifiedEpoch := jc.Epoch
+	justifiedRoot := bytesutil.ToBytes32(jc.Root)
 	fc := state.FinalizedCheckpoint()
 	if fc == nil {
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	node, err := f.store.insert(ctx, roblock, justifiedEpoch, finalizedEpoch)
+	pn, err := f.store.insert(ctx, roblock, justifiedEpoch, justifiedRoot, finalizedEpoch)
 	if err != nil {
 		return err
 	}
-
-	jc, fc = f.store.pullTips(state, node, jc, fc)
+	if roblock.Version() >= version.Gloas && pn.node.builderIndex != params.BeaconConfig().BuilderIndexSelfBuild {
+		pk, err := state.BuilderPubkey(pn.node.builderIndex)
+		if err == nil {
+			pn.node.builderPubkey = &pk
+		}
+	}
+	if features.Get().TrackEquivocations {
+		if slotStart, err := slots.StartTime(f.store.genesisTime, roblock.Block().Slot()); err == nil {
+			cfg := params.BeaconConfig()
+			deadline := slotStart.Add(cfg.SlotComponentDuration(cfg.EquivocationEarlyDueBPS))
+			now := time.Now()
+			if !now.Before(slotStart) && now.Before(deadline) {
+				f.RecordBlockForEquivocation(roblock.Block().Slot(), roblock.Block().ProposerIndex(), roblock.Root())
+			}
+		}
+	}
+	jc, fc = f.store.pullTips(state, pn.node, jc, fc)
 	if err := f.updateCheckpoints(ctx, jc, fc); err != nil {
-		_, remErr := f.store.removeNode(ctx, node)
+		_, remErr := f.store.removeNode(ctx, pn)
 		if remErr != nil {
 			log.WithError(remErr).Error("Could not remove node")
 		}
@@ -139,7 +173,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
 	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
 		f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
-		jcRoot := bytesutil.ToBytes32(jc.Root)
+		jcRoot := f.store.clampCheckpointRoot(jc.Epoch, bytesutil.ToBytes32(jc.Root))
 		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jcRoot}
 		if err := f.updateJustifiedBalances(ctx, jcRoot); err != nil {
 			return errors.Wrap(err, "could not update justified balances")
@@ -149,49 +183,63 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 	if fc.Epoch <= f.store.finalizedCheckpoint.Epoch {
 		return nil
 	}
-	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
-		Root: bytesutil.ToBytes32(fc.Root)}
+	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{
+		Epoch: fc.Epoch,
+		Root:  f.store.clampCheckpointRoot(fc.Epoch, bytesutil.ToBytes32(fc.Root)),
+	}
 	return f.store.prune(ctx)
 }
 
 // HasNode returns true if the node exists in fork choice store,
 // false else wise.
 func (f *ForkChoice) HasNode(root [32]byte) bool {
-	_, ok := f.store.nodeByRoot[root]
+	_, ok := f.store.emptyNodeByRoot[root]
 	return ok
 }
 
 // IsCanonical returns true if the given root is part of the canonical chain.
 func (f *ForkChoice) IsCanonical(root [32]byte) bool {
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
+	// It is fine to pick empty node here since we only check if the beacon block is canonical.
+	pn, ok := f.store.emptyNodeByRoot[root]
+	if !ok || pn == nil {
 		return false
 	}
 
-	if node.bestDescendant == nil {
+	if pn.node.bestDescendant == nil {
+		// The node doesn't have any children
 		if f.store.headNode.bestDescendant == nil {
-			return node == f.store.headNode
+			// headNode is itself head.
+			return pn.node == f.store.headNode
 		}
-		return node == f.store.headNode.bestDescendant
+		// headNode is not actualized and there are some descendants
+		return pn.node == f.store.headNode.bestDescendant
 	}
+	// The node has children
 	if f.store.headNode.bestDescendant == nil {
-		return node.bestDescendant == f.store.headNode
+		return pn.node.bestDescendant == f.store.headNode
 	}
-	return node.bestDescendant == f.store.headNode.bestDescendant
+	return pn.node.bestDescendant == f.store.headNode.bestDescendant
 }
 
 // IsOptimistic returns true if the given root has been optimistically synced.
+// TODO: Gloas, the current implementation uses the result of the full block for
+// the given root. In gloas this would be incorrect and we should specify the
+// payload content, thus we should expose a full/empty version of this call.
 func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	if f.store.allTipsAreInvalid {
 		return true, nil
 	}
 
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
+	en, ok := f.store.emptyNodeByRoot[root]
+	if !ok || en == nil {
 		return true, ErrNilNode
 	}
+	fn := f.store.fullNodeByRoot[root]
+	if fn != nil {
+		return fn.optimistic, nil
+	}
 
-	return node.optimistic, nil
+	return en.optimistic, nil
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
@@ -199,17 +247,21 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primi
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.AncestorRoot")
 	defer span.End()
 
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
+	pn, ok := f.store.emptyNodeByRoot[root]
+	if !ok || pn == nil {
 		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
-	n := node
-	for n != nil && n.slot > slot {
+	n := pn.node
+	for n.slot > slot {
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()
 		}
-		n = n.parent
+		if n.parent == nil {
+			n = nil
+			break
+		}
+		n = n.parent.node
 	}
 
 	if n == nil {
@@ -222,10 +274,11 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primi
 // IsViableForCheckpoint returns whether the root passed is a checkpoint root for any
 // known chain in forkchoice.
 func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
-	node, ok := f.store.nodeByRoot[cp.Root]
-	if !ok || node == nil {
+	pn, ok := f.store.emptyNodeByRoot[cp.Root]
+	if !ok || pn == nil {
 		return false, nil
 	}
+	node := pn.node
 	epochStart, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
 		return false, err
@@ -234,10 +287,13 @@ func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool
 		return false, nil
 	}
 
-	if len(node.children) == 0 {
+	// If it's the start of the epoch, it is a checkpoint
+	if node.slot == epochStart {
 		return true, nil
 	}
-	if node.slot == epochStart {
+	// If there are no descendants of this beacon block, it is is viable as a checkpoint
+	children := f.store.allConsensusChildren(node)
+	if len(children) == 0 {
 		return true, nil
 	}
 	if !features.Get().IgnoreUnviableAttestations {
@@ -247,7 +303,8 @@ func (f *ForkChoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool
 			return true, nil
 		}
 	}
-	for _, child := range node.children {
+	// If some child is after the start of the epoch, the checkpoint is viable.
+	for _, child := range children {
 		if child.slot > epochStart {
 			return true, nil
 		}
@@ -284,44 +341,63 @@ func (f *ForkChoice) updateBalances() error {
 			newBalance = newBalances[index]
 		}
 
-		// Update only if the validator's balance or vote has changed.
-		if vote.currentRoot != vote.nextRoot || oldBalance != newBalance {
-			// Ignore the vote if the root is not in fork choice
-			// store, that means we have not seen the block before.
-			nextNode, ok := f.store.nodeByRoot[vote.nextRoot]
-			if ok && vote.nextRoot != zHash {
-				// Protection against nil node
-				if nextNode == nil {
-					return errors.Wrap(ErrNilNode, "could not update balances")
+		if oldBalance != newBalance || vote.currentRoot != vote.nextRoot ||
+			vote.currentSlot != vote.nextSlot || vote.currentPayloadStatus != vote.nextPayloadStatus {
+			// Add new balance to the next vote target if the root is known.
+			pn, pending := f.store.resolveVoteNode(vote.nextRoot, vote.nextSlot, vote.nextPayloadStatus)
+			if pn != nil && vote.nextRoot != zHash {
+				if pending {
+					pn.node.balance += newBalance
+				} else {
+					pn.balance += newBalance
 				}
-				nextNode.balance += newBalance
 			}
 
-			currentNode, ok := f.store.nodeByRoot[vote.currentRoot]
-			if ok && vote.currentRoot != zHash {
-				// Protection against nil node
-				if currentNode == nil {
-					return errors.Wrap(ErrNilNode, "could not update balances")
-				}
-				if currentNode.balance < oldBalance {
-					log.WithFields(logrus.Fields{
-						"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
-						"oldBalance":                 oldBalance,
-						"nodeBalance":                currentNode.balance,
-						"nodeWeight":                 currentNode.weight,
-						"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
-						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
-						"previousProposerBoostScore": f.store.previousProposerBoostScore,
-					}).Warning("node with invalid balance, setting it to zero")
-					currentNode.balance = 0
+			// Subtract old balance from the current vote target if the root is known.
+			pn, pending = f.store.resolveVoteNode(vote.currentRoot, vote.currentSlot, vote.currentPayloadStatus)
+			if pn != nil && vote.currentRoot != zHash {
+				if pending {
+					if pn.node.balance < oldBalance {
+						if pn.node.slot == 0 {
+							log.WithField("nodeRoot", fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:]))).
+								Debug("Genesis node pending balance underflow, clamping to zero")
+						} else {
+							log.WithFields(logrus.Fields{
+								"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+								"oldBalance":                 oldBalance,
+								"nodeBalance":                pn.node.balance,
+								"nodeWeight":                 pn.node.weight,
+								"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
+								"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
+								"previousProposerBoostScore": f.store.previousProposerBoostScore,
+							}).Warning("node with invalid balance, setting it to zero")
+						}
+						pn.node.balance = 0
+					} else {
+						pn.node.balance -= oldBalance
+					}
 				} else {
-					currentNode.balance -= oldBalance
+					if pn.balance < oldBalance {
+						log.WithFields(logrus.Fields{
+							"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+							"oldBalance":                 oldBalance,
+							"nodeBalance":                pn.balance,
+							"nodeWeight":                 pn.weight,
+							"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
+							"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
+							"previousProposerBoostScore": f.store.previousProposerBoostScore,
+						}).Warning("node with invalid balance, setting it to zero")
+						pn.balance = 0
+					} else {
+						pn.balance -= oldBalance
+					}
 				}
 			}
 		}
-
 		// Rotate the validator vote.
 		f.votes[index].currentRoot = vote.nextRoot
+		f.votes[index].currentSlot = vote.nextSlot
+		f.votes[index].currentPayloadStatus = vote.nextPayloadStatus
 	}
 	f.balances = newBalances
 	return nil
@@ -338,13 +414,16 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// SetOptimisticToValid sets the node with the given root as a fully validated node
+// SetOptimisticToValid sets the node with the given root as a fully validated node. The payload for this root MUST have been processed.
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams.RootLength]byte) error {
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		return errors.Wrap(ErrNilNode, "could not set node to valid")
+	fn := f.store.fullNodeByRoot[root]
+	if fn == nil {
+		fn = f.store.emptyNodeByRoot[root]
+		if fn == nil {
+			return errors.Wrapf(ErrNilNode, "could not set node to valid, no node found for root: %#x", bytesutil.Trunc(root[:]))
+		}
 	}
-	return node.setNodeAndParentValidated(ctx)
+	return f.store.setNodeAndParentValidated(ctx, fn)
 }
 
 // PreviousJustifiedCheckpoint of fork choice store.
@@ -363,8 +442,8 @@ func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.setOptimisticToInvalid(ctx, root, parentRoot, payloadHash)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, parentHash, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, parentRoot, parentHash, payloadHash)
 }
 
 // InsertSlashedIndex adds the given slashed validator index to the
@@ -387,15 +466,23 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index primitives.Vali
 		return
 	}
 
-	node, ok := f.store.nodeByRoot[f.votes[index].currentRoot]
-	if !ok || node == nil {
+	v := f.votes[index]
+	pn, pending := f.store.resolveVoteNode(v.currentRoot, v.currentSlot, v.currentPayloadStatus)
+	if pn == nil {
 		return
 	}
-
-	if node.balance < f.balances[index] {
-		node.balance = 0
+	if pending {
+		if pn.node.balance < f.balances[index] {
+			pn.node.balance = 0
+		} else {
+			pn.node.balance -= f.balances[index]
+		}
+		return
+	}
+	if pn.balance < f.balances[index] {
+		pn.balance = 0
 	} else {
-		node.balance -= f.balances[index]
+		pn.balance -= f.balances[index]
 	}
 }
 
@@ -406,6 +493,13 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(ctx context.Context, jc *forkchoi
 	}
 	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
+	// Realized justification implies unrealized justification, backfill the zero-valued startup stub.
+	ujc := f.store.unrealizedJustifiedCheckpoint
+	if jc.Epoch > ujc.Epoch || (jc.Epoch == ujc.Epoch && ujc.Root == [32]byte{}) {
+		f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: jc.Epoch, Root: jc.Root,
+		}
+	}
 	if err := f.updateJustifiedBalances(ctx, jc.Root); err != nil {
 		return errors.Wrap(err, "could not update justified balances")
 	}
@@ -418,26 +512,56 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 		return errInvalidNilCheckpoint
 	}
 	f.store.finalizedCheckpoint = fc
+	f.store.finalizedPayloadBlockHash = f.store.checkpointPayloadHashForRoot(fc.Root)
+	finalizedSlot, err := slots.EpochStart(fc.Epoch)
+	if err == nil {
+		for key := range f.store.blockRootsBySlotProposer {
+			if key.slot <= finalizedSlot {
+				delete(f.store.blockRootsBySlotProposer, key)
+			}
+		}
+	}
 	return nil
 }
 
+// RecordBlockForEquivocation appends root to the (slot, proposer) list, capped at two entries.
+func (f *ForkChoice) RecordBlockForEquivocation(slot primitives.Slot, proposer primitives.ValidatorIndex, root [32]byte) {
+	key := proposerSlotKey{slot: slot, proposer: proposer}
+	roots := f.store.blockRootsBySlotProposer[key]
+	if len(roots) >= 2 {
+		return
+	}
+	if slices.Contains(roots, root) {
+		return
+	}
+	f.store.blockRootsBySlotProposer[key] = append(roots, root)
+}
+
 // CommonAncestor returns the common ancestor root and slot between the two block roots r1 and r2.
+// This is payload aware. Consider the following situation
+// [A,full] <--- [B, full] <---[C,pending]
+//
+//	\---------[B, empty] <--[D, pending]
+//
+// Then even though C and D both descend from the beacon block B, their common ancestor is A.
+// Notice that also this function **requires** that the two roots are actually contending blocks! otherwise the
+// behavior is not defined.
 func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, primitives.Slot, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.CommonAncestorRoot")
 	defer span.End()
 
-	n1, ok := f.store.nodeByRoot[r1]
-	if !ok || n1 == nil {
+	en1, ok := f.store.emptyNodeByRoot[r1]
+	if !ok || en1 == nil {
 		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	// Do nothing if the input roots are the same.
 	if r1 == r2 {
-		return r1, n1.slot, nil
+		return r1, en1.node.slot, nil
 	}
 
-	n2, ok := f.store.nodeByRoot[r2]
-	if !ok || n2 == nil {
+	en2, ok := f.store.emptyNodeByRoot[r2]
+	if !ok || en2 == nil {
 		return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 	}
 
@@ -445,23 +569,23 @@ func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byt
 		if ctx.Err() != nil {
 			return [32]byte{}, 0, ctx.Err()
 		}
-		if n1.slot > n2.slot {
-			n1 = n1.parent
+		if en1.node.slot > en2.node.slot {
+			en1 = en1.node.parent
 			// Reaches the end of the tree and unable to find common ancestor.
 			// This should not happen at runtime as the finalized
 			// node has to be a common ancestor
-			if n1 == nil {
+			if en1 == nil {
 				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		} else {
-			n2 = n2.parent
+			en2 = en2.node.parent
 			// Reaches the end of the tree and unable to find common ancestor.
-			if n2 == nil {
+			if en2 == nil {
 				return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
-		if n1 == n2 {
-			return n1.root, n1.slot, nil
+		if en1 == en2 {
+			return en1.node.root, en1.node.slot, nil
 		}
 	}
 }
@@ -475,10 +599,35 @@ func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.B
 		return nil
 	}
 	for _, bcp := range chain {
-		if _, err := f.store.insert(ctx,
+		pn, err := f.store.insert(ctx,
 			bcp.Block,
-			bcp.JustifiedCheckpoint.Epoch, bcp.FinalizedCheckpoint.Epoch); err != nil {
+			bcp.JustifiedCheckpoint.Epoch, bytesutil.ToBytes32(bcp.JustifiedCheckpoint.Root), bcp.FinalizedCheckpoint.Epoch)
+		if err != nil {
 			return err
+		}
+		if bcp.BuilderPubkey != nil && !bcp.HasPayload {
+			pn.node.builderPubkey = bcp.BuilderPubkey
+		}
+		if bcp.HasPayload {
+			root := bcp.Block.Root()
+			en := f.store.emptyNodeByRoot[root]
+			if en != nil && f.store.fullNodeByRoot[root] == nil {
+				sbid, err := bcp.Block.Block().Body().SignedExecutionPayloadBid()
+				if err != nil {
+					return errors.Wrap(err, "could not get signed execution payload bid")
+				}
+				if sbid == nil || sbid.Message == nil {
+					return errors.New("nil execution payload bid for full node")
+				}
+				f.store.fullNodeByRoot[root] = &PayloadNode{
+					node:       en.node,
+					optimistic: true,
+					timestamp:  time.Now(),
+					full:       true,
+					gasLimit:   sbid.Message.GasLimit,
+					children:   make([]*Node, 0),
+				}
+			}
 		}
 		if err := f.updateCheckpoints(ctx, bcp.JustifiedCheckpoint, bcp.FinalizedCheckpoint); err != nil {
 			return err
@@ -492,11 +641,6 @@ func (f *ForkChoice) SetGenesisTime(genesis time.Time) {
 	f.store.genesisTime = genesis.Truncate(time.Second) // Genesis time has a precision of 1 second.
 }
 
-// SetOriginRoot sets the genesis block root
-func (f *ForkChoice) SetOriginRoot(root [32]byte) {
-	f.store.originRoot = root
-}
-
 // CachedHeadRoot returns the last cached head root
 func (f *ForkChoice) CachedHeadRoot() [32]byte {
 	node := f.store.headNode
@@ -506,37 +650,25 @@ func (f *ForkChoice) CachedHeadRoot() [32]byte {
 	return f.store.headNode.root
 }
 
-// FinalizedPayloadBlockHash returns the hash of the payload at the finalized checkpoint
+// UnrealizedJustifiedCheckpoint returns the store-level unrealized justified checkpoint.
+func (f *ForkChoice) UnrealizedJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	return f.store.unrealizedJustifiedCheckpoint
+}
+
+// FinalizedPayloadBlockHash returns the hash of the payload at the finalized checkpoint.
+// The value is cached by the store because the node that resolves it is pruned at finalization.
 func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
-	root := f.FinalizedCheckpoint().Root
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		// This should not happen
-		return [32]byte{}
-	}
-	return node.payloadHash
+	return f.store.finalizedPayloadBlockHash
 }
 
 // JustifiedPayloadBlockHash returns the hash of the payload at the justified checkpoint
 func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
-	root := f.JustifiedCheckpoint().Root
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		// This should not happen
-		return [32]byte{}
-	}
-	return node.payloadHash
+	return f.store.checkpointPayloadHashForRoot(f.JustifiedCheckpoint().Root)
 }
 
 // UnrealizedJustifiedPayloadBlockHash returns the hash of the payload at the unrealized justified checkpoint
 func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
-	root := f.store.unrealizedJustifiedCheckpoint.Root
-	node, ok := f.store.nodeByRoot[root]
-	if !ok || node == nil {
-		// This should not happen
-		return [32]byte{}
-	}
-	return node.payloadHash
+	return f.store.checkpointPayloadHashForRoot(f.store.unrealizedJustifiedCheckpoint.Root)
 }
 
 // ForkChoiceDump returns a full dump of forkchoice.
@@ -560,7 +692,7 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, err
 	nodes := make([]*forkchoice2.Node, 0, f.NodeCount())
 	var err error
 	if f.store.treeRootNode != nil {
-		nodes, err = f.store.treeRootNode.nodeTreeDump(ctx, nodes)
+		nodes, err = f.store.nodeTreeDump(ctx, f.store.treeRootNode, nodes)
 		if err != nil {
 			return nil, err
 		}
@@ -582,33 +714,105 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, err
 	return resp, nil
 }
 
+// ForkChoiceDumpV2 returns a Gloas-aware dump of forkchoice, emitting one entry per (root, payload_status) tuple.
+func (f *ForkChoice) ForkChoiceDumpV2(ctx context.Context) (*forkchoice2.DumpV2, error) {
+	jc := &ethpb.Checkpoint{
+		Epoch: f.store.justifiedCheckpoint.Epoch,
+		Root:  f.store.justifiedCheckpoint.Root[:],
+	}
+	ujc := &ethpb.Checkpoint{
+		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
+		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
+	}
+	fc := &ethpb.Checkpoint{
+		Epoch: f.store.finalizedCheckpoint.Epoch,
+		Root:  f.store.finalizedCheckpoint.Root[:],
+	}
+	ufc := &ethpb.Checkpoint{
+		Epoch: f.store.unrealizedFinalizedCheckpoint.Epoch,
+		Root:  f.store.unrealizedFinalizedCheckpoint.Root[:],
+	}
+	nodes := make([]*forkchoice2.NodeV2, 0, f.NodeCount())
+	var err error
+	if f.store.treeRootNode != nil {
+		nodes, err = f.store.nodeTreeDumpV2(ctx, f.store.treeRootNode, nodes)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var headRoot [32]byte
+	if f.store.headNode != nil {
+		headRoot = f.store.headNode.root
+	}
+	return &forkchoice2.DumpV2{
+		JustifiedCheckpoint:           jc,
+		UnrealizedJustifiedCheckpoint: ujc,
+		FinalizedCheckpoint:           fc,
+		UnrealizedFinalizedCheckpoint: ufc,
+		ProposerBoostRoot:             f.store.proposerBoostRoot[:],
+		PreviousProposerBoostRoot:     f.store.previousProposerBoostRoot[:],
+		HeadRoot:                      headRoot[:],
+		ForkChoiceNodes:               nodes,
+	}, nil
+}
+
 // SetBalancesByRooter sets the balanceByRoot handler in forkchoice
 func (f *ForkChoice) SetBalancesByRooter(handler forkchoice.BalancesByRooter) {
 	f.balancesByRoot = handler
 }
 
-// Weight returns the weight of the given root if found on the store
+// Weight returns the payload-node weight of the given root if found on the store.
+// For Gloas, this is the node weight used for forkchoice on the payload tree.
 func (f *ForkChoice) Weight(root [32]byte) (uint64, error) {
-	n, ok := f.store.nodeByRoot[root]
+	n, ok := f.store.emptyNodeByRoot[root]
 	if !ok || n == nil {
 		return 0, ErrNilNode
 	}
 	return n.weight, nil
 }
 
+// ConsensusNodeWeight returns the consensus-node weight for the given root if found on the store.
+// For Gloas blocks, this includes both empty and full payload node weights.
+func (f *ForkChoice) ConsensusNodeWeight(root [32]byte) (uint64, error) {
+	n, ok := f.store.emptyNodeByRoot[root]
+	if !ok || n == nil {
+		return 0, ErrNilNode
+	}
+	return n.node.weight, nil
+}
+
+// PayloadWeights returns the empty and full payload node weights for the given root.
+func (f *ForkChoice) PayloadWeights(root [32]byte) (emptyWeight, fullWeight uint64, err error) {
+	en, ok := f.store.emptyNodeByRoot[root]
+	if !ok || en == nil {
+		return 0, 0, ErrNilNode
+	}
+	emptyWeight = en.weight
+	fn := f.store.fullNodeByRoot[root]
+	if fn != nil {
+		fullWeight = fn.weight
+	}
+	return emptyWeight, fullWeight, nil
+}
+
 // updateJustifiedBalances updates the validators balances on the justified checkpoint pointed by root.
 func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte) error {
 	balances, err := f.balancesByRoot(ctx, root)
 	if err != nil {
-		return errors.Wrap(err, "could not get justified balances")
+		if f.store.treeRootNode == nil || f.store.treeRootNode.root == root {
+			return errors.Wrap(err, "could not get justified balances")
+		}
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", root)).Warn("Falling back to forkchoice root for justified balances")
+		balances, err = f.balancesByRoot(ctx, f.store.treeRootNode.root)
+		if err != nil {
+			return errors.Wrap(err, "could not get justified balances")
+		}
 	}
 	f.justifiedBalances = balances
 	f.store.committeeWeight = 0
-	f.numActiveValidators = 0
 	for _, val := range balances {
 		if val > 0 {
 			f.store.committeeWeight += val
-			f.numActiveValidators++
 		}
 	}
 	f.store.committeeWeight /= uint64(params.BeaconConfig().SlotsPerEpoch)
@@ -617,42 +821,59 @@ func (f *ForkChoice) updateJustifiedBalances(ctx context.Context, root [32]byte)
 
 // Slot returns the slot of the given root if it's known to forkchoice
 func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
-	n, ok := f.store.nodeByRoot[root]
+	n, ok := f.store.emptyNodeByRoot[root]
 	if !ok || n == nil {
 		return 0, ErrNilNode
 	}
-	return n.slot, nil
+	return n.node.slot, nil
 }
 
 // DependentRoot returns the last root of the epoch prior to the requested ecoch in the canonical chain.
 func (f *ForkChoice) DependentRoot(epoch primitives.Epoch) ([32]byte, error) {
-	return f.DependentRootForEpoch(f.CachedHeadRoot(), epoch)
+	return f.store.dependentRoot(epoch)
 }
 
-// DependentRootForEpoch return the last root of the epoch prior to the requested ecoch for the given root.
+// DependentRootForEpoch return the last root of the epoch prior to the requested epoch for the given root.
 func (f *ForkChoice) DependentRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
-	tr, err := f.TargetRootForEpoch(root, epoch)
+	return f.store.dependentRootForEpoch(root, epoch)
+}
+
+// TargetRootForEpoch returns the root of the target block for a given epoch.
+func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	return f.store.targetRootForEpoch(root, epoch)
+}
+
+func (s *Store) dependentRoot(epoch primitives.Epoch) ([32]byte, error) {
+	var headRoot [32]byte
+	if s.headNode != nil {
+		headRoot = s.headNode.root
+	}
+	return s.dependentRootForEpoch(headRoot, epoch)
+}
+
+func (s *Store) dependentRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	tr, err := s.targetRootForEpoch(root, epoch)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	if tr == [32]byte{} {
 		return [32]byte{}, nil
 	}
-	node, ok := f.store.nodeByRoot[tr]
-	if !ok || node == nil {
+	en, ok := s.emptyNodeByRoot[tr]
+	if !ok || en == nil {
 		return [32]byte{}, ErrNilNode
 	}
-	if slots.ToEpoch(node.slot) >= epoch {
-		if node.parent != nil {
-			node = node.parent
+	if slots.ToEpoch(en.node.slot) >= epoch {
+		if en.node.parent != nil {
+			en = en.node.parent
 		} else {
-			return f.store.finalizedDependentRoot, nil
+			return s.finalizedDependentRoot, nil
 		}
 	}
-	return node.root, nil
+	return en.node.root, nil
 }
 
-// TargetRootForEpoch returns the root of the target block for a given epoch.
+// targetRootForEpoch returns the root of the target block for a given epoch.
 // The epoch parameter is crucial to identify the correct target root. For example:
 // When inserting a block at slot 63 with block root 0xA and target root 0xB (pointing to the block at slot 32),
 // and at slot 64, where the block is skipped, the attestation will reference the target root as 0xA (for slot 63), not 0xB (for slot 32).
@@ -660,47 +881,158 @@ func (f *ForkChoice) DependentRootForEpoch(root [32]byte, epoch primitives.Epoch
 // We also allow for the epoch to be below the current target for this root, in
 // which case we return the root of the checkpoint of the chain containing the
 // passed root, at the given epoch
-func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
-	n, ok := f.store.nodeByRoot[root]
+func (s *Store) targetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	n, ok := s.emptyNodeByRoot[root]
 	if !ok || n == nil {
 		return [32]byte{}, ErrNilNode
 	}
-	nodeEpoch := slots.ToEpoch(n.slot)
+	node := n.node
+	nodeEpoch := slots.ToEpoch(node.slot)
 	if epoch > nodeEpoch {
-		return n.root, nil
+		return node.root, nil
 	}
-	if n.target == nil {
+	if node.target == nil {
 		return [32]byte{}, nil
 	}
-	targetRoot := n.target.root
+	targetRoot := node.target.root
 	if epoch == nodeEpoch {
 		return targetRoot, nil
 	}
-	targetNode, ok := f.store.nodeByRoot[targetRoot]
+	targetNode, ok := s.emptyNodeByRoot[targetRoot]
 	if !ok || targetNode == nil {
 		return [32]byte{}, ErrNilNode
 	}
 	// If slot 0 was not missed we consider a previous block to go back at least one epoch
-	if nodeEpoch == slots.ToEpoch(targetNode.slot) {
-		targetNode = targetNode.parent
+	if nodeEpoch == slots.ToEpoch(targetNode.node.slot) {
+		targetNode = targetNode.node.parent
 		if targetNode == nil {
 			return [32]byte{}, ErrNilNode
 		}
 	}
-	return f.TargetRootForEpoch(targetNode.root, epoch)
+	return s.targetRootForEpoch(targetNode.node.root, epoch)
+}
+
+// UnrealizedJustification returns the spec's store.unrealized_justifications[block_root], set per node in pullTips.
+func (f *ForkChoice) UnrealizedJustification(root [32]byte) (*forkchoicetypes.Checkpoint, error) {
+	en, ok := f.store.emptyNodeByRoot[root]
+	if !ok || en == nil {
+		return nil, errors.Wrap(ErrNilNode, "could not get unrealized justification")
+	}
+	return &forkchoicetypes.Checkpoint{
+		Epoch: en.node.unrealizedJustified.Epoch,
+		Root:  en.node.unrealizedJustified.Root,
+	}, nil
+}
+
+// VotingSource returns the spec's get_voting_source, unrealized justification for past-epoch blocks, realized for current-epoch ones.
+func (f *ForkChoice) VotingSource(root [32]byte) (*forkchoicetypes.Checkpoint, error) {
+	en, ok := f.store.emptyNodeByRoot[root]
+	if !ok || en == nil {
+		return nil, errors.Wrap(ErrNilNode, "could not get voting source")
+	}
+	currentEpoch := slots.EpochsSinceGenesis(f.store.genesisTime)
+	blockEpoch := slots.ToEpoch(en.node.slot)
+	if currentEpoch > blockEpoch {
+		return f.UnrealizedJustification(root)
+	}
+	// TargetRootForEpoch is safe here, the realized justified checkpoint is never pruned.
+	epoch := en.node.justifiedEpoch
+	cpRoot, err := f.TargetRootForEpoch(root, epoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get voting source root")
+	}
+	return &forkchoicetypes.Checkpoint{Epoch: epoch, Root: cpRoot}, nil
+}
+
+// AncestorRoots returns the spec's get_ancestor_roots, terminal-exclusive to root-inclusive, nil when terminalRoot is not an ancestor.
+func (f *ForkChoice) AncestorRoots(root [32]byte, terminalRoot [32]byte) ([][32]byte, error) {
+	en, ok := f.store.emptyNodeByRoot[root]
+	if !ok || en == nil {
+		return nil, errors.Wrap(ErrNilNode, "could not get ancestor roots")
+	}
+	ten, ok := f.store.emptyNodeByRoot[terminalRoot]
+	if !ok || ten == nil {
+		return nil, errors.Wrap(ErrNilNode, "could not get ancestor roots for terminal")
+	}
+	terminalSlot := ten.node.slot
+
+	var result [][32]byte
+	n := en.node
+	for n.slot > terminalSlot {
+		result = append(result, n.root)
+		if n.parent == nil {
+			return nil, nil
+		}
+		if n.parent.node.root == terminalRoot {
+			slices.Reverse(result)
+			return result, nil
+		}
+		n = n.parent.node
+	}
+	return nil, nil
+}
+
+// IsAncestor returns true if ancestorRoot is an ancestor of root, a root is its own ancestor.
+func (f *ForkChoice) IsAncestor(root [32]byte, ancestorRoot [32]byte) (bool, error) {
+	if root == ancestorRoot {
+		return true, nil
+	}
+	en, ok := f.store.emptyNodeByRoot[root]
+	if !ok || en == nil {
+		return false, errors.Wrap(ErrNilNode, "could not check ancestry")
+	}
+	aen, ok := f.store.emptyNodeByRoot[ancestorRoot]
+	if !ok || aen == nil {
+		return false, errors.Wrap(ErrNilNode, "could not check ancestry for ancestor")
+	}
+	ancestorSlot := aen.node.slot
+
+	n := en.node
+	for n.slot > ancestorSlot {
+		if n.parent == nil {
+			return false, nil
+		}
+		n = n.parent.node
+	}
+	return n.root == ancestorRoot, nil
 }
 
 // ParentRoot returns the block root of the parent node if it is in forkchoice.
 // The exception is for the finalized checkpoint root which we return the zero
 // hash.
 func (f *ForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
-	n, ok := f.store.nodeByRoot[root]
+	n, ok := f.store.emptyNodeByRoot[root]
 	if !ok || n == nil {
 		return [32]byte{}, ErrNilNode
 	}
 	// Return the zero hash for the tree root
-	if n.parent == nil {
+	parent := n.node.parent
+	if parent == nil {
 		return [32]byte{}, nil
 	}
-	return n.parent.root, nil
+	return parent.node.root, nil
+}
+
+// SlashedIndices returns a copy of the slashed validator indices set.
+func (f *ForkChoice) SlashedIndices() map[primitives.ValidatorIndex]bool {
+	result := make(map[primitives.ValidatorIndex]bool, len(f.store.slashedIndices))
+	maps.Copy(result, f.store.slashedIndices)
+	return result
+}
+
+// VoteSnapshot appends a copy of the latest votes to buf so callers can reuse a buffer across slots.
+func (f *ForkChoice) VoteSnapshot(buf []forkchoicetypes.VoteData) []forkchoicetypes.VoteData {
+	for _, v := range f.votes {
+		buf = append(buf, forkchoicetypes.VoteData{
+			Root:          v.nextRoot,
+			Slot:          v.nextSlot,
+			PayloadStatus: v.nextPayloadStatus,
+		})
+	}
+	return buf
+}
+
+// ConfirmedPayloadBlockHash resolves the Gloas empty/full payload ambiguity the same way as the justified and finalized hashes.
+func (f *ForkChoice) ConfirmedPayloadBlockHash(root [32]byte) [32]byte {
+	return f.store.checkpointPayloadHashForRoot(root)
 }

@@ -55,8 +55,6 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.DisablePenaltyRewardLogFlag,
-	flags.InteropStartIndex,
-	flags.InteropNumValidators,
 	flags.EnableRPCFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -68,8 +66,6 @@ var appFlags = []cli.Flag{
 	flags.HTTPServerCorsDomain,
 	flags.DisableAccountMetricsFlag,
 	flags.MonitoringPortFlag,
-	flags.SlasherRPCProviderFlag,
-	flags.SlasherCertFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.GraffitiFileFlag,
@@ -81,16 +77,21 @@ var appFlags = []cli.Flag{
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
 	flags.Web3SignerKeyFileFlag,
+	flags.Web3SignerKeyPollIntervalFlag,
 	flags.SuggestedFeeRecipientFlag,
 	flags.ProposerSettingsURLFlag,
 	flags.ProposerSettingsFlag,
 	flags.EnableBuilderFlag,
 	flags.BuilderGasLimitFlag,
+	flags.BuilderURLsFlag,
+	flags.BuilderMinBidFlag,
+	flags.BuilderBoostFactorFlag,
+	flags.BuilderMaxExecutionPaymentFlag,
 	flags.ValidatorsRegistrationBatchSizeFlag,
+	flags.EnableStatelessFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,
-	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
@@ -103,6 +104,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
 	cmd.LogFormat,
+	cmd.DisableLogColor,
 	cmd.LogFileName,
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
@@ -125,8 +127,9 @@ func init() {
 func main() {
 	app := cli.App{
 		Name:    "validator",
-		Usage:   "Launches an Ethereum validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more.",
+		Usage:   "Ethereum validator client",
 		Version: version.Version(),
+		Authors: cmd.Authors,
 		Action: func(ctx *cli.Context) error {
 			if err := startNode(ctx); err != nil {
 				log.Fatal(err.Error())
@@ -164,8 +167,8 @@ func main() {
 				return errors.Wrap(err, "failed to parse log vmodule")
 			}
 
-			// set the global logging level to allow for the highest verbosity requested
-			logs.SetLoggingLevel(max(maxLevel, verbosityLevel))
+			// set the global logging level and data
+			logs.SetLoggingLevelAndData(verbosityLevel, vmodule, maxLevel, ctx.Bool(flags.DisableEphemeralLogFile.Name))
 
 			logFileName := ctx.String(cmd.LogFileName.Name)
 
@@ -181,6 +184,7 @@ func main() {
 				formatter.FullTimestamp = true
 				formatter.ForceFormatting = true
 				formatter.ForceColors = true
+				formatter.DisableColors = ctx.Bool(cmd.DisableLogColor.Name)
 				formatter.VModule = vmodule
 				formatter.BaseVerbosity = verbosityLevel
 
@@ -188,19 +192,36 @@ func main() {
 					Formatter:     formatter,
 					Writer:        os.Stderr,
 					AllowedLevels: logrus.AllLevels[:max(verbosityLevel, maxLevel)+1],
+					Identifier:    logs.LogTargetUser,
 				})
 			case "fluentd":
+				// disabling logrus default output so we can control it via hooks
+				logrus.SetOutput(io.Discard)
+
 				f := joonix.NewFormatter()
 				if err := joonix.DisableTimestampFormat(f); err != nil {
 					panic(err) // lint:nopanic -- This shouldn't happen, but crashing immediately at startup is OK.
 				}
-				logrus.SetFormatter(f)
+
+				logrus.AddHook(&logs.WriterHook{
+					Formatter:     f,
+					Writer:        os.Stderr,
+					AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+					Identifier:    logs.LogTargetUser,
+				})
 			case "json":
-				logrus.SetFormatter(&logrus.JSONFormatter{
-					TimestampFormat: "2006-01-02 15:04:05.00",
+				// disabling logrus default output so we can control it via hooks
+				logrus.SetOutput(io.Discard)
+				logrus.AddHook(&logs.WriterHook{
+					Formatter: &logrus.JSONFormatter{
+						TimestampFormat: "2006-01-02 15:04:05.00",
+					},
+					Writer:        os.Stderr,
+					AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+					Identifier:    logs.LogTargetUser,
 				})
 			case "journald":
-				if err := journald.Enable(); err != nil {
+				if err := journald.Enable(verbosityLevel); err != nil {
 					return err
 				}
 			default:

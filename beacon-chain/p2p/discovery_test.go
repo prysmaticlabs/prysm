@@ -186,11 +186,6 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	bootListener, err := s.createListener(ipAddr, pkey)
 	require.NoError(t, err)
 	defer bootListener.Close()
-
-	// Allow bootnode's table to have its initial refresh. This allows
-	// inbound nodes to be added in.
-	time.Sleep(5 * time.Second)
-
 	bootNode := bootListener.Self()
 
 	var listeners []*listenerWrapper
@@ -227,15 +222,13 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 		}
 	}()
 
-	// Wait for the nodes to have their local routing tables to be populated with the other nodes
-	time.Sleep(discoveryWaitTime)
-
+	var nodes []*enode.Node
 	lastListener := listeners[len(listeners)-1]
-	nodes := lastListener.Lookup(bootNode.ID())
-	if len(nodes) < 4 {
-		t.Errorf("The node's local table doesn't have the expected number of nodes. "+
-			"Expected more than or equal to %d but got %d", 4, len(nodes))
-	}
+	require.Eventually(t, func() bool {
+		nodes = lastListener.Lookup(bootNode.ID())
+		return len(nodes) > 4
+	}, 10*time.Second, 100*time.Millisecond, fmt.Errorf("The node's local table doesn't have the expected number of nodes. "+
+		"Expected more than or equal to %d but got %d", 4, len(nodes)))
 }
 
 func TestCreateLocalNode(t *testing.T) {
@@ -441,6 +434,23 @@ func TestMultiAddrConversion_OK(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Node doesn't have an ip4 address")
 	require.LogsDoNotContain(t, hook, "Invalid port, the tcp port of the node is a reserved port")
 	require.LogsDoNotContain(t, hook, "Could not get multiaddr")
+}
+
+func TestPeersFromStringAddrs_SkipsUnusablePeer(t *testing.T) {
+	const validAddr = "/ip4/127.0.0.1/tcp/13000"
+	_, pkey := createAddrAndPrivKey(t)
+
+	db, err := enode.OpenDB("")
+	require.NoError(t, err)
+	t.Cleanup(func() { db.Close() })
+
+	localNode := enode.NewLocalNode(db, pkey)
+	localNode.Set(enr.TCP(13001))
+
+	addrs, err := PeersFromStringAddrs([]string{validAddr, localNode.Node().String()})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(addrs))
+	assert.Equal(t, validAddr, addrs[0].String())
 }
 
 func TestStaticPeering_PeersAreAdded(t *testing.T) {
@@ -1298,4 +1308,15 @@ func TestFindPeers_received_bad_existing_node(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 1, len(result))
+}
+
+func TestGetPort_ZeroPortTreatedAsAbsent(t *testing.T) {
+	localNode := createTestNodeRandom(t)
+	localNode.Set(enr.TCP(0))
+
+	port, ok, err := getPort(localNode.Node(), tcp)
+
+	require.NoError(t, err)
+	require.Equal(t, false, ok)
+	require.Equal(t, uint(0), port)
 }

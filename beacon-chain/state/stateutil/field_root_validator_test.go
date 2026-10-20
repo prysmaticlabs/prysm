@@ -8,6 +8,7 @@ import (
 
 	mathutil "github.com/OffchainLabs/prysm/v7/math"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
@@ -29,15 +30,16 @@ func TestValidatorConstants(t *testing.T) {
 	assert.Equal(t, validatorFieldRoots, numOfValFields)
 	assert.Equal(t, uint64(validatorFieldRoots), mathutil.PowerOf2(validatorTreeDepth))
 
-	_, err := ValidatorRegistryRoot([]*ethpb.Validator{v})
+	cv := CompactValidatorFromProto(v)
+	_, err := ValidatorRegistryRoot(version.Phase0, []CompactValidator{cv})
 	assert.NoError(t, err)
 }
 
 func TestHashValidatorHelper(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	v := &ethpb.Validator{}
-	valList := make([]*ethpb.Validator, 10*validatorFieldRoots)
+	v := CompactValidator{}
+	valList := make([]CompactValidator, 10*validatorFieldRoots)
 	for i := range valList {
 		valList[i] = v
 	}
@@ -46,7 +48,7 @@ func TestHashValidatorHelper(t *testing.T) {
 	for i := range 4 * validatorFieldRoots {
 		require.Equal(t, [32]byte{}, roots[i])
 	}
-	emptyValRoots, err := ValidatorFieldRoots(v)
+	emptyValRoots, err := v.fieldRoots()
 	require.NoError(t, err)
 	for i := 4; i < 6; i++ {
 		for j := range validatorFieldRoots {

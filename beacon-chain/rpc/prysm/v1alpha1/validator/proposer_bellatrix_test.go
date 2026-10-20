@@ -1,3 +1,5 @@
+//go:build minimal
+
 package validator
 
 import (
@@ -22,9 +24,9 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v7/encoding/ssz"
 	v1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/wrappers"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
@@ -56,7 +58,6 @@ func TestServer_setExecutionData(t *testing.T) {
 	require.NoError(t, capellaTransitionState.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b2rCapella[:],
 	}))
-	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(t.Context(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
 
 	denebTransitionState, _ := util.DeterministicGenesisStateDeneb(t, 1)
 	wrappedHeaderDeneb, err := blocks.WrappedExecutionPayloadHeaderDeneb(&v1.ExecutionPayloadHeaderDeneb{BlockNumber: 2})
@@ -80,25 +81,26 @@ func TestServer_setExecutionData(t *testing.T) {
 
 	ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 1, Withdrawals: withdrawals})
 	require.NoError(t, err)
+	regCache := cache.NewRegistrationCache()
 	vs := &Server{
 		ExecutionEngineCaller: &powtesting.EngineClient{
 			GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed},
 			PayloadIDBytes:     id,
 		},
-		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
-		FinalizationFetcher:    &blockchainTest.ChainService{},
-		BeaconDB:               beaconDB,
-		PayloadIDCache:         cache.NewPayloadIDCache(),
-		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true, Cfg: &builderTest.Config{BeaconDB: beaconDB}},
-		ForkchoiceFetcher:      &blockchainTest.ChainService{},
-		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+		HeadFetcher:              &blockchainTest.ChainService{State: capellaTransitionState},
+		FinalizationFetcher:      &blockchainTest.ChainService{},
+		BeaconDB:                 beaconDB,
+		PayloadIDCache:           cache.NewPayloadIDCache(),
+		BlockBuilder:             &builderTest.MockBuilderService{HasConfigured: true, RegistrationCache: regCache},
+		ForkchoiceFetcher:        &blockchainTest.ChainService{},
+		ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
 	}
 	gasLimit := uint64(30000000)
 	t.Run("No builder configured. Use local block", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -113,12 +115,12 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Builder Block has higher value. Incorrect withdrawals", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{
-				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-				Timestamp:    uint64(time.Now().Unix()),
-				GasLimit:     gasLimit,
-				Pubkey:       make([]byte, fieldparams.BLSPubkeyLength)}}))
+		regCache.UpdateIndexToRegisteredMap(ctx, map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{blk.Block().ProposerIndex(): {
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			Timestamp:    uint64(time.Now().Unix()),
+			GasLimit:     gasLimit,
+			Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+		}})
 		ti, err := slots.StartTime(time.Now(), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
@@ -153,9 +155,9 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidCapella:    sBid,
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			BidCapella:        sBid,
+			HasConfigured:     true,
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
@@ -166,7 +168,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 		b := blk.Block()
 
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -182,17 +184,17 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Builder Block has higher value. Correct withdrawals.", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
-		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{
-				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-				Timestamp:    uint64(time.Now().Unix()),
-				GasLimit:     gasLimit,
-				Pubkey:       make([]byte, fieldparams.BLSPubkeyLength)}}))
+		regCache.UpdateIndexToRegisteredMap(ctx, map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{blk.Block().ProposerIndex(): {
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			Timestamp:    uint64(time.Now().Unix()),
+			GasLimit:     gasLimit,
+			Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+		}})
 		ti, err := slots.StartTime(time.Now(), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 		bid := &ethpb.BuilderBidCapella{
@@ -225,9 +227,9 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidCapella:    sBid,
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			BidCapella:        sBid,
+			HasConfigured:     true,
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
@@ -238,7 +240,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -254,17 +256,17 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Max builder boost factor should return builder", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
-		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{
-				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-				Timestamp:    uint64(time.Now().Unix()),
-				GasLimit:     gasLimit,
-				Pubkey:       make([]byte, fieldparams.BLSPubkeyLength)}}))
+		regCache.UpdateIndexToRegisteredMap(ctx, map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{blk.Block().ProposerIndex(): {
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			Timestamp:    uint64(time.Now().Unix()),
+			GasLimit:     gasLimit,
+			Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+		}})
 		ti, err := slots.StartTime(time.Now(), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 		bid := &ethpb.BuilderBidCapella{
@@ -296,9 +298,9 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidCapella:    sBid,
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			BidCapella:        sBid,
+			HasConfigured:     true,
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
@@ -309,7 +311,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -325,17 +327,17 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder builder has higher value but forced to local payload with builder boost factor", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
-		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{
-				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-				Timestamp:    uint64(time.Now().Unix()),
-				GasLimit:     gasLimit,
-				Pubkey:       make([]byte, fieldparams.BLSPubkeyLength)}}))
+		regCache.UpdateIndexToRegisteredMap(ctx, map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{blk.Block().ProposerIndex(): {
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			Timestamp:    uint64(time.Now().Unix()),
+			GasLimit:     gasLimit,
+			Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+		}})
 		ti, err := slots.StartTime(time.Now(), 0)
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 		bid := &ethpb.BuilderBidCapella{
@@ -367,9 +369,9 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidCapella:    sBid,
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			BidCapella:        sBid,
+			HasConfigured:     true,
 		}
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
@@ -380,7 +382,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -401,7 +403,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -428,7 +430,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -458,7 +460,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed, Bid: elBid}}
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.NoError(t, err)
@@ -477,15 +479,15 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			ErrGetHeader:  errors.New("fault"),
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			ErrGetHeader:      errors.New("fault"),
+			HasConfigured:     true,
 		}
 		ed, err := blocks.NewWrappedExecutionData(&v1.ExecutionPayloadCapella{BlockNumber: 4})
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, GetPayloadResponse: &blocks.GetPayloadResponse{ExecutionData: ed}}
 		b := blk.Block()
-		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, b, capellaTransitionState, false)
 		require.NoError(t, err)
 		builderBid, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex(), gasLimit)
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
@@ -507,7 +509,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk.SetSlot(1)
 		require.NoError(t, err)
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			HasConfigured: false,
+			RegistrationCache: regCache,
+			HasConfigured:     false,
 		}
 		blobsBundle := &v1.BlobsBundle{
 			KzgCommitments: [][]byte{{1, 2, 3}},
@@ -525,7 +528,7 @@ func TestServer_setExecutionData(t *testing.T) {
 			},
 		}
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
-		res, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState)
+		res, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState, false)
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), res.ExecutionData.BlockNumber())
 		require.DeepEqual(t, res.BlobsBundler, blobsBundle)
@@ -542,7 +545,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 
@@ -579,16 +582,16 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidDeneb:      sBid,
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			BidDeneb:          sBid,
+			HasConfigured:     true,
 		}
-		require.NoError(t, beaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{
-				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-				Timestamp:    uint64(time.Now().Unix()),
-				GasLimit:     gasLimit,
-				Pubkey:       make([]byte, fieldparams.BLSPubkeyLength)}}))
+		regCache.UpdateIndexToRegisteredMap(ctx, map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{blk.Block().ProposerIndex(): {
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			Timestamp:    uint64(time.Now().Unix()),
+			GasLimit:     gasLimit,
+			Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+		}})
 
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
 		require.NoError(t, err)
@@ -618,7 +621,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.DeepEqual(t, bid.BlobKzgCommitments, builderKzgCommitments)
 		require.Equal(t, bid.Header.BlockNumber, builderPayload.BlockNumber()) // header should be the same from block
 
-		res, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
+		res, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState, false)
 		require.NoError(t, err)
 		_, bundle, err := setExecutionData(t.Context(), blk, res, builderBid, defaultBuilderBoostFactor)
 		require.NoError(t, err)
@@ -640,7 +643,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sk, err := bls.RandKey()
 		require.NoError(t, err)
-		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 
@@ -704,16 +707,16 @@ func TestServer_setExecutionData(t *testing.T) {
 			Signature: sk.Sign(sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
-			BidElectra:    sBid,
-			HasConfigured: true,
-			Cfg:           &builderTest.Config{BeaconDB: beaconDB},
+			RegistrationCache: regCache,
+			BidElectra:        sBid,
+			HasConfigured:     true,
 		}
-		require.NoError(t, beaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{
-				FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-				Timestamp:    uint64(time.Now().Unix()),
-				GasLimit:     gasLimit,
-				Pubkey:       make([]byte, fieldparams.BLSPubkeyLength)}}))
+		regCache.UpdateIndexToRegisteredMap(ctx, map[primitives.ValidatorIndex]*ethpb.ValidatorRegistrationV1{blk.Block().ProposerIndex(): {
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+			Timestamp:    uint64(time.Now().Unix()),
+			GasLimit:     gasLimit,
+			Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+		}})
 		wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockElectra())
 		require.NoError(t, err)
 		chain := &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New(), Genesis: time.Now(), Block: wb}
@@ -742,7 +745,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.DeepEqual(t, bid.ExecutionRequests, eBid.ExecutionRequests())
 		require.Equal(t, bid.Header.BlockNumber, builderPayload.BlockNumber()) // header should be the same from block
 
-		res, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
+		res, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState, false)
 		require.NoError(t, err)
 		_, bundle, err := setExecutionData(t.Context(), blk, res, builderBid, defaultBuilderBoostFactor)
 		require.NoError(t, err)
@@ -771,7 +774,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	cfg.CapellaForkEpoch = fakeCapellaEpoch
 	cfg.InitializeForkSchedule()
 	params.OverrideBeaconConfig(cfg)
-	emptyRoot, err := ssz.TransactionsRoot([][]byte{})
+	emptyRoot, err := wrappers.TransactionsRoot([][]byte{})
 	require.NoError(t, err)
 	ti, err := slots.StartTime(time.Now(), 0)
 	require.NoError(t, err)
@@ -812,7 +815,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		Address:        make([]byte, fieldparams.FeeRecipientLength),
 		Amount:         3,
 	}}
-	wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	wr, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	require.NoError(t, err)
 
 	tiCapella, err := slots.StartTime(genesis, primitives.Slot(fakeCapellaEpoch)*params.BeaconConfig().SlotsPerEpoch)
@@ -1215,7 +1218,7 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 		p, err := blocks.WrappedExecutionPayloadCapella(local)
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
-		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
+		wr, err := wrappers.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		header.WithdrawalsRoot = wr[:]
 		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header)
@@ -1227,7 +1230,7 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 }
 
 func TestEmptyTransactionsRoot(t *testing.T) {
-	r, err := ssz.TransactionsRoot([][]byte{})
+	r, err := wrappers.TransactionsRoot([][]byte{})
 	require.NoError(t, err)
 	require.DeepEqual(t, r, emptyTransactionsRoot)
 }

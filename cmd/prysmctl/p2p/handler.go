@@ -6,13 +6,15 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
-	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	corenet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
 )
 
 type rpcHandler func(context.Context, any, libp2pcore.Stream) error
@@ -62,7 +64,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 		// Given we have an input argument that can be pointer or the actual object, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
-		if t.Kind() == reflect.Ptr {
+		if t.Kind() == reflect.Pointer {
 			msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
 			if !ok {
 				log.Errorf("message of %T does not support marshaller interface", msg)

@@ -3,6 +3,7 @@ package beacon
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,15 +14,24 @@ import (
 	"time"
 
 	"github.com/OffchainLabs/go-bitfield"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/mock"
+	"go.uber.org/mock/gomock"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
 	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
 	dbTest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	mockp2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
 	rpctesting "github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/lookup"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
@@ -34,6 +44,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ssz "github.com/OffchainLabs/prysm/v7/encoding/ssz"
 	"github.com/OffchainLabs/prysm/v7/network/httputil"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
@@ -42,12 +53,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/mock"
-	"go.uber.org/mock/gomock"
 )
 
 // fillGloasBlockTestData populates a Gloas block with non-zero test values for the
@@ -750,6 +755,15 @@ func TestGetBlockAttestationsV2(t *testing.T) {
 	esb, err := blocks.NewSignedBeaconBlock(eb)
 	require.NoError(t, err)
 
+	gloasAtts := make([]*eth.AttestationGloas, len(electraAtts))
+	for i, att := range electraAtts {
+		gloasAtts[i] = eth.AttestationElectraToGloas(att)
+	}
+	gb := util.NewBeaconBlockGloas()
+	gb.Block.Body.Attestations = gloasAtts
+	gsb, err := blocks.NewSignedBeaconBlock(gb)
+	require.NoError(t, err)
+
 	t.Run("ok-pre-electra", func(t *testing.T) {
 		mockChainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{},
@@ -820,6 +834,34 @@ func TestGetBlockAttestationsV2(t *testing.T) {
 
 		assert.DeepEqual(t, eb.Block.Body.Attestations, atts)
 		assert.Equal(t, "electra", resp.Version)
+	})
+	t.Run("ok-gloas", func(t *testing.T) {
+		mockChainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		s := &Server{
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               &testutil.MockBlocker{BlockToReturn: gsb},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v2/beacon/blocks/{block_id}/attestations", nil)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+
+		s.GetBlockAttestationsV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+
+		resp := &structs.GetBlockAttestationsV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, version.String(version.Gloas), resp.Version)
+
+		var attStructs []structs.AttestationElectra
+		require.NoError(t, json.Unmarshal(resp.Data, &attStructs))
+		require.Equal(t, len(gloasAtts), len(attStructs))
+		for i := range attStructs {
+			assert.DeepEqual(t, structs.AttGloasFromConsensus(gloasAtts[i]), &attStructs[i])
+		}
 	})
 	t.Run("execution-optimistic", func(t *testing.T) {
 		r, err := bsb.Block().HashTreeRoot()
@@ -1243,6 +1285,24 @@ func TestGetBlindedBlock(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, false, resp.Finalized)
 	})
+	t.Run("gloas", func(t *testing.T) {
+		sb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockGloas())
+		require.NoError(t, err)
+
+		s := &Server{
+			FinalizationFetcher: &chainMock.ChainService{},
+			Blocker:             &testutil.MockBlocker{BlockToReturn: sb},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/blinded_blocks/{block_id}", nil)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlindedBlock(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, "not supported from Gloas", writer.Body.String())
+	})
 }
 
 func TestGetBlindedBlockSSZ(t *testing.T) {
@@ -1359,6 +1419,19 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 }
 
 func TestVersionHeaderFromRequest(t *testing.T) {
+	t.Run("Gloas block returns gloas header", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 8
+		params.OverrideBeaconConfig(cfg)
+
+		slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().GloasForkEpoch)
+		block := []byte(fmt.Sprintf(`{"message":{"slot":"%d"}}`, slot))
+		versionHead, err := versionHeaderFromRequest(block)
+		require.NoError(t, err)
+		require.Equal(t, version.String(version.Gloas), versionHead)
+	})
+
 	t.Run("Fulu block contents returns fulu header", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
 		cfg.FuluForkEpoch = 7
@@ -1531,6 +1604,35 @@ func TestVersionHeaderFromRequest(t *testing.T) {
 
 func TestPublishBlockV2(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	t.Run("Gloas builder url header is forwarded", func(t *testing.T) {
+		b := util.NewBeaconBlockGloas()
+		fillGloasBlockTestData(b, 1)
+		blkJSON, err := structs.SignedBeaconBlockGloasFromConsensus(b)
+		require.NoError(t, err)
+		body, err := json.Marshal(blkJSON)
+		require.NoError(t, err)
+
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(mock.MatchedBy(func(ctx context.Context) bool {
+			md, ok := metadata.FromIncomingContext(ctx)
+			return ok && len(md.Get(api.BuilderUrlHeader)) == 1 && md.Get(api.BuilderUrlHeader)[0] == "http://builder.example"
+		}), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Gloas)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(body))
+		request.Header.Set(api.VersionHeader, version.String(version.Gloas))
+		request.Header.Set(api.BuilderUrlHeader, "http://builder.example")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1754,6 +1856,33 @@ func TestPublishBlockV2(t *testing.T) {
 
 func TestPublishBlockV2SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	t.Run("Gloas builder url header is forwarded", func(t *testing.T) {
+		b := util.NewBeaconBlockGloas()
+		fillGloasBlockTestData(b, 1)
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(mock.MatchedBy(func(ctx context.Context) bool {
+			md, ok := metadata.FromIncomingContext(ctx)
+			return ok && len(md.Get(api.BuilderUrlHeader)) == 1 && md.Get(api.BuilderUrlHeader)[0] == "http://builder.example"
+		}), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Gloas)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Gloas))
+		request.Header.Set(api.BuilderUrlHeader, "http://builder.example")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -2528,6 +2657,65 @@ func TestValidateConsensus(t *testing.T) {
 	}))
 }
 
+func TestValidateGossip(t *testing.T) {
+	ctx := t.Context()
+
+	parentState, privs := util.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
+	parentBlock, err := util.GenerateFullBlock(parentState, privs, util.DefaultBlockGenConfig(), parentState.Slot())
+	require.NoError(t, err)
+	parentSbb, err := blocks.NewSignedBeaconBlock(parentBlock)
+	require.NoError(t, err)
+	st, err := transition.ExecuteStateTransition(ctx, parentState, parentSbb)
+	require.NoError(t, err)
+	block, err := util.GenerateFullBlock(st, privs, util.DefaultBlockGenConfig(), st.Slot())
+	require.NoError(t, err)
+	parentRoot, err := parentSbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	// ProcessSlots advances the head state in place, so each run needs a fresh copy.
+	newServer := func() *Server {
+		return &Server{
+			Blocker:     &testutil.MockBlocker{RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{parentRoot: parentSbb}},
+			Stater:      &testutil.MockStater{StatesByRoot: map[[32]byte]state.BeaconState{bytesutil.ToBytes32(parentBlock.Block.StateRoot): parentState}},
+			HeadFetcher: &chainMock.ChainService{State: parentState.Copy(), Root: parentRoot[:]},
+		}
+	}
+	genericBlock := &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Phase0{
+			Phase0: block,
+		},
+	}
+
+	t.Run("valid signature", func(t *testing.T) {
+		require.NoError(t, newServer().validateGossip(ctx, genericBlock))
+	})
+	t.Run("routed via broadcast_validation=gossip", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "http://foo.example?broadcast_validation=gossip", nil)
+		require.NoError(t, newServer().validateBroadcast(ctx, r, genericBlock))
+	})
+	t.Run("invalid signature", func(t *testing.T) {
+		bad := &eth.SignedBeaconBlock{Block: block.Block, Signature: bytesutil.PadTo([]byte("bad"), 96)}
+		err := newServer().validateGossip(ctx, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Phase0{Phase0: bad},
+		})
+		require.ErrorContains(t, "could not verify block signature", err)
+	})
+	t.Run("invalid signature routed via broadcast_validation=gossip", func(t *testing.T) {
+		bad := &eth.SignedBeaconBlock{Block: block.Block, Signature: bytesutil.PadTo([]byte("bad"), 96)}
+		r := httptest.NewRequest(http.MethodPost, "http://foo.example?broadcast_validation=gossip", nil)
+		err := newServer().validateBroadcast(ctx, r, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Phase0{Phase0: bad},
+		})
+		require.ErrorContains(t, "gossip validation failed", err)
+	})
+	t.Run("no validation by default", func(t *testing.T) {
+		bad := &eth.SignedBeaconBlock{Block: block.Block, Signature: bytesutil.PadTo([]byte("bad"), 96)}
+		r := httptest.NewRequest(http.MethodPost, "http://foo.example", nil)
+		require.NoError(t, (&Server{}).validateBroadcast(ctx, r, &eth.GenericSignedBeaconBlock{
+			Block: &eth.GenericSignedBeaconBlock_Phase0{Phase0: bad},
+		}))
+	})
+}
+
 func TestValidateEquivocation(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		st, err := util.NewBeaconState()
@@ -2876,7 +3064,7 @@ func TestGetStateFork(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), fakeState)
 		require.NoError(t, err)
 		chainService = &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -3074,7 +3262,7 @@ func TestGetCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 		chainService = &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -3610,7 +3798,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 	t.Run("finalized", func(t *testing.T) {
-		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), fakeState)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -4167,7 +4355,7 @@ func TestGetPendingConsolidations(t *testing.T) {
 	})
 
 	t.Run("finalized node", func(t *testing.T) {
-		blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 
 		finalizedChainService := &chainMock.ChainService{
@@ -4360,7 +4548,7 @@ func TestGetPendingDeposits(t *testing.T) {
 	})
 
 	t.Run("finalized node", func(t *testing.T) {
-		blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 
 		finalizedChainService := &chainMock.ChainService{
@@ -4550,7 +4738,7 @@ func TestGetPendingPartialWithdrawals(t *testing.T) {
 	})
 
 	t.Run("finalized node", func(t *testing.T) {
-		blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 
 		finalizedChainService := &chainMock.ChainService{
@@ -4646,7 +4834,7 @@ func TestGetProposerLookahead(t *testing.T) {
 			start := i * validatorIndexSize
 			end := start + validatorIndexSize
 
-			idx := ssz.UnmarshallUint64(responseBytes[start:end])
+			idx := ssz.UnmarshalUint64(responseBytes[start:end])
 			recoveredIndices[i] = primitives.ValidatorIndex(idx)
 		}
 		require.DeepEqual(t, lookahead, recoveredIndices)
@@ -4737,7 +4925,7 @@ func TestGetProposerLookahead(t *testing.T) {
 	})
 
 	t.Run("finalized node", func(t *testing.T) {
-		blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 
 		finalizedChainService := &chainMock.ChainService{
@@ -4761,5 +4949,616 @@ func TestGetProposerLookahead(t *testing.T) {
 		var resp structs.GetProposerLookaheadResponse
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		require.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetBuilderPendingWithdrawals(t *testing.T) {
+	st, err := util.NewBeaconStateGloas()
+	require.NoError(t, err)
+	withdrawals := make([]*eth.BuilderPendingWithdrawal, 3)
+	for i := range withdrawals {
+		withdrawals[i] = &eth.BuilderPendingWithdrawal{
+			FeeRecipient: bytes.Repeat([]byte{byte(i + 1)}, 20),
+			Amount:       primitives.Gwei(100 * (i + 1)),
+			BuilderIndex: primitives.BuilderIndex(i),
+		}
+	}
+	require.NoError(t, st.SetBuilderPendingWithdrawals(withdrawals))
+
+	chainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{}}
+	server := &Server{
+		Stater:                &testutil.MockStater{BeaconState: st},
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+	}
+	url := "http://example.com/eth/v1/beacon/states/{state_id}/builder_pending_withdrawals"
+
+	t.Run("json response", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		server.GetBuilderPendingWithdrawals(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "gloas", rec.Header().Get(api.VersionHeader))
+
+		var resp structs.GetBuilderPendingWithdrawalsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, "gloas", resp.Version)
+		require.Equal(t, false, resp.ExecutionOptimistic)
+		require.Equal(t, false, resp.Finalized)
+		require.DeepEqual(t, structs.BuilderPendingWithdrawalsFromConsensus(withdrawals), resp.Data)
+		require.Equal(t, "0x0101010101010101010101010101010101010101", resp.Data[0].FeeRecipient)
+		require.Equal(t, "300", resp.Data[2].Amount)
+		require.Equal(t, "2", resp.Data[2].BuilderIndex)
+	})
+
+	t.Run("ssz response", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.Header.Set("Accept", api.OctetStreamMediaType)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		server.GetBuilderPendingWithdrawals(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "gloas", rec.Header().Get(api.VersionHeader))
+
+		size := (&eth.BuilderPendingWithdrawal{}).SizeSSZ()
+		require.Equal(t, len(withdrawals)*size, rec.Body.Len())
+		for i, want := range withdrawals {
+			got := &eth.BuilderPendingWithdrawal{}
+			require.NoError(t, got.UnmarshalSSZ(rec.Body.Bytes()[i*size:(i+1)*size]))
+			require.DeepEqual(t, want, got)
+		}
+	})
+
+	t.Run("empty list", func(t *testing.T) {
+		emptySt, err := util.NewBeaconStateGloas()
+		require.NoError(t, err)
+		emptyServer := &Server{
+			Stater:                &testutil.MockStater{BeaconState: emptySt},
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		emptyServer.GetBuilderPendingWithdrawals(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.StringContains(t, `"data":[]`, rec.Body.String())
+	})
+
+	t.Run("pre gloas state", func(t *testing.T) {
+		fuluSt, _ := util.DeterministicGenesisStateFulu(t, 1)
+		fuluServer := &Server{
+			Stater:                &testutil.MockStater{BeaconState: fuluSt},
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+		for _, accept := range []string{api.JsonMediaType, api.OctetStreamMediaType} {
+			req := httptest.NewRequest(http.MethodGet, url, nil)
+			req.Header.Set("Accept", accept)
+			req.SetPathValue("state_id", "head")
+			rec := httptest.NewRecorder()
+
+			fuluServer.GetBuilderPendingWithdrawals(rec, req)
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), e))
+			require.Equal(t, "state_id is prior to gloas", e.Message)
+		}
+	})
+
+	t.Run("missing state_id", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+
+		server.GetBuilderPendingWithdrawals(rec, req)
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), e))
+		require.Equal(t, "state_id is required in URL params", e.Message)
+	})
+
+	t.Run("state not found", func(t *testing.T) {
+		notFoundServer := &Server{Stater: &testutil.MockStater{CustomError: &lookup.StateNotFoundError{}}}
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "0x"+strings.Repeat("00", 32))
+		rec := httptest.NewRecorder()
+
+		notFoundServer.GetBuilderPendingWithdrawals(rec, req)
+		require.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("optimistic and finalized", func(t *testing.T) {
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
+		require.NoError(t, err)
+		flagsService := &chainMock.ChainService{Optimistic: true, FinalizedRoots: map[[32]byte]bool{blockRoot: true}}
+		flagsServer := &Server{
+			Stater:                server.Stater,
+			OptimisticModeFetcher: flagsService,
+			FinalizationFetcher:   flagsService,
+		}
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		flagsServer.GetBuilderPendingWithdrawals(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		var resp structs.GetBuilderPendingWithdrawalsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, true, resp.ExecutionOptimistic)
+		require.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetBuilderPendingPayments(t *testing.T) {
+	st, err := util.NewBeaconStateGloas()
+	require.NoError(t, err)
+	payments, err := st.BuilderPendingPayments()
+	require.NoError(t, err)
+	require.Equal(t, 2*int(params.BeaconConfig().SlotsPerEpoch), len(payments))
+	payments[5] = &eth.BuilderPendingPayment{
+		Weight: 42,
+		Withdrawal: &eth.BuilderPendingWithdrawal{
+			FeeRecipient: bytes.Repeat([]byte{0xab}, 20),
+			Amount:       1000,
+			BuilderIndex: 7,
+		},
+		ProposerIndex: 3,
+	}
+	require.NoError(t, st.SetBuilderPendingPayments(payments))
+
+	chainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{}}
+	server := &Server{
+		Stater:                &testutil.MockStater{BeaconState: st},
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+	}
+	url := "http://example.com/eth/v1/beacon/states/{state_id}/builder_pending_payments"
+
+	t.Run("json response", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		server.GetBuilderPendingPayments(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "gloas", rec.Header().Get(api.VersionHeader))
+
+		var resp structs.GetBuilderPendingPaymentsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, "gloas", resp.Version)
+		require.Equal(t, false, resp.ExecutionOptimistic)
+		require.Equal(t, false, resp.Finalized)
+		require.DeepEqual(t, structs.BuilderPendingPaymentsFromConsensus(payments), resp.Data)
+		require.Equal(t, "42", resp.Data[5].Weight)
+		require.Equal(t, "3", resp.Data[5].ProposerIndex)
+		require.Equal(t, "1000", resp.Data[5].Withdrawal.Amount)
+		require.Equal(t, "7", resp.Data[5].Withdrawal.BuilderIndex)
+	})
+
+	t.Run("ssz response", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.Header.Set("Accept", api.OctetStreamMediaType)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		server.GetBuilderPendingPayments(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "gloas", rec.Header().Get(api.VersionHeader))
+
+		size := (&eth.BuilderPendingPayment{}).SizeSSZ()
+		require.Equal(t, len(payments)*size, rec.Body.Len())
+		for i, want := range payments {
+			got := &eth.BuilderPendingPayment{}
+			require.NoError(t, got.UnmarshalSSZ(rec.Body.Bytes()[i*size:(i+1)*size]))
+			require.DeepEqual(t, want, got)
+		}
+	})
+
+	t.Run("pre gloas state", func(t *testing.T) {
+		fuluSt, _ := util.DeterministicGenesisStateFulu(t, 1)
+		fuluServer := &Server{
+			Stater:                &testutil.MockStater{BeaconState: fuluSt},
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+		for _, accept := range []string{api.JsonMediaType, api.OctetStreamMediaType} {
+			req := httptest.NewRequest(http.MethodGet, url, nil)
+			req.Header.Set("Accept", accept)
+			req.SetPathValue("state_id", "head")
+			rec := httptest.NewRecorder()
+
+			fuluServer.GetBuilderPendingPayments(rec, req)
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+			e := &httputil.DefaultJsonError{}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), e))
+			require.Equal(t, "state_id is prior to gloas", e.Message)
+		}
+	})
+
+	t.Run("missing state_id", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+
+		server.GetBuilderPendingPayments(rec, req)
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), e))
+		require.Equal(t, "state_id is required in URL params", e.Message)
+	})
+
+	t.Run("state not found", func(t *testing.T) {
+		notFoundServer := &Server{Stater: &testutil.MockStater{CustomError: &lookup.StateNotFoundError{}}}
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "0x"+strings.Repeat("00", 32))
+		rec := httptest.NewRecorder()
+
+		notFoundServer.GetBuilderPendingPayments(rec, req)
+		require.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("optimistic and finalized", func(t *testing.T) {
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
+		require.NoError(t, err)
+		flagsService := &chainMock.ChainService{Optimistic: true, FinalizedRoots: map[[32]byte]bool{blockRoot: true}}
+		flagsServer := &Server{
+			Stater:                server.Stater,
+			OptimisticModeFetcher: flagsService,
+			FinalizationFetcher:   flagsService,
+		}
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req.SetPathValue("state_id", "head")
+		rec := httptest.NewRecorder()
+
+		flagsServer.GetBuilderPendingPayments(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		var resp structs.GetBuilderPendingPaymentsResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, true, resp.ExecutionOptimistic)
+		require.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetStatePTC(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	// State sits at epoch 2, so the PTC window covers epochs 1 through 3.
+	stateSlot := 2 * slotsPerEpoch
+	st, err := util.NewBeaconStateGloas(func(state *eth.BeaconStateGloas) error {
+		state.Slot = primitives.Slot(stateSlot)
+		// Mark each window entry with its own offset so tests can verify indexing.
+		for i := range state.PtcWindow {
+			state.PtcWindow[i].ValidatorIndices[0] = primitives.ValidatorIndex(i)
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	chainService := &chainMock.ChainService{
+		Optimistic:     false,
+		FinalizedRoots: map[[32]byte]bool{},
+	}
+	server := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+	}
+
+	newRequest := func(slotParam string) *http.Request {
+		target := "http://example.com/eth/v1/beacon/states/{state_id}/ptc"
+		if slotParam != "" {
+			target += "?slot=" + slotParam
+		}
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		req.SetPathValue("state_id", "head")
+		return req
+	}
+
+	errMessage := func(rec *httptest.ResponseRecorder) string {
+		var errResp struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &errResp))
+		return errResp.Message
+	}
+
+	okCases := []struct {
+		name          string
+		slotParam     string
+		wantSlot      uint64
+		wantWindowIdx uint64
+	}{
+		{
+			name:          "default slot",
+			wantSlot:      stateSlot,
+			wantWindowIdx: slotsPerEpoch, // current epoch starts at offset SLOTS_PER_EPOCH
+		},
+		{
+			name:          "previous epoch slot",
+			slotParam:     strconv.FormatUint(stateSlot-1, 10),
+			wantSlot:      stateSlot - 1,
+			wantWindowIdx: slotsPerEpoch - 1,
+		},
+		{
+			name:          "lookahead epoch slot",
+			slotParam:     strconv.FormatUint(3*slotsPerEpoch, 10),
+			wantSlot:      3 * slotsPerEpoch,
+			wantWindowIdx: 2 * slotsPerEpoch,
+		},
+	}
+	for _, tc := range okCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			rec.Body = new(bytes.Buffer)
+
+			server.GetStatePTC(rec, newRequest(tc.slotParam))
+			require.Equal(t, http.StatusOK, rec.Code)
+
+			var resp structs.GetStatePTCResponse
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+			require.Equal(t, false, resp.ExecutionOptimistic)
+			require.Equal(t, false, resp.Finalized)
+			require.Equal(t, strconv.FormatUint(tc.wantSlot, 10), resp.Data.Slot)
+			require.Equal(t, fieldparams.PTCSize, len(resp.Data.Validators))
+			require.Equal(t, strconv.FormatUint(tc.wantWindowIdx, 10), resp.Data.Validators[0])
+		})
+	}
+
+	t.Run("slot outside PTC window", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		server.GetStatePTC(rec, newRequest(strconv.FormatUint(4*slotsPerEpoch, 10)))
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		require.Equal(t, true, strings.Contains(errMessage(rec), "outside the PTC window"))
+	})
+
+	t.Run("slot prior to gloas", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		server.GetStatePTC(rec, newRequest(strconv.FormatUint(slotsPerEpoch-1, 10)))
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		require.Equal(t, "slot is prior to gloas", errMessage(rec))
+	})
+
+	t.Run("invalid slot param", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		server.GetStatePTC(rec, newRequest("foo"))
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+	})
+
+	t.Run("pre-gloas state", func(t *testing.T) {
+		preGloasSt, err := util.NewBeaconStateFulu()
+		require.NoError(t, err)
+		preGloasServer := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: preGloasSt,
+			},
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		preGloasServer.GetStatePTC(rec, newRequest(""))
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		require.Equal(t, "state_id is prior to gloas", errMessage(rec))
+	})
+
+	t.Run("no state_id", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/ptc", nil)
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		server.GetStatePTC(rec, req)
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		require.Equal(t, "state_id is required in URL params", errMessage(rec))
+	})
+
+	t.Run("ssz response", func(t *testing.T) {
+		req := newRequest("")
+		req.Header.Set("Accept", api.OctetStreamMediaType)
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		server.GetStatePTC(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, api.OctetStreamMediaType, rec.Header().Get("Content-Type"))
+
+		sszData := rec.Body.Bytes()
+		require.Equal(t, 8+fieldparams.PTCSize*8, len(sszData))
+		require.Equal(t, stateSlot, binary.LittleEndian.Uint64(sszData[:8]))
+
+		// The SSZ payload must carry the same committee as the JSON response.
+		jsonRec := httptest.NewRecorder()
+		jsonRec.Body = new(bytes.Buffer)
+		server.GetStatePTC(jsonRec, newRequest(""))
+		require.Equal(t, http.StatusOK, jsonRec.Code)
+		var resp structs.GetStatePTCResponse
+		require.NoError(t, json.Unmarshal(jsonRec.Body.Bytes(), &resp))
+		for i, v := range resp.Data.Validators {
+			require.Equal(t, v, strconv.FormatUint(binary.LittleEndian.Uint64(sszData[8+i*8:16+i*8]), 10))
+		}
+	})
+
+	t.Run("optimistic node", func(t *testing.T) {
+		optimisticChainService := &chainMock.ChainService{
+			Optimistic:     true,
+			FinalizedRoots: map[[32]byte]bool{},
+		}
+		optimisticServer := &Server{
+			Stater:                server.Stater,
+			OptimisticModeFetcher: optimisticChainService,
+			FinalizationFetcher:   optimisticChainService,
+		}
+
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		optimisticServer.GetStatePTC(rec, newRequest(""))
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var resp structs.GetStatePTCResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized node", func(t *testing.T) {
+		blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
+		require.NoError(t, err)
+
+		finalizedChainService := &chainMock.ChainService{
+			Optimistic:     false,
+			FinalizedRoots: map[[32]byte]bool{blockRoot: true},
+		}
+		finalizedServer := &Server{
+			Stater:                server.Stater,
+			OptimisticModeFetcher: finalizedChainService,
+			FinalizationFetcher:   finalizedChainService,
+		}
+
+		rec := httptest.NewRecorder()
+		rec.Body = new(bytes.Buffer)
+
+		finalizedServer.GetStatePTC(rec, newRequest(""))
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var resp structs.GetStatePTCResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetProposerPreferences(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 8
+	params.OverrideBeaconConfig(cfg)
+
+	start := primitives.Slot(uint64(cfg.SlotsPerEpoch) * uint64(cfg.GloasForkEpoch))
+	rootA := [32]byte{0xaa}
+	rootB := [32]byte{0xbb}
+	prefCache := cache.NewProposerPreferencesCache()
+	// Inserted out of slot order to exercise the slot-ascending ordering.
+	entries := []struct {
+		slot primitives.Slot
+		pref cache.ProposerPreference
+	}{
+		{start + 2, cache.ProposerPreference{DependentRoot: rootA, ValidatorIndex: 3, FeeRecipient: primitives.ExecutionAddress{3}, TargetGasLimit: 30, Signature: [96]byte{3}}},
+		{start + 1, cache.ProposerPreference{DependentRoot: rootA, ValidatorIndex: 1, FeeRecipient: primitives.ExecutionAddress{1}, TargetGasLimit: 10, Signature: [96]byte{1}}},
+		{start + 1, cache.ProposerPreference{DependentRoot: rootB, ValidatorIndex: 2, FeeRecipient: primitives.ExecutionAddress{2}, TargetGasLimit: 20, Signature: [96]byte{2}}},
+	}
+	for _, e := range entries {
+		require.Equal(t, true, prefCache.Add(e.pref, e.slot))
+	}
+	signed := func(slot primitives.Slot, p cache.ProposerPreference) *eth.SignedProposerPreferences {
+		return &eth.SignedProposerPreferences{
+			Message: &eth.ProposerPreferences{
+				DependentRoot:  p.DependentRoot[:],
+				ProposalSlot:   slot,
+				ValidatorIndex: p.ValidatorIndex,
+				FeeRecipient:   p.FeeRecipient[:],
+				TargetGasLimit: p.TargetGasLimit,
+			},
+			Signature: p.Signature[:],
+		}
+	}
+	slot1RootA := signed(entries[1].slot, entries[1].pref)
+	slot1RootB := signed(entries[2].slot, entries[2].pref)
+	slot2RootA := signed(entries[0].slot, entries[0].pref)
+
+	currentSlot := start
+	server := &Server{
+		ProposerPreferencesCache: prefCache,
+		TimeFetcher:              &chainMock.ChainService{Slot: &currentSlot},
+	}
+
+	get := func(t *testing.T, query string, accept string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/proposer_preferences"+query, nil)
+		if accept != "" {
+			req.Header.Set("Accept", accept)
+		}
+		rec := httptest.NewRecorder()
+		server.GetProposerPreferences(rec, req)
+		return rec
+	}
+	getJSON := func(t *testing.T, query string) []*structs.SignedProposerPreferences {
+		rec := get(t, query, "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "gloas", rec.Header().Get(api.VersionHeader))
+		var resp structs.GetProposerPreferencesResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		require.Equal(t, "gloas", resp.Version)
+		return resp.Data
+	}
+	toJSON := func(ps ...*eth.SignedProposerPreferences) []*structs.SignedProposerPreferences {
+		out := make([]*structs.SignedProposerPreferences, len(ps))
+		for i, p := range ps {
+			out[i] = structs.SignedProposerPreferencesFromConsensus(p)
+		}
+		return out
+	}
+
+	t.Run("no filter", func(t *testing.T) {
+		data := getJSON(t, "")
+		require.Equal(t, 3, len(data))
+		require.DeepEqual(t, toJSON(slot1RootA, slot1RootB, slot2RootA), data)
+		assert.Equal(t, hexutil.Encode(entries[1].pref.Signature[:]), data[0].Signature)
+	})
+	t.Run("slot filter", func(t *testing.T) {
+		require.DeepEqual(t, toJSON(slot1RootA, slot1RootB), getJSON(t, fmt.Sprintf("?slot=%d", start+1)))
+	})
+	t.Run("dependent_root filter", func(t *testing.T) {
+		require.DeepEqual(t, toJSON(slot1RootA, slot2RootA), getJSON(t, "?dependent_root="+hexutil.Encode(rootA[:])))
+	})
+	t.Run("slot and dependent_root filter", func(t *testing.T) {
+		require.DeepEqual(t, toJSON(slot1RootB), getJSON(t, fmt.Sprintf("?slot=%d&dependent_root=%s", start+1, hexutil.Encode(rootB[:]))))
+	})
+	t.Run("empty result", func(t *testing.T) {
+		data := getJSON(t, fmt.Sprintf("?slot=%d", start+5))
+		require.NotNil(t, data)
+		require.Equal(t, 0, len(data))
+	})
+	t.Run("bad slot", func(t *testing.T) {
+		rec := get(t, "?slot=abc", "")
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "slot", e.Message)
+	})
+	t.Run("bad dependent_root", func(t *testing.T) {
+		rec := get(t, "?dependent_root=0x1234", "")
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "dependent_root", e.Message)
+	})
+	t.Run("ssz response", func(t *testing.T) {
+		rec := get(t, "", api.OctetStreamMediaType)
+		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, "gloas", rec.Header().Get(api.VersionHeader))
+		var want []byte
+		for _, p := range []*eth.SignedProposerPreferences{slot1RootA, slot1RootB, slot2RootA} {
+			b, err := p.MarshalSSZ()
+			require.NoError(t, err)
+			want = append(want, b...)
+		}
+		require.DeepEqual(t, want, rec.Body.Bytes())
 	})
 }

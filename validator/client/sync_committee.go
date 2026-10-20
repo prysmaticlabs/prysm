@@ -16,12 +16,21 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+// syncMessageDueComponent returns the slot-component basis points for the
+// sync committee message due time.
+func syncMessageDueComponent(slot primitives.Slot) primitives.BP {
+	cfg := params.BeaconConfig()
+	if slots.ToEpoch(slot) >= cfg.GloasForkEpoch {
+		return cfg.SyncMessageDueBPSGloas
+	}
+
+	return cfg.SyncMessageDueBPS
+}
 
 // SubmitSyncCommitteeMessage submits the sync committee message to the beacon chain.
 func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) {
@@ -30,6 +39,13 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 	span.SetAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
 	v.waitUntilAttestationDueOrValidBlock(ctx, slot)
+
+	ctx, err := v.withHeadHint(ctx, slot, syncMessageDueComponent(slot))
+	if err != nil {
+		log.WithField("slot", slot).WithError(err).Error("Could not attach freshness hint")
+		tracing.AnnotateError(span, err)
+		return
+	}
 
 	res, err := v.validatorClient.SyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -92,8 +108,8 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 		"timeSinceSlotStart": time.Since(slotTime),
 		"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
 		"validatorIndex":     msg.ValidatorIndex,
-	}).Info("Submitted new sync message")
-	v.syncCommitteeStats.totalMessagesSubmitted.Add(1)
+	}).Debug("Submitted new sync message")
+	v.saveSubmittedSyncMessage(msg)
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
@@ -121,7 +137,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		return
 	}
 
-	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes, duty.ValidatorIndex)
+	selectionProofs, err := v.aggSelector.SyncCommitteeSelectionProofs(ctx, slot, pubKey, indexRes)
 	if err != nil {
 		log.WithError(err).Error("Could not get selection proofs")
 		return
@@ -133,6 +149,12 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		component = cfg.ContributionDueBPSGloas
 	}
 	v.waitUntilSlotComponent(ctx, slot, component)
+
+	ctx, err = v.withHeadHint(ctx, slot, component)
+	if err != nil {
+		log.WithField("slot", slot).WithError(err).Error("Could not attach freshness hint")
+		return
+	}
 
 	coveredSubnets := make(map[uint64]bool)
 	for i, comIdx := range indexRes.Indices {
@@ -202,50 +224,9 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 			"subcommitteeIndex":  contributionAndProof.Contribution.SubcommitteeIndex,
 			"aggregatorIndex":    contributionAndProof.AggregatorIndex,
 			"bitsCount":          contributionAndProof.Contribution.AggregationBits.Count(),
-		}).Info("Submitted new sync contribution and proof")
+		}).Debug("Submitted new sync contribution and proof")
+		v.saveSubmittedSyncContribution(contributionAndProof)
 	}
-}
-
-// Signs and returns selection proofs per validator for slot and pub key.
-func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, indexRes *ethpb.SyncSubcommitteeIndexResponse, validatorIndex primitives.ValidatorIndex) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.selectionProofs")
-	defer span.End()
-
-	selectionProofs := make([][]byte, len(indexRes.Indices))
-	cfg := params.BeaconConfig()
-	size := cfg.SyncCommitteeSize
-	subCount := cfg.SyncCommitteeSubnetCount
-	selections := make([]iface.SyncCommitteeSelection, len(indexRes.Indices))
-	for i, index := range indexRes.Indices {
-		subSize := size / subCount
-		subnet := uint64(index) / subSize
-		selectionProof, err := v.signSyncSelectionData(ctx, pubKey, subnet, slot)
-		if err != nil {
-			return nil, err
-		}
-		selectionProofs[i] = selectionProof
-		selections[i] = iface.SyncCommitteeSelection{
-			SelectionProof:    selectionProof,
-			Slot:              slot,
-			SubcommitteeIndex: primitives.CommitteeIndex(subnet),
-			ValidatorIndex:    validatorIndex,
-		}
-	}
-
-	// Override selection proofs with aggregated ones if the node is part of a Distributed Validator.
-	if v.distributed && len(selections) > 0 {
-		var err error
-		selections, err := v.validatorClient.AggregatedSyncSelections(ctx, selections)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get aggregated sync selections")
-		}
-
-		for i, s := range selections {
-			selectionProofs[i] = s.SelectionProof
-		}
-	}
-
-	return selectionProofs, nil
 }
 
 // Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.

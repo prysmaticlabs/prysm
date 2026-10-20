@@ -20,37 +20,46 @@ import (
 )
 
 func TestProcessPendingDepositsMultiplesSameDeposits(t *testing.T) {
-	st := stateWithActiveBalanceETH(t, 1000)
-	deps := make([]*eth.PendingDeposit, 2) // Make same deposit twice
-	validators := st.Validators()
-	sk, err := bls.RandKey()
-	require.NoError(t, err)
-	for i := 0; i < len(deps); i += 1 {
-		wc := make([]byte, 32)
-		wc[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
-		wc[31] = byte(i)
-		validators[i].PublicKey = sk.PublicKey().Marshal()
-		validators[i].WithdrawalCredentials = wc
-		deps[i] = stateTesting.GeneratePendingDeposit(t, sk, 32, bytesutil.ToBytes32(wc), 0)
-	}
-	require.NoError(t, st.SetPendingDeposits(deps))
+	const (
+		depositCount      = uint64(2)
+		amountETH         = uint64(32)
+		slot              = 0
+		activeBalanceGwei = 10_000
+	)
 
-	err = electra.ProcessPendingDeposits(context.TODO(), st, 10000)
+	state := stateWithActiveBalanceETH(t, 0)
+
+	secretKey, err := bls.RandKey()
 	require.NoError(t, err)
 
-	val := st.Validators()
-	seenPubkeys := make(map[string]struct{})
-	for i := 0; i < len(val); i += 1 {
-		if len(val[i].PublicKey) == 0 {
-			continue
-		}
-		_, ok := seenPubkeys[string(val[i].PublicKey)]
-		if ok {
-			t.Fatalf("duplicated pubkeys")
-		} else {
-			seenPubkeys[string(val[i].PublicKey)] = struct{}{}
-		}
+	withdrawalCredentialsBytes := make([]byte, 32)
+	withdrawalCredentialsBytes[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
+	withdrawalCredentials := bytesutil.ToBytes32(withdrawalCredentialsBytes)
+
+	validators := state.Validators()
+	require.Equal(t, 0, len(validators))
+
+	deposits := make([]*eth.PendingDeposit, 0, depositCount)
+	for range depositCount {
+		deposit := stateTesting.GeneratePendingDeposit(t, secretKey, amountETH, withdrawalCredentials, slot)
+		deposits = append(deposits, deposit)
 	}
+
+	err = state.SetPendingDeposits(deposits)
+	require.NoError(t, err)
+
+	err = electra.ProcessPendingDeposits(t.Context(), state, activeBalanceGwei)
+	require.NoError(t, err)
+
+	// The first deposit should create a new validator,
+	// and the second deposit should top up the same validator
+	// We should have 1 validator with balance of 64 ETH.
+	validators = state.Validators()
+	require.Equal(t, 1, len(validators))
+
+	balance, err := state.BalanceAtIndex(0)
+	require.NoError(t, err)
+	require.Equal(t, depositCount*amountETH, balance)
 }
 
 func TestProcessPendingDeposits(t *testing.T) {
@@ -292,7 +301,7 @@ func TestProcessPendingDeposits(t *testing.T) {
 				// The caller of this method would normally have the precompute balance values for total
 				// active balance for this epoch. For ease of test setup, we will compute total active
 				// balance from the given state.
-				tab, err = helpers.TotalActiveBalance(tt.state)
+				tab, err = helpers.TotalActiveBalance(t.Context(), tt.state)
 			}
 			require.NoError(t, err)
 			err = electra.ProcessPendingDeposits(context.TODO(), tt.state, primitives.Gwei(tab))
@@ -300,6 +309,85 @@ func TestProcessPendingDeposits(t *testing.T) {
 			if tt.check != nil {
 				tt.check(t, tt.state)
 			}
+		})
+	}
+}
+
+func TestProcessPendingDeposits_Eth1BridgeGate(t *testing.T) {
+	// Queue a deposit request while the Eth1 bridge is unfinished, i.e. `eth1_deposit_index` has
+	// not caught up with `deposit_requests_start_index`.
+	withUnfinishedBridge := func(t *testing.T, st state.BeaconState, startIndex uint64) uint64 {
+		require.NoError(t, st.SetSlot(10*params.BeaconConfig().SlotsPerEpoch))
+		require.NoError(t, st.SetFinalizedCheckpoint(&eth.Checkpoint{Epoch: 1, Root: make([]byte, 32)}))
+		require.NoError(t, st.SetEth1DepositIndex(0))
+		require.NoError(t, st.SetDepositRequestsStartIndex(startIndex))
+		val, err := st.ValidatorAtIndex(0)
+		require.NoError(t, err)
+		require.NoError(t, st.SetPendingDeposits([]*eth.PendingDeposit{{
+			PublicKey:             val.PublicKey,
+			WithdrawalCredentials: val.WithdrawalCredentials,
+			Amount:                1_000,
+			Signature:             make([]byte, fieldparams.BLSSignatureLength),
+			Slot:                  1,
+		}}))
+		bal, err := st.BalanceAtIndex(0)
+		require.NoError(t, err)
+		return bal
+	}
+
+	unset := params.BeaconConfig().UnsetDepositRequestsStartIndex
+
+	for _, tt := range []struct {
+		name       string
+		newState   func(testing.TB) state.BeaconState
+		startIndex uint64
+		applied    bool
+	}{
+		{
+			name:       "electra postpones deposit requests until Eth1 bridge deposits are applied",
+			newState:   func(t testing.TB) state.BeaconState { st, _ := util.DeterministicGenesisStateElectra(t, 64); return st },
+			startIndex: unset,
+		},
+		{
+			name:       "electra postpones deposit requests mid-bridge",
+			newState:   func(t testing.TB) state.BeaconState { st, _ := util.DeterministicGenesisStateElectra(t, 64); return st },
+			startIndex: 5,
+		},
+		{
+			name:       "fulu processes deposit requests without the Eth1 bridge gate",
+			newState:   func(t testing.TB) state.BeaconState { st, _ := util.DeterministicGenesisStateFulu(t, 64); return st },
+			startIndex: unset,
+			applied:    true,
+		},
+		{
+			name:       "fulu processes deposit requests mid-bridge",
+			newState:   func(t testing.TB) state.BeaconState { st, _ := util.DeterministicGenesisStateFulu(t, 64); return st },
+			startIndex: 5,
+			applied:    true,
+		},
+		{
+			name:       "gloas processes deposit requests without the Eth1 bridge gate",
+			newState:   func(t testing.TB) state.BeaconState { st, _ := util.DeterministicGenesisStateGloas(t, 64); return st },
+			startIndex: unset,
+			applied:    true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			st := tt.newState(t)
+			balBefore := withUnfinishedBridge(t, st, tt.startIndex)
+
+			require.NoError(t, electra.ProcessPendingDeposits(t.Context(), st, 10_000))
+
+			wantBal, wantRemaining := balBefore, 1
+			if tt.applied {
+				wantBal, wantRemaining = balBefore+1_000, 0
+			}
+			balAfter, err := st.BalanceAtIndex(0)
+			require.NoError(t, err)
+			require.Equal(t, wantBal, balAfter)
+			remaining, err := st.PendingDeposits()
+			require.NoError(t, err)
+			require.Equal(t, wantRemaining, len(remaining))
 		})
 	}
 }

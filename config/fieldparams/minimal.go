@@ -35,6 +35,9 @@ const (
 	KzgCommitmentSize                     = 48                // KzgCommitmentSize defines the byte length of a KZG commitment.
 	KzgCommitmentInclusionProofDepth      = 17                // Merkle proof depth for blob_kzg_commitments list item
 	ExecutionBranchDepth                  = 4                 // ExecutionBranchDepth defines the number of leaves in a merkle proof of the execution payload header.
+	ExecutionBranchDepthGloas             = 11                // ExecutionBranchDepthGloas is the execution block hash proof depth.
+	SyncCommitteeBranchDepthGloas         = 11                // SyncCommitteeBranchDepthGloas is the sync committee proof depth.
+	FinalityBranchDepthGloas              = 9                 // FinalityBranchDepthGloas is the finalized checkpoint root proof depth.
 	SyncCommitteeBranchDepth              = 5                 // SyncCommitteeBranchDepth defines the number of leaves in a merkle proof of a sync committee.
 	SyncCommitteeBranchDepthElectra       = 6                 // SyncCommitteeBranchDepthElectra defines the number of leaves in a merkle proof of a sync committee.
 	FinalityBranchDepth                   = 6                 // FinalityBranchDepth defines the number of leaves in a merkle proof of the finalized checkpoint root.
@@ -52,5 +55,11 @@ const (
 	CellsPerBlob    = 64  // CellsPerBlob refers to the number of cells in a (non-extended) blob.
 
 	// Introduced in Gloas network upgrade.
-	PTCSize = 2 // PTCSize is the size of the payload timeliness committee.
+	PTCSize                = 16 // PTCSize is the size of the payload timeliness committee.
+	MaxPayloadAttestations = 4  // MaxPayloadAttestations is the maximum number of payload attestations in a block.
+
+	// Type-specific SSZ bounds, introduced in Gloas network upgrade.
+	MaxSignedAggregateAndProofSize   = 1462   // MaxSignedAggregateAndProofSize is the maximum size of a signed aggregate and proof, ~1 KiB.
+	MaxAttesterSlashingSize          = 131536 // MaxAttesterSlashingSize is the maximum size of an attester slashing, ~128 KiB.
+	MaxSignedExecutionPayloadBidSize = 196932 // MaxSignedExecutionPayloadBidSize is the maximum size of a signed execution payload bid, ~192 KiB.
 )

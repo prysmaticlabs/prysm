@@ -122,6 +122,7 @@ func Test_pruneAttsFromPool_Electra(t *testing.T) {
 	rob, err := consensusblocks.NewSignedBeaconBlock(bl)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisStateElectra(t, 1024)
+	require.NoError(t, helpers.UpdateCommitteeCache(ctx, st, 0))
 	committees, err := helpers.BeaconCommittees(ctx, st, 0)
 	require.NoError(t, err)
 	// Sanity check to make sure the on-chain att will be decomposed
@@ -163,7 +164,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		blks = append(blks, rwsb)
 	}
-	err := service.onBlockBatch(ctx, blks, &das.MockAvailabilityStore{})
+	err := service.onBlockBatch(ctx, blks, nil, &das.MockAvailabilityStore{})
 	require.NoError(t, err)
 	jcp := service.CurrentJustifiedCheckpt()
 	jroot := bytesutil.ToBytes32(jcp.Root)
@@ -193,7 +194,53 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		require.NoError(t, service.saveInitSyncBlock(ctx, rwsb.Root(), wsb))
 		blks = append(blks, rwsb)
 	}
-	require.NoError(t, service.onBlockBatch(ctx, blks, &das.MockAvailabilityStore{}))
+	require.NoError(t, service.onBlockBatch(ctx, blks, nil, &das.MockAvailabilityStore{}))
+}
+
+func TestGetBatchPrestate(t *testing.T) {
+	parentRoot, ancestorRoot := [32]byte{0xa2}, [32]byte{0xa1}
+	parentHash, ancestorHash := [32]byte{0xb2}, [32]byte{0xb1}
+	for _, test := range []struct {
+		name         string
+		envelopeRoot [32]byte
+		payloadHash  [32]byte
+		slot         primitives.Slot
+		wantApplied  bool
+	}{
+		{"ancestor envelope with matching execution hash is not applied", ancestorRoot, ancestorHash, 31, false},
+		{"parent envelope with matching execution hash is applied", parentRoot, parentHash, 32, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			service, tr := minimalTestService(t, WithExecutionEngineCaller(&mockExecution.EngineClient{}))
+			parentState, err := util.NewBeaconStateGloas(func(st *ethpb.BeaconStateGloas) error {
+				st.Slot = 32
+				st.LatestBlockHash = ancestorHash[:]
+				st.LatestExecutionPayloadBid.BlockHash = parentHash[:]
+				return nil
+			})
+			require.NoError(t, err)
+			require.NoError(t, tr.db.SaveState(tr.ctx, parentState, parentRoot))
+
+			child := util.NewBeaconBlockGloas()
+			child.Block.Slot = 33
+			child.Block.ParentRoot = parentRoot[:]
+			child.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockHash = test.payloadHash[:]
+			childBlock, err := consensusblocks.NewSignedBeaconBlock(child)
+			require.NoError(t, err)
+			roChild, err := consensusblocks.NewROBlock(childBlock)
+			require.NoError(t, err)
+			protoEnvelope := testSignedEnvelope(t, test.envelopeRoot, test.slot, test.payloadHash[:])
+			protoEnvelope.Message.Payload.SlotNumber = test.slot
+			protoEnvelope.Message.Payload.ParentHash = ancestorHash[:]
+			envelope, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnvelope)
+			require.NoError(t, err)
+
+			got, applied, err := service.getBatchPrestate(tr.ctx, roChild, []interfaces.ROSignedExecutionPayloadEnvelope{envelope})
+			require.NoError(t, err)
+			require.Equal(t, test.wantApplied, applied)
+			require.DeepSSZEqual(t, parentState.ToProto(), got.ToProto())
+		})
+	}
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
@@ -731,13 +778,13 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 		currStoreJustifiedEpoch := service.CurrentJustifiedCheckpt().Epoch
 		currStoreFinalizedEpoch := service.FinalizedCheckpt().Epoch
 
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, r)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, r)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -783,13 +830,13 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		currStoreJustifiedEpoch := service.CurrentJustifiedCheckpt().Epoch
 		currStoreFinalizedEpoch := service.FinalizedCheckpt().Epoch
 
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, r)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, r)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -847,13 +894,13 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, r)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, r)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1047,12 +1094,23 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 				BlockNumber: 1,
 			},
 		},
+		{
+			name: "gloas state",
+			st: func() state.BeaconState {
+				s, _ := util.DeterministicGenesisStateGloas(t, 64)
+				return s
+			}(),
+			version: version.Gloas,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ver, header, err := getStateVersionAndPayload(tt.st)
 			require.NoError(t, err)
 			require.Equal(t, tt.version, ver)
+			if tt.version >= version.Gloas {
+				require.IsNil(t, header)
+			}
 			if header != nil {
 				protoHeader, ok := header.Proto().(*enginev1.ExecutionPayloadHeader)
 				require.Equal(t, true, ok)
@@ -1322,13 +1380,13 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		wg.Add(4)
 		var lock sync.Mutex
 		go func() {
-			preState, err := service.getBlockPreState(ctx, wsb1.Block())
+			roblock, err := consensusblocks.NewROBlockWithRoot(wsb1, r1)
+			require.NoError(t, err)
+			preState, err := service.GetBlockPreState(ctx, roblock)
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb1)
 			require.NoError(t, err)
 			lock.Lock()
-			roblock, err := consensusblocks.NewROBlockWithRoot(wsb1, r1)
-			require.NoError(t, err)
 			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 			service.cfg.ForkChoiceStore.Unlock()
@@ -1336,13 +1394,13 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			wg.Done()
 		}()
 		go func() {
-			preState, err := service.getBlockPreState(ctx, wsb2.Block())
+			roblock, err := consensusblocks.NewROBlockWithRoot(wsb2, r2)
+			require.NoError(t, err)
+			preState, err := service.GetBlockPreState(ctx, roblock)
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb2)
 			require.NoError(t, err)
 			lock.Lock()
-			roblock, err := consensusblocks.NewROBlockWithRoot(wsb2, r2)
-			require.NoError(t, err)
 			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 			service.cfg.ForkChoiceStore.Unlock()
@@ -1350,13 +1408,13 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			wg.Done()
 		}()
 		go func() {
-			preState, err := service.getBlockPreState(ctx, wsb3.Block())
+			roblock, err := consensusblocks.NewROBlockWithRoot(wsb3, r3)
+			require.NoError(t, err)
+			preState, err := service.GetBlockPreState(ctx, roblock)
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb3)
 			require.NoError(t, err)
 			lock.Lock()
-			roblock, err := consensusblocks.NewROBlockWithRoot(wsb3, r3)
-			require.NoError(t, err)
 			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 			service.cfg.ForkChoiceStore.Unlock()
@@ -1364,13 +1422,13 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			wg.Done()
 		}()
 		go func() {
-			preState, err := service.getBlockPreState(ctx, wsb4.Block())
+			roblock, err := consensusblocks.NewROBlockWithRoot(wsb4, r4)
+			require.NoError(t, err)
+			preState, err := service.GetBlockPreState(ctx, roblock)
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb4)
 			require.NoError(t, err)
 			lock.Lock()
-			roblock, err := consensusblocks.NewROBlockWithRoot(wsb4, r4)
-			require.NoError(t, err)
 			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 			service.cfg.ForkChoiceStore.Unlock()
@@ -1442,13 +1500,13 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1464,13 +1522,13 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1487,13 +1545,13 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1512,13 +1570,13 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	require.NoError(t, err)
 	firstInvalidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	preState, err := service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, firstInvalidRoot, wsb, postState))
-	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, firstInvalidRoot)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	err = service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false})
 	service.cfg.ForkChoiceStore.Unlock()
@@ -1549,11 +1607,11 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	rowsb, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, rowsb)
 	require.NoError(t, err)
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-	require.NoError(t, err)
-	rowsb, err := consensusblocks.NewROBlockWithRoot(wsb, root)
 	require.NoError(t, err)
 	_, err = service.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, rowsb)
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
@@ -1578,13 +1636,13 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	err = service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true})
 	service.cfg.ForkChoiceStore.Unlock()
@@ -1647,13 +1705,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1670,13 +1728,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1692,13 +1750,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	lastValidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, lastValidRoot)
+	require.NoError(t, err)
+	preState, err := service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, lastValidRoot, wsb, postState))
-	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, lastValidRoot)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	err = service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false})
 	service.cfg.ForkChoiceStore.Unlock()
@@ -1723,13 +1781,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 		invalidRoots[i-13], err = b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, invalidRoots[i-13])
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, invalidRoots[i-13], wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, invalidRoots[i-13])
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1753,11 +1811,11 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	rowsb, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, rowsb)
 	require.NoError(t, err)
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-	require.NoError(t, err)
-	rowsb, err := consensusblocks.NewROBlockWithRoot(wsb, root)
 	require.NoError(t, err)
 	_, err = service.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, rowsb)
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
@@ -1793,13 +1851,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true}))
 	service.cfg.ForkChoiceStore.Unlock()
@@ -1820,13 +1878,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		err = service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true})
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1850,13 +1908,13 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	err = service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, true})
 	service.cfg.ForkChoiceStore.Unlock()
@@ -1912,13 +1970,13 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1934,13 +1992,13 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -1956,13 +2014,13 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, err)
 	lastValidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, lastValidRoot)
+	require.NoError(t, err)
+	preState, err := service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, lastValidRoot, wsb, postState))
-	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, lastValidRoot)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	err = service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false})
 	service.cfg.ForkChoiceStore.Unlock()
@@ -1989,13 +2047,13 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		// Save current justified and finalized epochs for future use.
 		currStoreJustifiedEpoch := service.CurrentJustifiedCheckpt().Epoch
 		currStoreFinalizedEpoch := service.FinalizedCheckpt().Epoch
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -2006,6 +2064,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	// Check that we have justified the second epoch
 	jc := service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
+	time.Sleep(20 * time.Millisecond) // wait for async forkchoice update to be processed
 
 	// import block 19 to find out that the whole chain 13--18 was in fact
 	// invalid
@@ -2020,11 +2079,11 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	rowsb, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, rowsb)
 	require.NoError(t, err)
 	preStateVersion, preStateHeader, err := getStateVersionAndPayload(preState)
-	require.NoError(t, err)
-	rowsb, err := consensusblocks.NewROBlockWithRoot(wsb, root)
 	require.NoError(t, err)
 	_, err = service.validateExecutionOnBlock(ctx, preStateVersion, preStateHeader, rowsb)
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
@@ -2072,7 +2131,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	rwsb, err := consensusblocks.NewROBlock(wsb)
 	require.NoError(t, err)
 	// We use onBlockBatch here because the valid chain is missing in forkchoice
-	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}, &das.MockAvailabilityStore{}))
+	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}, nil, &das.MockAvailabilityStore{}))
 	// Check that the head is now VALID and the node is not optimistic
 	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
@@ -2112,13 +2171,13 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -2180,13 +2239,13 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		preState, err := service.getBlockPreState(ctx, wsb.Block())
+		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+		require.NoError(t, err)
+		preState, err := service.GetBlockPreState(ctx, roblock)
 		require.NoError(t, err)
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-		require.NoError(t, err)
 		service.cfg.ForkChoiceStore.Lock()
 		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 		service.cfg.ForkChoiceStore.Unlock()
@@ -2416,14 +2475,12 @@ func Test_getFCUArgs(t *testing.T) {
 		isValidPayload: true,
 	}
 	// error branch
-	fcuArgs := &fcuConfig{}
-	err = s.getFCUArgs(cfg, fcuArgs)
+	_, err = s.getFCUArgs(cfg)
 	require.ErrorContains(t, "block does not exist", err)
 
 	// canonical branch
 	cfg.headRoot = cfg.roblock.Root()
-	fcuArgs = &fcuConfig{}
-	err = s.getFCUArgs(cfg, fcuArgs)
+	fcuArgs, err := s.getFCUArgs(cfg)
 	require.NoError(t, err)
 	require.Equal(t, cfg.roblock.Root(), fcuArgs.headRoot)
 }
@@ -2455,7 +2512,9 @@ func TestRollbackBlock(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err := service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
@@ -2468,7 +2527,7 @@ func TestRollbackBlock(t *testing.T) {
 
 	// Set invalid parent root to trigger forkchoice error.
 	wsb.SetParentRoot([]byte("bad"))
-	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
 	require.NoError(t, err)
 
 	// Rollback block insertion into db and caches.
@@ -2513,7 +2572,9 @@ func TestRollbackBlock_SavePostStateInfo_ContextDeadline(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err := service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
@@ -2569,13 +2630,13 @@ func TestRollbackBlock_ContextDeadline(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err := service.getBlockPreState(ctx, wsb.Block())
+	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err := service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	roblock, err := consensusblocks.NewROBlockWithRoot(wsb, root)
-	require.NoError(t, err)
 	service.cfg.ForkChoiceStore.Lock()
 	require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, roblock, [32]byte{}, postState, false}))
 	service.cfg.ForkChoiceStore.Unlock()
@@ -2586,7 +2647,9 @@ func TestRollbackBlock_ContextDeadline(t *testing.T) {
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	preState, err = service.getBlockPreState(ctx, wsb.Block())
+	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
+	require.NoError(t, err)
+	preState, err = service.GetBlockPreState(ctx, roblock)
 	require.NoError(t, err)
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
@@ -2600,8 +2663,6 @@ func TestRollbackBlock_ContextDeadline(t *testing.T) {
 	// Set deadlined context when processing the block
 	cancCtx, canc := context.WithCancel(t.Context())
 	canc()
-	roblock, err = consensusblocks.NewROBlockWithRoot(wsb, root)
-	require.NoError(t, err)
 
 	parentRoot = roblock.Block().ParentRoot()
 
@@ -2778,6 +2839,9 @@ func testIsAvailableSetup(t *testing.T, p testIsAvailableParams) (context.Contex
 
 	signedBeaconBlock, err := util.GenerateFullBlockFulu(genesisState, secretKeys, conf, fs+1)
 	require.NoError(t, err)
+
+	// The block is the one being imported, so put its slot at the head of the clock.
+	service.SetGenesisTime(time.Now().Add(time.Duration(-1*int64(fs+1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second))
 
 	block := signedBeaconBlock.Block
 	bodyRoot, err := block.Body.HashTreeRoot()
@@ -3000,6 +3064,97 @@ func TestIsDataAvailable(t *testing.T) {
 		require.NoError(t, err)
 		err = service.isDataAvailable(ctx, roBlock)
 		require.NotNil(t, err)
+	})
+}
+
+// Reproduces the checkpoint sync stall, during initial sync a block with missing columns must fail fast instead of waiting for gossip that never comes.
+func TestIsDataAvailable_InitSync(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch, cfg.BellatrixForkEpoch, cfg.CapellaForkEpoch, cfg.DenebForkEpoch, cfg.ElectraForkEpoch, cfg.FuluForkEpoch = 0, 0, 0, 0, 0, 0
+	params.OverrideBeaconConfig(cfg)
+
+	t.Run("missing columns fail instead of blocking", func(t *testing.T) {
+		testParams := testIsAvailableParams{
+			options:                 []Option{WithSyncChecker(&mock.MockSyncChecker{})},
+			blobKzgCommitmentsCount: 3,
+		}
+
+		ctx, cancel, service, root, signed := testIsAvailableSetup(t, testParams)
+		defer cancel()
+
+		roBlock, err := consensusblocks.NewROBlockWithRoot(signed, root)
+		require.NoError(t, err)
+
+		done := make(chan error, 1)
+		go func() {
+			done <- service.isDataAvailable(ctx, roBlock)
+		}()
+
+		bound := time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second + 2*time.Second
+		select {
+		case err := <-done:
+			require.NotNil(t, err)
+		case <-time.After(bound):
+			t.Fatal("isDataAvailable did not return for a block with missing data columns, the init-sync consumer stalls forever on this path")
+		}
+	})
+
+	t.Run("stored columns pass", func(t *testing.T) {
+		testParams := testIsAvailableParams{
+			options:                 []Option{WithSyncChecker(&mock.MockSyncChecker{})},
+			columnsToSave:           []uint64{1, 17, 19, 42, 75, 87, 102, 117},
+			blobKzgCommitmentsCount: 3,
+		}
+
+		ctx, cancel, service, root, signed := testIsAvailableSetup(t, testParams)
+		defer cancel()
+
+		roBlock, err := consensusblocks.NewROBlockWithRoot(signed, root)
+		require.NoError(t, err)
+		require.NoError(t, service.isDataAvailable(ctx, roBlock))
+	})
+}
+
+func TestDataColumnsAvailableNow(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch, cfg.BellatrixForkEpoch, cfg.CapellaForkEpoch, cfg.DenebForkEpoch, cfg.ElectraForkEpoch, cfg.FuluForkEpoch = 0, 0, 0, 0, 0, 0
+	params.OverrideBeaconConfig(cfg)
+
+	t.Run("all custody columns present", func(t *testing.T) {
+		ctx, _, service, root, signed := testIsAvailableSetup(t, testIsAvailableParams{
+			columnsToSave:           []uint64{1, 17, 19, 42, 75, 87, 102, 117, 119},
+			blobKzgCommitmentsCount: 3,
+		})
+		available, err := service.dataColumnsAvailableNow(ctx, root, signed.Block().Slot())
+		require.NoError(t, err)
+		require.Equal(t, true, available)
+	})
+
+	t.Run("enough columns to reconstruct", func(t *testing.T) {
+		minimum := peerdas.MinimumColumnCountToReconstruct()
+		indices := make([]uint64, 0, minimum)
+		for i := range minimum {
+			indices = append(indices, i)
+		}
+		ctx, _, service, root, signed := testIsAvailableSetup(t, testIsAvailableParams{
+			columnsToSave:           indices,
+			blobKzgCommitmentsCount: 3,
+		})
+		available, err := service.dataColumnsAvailableNow(ctx, root, signed.Block().Slot())
+		require.NoError(t, err)
+		require.Equal(t, true, available)
+	})
+
+	t.Run("missing columns returns false", func(t *testing.T) {
+		ctx, _, service, root, signed := testIsAvailableSetup(t, testIsAvailableParams{
+			columnsToSave:           []uint64{1},
+			blobKzgCommitmentsCount: 3,
+		})
+		available, err := service.dataColumnsAvailableNow(ctx, root, signed.Block().Slot())
+		require.NoError(t, err)
+		require.Equal(t, false, available)
 	})
 }
 
@@ -3475,5 +3630,427 @@ func TestProcessLightClientFinalityUpdate(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestHandleBlockPayloadAttestations(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	t.Run("pre-Gloas block is no-op", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		blk := util.NewBeaconBlockElectra()
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		st, err := util.NewBeaconStateElectra()
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(t.Context(), wsb.Block(), st))
+	})
+
+	t.Run("empty payload attestations", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		blk := util.NewBeaconBlockGloas()
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		st, err := util.NewBeaconStateGloas()
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(t.Context(), wsb.Block(), st))
+	})
+
+	t.Run("unknown root is skipped", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		ctx := t.Context()
+
+		numVals := 2048
+		headState := gloasStateWithValidators(t, 2, numVals)
+
+		unknownRoot := bytesutil.ToBytes32([]byte("unknown"))
+		bits := bitfield.NewBitvector512()
+		bits.SetBitAt(0, true)
+		blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+			Block: &ethpb.BeaconBlockGloas{
+				Slot: 2,
+				Body: &ethpb.BeaconBlockBodyGloas{
+					PayloadAttestations: []*ethpb.PayloadAttestation{
+						{
+							AggregationBits: bits,
+							Data: &ethpb.PayloadAttestationData{
+								BeaconBlockRoot:   unknownRoot[:],
+								Slot:              1,
+								PayloadPresent:    true,
+								BlobDataAvailable: true,
+							},
+							Signature: make([]byte, 96),
+						},
+					},
+				},
+			},
+		})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(ctx, wsb.Block(), headState))
+	})
+
+	t.Run("known root sets PTC votes", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		ctx := t.Context()
+
+		blockRoot := bytesutil.ToBytes32([]byte("root1"))
+		parentRoot := params.BeaconConfig().ZeroHash
+		blockHash := bytesutil.ToBytes32([]byte("hash1"))
+
+		numVals := 2048
+		headState := gloasStateWithValidators(t, 2, numVals)
+
+		base, insertBlk := testGloasState(t, 1, parentRoot, blockHash)
+		insertGloasBlock(t, s, base, insertBlk, blockRoot)
+
+		ptc, err := headState.PayloadCommitteeReadOnly(1)
+		require.NoError(t, err)
+		require.NotEqual(t, 0, len(ptc))
+
+		bits := bitfield.NewBitvector512()
+		bits.SetBitAt(0, true)
+		bits.SetBitAt(2, true)
+		blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+			Block: &ethpb.BeaconBlockGloas{
+				Slot: 2,
+				Body: &ethpb.BeaconBlockBodyGloas{
+					PayloadAttestations: []*ethpb.PayloadAttestation{
+						{
+							AggregationBits: bits,
+							Data: &ethpb.PayloadAttestationData{
+								BeaconBlockRoot:   blockRoot[:],
+								Slot:              1,
+								PayloadPresent:    true,
+								BlobDataAvailable: true,
+							},
+							Signature: make([]byte, 96),
+						},
+					},
+				},
+			},
+		})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(ctx, wsb.Block(), headState))
+	})
+
+	t.Run("multiple attestations", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		ctx := t.Context()
+
+		blockRoot := bytesutil.ToBytes32([]byte("root1"))
+		parentRoot := params.BeaconConfig().ZeroHash
+		blockHash := bytesutil.ToBytes32([]byte("hash1"))
+
+		numVals := 2048
+		headState := gloasStateWithValidators(t, 2, numVals)
+
+		base, insertBlk := testGloasState(t, 1, parentRoot, blockHash)
+		insertGloasBlock(t, s, base, insertBlk, blockRoot)
+
+		bits1 := bitfield.NewBitvector512()
+		bits1.SetBitAt(0, true)
+		bits2 := bitfield.NewBitvector512()
+		bits2.SetBitAt(1, true)
+		blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+			Block: &ethpb.BeaconBlockGloas{
+				Slot: 2,
+				Body: &ethpb.BeaconBlockBodyGloas{
+					PayloadAttestations: []*ethpb.PayloadAttestation{
+						{
+							AggregationBits: bits1,
+							Data: &ethpb.PayloadAttestationData{
+								BeaconBlockRoot:   blockRoot[:],
+								Slot:              1,
+								PayloadPresent:    true,
+								BlobDataAvailable: false,
+							},
+							Signature: make([]byte, 96),
+						},
+						{
+							AggregationBits: bits2,
+							Data: &ethpb.PayloadAttestationData{
+								BeaconBlockRoot:   blockRoot[:],
+								Slot:              1,
+								PayloadPresent:    false,
+								BlobDataAvailable: true,
+							},
+							Signature: make([]byte, 96),
+						},
+					},
+				},
+			},
+		})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(ctx, wsb.Block(), headState))
+	})
+
+	t.Run("vote is written to every seat of the voter", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		ctx := t.Context()
+
+		blockRoot := bytesutil.ToBytes32([]byte("root1"))
+		headState := gloasStateWithValidators(t, 2, 2048)
+		base, insertBlk := testGloasState(t, 1, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32([]byte("hash1")))
+		insertGloasBlock(t, s, base, insertBlk, blockRoot)
+
+		ptc, err := headState.PayloadCommitteeReadOnly(1)
+		require.NoError(t, err)
+		seats := make(map[primitives.ValidatorIndex][]uint64)
+		for i, idx := range ptc {
+			seats[idx] = append(seats[idx], uint64(i))
+		}
+		var voterSeats []uint64
+		for _, ss := range seats {
+			if len(ss) > 1 {
+				voterSeats = ss
+				break
+			}
+		}
+		require.NotEqual(t, 0, len(voterSeats), "expected a validator holding multiple PTC seats")
+
+		bits := bitfield.NewBitvector512()
+		bits.SetBitAt(voterSeats[0], true)
+		blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+			Block: &ethpb.BeaconBlockGloas{
+				Slot: 2,
+				Body: &ethpb.BeaconBlockBodyGloas{
+					PayloadAttestations: []*ethpb.PayloadAttestation{
+						{
+							AggregationBits: bits,
+							Data: &ethpb.PayloadAttestationData{
+								BeaconBlockRoot:   blockRoot[:],
+								Slot:              1,
+								PayloadPresent:    true,
+								BlobDataAvailable: true,
+							},
+							Signature: make([]byte, 96),
+						},
+					},
+				},
+			},
+		})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(ctx, wsb.Block(), headState))
+
+		attesters, present, available, ok := s.cfg.ForkChoiceStore.(*doublylinkedtree.ForkChoice).PTCVotes(blockRoot)
+		require.Equal(t, true, ok)
+		require.Equal(t, uint64(len(voterSeats)), attesters.Count())
+		for _, seat := range voterSeats {
+			require.Equal(t, true, attesters.BitAt(seat))
+			require.Equal(t, true, present.BitAt(seat))
+			require.Equal(t, true, available.BitAt(seat))
+		}
+	})
+
+	t.Run("vote for a block from an earlier slot is skipped", func(t *testing.T) {
+		s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+		ctx := t.Context()
+
+		blockRoot := bytesutil.ToBytes32([]byte("root1"))
+		headState := gloasStateWithValidators(t, 3, 2048)
+		base, insertBlk := testGloasState(t, 1, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32([]byte("hash1")))
+		insertGloasBlock(t, s, base, insertBlk, blockRoot)
+
+		bits := bitfield.NewBitvector512()
+		bits.SetBitAt(0, true)
+		blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+			Block: &ethpb.BeaconBlockGloas{
+				Slot: 3,
+				Body: &ethpb.BeaconBlockBodyGloas{
+					PayloadAttestations: []*ethpb.PayloadAttestation{
+						{
+							AggregationBits: bits,
+							Data: &ethpb.PayloadAttestationData{
+								BeaconBlockRoot:   blockRoot[:],
+								Slot:              2,
+								PayloadPresent:    true,
+								BlobDataAvailable: true,
+							},
+							Signature: make([]byte, 96),
+						},
+					},
+				},
+			},
+		})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, s.handleBlockPayloadAttestations(ctx, wsb.Block(), headState))
+
+		attesters, _, _, ok := s.cfg.ForkChoiceStore.(*doublylinkedtree.ForkChoice).PTCVotes(blockRoot)
+		require.Equal(t, true, ok)
+		require.Equal(t, uint64(0), attesters.Count())
+	})
+}
+
+func TestHandleBlockAttestations_GloasSameSlotPayloadVote(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	s, _ := setupGloasService(t, &mockExecution.EngineClient{})
+	ctx := t.Context()
+
+	// Insert an empty node at slot 1 into forkchoice.
+	blockRoot := bytesutil.ToBytes32([]byte("root1"))
+	parentRoot := params.BeaconConfig().ZeroHash
+	blockHash := bytesutil.ToBytes32([]byte("hash1"))
+	base, insertBlk := testGloasState(t, 1, parentRoot, blockHash)
+	insertGloasBlock(t, s, base, insertBlk, blockRoot)
+	require.Equal(t, true, s.cfg.ForkChoiceStore.HasNode(blockRoot))
+
+	headState := gloasStateWithValidators(t, 1, 2048)
+
+	// blockWithPayloadVote returns a slot-2 block carrying a committee-index-1
+	// (payload-present) attestation for blockRoot, dated attSlot.
+	blockWithPayloadVote := func(attSlot primitives.Slot, targetRoot []byte) interfaces.ReadOnlyBeaconBlock {
+		committee, err := helpers.BeaconCommitteeFromState(ctx, headState, attSlot, 0)
+		require.NoError(t, err)
+		require.NotEqual(t, 0, len(committee))
+		aggBits := bitfield.NewBitlist(uint64(len(committee)))
+		aggBits.SetBitAt(0, true)
+		cb := primitives.NewAttestationCommitteeBits()
+		cb.SetBitAt(0, true)
+		blk := util.HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{
+			Block: &ethpb.BeaconBlockGloas{
+				Slot: 2,
+				Body: &ethpb.BeaconBlockBodyGloas{
+					Attestations: []*ethpb.AttestationGloas{
+						{
+							AggregationBits: aggBits,
+							CommitteeBits:   cb,
+							Data: &ethpb.AttestationData{
+								Slot:            attSlot,
+								CommitteeIndex:  1,
+								BeaconBlockRoot: blockRoot[:],
+								Source:          &ethpb.Checkpoint{Root: make([]byte, 32)},
+								Target:          &ethpb.Checkpoint{Root: targetRoot},
+							},
+							Signature: make([]byte, 96),
+						},
+					},
+				},
+			},
+		})
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		return wsb.Block()
+	}
+
+	t.Run("same-slot payload vote is skipped", func(t *testing.T) {
+		logHook := logTest.NewGlobal()
+		require.NoError(t, s.handleBlockAttestations(ctx, blockWithPayloadVote(1, make([]byte, 32)), headState))
+		require.LogsContain(t, logHook, "Skipping same-slot payload-present attestation")
+	})
+
+	t.Run("prior-slot payload vote is processed", func(t *testing.T) {
+		logHook := logTest.NewGlobal()
+		require.NoError(t, s.handleBlockAttestations(ctx, blockWithPayloadVote(2, make([]byte, 32)), headState))
+		require.LogsDoNotContain(t, logHook, "Skipping same-slot payload-present attestation")
+	})
+
+	t.Run("vote with inconsistent target is dropped", func(t *testing.T) {
+		logHook := logTest.NewGlobal()
+		badTarget := bytesutil.PadTo([]byte("bad"), 32)
+		require.NoError(t, s.handleBlockAttestations(ctx, blockWithPayloadVote(1, badTarget), headState))
+		require.LogsDoNotContain(t, logHook, "Skipping same-slot payload-present attestation")
+	})
+}
+
+func TestUpdateCachesAndEpochBoundary_MatchingRoots(t *testing.T) {
+	service := testServiceNoDB(t)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	headRoot := [32]byte{'a'}
+
+	service.updateCachesAndEpochBoundary(t.Context(), 1, st, headRoot, headRoot[:], st)
+
+	cached := transition.NextSlotState(headRoot[:], 1)
+	require.NotNil(t, cached)
+	require.Equal(t, primitives.Slot(1), cached.Slot())
+}
+
+func TestUpdateCachesAndEpochBoundary_DifferentRoots(t *testing.T) {
+	service := testServiceNoDB(t)
+	headState, _ := util.DeterministicGenesisState(t, 1)
+	lastState, _ := util.DeterministicGenesisState(t, 1)
+	headRoot := [32]byte{'a'}
+	lastRoot := [32]byte{'b'}
+
+	service.updateCachesAndEpochBoundary(t.Context(), 1, headState, headRoot, lastRoot[:], lastState)
+
+	cached := transition.NextSlotState(headRoot[:], 1)
+	require.NotNil(t, cached)
+	require.Equal(t, primitives.Slot(1), cached.Slot())
+
+	cached = transition.NextSlotState(lastRoot[:], 1)
+	require.Equal(t, true, cached == nil)
+}
+
+func TestRefreshCaches_NoCachedState(t *testing.T) {
+	service := testServiceNoDB(t)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	headRoot := [32]byte{'h'}
+
+	service.refreshCaches(t.Context(), 1, headRoot, st)
+
+	cached := transition.NextSlotState(headRoot[:], 1)
+	require.NotNil(t, cached)
+	require.Equal(t, primitives.Slot(1), cached.Slot())
+}
+
+func TestRefreshCaches_CachedStateMatchesHeadRoot(t *testing.T) {
+	service := testServiceNoDB(t)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	headRoot := [32]byte{'h'}
+
+	// Pre-populate the cache with headRoot.
+	require.NoError(t, transition.UpdateNextSlotCache(t.Context(), headRoot[:], st))
+
+	service.refreshCaches(t.Context(), 1, headRoot, st)
+
+	cached := transition.NextSlotState(headRoot[:], 1)
+	require.NotNil(t, cached)
+	require.Equal(t, primitives.Slot(1), cached.Slot())
+}
+
+// A node in regular sync whose head has fallen behind is past the gossip window of the
+// slot it is importing, so a block with missing columns must fail fast rather than block.
+func TestIsDataAvailable_BehindHead(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch, cfg.BellatrixForkEpoch, cfg.CapellaForkEpoch, cfg.DenebForkEpoch, cfg.ElectraForkEpoch, cfg.FuluForkEpoch = 0, 0, 0, 0, 0, 0
+	params.OverrideBeaconConfig(cfg)
+
+	testParams := testIsAvailableParams{blobKzgCommitmentsCount: 3}
+
+	ctx, cancel, service, root, signed := testIsAvailableSetup(t, testParams)
+	defer cancel()
+
+	// Move the clock 30 slots past the block being imported.
+	behind := signed.Block().Slot() + 30
+	service.SetGenesisTime(time.Now().Add(time.Duration(-1*int64(behind)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second))
+	require.Equal(t, true, service.inRegularSync())
+
+	roBlock, err := consensusblocks.NewROBlockWithRoot(signed, root)
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- service.isDataAvailable(ctx, roBlock)
+	}()
+
+	bound := time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second + 2*time.Second
+	select {
+	case err := <-done:
+		require.ErrorContains(t, "data columns unavailable for block", err)
+	case <-time.After(bound):
+		t.Fatal("isDataAvailable blocked on gossip for a slot whose gossip window has closed")
 	}
 }

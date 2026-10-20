@@ -23,17 +23,17 @@ func TestExecutionPayloadBid_Copy(t *testing.T) {
 		{
 			name: "fully populated bid",
 			bid: &ExecutionPayloadBid{
-				ParentBlockHash:        []byte("parent_block_hash_32_bytes_long!"),
-				ParentBlockRoot:        []byte("parent_block_root_32_bytes_long!"),
-				BlockHash:              []byte("block_hash_32_bytes_are_long!!"),
-				PrevRandao:             []byte("prev_randao_32_bytes_long!!!"),
-				FeeRecipient:           []byte("fee_recipient_20_byt"),
-				GasLimit:               15000000,
-				BuilderIndex:           primitives.BuilderIndex(42),
-				Slot:                   primitives.Slot(12345),
-				ExecutionPayment:       5645654,
-				Value:                  1000000000000000000,
-				BlobKzgCommitmentsRoot: []byte("blob_kzg_commitments_32_bytes!!"),
+				ParentBlockHash:    []byte("parent_block_hash_32_bytes_long!"),
+				ParentBlockRoot:    []byte("parent_block_root_32_bytes_long!"),
+				BlockHash:          []byte("block_hash_32_bytes_are_long!!"),
+				PrevRandao:         []byte("prev_randao_32_bytes_long!!!"),
+				FeeRecipient:       []byte("fee_recipient_20_byt"),
+				GasLimit:           15000000,
+				BuilderIndex:       primitives.BuilderIndex(42),
+				Slot:               primitives.Slot(12345),
+				Value:              1000000000000000000,
+				ExecutionPayment:   5645654,
+				BlobKzgCommitments: [][]byte{[]byte("blob_kzg_commitments_48_bytes_longer_than_needed")},
 			},
 		},
 	}
@@ -139,6 +139,7 @@ func TestBuilderPendingPayment_Copy(t *testing.T) {
 					Amount:       primitives.Gwei(10000),
 					BuilderIndex: primitives.BuilderIndex(789),
 				},
+				ProposerIndex: primitives.ValidatorIndex(456),
 			},
 		},
 	}
@@ -155,6 +156,10 @@ func TestBuilderPendingPayment_Copy(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.payment, copied) {
 				t.Errorf("Copy() = %v, want %v", copied, tt.payment)
+			}
+
+			if copied.ProposerIndex != tt.payment.ProposerIndex {
+				t.Errorf("Copy() ProposerIndex = %d, want %d", copied.ProposerIndex, tt.payment.ProposerIndex)
 			}
 
 			if tt.payment.Withdrawal != nil && len(tt.payment.Withdrawal.FeeRecipient) > 0 {

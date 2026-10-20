@@ -76,7 +76,7 @@ func GetSpec(w http.ResponseWriter, r *http.Request) {
 
 func convertValueForJSON(v reflect.Value, tag string) any {
 	// Unwrap pointers / interfaces
-	for v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
@@ -191,6 +191,15 @@ func prepareConfigSpec() (map[string]any, error) {
 	data["KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH"] = convertValueForJSON(reflect.ValueOf(uint64(4)), "KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH")
 	// UPDATE_TIMEOUT is derived from SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD
 	data["UPDATE_TIMEOUT"] = convertValueForJSON(reflect.ValueOf(uint64(config.SlotsPerEpoch)*uint64(config.EpochsPerSyncCommitteePeriod)), "UPDATE_TIMEOUT")
+	// Add Gloas config values from fieldparams required by the /eth/v1/config/spec API.
+	data["PTC_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.PTCSize)), "PTC_SIZE")
+	data["MAX_PAYLOAD_ATTESTATIONS"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxPayloadAttestations)), "MAX_PAYLOAD_ATTESTATIONS")
+	data["BUILDER_REGISTRY_LIMIT"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.BuilderRegistryLimit)), "BUILDER_REGISTRY_LIMIT")
+	data["BUILDER_PENDING_WITHDRAWALS_LIMIT"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.BuilderPendingWithdrawalsLimit)), "BUILDER_PENDING_WITHDRAWALS_LIMIT")
+	// Gloas type-specific SSZ bounds.
+	data["MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxSignedAggregateAndProofSize)), "MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE")
+	data["MAX_ATTESTER_SLASHING_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxAttesterSlashingSize)), "MAX_ATTESTER_SLASHING_SIZE")
+	data["MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxSignedExecutionPayloadBidSize)), "MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE")
 
 	return data, nil
 }
@@ -199,6 +208,10 @@ func shouldSkip(tField reflect.StructField) bool {
 	// Dynamically skip blob schedule if Fulu is not yet scheduled.
 	if params.BeaconConfig().FuluForkEpoch == math.MaxUint64 &&
 		tField.Type == reflect.TypeOf(params.BeaconConfig().BlobSchedule) {
+		return true
+	}
+	if params.BeaconConfig().GloasForkEpoch == math.MaxUint64 &&
+		tField.Type == reflect.TypeOf(params.BeaconConfig().GasLimitSchedule) {
 		return true
 	}
 	return false

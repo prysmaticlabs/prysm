@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	"github.com/OffchainLabs/prysm/v7/config/params"
@@ -18,8 +21,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	fastssz "github.com/prysmaticlabs/fastssz"
-	"google.golang.org/protobuf/proto"
 )
 
 type stubBlockBody struct {
@@ -52,6 +53,9 @@ func (s stubBlockBody) PayloadAttestations() ([]*ethpb.PayloadAttestation, error
 }
 func (s stubBlockBody) SignedExecutionPayloadBid() (*ethpb.SignedExecutionPayloadBid, error) {
 	return s.signedBid, nil
+}
+func (s stubBlockBody) ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error) {
+	return nil, nil
 }
 func (s stubBlockBody) MarshalSSZ() ([]byte, error)         { return nil, nil }
 func (s stubBlockBody) MarshalSSZTo([]byte) ([]byte, error) { return nil, nil }
@@ -88,7 +92,7 @@ func (s stubBlock) Version() int                             { return s.v }
 func (s stubBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	return nil, nil
 }
-func (s stubBlock) HashTreeRootWith(*fastssz.Hasher) error { return nil }
+func (s stubBlock) HashTreeRootWith(*ssz.Hasher) error { return nil }
 
 func buildGloasState(t *testing.T, slot primitives.Slot, proposerIdx primitives.ValidatorIndex, builderIdx primitives.BuilderIndex, balance uint64, randao [32]byte, latestHash [32]byte, builderPubkey [48]byte) *state_native.BeaconState {
 	t.Helper()
@@ -184,6 +188,28 @@ func signBid(t *testing.T, sk common.SecretKey, bid *ethpb.ExecutionPayloadBid, 
 	return out
 }
 
+func blobCommitmentsForSlot(slot primitives.Slot, count int) [][]byte {
+	max := int(params.BeaconConfig().MaxBlobsPerBlockAtEpoch(slots.ToEpoch(slot)))
+	if count > max {
+		count = max
+	}
+	commitments := make([][]byte, count)
+	for i := range commitments {
+		commitments[i] = bytes.Repeat([]byte{0xEE}, 48)
+	}
+	return commitments
+}
+
+func tooManyBlobCommitmentsForSlot(slot primitives.Slot) [][]byte {
+	max := int(params.BeaconConfig().MaxBlobsPerBlockAtEpoch(slots.ToEpoch(slot)))
+	count := max + 1
+	commitments := make([][]byte, count)
+	for i := range commitments {
+		commitments[i] = bytes.Repeat([]byte{0xEE}, 48)
+	}
+	return commitments
+}
+
 func TestProcessExecutionPayloadBid_SelfBuildSuccess(t *testing.T) {
 	slot := primitives.Slot(12)
 	proposerIdx := primitives.ValidatorIndex(0)
@@ -194,17 +220,18 @@ func TestProcessExecutionPayloadBid_SelfBuildSuccess(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinActivationBalance+1000, randao, latestHash, pubKey)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0xCC}, 32),
-		BlockHash:              bytes.Repeat([]byte{0xDD}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  0,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0xEE}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0xFF}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xDD}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 0,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	signed := &ethpb.SignedExecutionPayloadBid{
 		Message:   bid,
@@ -236,16 +263,17 @@ func TestProcessExecutionPayloadBid_SelfBuildNonZeroAmountFails(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinActivationBalance+1000, randao, latestHash, [48]byte{})
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0xAA}, 32),
-		BlockHash:              bytes.Repeat([]byte{0xBB}, 32),
-		PrevRandao:             randao[:],
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  10,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0xCC}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0xDD}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xBB}, 32),
+		PrevRandao:            randao[:],
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 10,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0xDD}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	signed := &ethpb.SignedExecutionPayloadBid{
 		Message:   bid,
@@ -280,17 +308,18 @@ func TestProcessExecutionPayloadBid_PendingPaymentAndCacheBid(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, balance, randao, latestHash, pubKey)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0xCC}, 32),
-		BlockHash:              bytes.Repeat([]byte{0xDD}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  500_000,
-		ExecutionPayment:       1,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0xEE}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0xFF}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xDD}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 500_000,
+		ExecutionPayment:      1,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
@@ -341,17 +370,18 @@ func TestProcessExecutionPayloadBid_BuilderNotActive(t *testing.T) {
 	state = stateIface.(*state_native.BeaconState)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0x03}, 32),
-		BlockHash:              bytes.Repeat([]byte{0x04}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  10,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0x05}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0x06}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0x03}, 32),
+		BlockHash:             bytes.Repeat([]byte{0x04}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 10,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0x06}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -394,17 +424,18 @@ func TestProcessExecutionPayloadBid_CannotCoverBid(t *testing.T) {
 	state = stateIface.(*state_native.BeaconState)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0xCC}, 32),
-		BlockHash:              bytes.Repeat([]byte{0xDD}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  25,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0xEE}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0xFF}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xDD}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 25,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -436,17 +467,18 @@ func TestProcessExecutionPayloadBid_InvalidSignature(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinDepositAmount+1000, randao, latestHash, pubKey)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0xCC}, 32),
-		BlockHash:              bytes.Repeat([]byte{0xDD}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  10,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0xEE}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0xFF}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xDD}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 10,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	// Use an invalid signature.
 	invalidSig := [96]byte{1}
@@ -461,6 +493,43 @@ func TestProcessExecutionPayloadBid_InvalidSignature(t *testing.T) {
 
 	err = ProcessExecutionPayloadBid(state, block)
 	require.ErrorContains(t, "bid signature validation failed", err)
+}
+
+func TestProcessExecutionPayloadBid_TooManyBlobCommitments(t *testing.T) {
+	slot := primitives.Slot(9)
+	proposerIdx := primitives.ValidatorIndex(0)
+	builderIdx := params.BeaconConfig().BuilderIndexSelfBuild
+	randao := [32]byte(bytes.Repeat([]byte{0xAA}, 32))
+	latestHash := [32]byte(bytes.Repeat([]byte{0xBB}, 32))
+	pubKey := [48]byte{}
+	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinActivationBalance+1000, randao, latestHash, pubKey)
+
+	bid := &ethpb.ExecutionPayloadBid{
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xDD}, 32),
+		PrevRandao:            randao[:],
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		BlobKzgCommitments:    tooManyBlobCommitmentsForSlot(slot),
+		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
+	}
+	signed := &ethpb.SignedExecutionPayloadBid{
+		Message:   bid,
+		Signature: common.InfiniteSignature[:],
+	}
+
+	block := stubBlock{
+		slot:       slot,
+		proposer:   proposerIdx,
+		parentRoot: bytesutil.ToBytes32(bid.ParentBlockRoot),
+		body:       stubBlockBody{signedBid: signed},
+		v:          version.Gloas,
+	}
+
+	err := ProcessExecutionPayloadBid(state, block)
+	require.ErrorContains(t, "blob KZG commitments over max", err)
 }
 
 func TestProcessExecutionPayloadBid_SlotMismatch(t *testing.T) {
@@ -478,17 +547,18 @@ func TestProcessExecutionPayloadBid_SlotMismatch(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinDepositAmount+1000, randao, latestHash, pubKey)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0xAA}, 32),
-		BlockHash:              bytes.Repeat([]byte{0xBB}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot + 1, // mismatch
-		Value:                  1,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0xCC}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0xDD}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0xDD}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot + 1, // mismatch
+		Value:                 1,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0xDD}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -520,17 +590,18 @@ func TestProcessExecutionPayloadBid_ParentHashMismatch(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinDepositAmount+1000, randao, latestHash, pubKey)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        bytes.Repeat([]byte{0x11}, 32), // mismatch
-		ParentBlockRoot:        bytes.Repeat([]byte{0x22}, 32),
-		BlockHash:              bytes.Repeat([]byte{0x33}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  1,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0x44}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0x55}, 20),
+		ParentBlockHash:       bytes.Repeat([]byte{0x11}, 32), // mismatch
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0x33}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 1,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -545,6 +616,49 @@ func TestProcessExecutionPayloadBid_ParentHashMismatch(t *testing.T) {
 
 	err = ProcessExecutionPayloadBid(state, block)
 	require.ErrorContains(t, "parent block hash mismatch", err)
+}
+
+func TestProcessExecutionPayloadBid_BlockHashEqualsParent(t *testing.T) {
+	slot := primitives.Slot(14)
+	builderIdx := primitives.BuilderIndex(1)
+	proposerIdx := primitives.ValidatorIndex(2)
+	randao := [32]byte(bytes.Repeat([]byte{0xAA}, 32))
+	latestHash := [32]byte(bytes.Repeat([]byte{0xBB}, 32))
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	var pubKey [48]byte
+	copy(pubKey[:], sk.PublicKey().Marshal())
+
+	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinDepositAmount+1000, randao, latestHash, pubKey)
+
+	bid := &ethpb.ExecutionPayloadBid{
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             latestHash[:], // equals parent block hash
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 1,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
+	}
+	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
+	sig := signBid(t, sk, bid, state.Fork(), genesis)
+	signed := &ethpb.SignedExecutionPayloadBid{Message: bid, Signature: sig[:]}
+	block := stubBlock{
+		slot:       slot,
+		proposer:   proposerIdx,
+		parentRoot: bytesutil.ToBytes32(bid.ParentBlockRoot),
+		body:       stubBlockBody{signedBid: signed},
+		v:          version.Gloas,
+	}
+
+	err = ProcessExecutionPayloadBid(state, block)
+	require.ErrorContains(t, "equals parent block hash", err)
 }
 
 func TestProcessExecutionPayloadBid_ParentRootMismatch(t *testing.T) {
@@ -563,17 +677,18 @@ func TestProcessExecutionPayloadBid_ParentRootMismatch(t *testing.T) {
 
 	parentRoot := bytes.Repeat([]byte{0x22}, 32)
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        parentRoot,
-		BlockHash:              bytes.Repeat([]byte{0x33}, 32),
-		PrevRandao:             randao[:],
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  1,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0x44}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0x55}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       parentRoot,
+		BlockHash:             bytes.Repeat([]byte{0x33}, 32),
+		PrevRandao:            randao[:],
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 1,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -605,17 +720,18 @@ func TestProcessExecutionPayloadBid_PrevRandaoMismatch(t *testing.T) {
 	state := buildGloasState(t, slot, proposerIdx, builderIdx, params.BeaconConfig().MinDepositAmount+1000, randao, latestHash, pubKey)
 
 	bid := &ethpb.ExecutionPayloadBid{
-		ParentBlockHash:        latestHash[:],
-		ParentBlockRoot:        bytes.Repeat([]byte{0x22}, 32),
-		BlockHash:              bytes.Repeat([]byte{0x33}, 32),
-		PrevRandao:             bytes.Repeat([]byte{0x01}, 32), // mismatch
-		GasLimit:               1,
-		BuilderIndex:           builderIdx,
-		Slot:                   slot,
-		Value:                  1,
-		ExecutionPayment:       0,
-		BlobKzgCommitmentsRoot: bytes.Repeat([]byte{0x44}, 32),
-		FeeRecipient:           bytes.Repeat([]byte{0x55}, 20),
+		ParentBlockHash:       latestHash[:],
+		ParentBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
+		BlockHash:             bytes.Repeat([]byte{0x33}, 32),
+		PrevRandao:            bytes.Repeat([]byte{0x01}, 32), // mismatch
+		GasLimit:              1,
+		BuilderIndex:          builderIdx,
+		Slot:                  slot,
+		Value:                 1,
+		ExecutionPayment:      0,
+		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
+		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
+		ExecutionRequestsRoot: make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)

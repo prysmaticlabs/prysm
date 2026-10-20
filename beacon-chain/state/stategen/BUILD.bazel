@@ -3,7 +3,9 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "archive.go",
         "cacher.go",
+        "canonical_root.go",
         "epoch_boundary_state_cache.go",
         "errors.go",
         "getter.go",
@@ -38,6 +40,7 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//monitoring/tracing/trace:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_hashicorp_golang_lru//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -51,6 +54,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "archive_test.go",
+        "canonical_root_test.go",
         "epoch_boundary_state_cache_test.go",
         "getter_test.go",
         "history_test.go",
@@ -93,6 +98,5 @@ go_test(
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

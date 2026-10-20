@@ -30,36 +30,32 @@ func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) st
 	if err != nil {
 		return nil
 	}
-	// headEpoch - 1 equals c.Epoch if c is from the previous epoch and equals c.Epoch - 1 if c is from the current epoch.
-	// We don't use the smaller c.Epoch - 1 because forkchoice would not have the data to answer that.
-	headDependent, err := s.cfg.ForkChoiceStore.DependentRootForEpoch([32]byte(headRoot), headEpoch-1)
+	headDependent, err := s.cfg.ForkChoiceStore.DependentRootForEpoch([32]byte(headRoot), c.Epoch-1)
 	if err != nil {
 		return nil
 	}
-	targetDependent, err := s.cfg.ForkChoiceStore.DependentRootForEpoch([32]byte(c.Root), headEpoch-1)
+	targetDependent, err := s.cfg.ForkChoiceStore.DependentRootForEpoch([32]byte(c.Root), c.Epoch-1)
 	if err != nil {
 		return nil
 	}
 	if targetDependent != headDependent {
 		return nil
 	}
-
-	// If the head state alone is enough, we can return it directly read only.
-	if c.Epoch <= headEpoch {
-		st, err := s.HeadStateReadOnly(ctx)
-		if err != nil {
-			return nil
-		}
-		return st
-	}
-	// At this point we can only have c.Epoch > headEpoch.
-	if !s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
+	st, err := s.HeadStateReadOnly(ctx)
+	if err != nil {
 		return nil
 	}
-	// Advance the head state to the start of the target epoch.
-	// This point can only be reached if c.Root == headRoot and c.Epoch > headEpoch.
+	if c.Epoch <= headEpoch {
+		return st
+	}
 	slot, err := slots.EpochStart(c.Epoch)
 	if err != nil {
+		return nil
+	}
+	if c.Epoch == slots.ToEpoch(st.Slot())+1 && slots.ToForkVersion(slot) == slots.ToForkVersion(st.Slot()) {
+		return st
+	}
+	if bytesutil.ToBytes32(c.Root) != bytesutil.ToBytes32(headRoot) {
 		return nil
 	}
 	// Try if we have already set the checkpoint cache. This will be tried again if we fail here but the check is cheap anyway.
@@ -75,11 +71,7 @@ func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) st
 		return cachedState
 	}
 	// If we haven't advanced yet then process the slots from head state.
-	st, err := s.HeadState(ctx)
-	if err != nil {
-		return nil
-	}
-	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, c.Root, slot)
+	st, err = transition.ProcessSlotsIfNeeded(ctx, st, c.Root, slot)
 	if err != nil {
 		return nil
 	}
@@ -89,7 +81,7 @@ func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) st
 	return st
 }
 
-// getAttPreState retrieves the att pre state by either from the cache or the DB.
+// getAttPreState returns a state valid for computing c.Epoch's committees and signature domains, its slot may be one epoch behind c.Epoch.
 // The caller of this function must have a lock on forkchoice.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
@@ -115,8 +107,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute epoch start")
 	}
-	cachedState = transition.NextSlotState(c.Root, slot)
-	if cachedState != nil && !cachedState.IsNil() {
+	if cachedState := transition.NextSlotState(c.Root, slot); cachedState != nil && !cachedState.IsNil() {
 		if cachedState.Slot() != slot {
 			cachedState, err = transition.ProcessSlots(ctx, cachedState, slot)
 			if err != nil {
@@ -139,6 +130,15 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	}
 
 	// Fallback to state regeneration.
+	select {
+	case s.attPreStateRegenSem <- struct{}{}:
+		defer func() { <-s.attPreStateRegenSem }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	log.WithFields(logrus.Fields{"epoch": c.Epoch, "root": fmt.Sprintf("%#x", c.Root)}).Debug("Regenerating attestation pre-state")
 	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {

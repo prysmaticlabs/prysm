@@ -56,14 +56,6 @@ func WithDatabase(beaconDB db.HeadAccessDatabase) Option {
 	}
 }
 
-// WithChainStartFetcher to retrieve information about genesis.
-func WithChainStartFetcher(f execution.ChainStartFetcher) Option {
-	return func(s *Service) error {
-		s.cfg.ChainStartFetcher = f
-		return nil
-	}
-}
-
 // WithExecutionEngineCaller to call execution engine.
 func WithExecutionEngineCaller(c execution.EngineCaller) Option {
 	return func(s *Service) error {
@@ -88,10 +80,28 @@ func WithPayloadIDCache(c *cache.PayloadIDCache) Option {
 	}
 }
 
-// WithTrackedValidatorsCache for tracked validators cache.
-func WithTrackedValidatorsCache(c *cache.TrackedValidatorsCache) Option {
+// WithProposerPreferencesCache sets the proposer preferences cache used to
+// look up fee recipient and gas limit from Gloas gossip preferences.
+func WithProposerPreferencesCache(c *cache.ProposerPreferencesCache) Option {
 	return func(s *Service) error {
-		s.cfg.TrackedValidatorsCache = c
+		s.cfg.ProposerPreferencesCache = c
+		return nil
+	}
+}
+
+// WithBuilderCircuitBreaker sets the tracker of builders that failed to reveal their payload.
+func WithBuilderCircuitBreaker(c *cache.BuilderCircuitBreaker) Option {
+	return func(s *Service) error {
+		s.cfg.BuilderCircuitBreaker = c
+		return nil
+	}
+}
+
+// WithSubscribedValidatorsCache sets the cache of validator indices attached
+// to this BN, populated from beacon_committee_subscriptions.
+func WithSubscribedValidatorsCache(c *cache.SubscribedValidatorsCache) Option {
+	return func(s *Service) error {
+		s.cfg.SubscribedValidatorsCache = c
 		return nil
 	}
 }

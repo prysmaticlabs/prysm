@@ -12,10 +12,12 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/math"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -70,6 +72,11 @@ func NewStateNotFoundError(stateRootsSize int, stateRoot []byte) StateNotFoundEr
 	return StateNotFoundError{
 		message: fmt.Sprintf("state not found in the last %d state roots, looking for state root: %#x", stateRootsSize, stateRoot),
 	}
+}
+
+// newStateNotFoundErrorf creates a new error instance with a formatted message.
+func newStateNotFoundErrorf(format string, args ...any) *StateNotFoundError {
+	return &StateNotFoundError{message: fmt.Sprintf(format, args...)}
 }
 
 // Error returns the underlying error message.
@@ -237,10 +244,39 @@ func (p *BeaconDbStater) stateByRoot(ctx context.Context, stateRoot []byte) (sta
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
-	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateRoot) {
-			blockRoot := headState.BlockRoots()[i]
+
+	stateRoots := headState.StateRoots()
+	blkRoots := headState.BlockRoots()
+	n := len(stateRoots)
+	s, err := math.Int(uint64(headState.Slot()))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert slot to int")
+	}
+	startIdx := s % n
+	isPostGloas := slots.ToEpoch(p.ChainInfoFetcher.CurrentSlot()) >= params.BeaconConfig().GloasForkEpoch
+
+	// iterate from the head state backwards, wrapping the list.
+	for i := range n {
+		idx := (startIdx - i + n) % n
+
+		if bytes.Equal(stateRoots[idx], stateRoot) {
+			blockRoot := blkRoots[idx]
 			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
+		}
+
+		// this is to support fetching states by pre-payload state roots after gloas
+		if isPostGloas {
+			r := bytesutil.ToBytes32(blkRoots[idx])
+			if r == params.BeaconConfig().ZeroHash {
+				continue
+			}
+			b, err := p.BeaconDB.Block(ctx, r)
+			if err != nil || b == nil || b.IsNil() {
+				continue
+			}
+			if b.Block().StateRoot() == bytesutil.ToBytes32(stateRoot) {
+				return p.StateGenService.StateByRoot(ctx, r)
+			}
 		}
 	}
 
@@ -257,16 +293,65 @@ func (p *BeaconDbStater) StateBySlot(ctx context.Context, target primitives.Slot
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
-	if target > p.GenesisTimeFetcher.CurrentSlot() {
-		return nil, errors.New("requested slot is in the future")
+	if currentSlot := p.GenesisTimeFetcher.CurrentSlot(); target > currentSlot {
+		return nil, newStateNotFoundErrorf("requested slot is in the future (requested %d, current %d)", target, currentSlot)
+	}
+
+	if p.BeaconDB != nil {
+		earliestSlot, err := p.BeaconDB.EarliestSlot(ctx)
+		if err != nil && !errors.Is(err, db.ErrNotFound) {
+			return nil, errors.Wrap(err, "could not determine state availability")
+		}
+		if err == nil && target > 0 && target < earliestSlot {
+			return nil, newStateNotFoundErrorf("requested slot %d is unavailable; earliest available slot is %d", target, earliestSlot)
+		}
+
+		backfillStatus, err := p.BeaconDB.BackfillStatus(ctx)
+		if err != nil && !errors.Is(err, db.ErrNotFound) {
+			return nil, errors.Wrap(err, "could not determine state availability")
+		}
+		if err == nil && backfillStatus != nil {
+			if target > 0 && target < primitives.Slot(backfillStatus.LowSlot) {
+				return nil, newStateNotFoundErrorf("requested slot %d is unavailable; backfill starts at slot %d", target, backfillStatus.LowSlot)
+			}
+		}
+	}
+
+	// An archive node holds a state at every state-diff tree boundary. Serve those directly: addressing the
+	// tree by slot also reaches boundaries whose slot had no block, which no root can identify.
+	if st, ok := p.stateFromDiffTree(ctx, target); ok {
+		return st, nil
 	}
 
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
+		if errors.Is(err, stategen.ErrNoDataForSlot) {
+			return nil, newStateNotFoundErrorf("requested slot %d is unavailable; historical data not available", target)
+		}
 		msg := fmt.Sprintf("error while replaying history to slot=%d", target)
 		return nil, errors.Wrap(err, msg)
 	}
 	return st, nil
+}
+
+// stateFromDiffTree returns the state at the given slot if it is a state-diff tree boundary that has been
+// written. A miss is not an error: the caller falls back to replaying.
+func (p *BeaconDbStater) stateFromDiffTree(ctx context.Context, target primitives.Slot) (state.BeaconState, bool) {
+	if p.BeaconDB == nil || !features.Get().EnableStateDiff {
+		return nil, false
+	}
+	_, lvl, err := p.BeaconDB.SlotInDiffTree(target)
+	if err != nil || lvl < 0 {
+		return nil, false
+	}
+	st, err := p.BeaconDB.StateBySlotFromDiffTree(ctx, target)
+	if err != nil {
+		return nil, false
+	}
+	if st == nil || st.IsNil() {
+		return nil, false
+	}
+	return st, true
 }
 
 // StateByEpoch returns the state for the start of the requested epoch.
@@ -315,7 +400,7 @@ func (p *BeaconDbStater) headStateRoot(ctx context.Context) ([]byte, error) {
 		return nil, errors.Wrap(err, "could not get head block")
 	}
 	if err = blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+		return nil, newStateNotFoundErrorf("head block is unavailable: %s", err.Error())
 	}
 	stateRoot := b.Block().StateRoot()
 	return stateRoot[:], nil
@@ -327,7 +412,7 @@ func (p *BeaconDbStater) genesisStateRoot(ctx context.Context) ([]byte, error) {
 		return nil, errors.Wrap(err, "could not get genesis block")
 	}
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+		return nil, newStateNotFoundErrorf("genesis block is unavailable: %s", err.Error())
 	}
 	stateRoot := b.Block().StateRoot()
 	return stateRoot[:], nil
@@ -343,7 +428,7 @@ func (p *BeaconDbStater) finalizedStateRoot(ctx context.Context) ([]byte, error)
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+		return nil, newStateNotFoundErrorf("finalized block %#x is unavailable: %s", cp.Root, err.Error())
 	}
 	stateRoot := b.Block().StateRoot()
 	return stateRoot[:], nil
@@ -359,7 +444,7 @@ func (p *BeaconDbStater) justifiedStateRoot(ctx context.Context) ([]byte, error)
 		return nil, errors.Wrap(err, "could not get justified block")
 	}
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+		return nil, newStateNotFoundErrorf("justified block %#x is unavailable: %s", cp.Root, err.Error())
 	}
 	stateRoot := b.Block().StateRoot()
 	return stateRoot[:], nil
@@ -385,20 +470,20 @@ func (p *BeaconDbStater) stateRootByRoot(ctx context.Context, stateRoot []byte) 
 func (p *BeaconDbStater) stateRootBySlot(ctx context.Context, slot primitives.Slot) ([]byte, error) {
 	currentSlot := p.GenesisTimeFetcher.CurrentSlot()
 	if slot > currentSlot {
-		return nil, errors.New("slot cannot be in the future")
+		return nil, newStateNotFoundErrorf("slot cannot be in the future (requested %d, current %d)", slot, currentSlot)
 	}
 	blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blocks")
 	}
 	if len(blks) == 0 {
-		return nil, errors.New("no block exists")
+		return nil, newStateNotFoundErrorf("no block exists at slot %d", slot)
 	}
 	if len(blks) != 1 {
 		return nil, errors.New("multiple blocks exist in same slot")
 	}
 	if blks[0] == nil || blks[0].Block() == nil {
-		return nil, errors.New("nil block")
+		return nil, newStateNotFoundErrorf("nil block at slot %d", slot)
 	}
 	stateRoot := blks[0].Block().StateRoot()
 	return stateRoot[:], nil

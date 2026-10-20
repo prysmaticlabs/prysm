@@ -12,7 +12,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
-	"google.golang.org/protobuf/proto"
 )
 
 func init() {
@@ -33,7 +32,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			base := &ethpb.BeaconStateGloas{}
 			require.NoError(t, base.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := state_native.InitializeFromProtoGloas(base)
+			beaconState, err := state_native.InitializeFromProtoUnsafeGloas(base)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
@@ -53,9 +52,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 
 			pbState, err := state_native.ProtobufBeaconStateGloas(postState.ToProto())
 			require.NoError(t, err)
-			if !proto.Equal(pbState, postBeaconState) {
-				t.Fatal("Did not receive expected post state")
-			}
+			require.DeepSSZEqual(t, pbState, postBeaconState, "Did not receive expected post state")
 		})
 	}
 }

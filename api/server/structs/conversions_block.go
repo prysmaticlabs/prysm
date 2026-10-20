@@ -270,6 +270,8 @@ func SignedBeaconBlockMessageJsoner(block interfaces.ReadOnlySignedBeaconBlock) 
 		return SignedBeaconBlockFuluFromConsensus(pbStruct)
 	case *eth.SignedBeaconBlockGloas:
 		return SignedBeaconBlockGloasFromConsensus(pbStruct)
+	case *eth.SignedBeaconBlockHeze:
+		return SignedBeaconBlockHezeFromConsensus(pbStruct)
 	default:
 		return nil, ErrUnsupportedConversion
 	}
@@ -805,7 +807,7 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 func SignedBeaconBlockBellatrixFromConsensus(b *eth.SignedBeaconBlockBellatrix) (*SignedBeaconBlockBellatrix, error) {
 	block, err := BeaconBlockBellatrixFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Bellatrix block: %w", err)
 	}
 	return &SignedBeaconBlockBellatrix{
 		Message:   block,
@@ -1187,7 +1189,7 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 func SignedBeaconBlockCapellaFromConsensus(b *eth.SignedBeaconBlockCapella) (*SignedBeaconBlockCapella, error) {
 	block, err := BeaconBlockCapellaFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Capella block: %w", err)
 	}
 	return &SignedBeaconBlockCapella{
 		Message:   block,
@@ -1629,7 +1631,7 @@ func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockContentsDeneb) (*Be
 func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockContentsDeneb) (*SignedBeaconBlockContentsDeneb, error) {
 	block, err := SignedBeaconBlockDenebFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert signed Deneb block: %w", err)
 	}
 
 	proofs := make([]string, len(b.KzgProofs))
@@ -1732,7 +1734,7 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 func SignedBeaconBlockDenebFromConsensus(b *eth.SignedBeaconBlockDeneb) (*SignedBeaconBlockDeneb, error) {
 	block, err := BeaconBlockDenebFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Deneb block: %w", err)
 	}
 	return &SignedBeaconBlockDeneb{
 		Message:   block,
@@ -2258,7 +2260,7 @@ func (b *BlindedBeaconBlockElectra) ToGeneric() (*eth.GenericBeaconBlock, error)
 func SignedBeaconBlockContentsElectraFromConsensus(b *eth.SignedBeaconBlockContentsElectra) (*SignedBeaconBlockContentsElectra, error) {
 	block, err := SignedBeaconBlockElectraFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert signed Electra block: %w", err)
 	}
 
 	proofs := make([]string, len(b.KzgProofs))
@@ -2384,7 +2386,7 @@ func BeaconBlockElectraFromConsensus(b *eth.BeaconBlockElectra) (*BeaconBlockEle
 func SignedBeaconBlockElectraFromConsensus(b *eth.SignedBeaconBlockElectra) (*SignedBeaconBlockElectra, error) {
 	block, err := BeaconBlockElectraFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Electra block: %w", err)
 	}
 	return &SignedBeaconBlockElectra{
 		Message:   block,
@@ -2810,7 +2812,7 @@ func BeaconBlockContentsFuluFromConsensus(b *eth.BeaconBlockContentsFulu) (*Beac
 func SignedBeaconBlockContentsFuluFromConsensus(b *eth.SignedBeaconBlockContentsFulu) (*SignedBeaconBlockContentsFulu, error) {
 	block, err := SignedBeaconBlockFuluFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert signed Fulu block: %w", err)
 	}
 
 	proofs := make([]string, len(b.KzgProofs))
@@ -2880,7 +2882,7 @@ func SignedBlindedBeaconBlockFuluFromConsensus(b *eth.SignedBlindedBeaconBlockFu
 func SignedBeaconBlockFuluFromConsensus(b *eth.SignedBeaconBlockFulu) (*SignedBeaconBlockFulu, error) {
 	block, err := BeaconBlockFuluFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Fulu block: %w", err)
 	}
 	return &SignedBeaconBlockFulu{
 		Message:   block,
@@ -2895,7 +2897,7 @@ func SignedBeaconBlockFuluFromConsensus(b *eth.SignedBeaconBlockFulu) (*SignedBe
 func SignedBeaconBlockGloasFromConsensus(b *eth.SignedBeaconBlockGloas) (*SignedBeaconBlockGloas, error) {
 	block, err := BeaconBlockGloasFromConsensus(b.Block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("convert Gloas block: %w", err)
 	}
 	return &SignedBeaconBlockGloas{
 		Message:   block,
@@ -2919,14 +2921,15 @@ func BeaconBlockGloasFromConsensus(b *eth.BeaconBlockGloas) (*BeaconBlockGloas, 
 			Eth1Data:                  Eth1DataFromConsensus(b.Body.Eth1Data),
 			Graffiti:                  hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings:         ProposerSlashingsFromConsensus(b.Body.ProposerSlashings),
-			AttesterSlashings:         AttesterSlashingsElectraFromConsensus(b.Body.AttesterSlashings),
-			Attestations:              AttsElectraFromConsensus(b.Body.Attestations),
+			AttesterSlashings:         AttesterSlashingsGloasFromConsensus(b.Body.AttesterSlashings),
+			Attestations:              AttsGloasFromConsensus(b.Body.Attestations),
 			Deposits:                  DepositsFromConsensus(b.Body.Deposits),
 			VoluntaryExits:            SignedExitsFromConsensus(b.Body.VoluntaryExits),
 			SyncAggregate:             SyncAggregateFromConsensus(b.Body.SyncAggregate),
 			BLSToExecutionChanges:     SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 			SignedExecutionPayloadBid: SignedExecutionPayloadBidFromConsensus(b.Body.SignedExecutionPayloadBid),
 			PayloadAttestations:       payloadAttestations,
+			ParentExecutionRequests:   ExecutionRequestsGloasFromConsensus(b.Body.ParentExecutionRequests),
 		},
 	}, nil
 }
@@ -2939,18 +2942,23 @@ func SignedExecutionPayloadBidFromConsensus(b *eth.SignedExecutionPayloadBid) *S
 }
 
 func ExecutionPayloadBidFromConsensus(b *eth.ExecutionPayloadBid) *ExecutionPayloadBid {
+	blobKzgCommitments := make([]string, len(b.BlobKzgCommitments))
+	for i := range b.BlobKzgCommitments {
+		blobKzgCommitments[i] = hexutil.Encode(b.BlobKzgCommitments[i])
+	}
 	return &ExecutionPayloadBid{
-		ParentBlockHash:        hexutil.Encode(b.ParentBlockHash),
-		ParentBlockRoot:        hexutil.Encode(b.ParentBlockRoot),
-		BlockHash:              hexutil.Encode(b.BlockHash),
-		PrevRandao:             hexutil.Encode(b.PrevRandao),
-		FeeRecipient:           hexutil.Encode(b.FeeRecipient),
-		GasLimit:               fmt.Sprintf("%d", b.GasLimit),
-		BuilderIndex:           fmt.Sprintf("%d", b.BuilderIndex),
-		Slot:                   fmt.Sprintf("%d", b.Slot),
-		Value:                  fmt.Sprintf("%d", b.Value),
-		ExecutionPayment:       fmt.Sprintf("%d", b.ExecutionPayment),
-		BlobKzgCommitmentsRoot: hexutil.Encode(b.BlobKzgCommitmentsRoot),
+		ParentBlockHash:       hexutil.Encode(b.ParentBlockHash),
+		ParentBlockRoot:       hexutil.Encode(b.ParentBlockRoot),
+		BlockHash:             hexutil.Encode(b.BlockHash),
+		PrevRandao:            hexutil.Encode(b.PrevRandao),
+		FeeRecipient:          hexutil.Encode(b.FeeRecipient),
+		GasLimit:              fmt.Sprintf("%d", b.GasLimit),
+		BuilderIndex:          fmt.Sprintf("%d", b.BuilderIndex),
+		Slot:                  fmt.Sprintf("%d", b.Slot),
+		Value:                 fmt.Sprintf("%d", b.Value),
+		ExecutionPayment:      fmt.Sprintf("%d", b.ExecutionPayment),
+		BlobKzgCommitments:    blobKzgCommitments,
+		ExecutionRequestsRoot: hexutil.Encode(b.ExecutionRequestsRoot),
 	}
 }
 
@@ -2962,6 +2970,14 @@ func PayloadAttestationFromConsensus(pa *eth.PayloadAttestation) *PayloadAttesta
 	}
 }
 
+func PayloadAttestationMessageFromConsensus(m *eth.PayloadAttestationMessage) *PayloadAttestationMessage {
+	return &PayloadAttestationMessage{
+		ValidatorIndex: fmt.Sprintf("%d", m.ValidatorIndex),
+		Data:           PayloadAttestationDataFromConsensus(m.Data),
+		Signature:      hexutil.Encode(m.Signature),
+	}
+}
+
 func PayloadAttestationDataFromConsensus(d *eth.PayloadAttestationData) *PayloadAttestationData {
 	return &PayloadAttestationData{
 		BeaconBlockRoot:   hexutil.Encode(d.BeaconBlockRoot),
@@ -2969,6 +2985,19 @@ func PayloadAttestationDataFromConsensus(d *eth.PayloadAttestationData) *Payload
 		PayloadPresent:    d.PayloadPresent,
 		BlobDataAvailable: d.BlobDataAvailable,
 	}
+}
+
+func (b *SignedBeaconBlockGloas) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	signed, err := b.ToConsensus()
+	if err != nil {
+		return nil, fmt.Errorf("convert block to consensus: %w", err)
+	}
+	return &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Gloas{Gloas: signed},
+	}, nil
 }
 
 func (b *SignedBeaconBlockGloas) ToConsensus() (*eth.SignedBeaconBlockGloas, error) {
@@ -3040,6 +3069,15 @@ func (b *BeaconBlockBodyGloas) ToConsensus() (*eth.BeaconBlockBodyGloas, error) 
 	if b == nil {
 		return nil, errNilValue
 	}
+	if b.Eth1Data == nil {
+		return nil, server.NewDecodeError(errNilValue, "Eth1Data")
+	}
+	if b.SyncAggregate == nil {
+		return nil, server.NewDecodeError(errNilValue, "SyncAggregate")
+	}
+	if b.SignedExecutionPayloadBid == nil {
+		return nil, server.NewDecodeError(errNilValue, "SignedExecutionPayloadBid")
+	}
 
 	randaoReveal, err := bytesutil.DecodeHexWithLength(b.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
@@ -3065,11 +3103,11 @@ func (b *BeaconBlockBodyGloas) ToConsensus() (*eth.BeaconBlockBodyGloas, error) 
 	if err != nil {
 		return nil, server.NewDecodeError(err, "ProposerSlashings")
 	}
-	attesterSlashings, err := AttesterSlashingsElectraToConsensus(b.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsGloasToConsensus(b.AttesterSlashings)
 	if err != nil {
 		return nil, server.NewDecodeError(err, "AttesterSlashings")
 	}
-	atts, err := AttsElectraToConsensus(b.Attestations)
+	atts, err := AttsGloasToConsensus(b.Attestations)
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Attestations")
 	}
@@ -3101,6 +3139,13 @@ func (b *BeaconBlockBodyGloas) ToConsensus() (*eth.BeaconBlockBodyGloas, error) 
 	if err != nil {
 		return nil, server.NewDecodeError(err, "PayloadAttestations")
 	}
+	var parentExecutionRequests *enginev1.ExecutionRequestsGloas
+	if b.ParentExecutionRequests != nil {
+		parentExecutionRequests, err = b.ParentExecutionRequests.ToConsensus()
+		if err != nil {
+			return nil, server.NewDecodeError(err, "ParentExecutionRequests")
+		}
+	}
 
 	return &eth.BeaconBlockBodyGloas{
 		RandaoReveal: randaoReveal,
@@ -3122,7 +3167,16 @@ func (b *BeaconBlockBodyGloas) ToConsensus() (*eth.BeaconBlockBodyGloas, error) 
 		BlsToExecutionChanges:     blsChanges,
 		SignedExecutionPayloadBid: signedBid,
 		PayloadAttestations:       payloadAttestations,
+		ParentExecutionRequests:   parentExecutionRequests,
 	}, nil
+}
+
+func (b *BeaconBlockGloas) ToGeneric() (*eth.GenericBeaconBlock, error) {
+	block, err := b.ToConsensus()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert gloas block to consensus")
+	}
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Gloas{Gloas: block}}, nil
 }
 
 func (b *SignedExecutionPayloadBid) ToConsensus() (*eth.SignedExecutionPayloadBid, error) {
@@ -3187,22 +3241,35 @@ func (b *ExecutionPayloadBid) ToConsensus() (*eth.ExecutionPayloadBid, error) {
 	if err != nil {
 		return nil, server.NewDecodeError(err, "ExecutionPayment")
 	}
-	blobKzgCommitmentsRoot, err := bytesutil.DecodeHexWithLength(b.BlobKzgCommitmentsRoot, fieldparams.RootLength)
+	err = slice.VerifyMaxLength(b.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
 	if err != nil {
-		return nil, server.NewDecodeError(err, "BlobKzgCommitmentsRoot")
+		return nil, server.NewDecodeError(err, "BlobKzgCommitments")
+	}
+	blobKzgCommitments := make([][]byte, len(b.BlobKzgCommitments))
+	for i, commitment := range b.BlobKzgCommitments {
+		kzg, err := bytesutil.DecodeHexWithLength(commitment, fieldparams.BLSPubkeyLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("BlobKzgCommitments[%d]", i))
+		}
+		blobKzgCommitments[i] = kzg
+	}
+	executionRequestsRoot, err := bytesutil.DecodeHexWithLength(b.ExecutionRequestsRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "ExecutionRequestsRoot")
 	}
 	return &eth.ExecutionPayloadBid{
-		ParentBlockHash:        parentBlockHash,
-		ParentBlockRoot:        parentBlockRoot,
-		BlockHash:              blockHash,
-		PrevRandao:             prevRandao,
-		FeeRecipient:           feeRecipient,
-		GasLimit:               gasLimit,
-		BuilderIndex:           primitives.BuilderIndex(builderIndex),
-		Slot:                   primitives.Slot(slot),
-		Value:                  primitives.Gwei(value),
-		ExecutionPayment:       primitives.Gwei(executionPayment),
-		BlobKzgCommitmentsRoot: blobKzgCommitmentsRoot,
+		ParentBlockHash:       parentBlockHash,
+		ParentBlockRoot:       parentBlockRoot,
+		BlockHash:             blockHash,
+		PrevRandao:            prevRandao,
+		FeeRecipient:          feeRecipient,
+		GasLimit:              gasLimit,
+		BuilderIndex:          primitives.BuilderIndex(builderIndex),
+		Slot:                  primitives.Slot(slot),
+		Value:                 primitives.Gwei(value),
+		ExecutionPayment:      primitives.Gwei(executionPayment),
+		BlobKzgCommitments:    blobKzgCommitments,
+		ExecutionRequestsRoot: executionRequestsRoot,
 	}, nil
 }
 
@@ -3261,5 +3328,28 @@ func (d *PayloadAttestationData) ToConsensus() (*eth.PayloadAttestationData, err
 		Slot:              primitives.Slot(slot),
 		PayloadPresent:    d.PayloadPresent,
 		BlobDataAvailable: d.BlobDataAvailable,
+	}, nil
+}
+
+func (p *PayloadAttestationMessage) ToConsensus() (*eth.PayloadAttestationMessage, error) {
+	if p == nil {
+		return nil, errNilValue
+	}
+	validatorIndex, err := strconv.ParseUint(p.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "ValidatorIndex")
+	}
+	data, err := p.Data.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Data")
+	}
+	sig, err := bytesutil.DecodeHexWithLength(p.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	return &eth.PayloadAttestationMessage{
+		ValidatorIndex: primitives.ValidatorIndex(validatorIndex),
+		Data:           data,
+		Signature:      sig,
 	}, nil
 }

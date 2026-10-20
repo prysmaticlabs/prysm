@@ -59,7 +59,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
-	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index, blob.Slot()))
+	want := fmt.Sprintf("/blob_sidecar_%d/", computeSubnetForBlobSidecar(blob.Index, blob.Slot()))
 	if !strings.Contains(*msg.Topic, want) {
 		log.WithFields(blobFields(blob)).Debug("Sidecar index does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
@@ -85,7 +85,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 
 	if err := vf.SidecarParentSeen(s.hasBadBlock); err != nil {
 		go func() {
-			if err := s.sendBatchRootRequest(context.Background(), [][32]byte{blob.ParentRoot()}, rand.NewGenerator()); err != nil {
+			if err := s.sendBatchRootRequest(s.ctx, [][32]byte{blob.ParentRoot()}, rand.NewGenerator()); err != nil {
 				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
 			}
 		}()

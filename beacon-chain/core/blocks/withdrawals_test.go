@@ -20,6 +20,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/ssz"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/wrappers"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
@@ -147,7 +148,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 		_, err = blocks.ValidateBLSToExecutionChange(st, signed)
 		// The state should return an empty validator, even when the validator object in the registry is
 		// nil. This error should return when the withdrawal credentials are invalid or too short.
-		require.ErrorIs(t, err, blocks.ErrInvalidBLSPrefix)
+		require.ErrorIs(t, err, blocks.ErrInvalidWithdrawalCredentials)
 	})
 	t.Run("non-existent validator", func(t *testing.T) {
 		priv, err := bls.RandKey()
@@ -677,7 +678,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			wdRoot, err := ssz.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+			wdRoot, err := wrappers.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 			require.NoError(t, err)
 			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]})
 			require.NoError(t, err)

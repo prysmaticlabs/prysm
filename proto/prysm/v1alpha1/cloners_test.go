@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	bitfield "github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	v1alpha1 "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -1013,6 +1012,15 @@ func genAttestationElectra() *v1alpha1.AttestationElectra {
 	}
 }
 
+func genAttestationGloas() *v1alpha1.AttestationGloas {
+	return &v1alpha1.AttestationGloas{
+		AggregationBits: bytes(32),
+		CommitteeBits:   bytes(8),
+		Data:            genAttData(),
+		Signature:       bytes(96),
+	}
+}
+
 func genAttesterSlashingsElectra(num int) []*v1alpha1.AttesterSlashingElectra {
 	as := make([]*v1alpha1.AttesterSlashingElectra, num)
 	for i := range num {
@@ -1028,8 +1036,31 @@ func genAttesterSlashingElectra() *v1alpha1.AttesterSlashingElectra {
 	}
 }
 
+func genAttesterSlashingsGloas(num int) []*v1alpha1.AttesterSlashingGloas {
+	as := make([]*v1alpha1.AttesterSlashingGloas, num)
+	for i := range num {
+		as[i] = genAttesterSlashingGloas()
+	}
+	return as
+}
+
+func genAttesterSlashingGloas() *v1alpha1.AttesterSlashingGloas {
+	return &v1alpha1.AttesterSlashingGloas{
+		Attestation_1: genIndexedAttestationGloas(),
+		Attestation_2: genIndexedAttestationGloas(),
+	}
+}
+
 func genIndexedAttestationElectra() *v1alpha1.IndexedAttestationElectra {
 	return &v1alpha1.IndexedAttestationElectra{
+		AttestingIndices: []uint64{1, 2, 3},
+		Data:             genAttData(),
+		Signature:        bytes(96),
+	}
+}
+
+func genIndexedAttestationGloas() *v1alpha1.IndexedAttestationGloas {
+	return &v1alpha1.IndexedAttestationGloas{
 		AttestingIndices: []uint64{1, 2, 3},
 		Data:             genAttData(),
 		Signature:        bytes(96),
@@ -1040,6 +1071,14 @@ func genAttestationsElectra(num int) []*v1alpha1.AttestationElectra {
 	atts := make([]*v1alpha1.AttestationElectra, num)
 	for i := range num {
 		atts[i] = genAttestationElectra()
+	}
+	return atts
+}
+
+func genAttestationsGloas(num int) []*v1alpha1.AttestationGloas {
+	atts := make([]*v1alpha1.AttestationGloas, num)
+	for i := range num {
+		atts[i] = genAttestationGloas()
 	}
 	return atts
 }
@@ -1195,8 +1234,8 @@ func genBeaconBlockBodyGloas() *v1alpha1.BeaconBlockBodyGloas {
 		Eth1Data:                  genEth1Data(),
 		Graffiti:                  bytes(32),
 		ProposerSlashings:         genProposerSlashings(3),
-		AttesterSlashings:         genAttesterSlashingsElectra(3),
-		Attestations:              genAttestationsElectra(3),
+		AttesterSlashings:         genAttesterSlashingsGloas(3),
+		Attestations:              genAttestationsGloas(3),
 		Deposits:                  genDeposits(3),
 		VoluntaryExits:            genSignedVoluntaryExits(3),
 		SyncAggregate:             genSyncAggregate(),
@@ -1215,23 +1254,24 @@ func genSignedExecutionPayloadBidGloas() *v1alpha1.SignedExecutionPayloadBid {
 
 func genExecutionPayloadBidGloas() *v1alpha1.ExecutionPayloadBid {
 	return &v1alpha1.ExecutionPayloadBid{
-		ParentBlockHash:        bytes(32),
-		ParentBlockRoot:        bytes(32),
-		BlockHash:              bytes(32),
-		FeeRecipient:           bytes(20),
-		GasLimit:               rand.Uint64(),
-		BuilderIndex:           primitives.BuilderIndex(rand.Uint64()),
-		Slot:                   primitives.Slot(rand.Uint64()),
-		Value:                  primitives.Gwei(rand.Uint64()),
-		BlobKzgCommitmentsRoot: bytes(32),
+		ParentBlockHash:    bytes(32),
+		ParentBlockRoot:    bytes(32),
+		BlockHash:          bytes(32),
+		FeeRecipient:       bytes(20),
+		GasLimit:           rand.Uint64(),
+		BuilderIndex:       primitives.BuilderIndex(rand.Uint64()),
+		Slot:               primitives.Slot(rand.Uint64()),
+		Value:              primitives.Gwei(rand.Uint64()),
+		ExecutionPayment:   primitives.Gwei(rand.Uint64()),
+		BlobKzgCommitments: [][]byte{bytes(48)},
 	}
 }
 
 func genPayloadAttestations(num int) []*v1alpha1.PayloadAttestation {
 	pas := make([]*v1alpha1.PayloadAttestation, num)
 	for i := range pas {
-		bits := bitfield.NewBitvector512()
-		bits.SetBitAt(uint64(i%512), true)
+		bits := v1alpha1.NewPayloadAttestationAggregationBits()
+		bits.SetBitAt(uint64(i)%bits.Len(), true)
 
 		pas[i] = &v1alpha1.PayloadAttestation{
 			AggregationBits: bits,
@@ -1300,6 +1340,7 @@ func TestCopyBuilderPendingPayment(t *testing.T) {
 				Amount:       primitives.Gwei(50),
 				BuilderIndex: primitives.BuilderIndex(7),
 			},
+			ProposerIndex: primitives.ValidatorIndex(3),
 		}
 
 		copied := v1alpha1.CopyBuilderPendingPayment(original)
@@ -1317,9 +1358,13 @@ func TestCopyBuilderPendingPayment(t *testing.T) {
 		original.Withdrawal.FeeRecipient[0] = 0xFF
 		original.Withdrawal.Amount = primitives.Gwei(75)
 		original.Withdrawal.BuilderIndex = primitives.BuilderIndex(9)
+		original.ProposerIndex = primitives.ValidatorIndex(11)
 
 		if copied.Weight != primitives.Gwei(5) {
 			t.Fatalf("weight mutated on copy: %d", copied.Weight)
+		}
+		if copied.ProposerIndex != primitives.ValidatorIndex(3) {
+			t.Fatalf("proposer index mutated on copy: %d", copied.ProposerIndex)
 		}
 		if copied.Withdrawal.FeeRecipient[0] == original.Withdrawal.FeeRecipient[0] {
 			t.Fatalf("withdrawal fee recipient was not deep copied")
@@ -1331,4 +1376,10 @@ func TestCopyBuilderPendingPayment(t *testing.T) {
 			t.Fatalf("withdrawal builder index mutated on copy: %d", copied.Withdrawal.BuilderIndex)
 		}
 	})
+}
+
+func TestCopySlice_NilStaysNil(t *testing.T) {
+	var nilForks []*v1alpha1.Fork
+	assert.Equal(t, true, v1alpha1.CopySlice(nilForks) == nil)
+	assert.Equal(t, 0, len(v1alpha1.CopySlice([]*v1alpha1.Fork{})))
 }

@@ -15,8 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// GenesisBeaconState gets called when MinGenesisActiveValidatorCount count of
-// full deposits were made to the deposit contract and the ChainStart log gets emitted.
+// GenesisBeaconState builds the phase 0 genesis state from the genesis deposits and eth1 data.
 //
 // Spec pseudocode definition:
 //
@@ -115,7 +114,7 @@ func PreminedGenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, 
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
-// create a mainnet state at chainstart.
+// create a mainnet genesis state.
 func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
@@ -147,7 +146,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
+	compactValidators := stateutil.CompactValidatorsFromProto(preState.Validators())
+	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Version(), compactValidators)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
@@ -217,7 +217,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return state_native.InitializeFromProtoPhase0(st)
+	return state_native.InitializeFromProtoUnsafePhase0(st)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
@@ -259,30 +259,5 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state_native.InitializeFromProtoPhase0(st)
-}
-
-// IsValidGenesisState gets called whenever there's a deposit event,
-// it checks whether there's enough effective balance to trigger and
-// if the minimum genesis time arrived already.
-//
-// Spec pseudocode definition:
-//
-//	def is_valid_genesis_state(state: BeaconState) -> bool:
-//	   if state.genesis_time < MIN_GENESIS_TIME:
-//	       return False
-//	   if len(get_active_validator_indices(state, GENESIS_EPOCH)) < MIN_GENESIS_ACTIVE_VALIDATOR_COUNT:
-//	       return False
-//	   return True
-//
-// This method has been modified from the spec to allow whole states not to be saved
-// but instead only cache the relevant information.
-func IsValidGenesisState(chainStartDepositCount, currentTime uint64) bool {
-	if currentTime < params.BeaconConfig().MinGenesisTime {
-		return false
-	}
-	if chainStartDepositCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
-		return false
-	}
-	return true
+	return state_native.InitializeFromProtoUnsafePhase0(st)
 }

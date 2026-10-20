@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
@@ -15,9 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// MigrateToCold advances the finalized info in between the cold and hot state sections.
-// It moves the recent finalized states from the hot section to the cold section and
-// only preserves the ones that are on archived point.
+// MigrateToCold moves finalized states to cold storage and advances the migration cursor.
 func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
@@ -28,13 +27,16 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	s.migrationLock.Lock()
 	defer s.migrationLock.Unlock()
 
+	// While an archive node is regenerating history, the live chain cannot write diffs.
+	if s.ArchivePending() {
+		return nil
+	}
+
 	if features.Get().EnableStateDiff {
 		return s.migrateToColdHdiff(ctx, fRoot)
 	}
 
-	s.finalizedInfo.lock.RLock()
-	oldFSlot := s.finalizedInfo.slot
-	s.finalizedInfo.lock.RUnlock()
+	oldFSlot := s.migratedSlot
 
 	fBlock, err := s.beaconDB.Block(ctx, fRoot)
 	if err != nil {
@@ -102,13 +104,19 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			continue
 		}
 
+		saveStart := time.Now()
 		if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
 			return err
 		}
+
+		duration := time.Since(saveStart)
+		saveStateToColdSummary.Observe(float64(duration.Milliseconds()))
+
 		log.WithFields(
 			logrus.Fields{
-				"slot": aState.Slot(),
-				"root": hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
+				"slot":     aState.Slot(),
+				"root":     hex.EncodeToString(bytesutil.Trunc(aRoot[:])),
+				"duration": duration,
 			}).Info("Saved state in DB")
 	}
 
@@ -118,17 +126,18 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		return err
 	}
 	if ok {
-		s.SaveFinalizedState(fSlot, fRoot, fInfo.state)
+		s.SaveFinalizedState(fRoot, fInfo.state)
 	}
+	// The migration can complete without the finalized state being cached. Keep
+	// finalizedInfo coherent and advance its independent migration cursor.
+	s.migratedSlot = fSlot
 
 	return nil
 }
 
 // migrateToColdHdiff saves the state-diffs for slots that are in the state diff tree after finalization
 func (s *State) migrateToColdHdiff(ctx context.Context, fRoot [32]byte) error {
-	s.finalizedInfo.lock.RLock()
-	oldFSlot := s.finalizedInfo.slot
-	s.finalizedInfo.lock.RUnlock()
+	oldFSlot := s.migratedSlot
 	fSlot, err := s.beaconDB.SlotByBlockRoot(ctx, fRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get slot by block root")
@@ -156,22 +165,28 @@ func (s *State) migrateToColdHdiff(ctx context.Context, fRoot [32]byte) error {
 			cached = nil
 			exists = false
 		}
+		// The cache is populated for every epoch boundary block that gets processed and is only ever
+		// evicted by size or when a block turns out to be invalid, never when a block loses fork choice.
+		// Its slot index is also first-write-wins, so a reorged sibling processed ahead of the canonical
+		// block at the same slot keeps the slot key. Either way the cached root can be non-canonical, and
+		// the diff tree is keyed by slot, so it has to be checked before the state is committed to a boundary.
+		if exists && !s.beaconDB.IsFinalizedBlock(ctx, cached.root) {
+			log.WithFields(logrus.Fields{
+				"slot": slot,
+				"root": fmt.Sprintf("%#x", cached.root),
+			}).Debug("Ignoring non-canonical epoch boundary state while migrating to cold")
+			exists = false
+		}
 		var aRoot [32]byte
 		var aState state.BeaconState
 		if exists {
 			aRoot = cached.root
 			aState = cached.state
 		} else {
-			_, roots, err := s.beaconDB.HighestRootsBelowSlot(ctx, slot)
+			aRoot, err = s.canonicalRootAtOrBelow(ctx, slot, oldFSlot)
 			if err != nil {
 				return err
 			}
-			// Given the block has been finalized, the db should not have more than one block in a given slot.
-			// We should error out when this happens.
-			if len(roots) != 1 {
-				return errUnknownBlock
-			}
-			aRoot = roots[0]
 			// Different than the legacy MigrateToCold, we need to always get the state even if
 			// the state exists in DB as part of the hot state db, because we need to process slots
 			// to the state diff tree slots.
@@ -180,10 +195,7 @@ func (s *State) migrateToColdHdiff(ctx context.Context, fRoot [32]byte) error {
 				return err
 			}
 		}
-		if s.beaconDB.HasState(ctx, aRoot) {
-			s.migrateHotToCold(aRoot)
-			continue
-		}
+
 		// advance slots to the target slot
 		if aState.Slot() < slot {
 			aState, err = transition.ProcessSlots(ctx, aState, slot)
@@ -191,13 +203,18 @@ func (s *State) migrateToColdHdiff(ctx context.Context, fRoot [32]byte) error {
 				return errors.Wrapf(err, "could not process slots to slot %d", slot)
 			}
 		}
+		saveStart := time.Now()
 		if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
 			return err
 		}
+		duration := time.Since(saveStart)
+		saveStateToColdSummary.Observe(float64(duration.Milliseconds()))
+
 		log.WithFields(
 			logrus.Fields{
-				"slot": aState.Slot(),
-				"root": fmt.Sprintf("%#x", aRoot),
+				"slot":     aState.Slot(),
+				"root":     fmt.Sprintf("%#x", aRoot),
+				"duration": duration,
 			}).Info("Saved state in DB")
 	}
 	// Update finalized info in memory.
@@ -206,9 +223,19 @@ func (s *State) migrateToColdHdiff(ctx context.Context, fRoot [32]byte) error {
 		return err
 	}
 	if ok {
-		s.SaveFinalizedState(fSlot, fRoot, fInfo.state)
+		s.SaveFinalizedState(fRoot, fInfo.state)
 	}
+	// The migration can complete without the finalized state being cached. Keep
+	// finalizedInfo coherent and advance its independent migration cursor.
+	s.migratedSlot = fSlot
 	return nil
+}
+
+// canonicalRootAtOrBelow returns the root of the highest canonical block at or below the given slot.
+// floor is a slot already known to be canonical. See CanonicalBlockAtOrBelow, which the archive walk shares.
+func (s *State) canonicalRootAtOrBelow(ctx context.Context, slot, floor primitives.Slot) ([32]byte, error) {
+	_, root, err := CanonicalBlockAtOrBelow(ctx, s.beaconDB, slot, floor)
+	return root, err
 }
 
 func (s *State) migrateHotToCold(aRoot [32]byte) {

@@ -14,15 +14,40 @@ type HeadEvent struct {
 	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root"`
 }
 
+// HeadEventV2 is the versioned, Gloas-aware head_v2 event.
+type HeadEventV2 struct {
+	Version string           `json:"version"`
+	Data    *HeadEventV2Data `json:"data"`
+}
+
+type HeadEventV2Data struct {
+	Slot                      string `json:"slot"`
+	Block                     string `json:"block"`
+	State                     string `json:"state"`
+	PayloadStatus             string `json:"payload_status"`
+	CurrentEpochDependentRoot string `json:"current_epoch_dependent_root"`
+	NextEpochDependentRoot    string `json:"next_epoch_dependent_root"`
+	EpochTransition           bool   `json:"epoch_transition"`
+	ExecutionOptimistic       bool   `json:"execution_optimistic"`
+}
+
 type BlockEvent struct {
 	Slot                string `json:"slot"`
 	Block               string `json:"block"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
+	BuilderIndex        string `json:"builder_index,omitempty"`
+	BlockHash           string `json:"block_hash,omitempty"`
 }
 
 type BlockGossipEvent struct {
 	Slot  string `json:"slot"`
 	Block string `json:"block"`
+}
+
+type FastConfirmationEvent struct {
+	Block       string `json:"block"`
+	Slot        string `json:"slot"`
+	CurrentSlot string `json:"current_slot"`
 }
 
 type DataColumnGossipEvent struct {
@@ -53,8 +78,8 @@ type ChainReorgEvent struct {
 	Slot                string `json:"slot"`
 	Depth               string `json:"depth"`
 	OldHeadBlock        string `json:"old_head_block"`
-	NewHeadBlock        string `json:"old_head_state"`
-	OldHeadState        string `json:"new_head_block"`
+	NewHeadBlock        string `json:"new_head_block"`
+	OldHeadState        string `json:"old_head_state"`
 	NewHeadState        string `json:"new_head_state"`
 	Epoch               string `json:"epoch"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
@@ -66,12 +91,14 @@ type PayloadAttributesEvent struct {
 }
 
 type PayloadAttributesEventData struct {
-	ProposerIndex     string          `json:"proposer_index"`
-	ProposalSlot      string          `json:"proposal_slot"`
-	ParentBlockNumber string          `json:"parent_block_number"`
-	ParentBlockRoot   string          `json:"parent_block_root"`
-	ParentBlockHash   string          `json:"parent_block_hash"`
-	PayloadAttributes json.RawMessage `json:"payload_attributes"`
+	ProposerIndex      string          `json:"proposer_index"`
+	ProposalSlot       string          `json:"proposal_slot"`
+	ParentBlockNumber  string          `json:"parent_block_number,omitempty"` // Removed from gloas onwards.
+	ParentBlockRoot    string          `json:"parent_block_root"`
+	ParentBlockHash    string          `json:"parent_block_hash"`
+	SafeBlockHash      string          `json:"safe_block_hash,omitempty"`      // Added from gloas onwards.
+	FinalizedBlockHash string          `json:"finalized_block_hash,omitempty"` // Added from gloas onwards.
+	PayloadAttributes  json.RawMessage `json:"payload_attributes"`
 }
 
 type PayloadAttributesV1 struct {
@@ -95,6 +122,16 @@ type PayloadAttributesV3 struct {
 	ParentBeaconBlockRoot string        `json:"parent_beacon_block_root"`
 }
 
+type PayloadAttributesV4 struct {
+	Timestamp             string        `json:"timestamp"`
+	PrevRandao            string        `json:"prev_randao"`
+	SuggestedFeeRecipient string        `json:"suggested_fee_recipient"`
+	Withdrawals           []*Withdrawal `json:"withdrawals"`
+	ParentBeaconBlockRoot string        `json:"parent_beacon_block_root"`
+	SlotNumber            string        `json:"slot_number"`
+	TargetGasLimit        string        `json:"target_gas_limit"`
+}
+
 type BlobSidecarEvent struct {
 	BlockRoot     string `json:"block_root"`
 	Index         string `json:"index"`
@@ -111,4 +148,39 @@ type LightClientFinalityUpdateEvent struct {
 type LightClientOptimisticUpdateEvent struct {
 	Version string                       `json:"version"`
 	Data    *LightClientOptimisticUpdate `json:"data"`
+}
+
+type ProposerPreferencesEvent struct {
+	Version string                     `json:"version"`
+	Data    *SignedProposerPreferences `json:"data"`
+}
+
+type ExecutionPayloadBidEvent struct {
+	Version string                     `json:"version"`
+	Data    *SignedExecutionPayloadBid `json:"data"`
+}
+
+type PayloadAttestationMessageEvent struct {
+	Version string                     `json:"version"`
+	Data    *PayloadAttestationMessage `json:"data"`
+}
+
+type ExecutionPayloadAvailableEvent struct {
+	Slot      string `json:"slot"`
+	BlockRoot string `json:"block_root"`
+}
+
+type ExecutionPayloadEvent struct {
+	Slot                string `json:"slot"`
+	BuilderIndex        string `json:"builder_index"`
+	BlockHash           string `json:"block_hash"`
+	BlockRoot           string `json:"block_root"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
+}
+
+type ExecutionPayloadGossipEvent struct {
+	Slot         string `json:"slot"`
+	BuilderIndex string `json:"builder_index"`
+	BlockHash    string `json:"block_hash"`
+	BlockRoot    string `json:"block_root"`
 }

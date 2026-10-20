@@ -3,6 +3,9 @@ package detect
 import (
 	"fmt"
 
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+	"github.com/pkg/errors"
+
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
@@ -14,8 +17,6 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
 )
 
 // VersionedUnmarshaler represents the intersection of Configuration (eg mainnet, testnet) and Fork (eg phase0, altair).
@@ -87,6 +88,10 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 		fork = version.Electra
 	case bytesutil.ToBytes4(cfg.FuluForkVersion):
 		fork = version.Fulu
+	case bytesutil.ToBytes4(cfg.GloasForkVersion):
+		fork = version.Gloas
+	case bytesutil.ToBytes4(cfg.HezeForkVersion):
+		fork = version.Heze
 	default:
 		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
 	}
@@ -184,6 +189,18 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
+	case version.Heze:
+		st := &ethpb.BeaconStateHeze{}
+
+		err = st.UnmarshalSSZ(marshaled)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+
+		s, err = state_native.InitializeFromProtoUnsafeHeze(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+		}
 	default:
 		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", forkName)
 	}
@@ -236,6 +253,10 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 		blk = &ethpb.SignedBeaconBlockElectra{}
 	case version.Fulu:
 		blk = &ethpb.SignedBeaconBlockFulu{}
+	case version.Gloas:
+		blk = &ethpb.SignedBeaconBlockGloas{}
+	case version.Heze:
+		blk = &ethpb.SignedBeaconBlockHeze{}
 	default:
 		forkName := version.String(cf.Fork)
 		return nil, fmt.Errorf("unable to initialize ReadOnlyBeaconBlock for fork version=%s at slot=%d", forkName, slot)
@@ -275,6 +296,10 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 		blk = &ethpb.SignedBlindedBeaconBlockElectra{}
 	case version.Fulu:
 		blk = &ethpb.SignedBlindedBeaconBlockFulu{}
+	case version.Gloas:
+		blk = &ethpb.SignedBeaconBlockGloas{}
+	case version.Heze:
+		blk = &ethpb.SignedBeaconBlockHeze{}
 	default:
 		forkName := version.String(cf.Fork)
 		return nil, fmt.Errorf("unable to initialize ReadOnlyBeaconBlock for fork version=%s at slot=%d", forkName, slot)

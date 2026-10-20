@@ -132,14 +132,17 @@ func finishedSyncing(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) e
 // waitForMidEpoch waits until we're at least halfway into the current epoch
 // and 3/4 into the current slot. This prevents race conditions at epoch
 // boundaries and slot boundaries where different nodes may report different heads.
-func waitForMidEpoch(conn *grpc.ClientConn) error {
+func waitForMidEpoch(ctx context.Context, conn *grpc.ClientConn) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	slotDuration := params.BeaconConfig().SlotDuration()
 	midEpochSlot := slotsPerEpoch / 2
 
 	for {
-		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err
 		}
@@ -147,53 +150,86 @@ func waitForMidEpoch(conn *grpc.ClientConn) error {
 		// If we're at least halfway into the epoch, we're safe
 		if slotInEpoch >= midEpochSlot {
 			// Wait 3/4 into the slot to ensure block propagation
-			time.Sleep(time.Duration(secondsPerSlot) * time.Second * 3 / 4)
+			if err := sleepWithContext(ctx, slotDuration*3/4); err != nil {
+				return err
+			}
 			return nil
 		}
 		// Wait for the remaining slots until mid-epoch
 		slotsToWait := midEpochSlot - slotInEpoch
-		time.Sleep(time.Duration(slotsToWait) * time.Duration(secondsPerSlot) * time.Second)
+		if err := sleepWithContext(ctx, time.Duration(slotsToWait)*slotDuration); err != nil {
+			return err
+		}
 	}
 }
 
 func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	ctx, cancel := context.WithTimeout(context.Background(), params.EpochsDuration(2, params.BeaconConfig()))
+	defer cancel()
 	// Wait until we're at least halfway into the epoch to avoid race conditions
 	// at epoch boundaries where nodes may report different epochs.
-	if err := waitForMidEpoch(conns[0]); err != nil {
+	if err := waitForAllMidEpoch(ctx, conns...); err != nil {
 		return errors.Wrap(err, "failed waiting for mid-epoch")
 	}
-
-	headEpochs := make([]primitives.Epoch, len(conns))
-	headBlockRoots := make([][]byte, len(conns))
-	justifiedRoots := make([][]byte, len(conns))
-	prevJustifiedRoots := make([][]byte, len(conns))
-	finalizedRoots := make([][]byte, len(conns))
-	chainHeads := make([]*eth.ChainHead, len(conns))
-	g, _ := errgroup.WithContext(context.Background())
-
+	clients := make([]eth.BeaconChainClient, len(conns))
 	for i, conn := range conns {
-		conIdx := i
-		currConn := conn
-		g.Go(func() error {
-			beaconClient := eth.NewBeaconChainClient(currConn)
-			chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
-			if err != nil {
-				return errors.Wrapf(err, "connection number=%d", conIdx)
-			}
-			headEpochs[conIdx] = chainHead.HeadEpoch
-			headBlockRoots[conIdx] = chainHead.HeadBlockRoot
-			justifiedRoots[conIdx] = chainHead.JustifiedBlockRoot
-			prevJustifiedRoots[conIdx] = chainHead.PreviousJustifiedBlockRoot
-			finalizedRoots[conIdx] = chainHead.FinalizedBlockRoot
-			chainHeads[conIdx] = chainHead
-			return nil
-		})
+		clients[i] = eth.NewBeaconChainClient(conn)
 	}
-	if err := g.Wait(); err != nil {
-		return err
+	return waitForMatchingHeads(ctx, clients...)
+}
+
+func waitForMatchingHeads(ctx context.Context, clients ...eth.BeaconChainClient) error {
+	ticker := time.NewTicker(connTimeDelay)
+	defer ticker.Stop()
+
+	var lastErr error
+	for {
+		chainHeads := make([]*eth.ChainHead, len(clients))
+		g, gctx := errgroup.WithContext(ctx)
+		for i, client := range clients {
+			idx := i
+			currClient := client
+			g.Go(func() error {
+				chainHead, err := currClient.GetChainHead(gctx, &emptypb.Empty{})
+				if err != nil {
+					return errors.Wrapf(err, "connection number=%d", idx)
+				}
+				chainHeads[idx] = chainHead
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return err
+		}
+		if err := compareChainHeads(chainHeads); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+
+		select {
+		case <-ctx.Done():
+			return lastErr
+		case <-ticker.C:
+		}
+	}
+}
+
+func compareChainHeads(chainHeads []*eth.ChainHead) error {
+	headEpochs := make([]primitives.Epoch, len(chainHeads))
+	headBlockRoots := make([][]byte, len(chainHeads))
+	justifiedRoots := make([][]byte, len(chainHeads))
+	prevJustifiedRoots := make([][]byte, len(chainHeads))
+	finalizedRoots := make([][]byte, len(chainHeads))
+	for i, chainHead := range chainHeads {
+		headEpochs[i] = chainHead.HeadEpoch
+		headBlockRoots[i] = chainHead.HeadBlockRoot
+		justifiedRoots[i] = chainHead.JustifiedBlockRoot
+		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
+		finalizedRoots[i] = chainHead.FinalizedBlockRoot
 	}
 
-	for i := range conns {
+	for i := range chainHeads {
 		if headEpochs[0] != headEpochs[i] {
 			return fmt.Errorf(
 				"received conflicting head epochs on node %d, expected %d, received %d",
@@ -239,4 +275,26 @@ func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientCo
 	}
 
 	return nil
+}
+
+func waitForAllMidEpoch(ctx context.Context, conns ...*grpc.ClientConn) error {
+	g, gctx := errgroup.WithContext(ctx)
+	for _, conn := range conns {
+		currConn := conn
+		g.Go(func() error {
+			return waitForMidEpoch(gctx, currConn)
+		})
+	}
+	return g.Wait()
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }

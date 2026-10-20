@@ -7,13 +7,14 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
 	b "github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition/interop"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/validators"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
@@ -58,9 +59,6 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	ctx, span := trace.StartSpan(ctx, "core.state.ExecuteStateTransitionNoVerifyAnySig")
 	defer span.End()
 	var err error
-
-	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
-	interop.WriteStateToDisk(st)
 
 	parentRoot := signed.Block().ParentRoot()
 	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
@@ -116,17 +114,32 @@ func CalculateStateRoot(
 	rollback state.BeaconState,
 	signed interfaces.ReadOnlySignedBeaconBlock,
 ) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
+	st, err := CalculatePostState(ctx, rollback, signed)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return st.HashTreeRoot(ctx)
+}
+
+// CalculatePostState returns the post-block state after processing the given
+// block on a copy of the input state. It is identical to CalculateStateRoot
+// but returns the full state instead of just its hash tree root.
+func CalculatePostState(
+	ctx context.Context,
+	rollback state.BeaconState,
+	signed interfaces.ReadOnlySignedBeaconBlock,
+) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.CalculatePostState")
 	defer span.End()
 	if ctx.Err() != nil {
 		tracing.AnnotateError(span, ctx.Err())
-		return [32]byte{}, ctx.Err()
+		return nil, ctx.Err()
 	}
 	if rollback == nil || rollback.IsNil() {
-		return [32]byte{}, errors.New("nil state")
+		return nil, errors.New("nil state")
 	}
 	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return [32]byte{}, errors.New("nil block")
+		return nil, errors.New("nil block")
 	}
 
 	// Copy state to avoid mutating the state reference.
@@ -137,22 +150,22 @@ func CalculateStateRoot(
 	parentRoot := signed.Block().ParentRoot()
 	state, err = ProcessSlotsUsingNextSlotCache(ctx, state, parentRoot[:], signed.Block().Slot())
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not process slots")
+		return nil, errors.Wrap(err, "could not process slots")
 	}
 
 	// Execute per block transition.
 	if features.Get().EnableProposerPreprocessing {
 		state, err = processBlockForProposing(ctx, state, signed)
 		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not process block for proposing")
+			return nil, errors.Wrap(err, "could not process block for proposing")
 		}
 	} else {
 		state, err = ProcessBlockForStateRoot(ctx, state, signed)
 		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not process block")
+			return nil, errors.Wrap(err, "could not process block")
 		}
 	}
-	return state.HashTreeRoot(ctx)
+	return state, nil
 }
 
 // processBlockVerifySigs processes the block and verifies the signatures within it. Block signatures are not verified as this block is not yet signed.
@@ -334,7 +347,8 @@ func ProcessBlockNoVerifyAnySig(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state state.BeaconState,
-	beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	beaconBlock interfaces.ReadOnlyBeaconBlock,
+	parentSlot primitives.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
 	if beaconBlock == nil || beaconBlock.IsNil() {
@@ -345,22 +359,37 @@ func ProcessOperationsNoVerifyAttsSigs(
 		return nil, errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	var err error
-	if beaconBlock.Version() == version.Phase0 {
-		state, err = phase0Operations(ctx, state, beaconBlock)
+	blockVersion := beaconBlock.Version()
+	if blockVersion >= version.Gloas {
+		state, err := gloasOperations(ctx, state, beaconBlock, parentSlot)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("gloas operations: %w", err)
 		}
-	} else if beaconBlock.Version() < version.Electra {
-		state, err = altairOperations(ctx, state, beaconBlock)
+
+		return state, nil
+	}
+
+	if blockVersion >= version.Electra {
+		state, err := electraOperations(ctx, state, beaconBlock)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("electra operations: %w", err)
 		}
-	} else {
-		state, err = electraOperations(ctx, state, beaconBlock)
+
+		return state, nil
+	}
+
+	if blockVersion > version.Phase0 {
+		state, err := altairOperations(ctx, state, beaconBlock)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("altair operations: %w", err)
 		}
+
+		return state, nil
+	}
+
+	state, err := phase0Operations(ctx, state, beaconBlock)
+	if err != nil {
+		return nil, fmt.Errorf("phase0 operations: %w", err)
 	}
 
 	return state, nil
@@ -392,6 +421,15 @@ func ProcessBlockForStateRoot(
 
 	blk := signed.Block()
 	body := blk.Body()
+
+	parentSlot := state.LatestBlockHeader().Slot
+
+	if state.Version() >= version.Gloas {
+		if err := gloas.ProcessParentExecutionPayload(ctx, state, blk); err != nil {
+			return nil, errors.Wrap(err, "could not process parent execution payload")
+		}
+	}
+
 	bodyRoot, err := body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root beacon block body")
@@ -403,23 +441,52 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block header")
 	}
 
-	enabled, err := b.IsExecutionEnabled(state, blk.Body())
-	if err != nil {
-		return nil, errors.Wrap(err, "could not check if execution is enabled")
-	}
-	if enabled {
-		executionData, err := blk.Body().Execution()
+	if state.Version() >= version.Gloas {
+		// <spec fn="process_block" fork="gloas" hash="c6ddaa45">
+		// def process_block(state: BeaconState, block: BeaconBlock) -> None:
+		//     # [New in Gloas:EIP7732]
+		//     parent_slot = state.latest_block_header.slot
+		//
+		//     # [New in Gloas:EIP7732]
+		//     process_parent_execution_payload(state, block)
+		//     process_block_header(state, block)
+		//     # [Modified in Gloas:EIP7732]
+		//     process_withdrawals(state)
+		//     # [Modified in Gloas:EIP7732]
+		//     # Removed `process_execution_payload`
+		//     # [New in Gloas:EIP7732]
+		//     process_execution_payload_bid(state, block.body.signed_execution_payload_bid)
+		//     process_randao(state, block.body)
+		//     process_eth1_data(state, block.body)
+		//     # [Modified in Gloas:EIP7732]
+		//     process_operations(state, block.body, parent_slot)
+		//     process_sync_aggregate(state, block.body.sync_aggregate)
+		// </spec>
+		if err := gloas.ProcessWithdrawals(state); err != nil {
+			return nil, errors.Wrap(ErrProcessWithdrawalsFailed, err.Error())
+		}
+		if err := gloas.ProcessExecutionPayloadBid(state, blk); err != nil {
+			return nil, errors.Wrap(err, "could not process execution payload bid")
+		}
+	} else {
+		enabled, err := b.IsExecutionEnabled(state, blk.Body())
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not check if execution is enabled")
 		}
-		if state.Version() >= version.Capella {
-			state, err = b.ProcessWithdrawals(state, executionData)
+		if enabled {
+			executionData, err := blk.Body().Execution()
 			if err != nil {
-				return nil, errors.Wrap(ErrProcessWithdrawalsFailed, err.Error())
+				return nil, err
 			}
-		}
-		if err = b.ProcessPayload(state, blk.Body()); err != nil {
-			return nil, errors.Wrap(err, "could not process execution data")
+			if state.Version() >= version.Capella {
+				state, err = b.ProcessWithdrawals(state, executionData)
+				if err != nil {
+					return nil, errors.Wrap(ErrProcessWithdrawalsFailed, err.Error())
+				}
+			}
+			if err = b.ProcessPayload(state, blk.Body()); err != nil {
+				return nil, errors.Wrap(err, "could not process execution data")
+			}
 		}
 	}
 
@@ -436,7 +503,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(ErrProcessEth1DataFailed, err.Error())
 	}
 
-	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block())
+	state, err = ProcessOperationsNoVerifyAttsSigs(ctx, state, signed.Block(), parentSlot)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
@@ -460,6 +527,9 @@ func ProcessBlockForStateRoot(
 
 // This calls altair block operations.
 func altairOperations(ctx context.Context, st state.BeaconState, beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.altairOperations")
+	defer span.End()
+
 	var err error
 
 	hasSlashings := len(beaconBlock.Body().ProposerSlashings()) > 0 || len(beaconBlock.Body().AttesterSlashings()) > 0
@@ -469,7 +539,7 @@ func altairOperations(ctx context.Context, st state.BeaconState, beaconBlock int
 	if hasSlashings || hasExits {
 		// ExitInformation is expensive to compute, only do it if we need it.
 		exitInfo = validators.ExitInformation(st)
-		if err := helpers.UpdateTotalActiveBalanceCache(st, exitInfo.TotalActiveBalance); err != nil {
+		if err := helpers.UpdateTotalActiveBalanceCache(ctx, st, exitInfo.TotalActiveBalance); err != nil {
 			return nil, errors.Wrap(err, "could not update total active balance cache")
 		}
 	}
@@ -501,6 +571,9 @@ func altairOperations(ctx context.Context, st state.BeaconState, beaconBlock int
 
 // This calls phase 0 block operations.
 func phase0Operations(ctx context.Context, st state.BeaconState, beaconBlock interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "core.state.phase0Operations")
+	defer span.End()
+
 	var err error
 	hasSlashings := len(beaconBlock.Body().ProposerSlashings()) > 0 || len(beaconBlock.Body().AttesterSlashings()) > 0
 	hasExits := len(beaconBlock.Body().VoluntaryExits()) > 0
@@ -508,7 +581,7 @@ func phase0Operations(ctx context.Context, st state.BeaconState, beaconBlock int
 	if hasSlashings || hasExits {
 		// ExitInformation is expensive to compute, only do it if we need it.
 		exitInfo = validators.ExitInformation(st)
-		if err := helpers.UpdateTotalActiveBalanceCache(st, exitInfo.TotalActiveBalance); err != nil {
+		if err := helpers.UpdateTotalActiveBalanceCache(ctx, st, exitInfo.TotalActiveBalance); err != nil {
 			return nil, errors.Wrap(err, "could not update total active balance cache")
 		}
 	}

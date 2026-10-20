@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v7/async/abool"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
 	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
@@ -40,6 +41,39 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func TestService_StopDuringPeerWait(t *testing.T) {
+	mc, p2p, _ := initializeTestServices(t, nil, nil)
+	resetFlags := *flags.Get()
+	withPeers := resetFlags
+	withPeers.MinimumSyncPeers = 1
+	flags.Init(&withPeers)
+	t.Cleanup(func() { flags.Init(&resetFlags) })
+
+	synctest.Test(t, func(t *testing.T) {
+		s := NewService(t.Context(), &Config{Chain: mc, P2P: p2p})
+		defer s.cancel()
+		done := make(chan error, 1)
+		go func() {
+			_, err := s.waitForMinimumPeers()
+			done <- err
+		}()
+		synctest.Wait()
+		select {
+		case err := <-done:
+			t.Fatalf("peer wait returned before shutdown: %v", err)
+		default:
+		}
+		require.NoError(t, s.Stop())
+		synctest.Wait()
+		select {
+		case err := <-done:
+			require.ErrorIs(t, err, context.Canceled)
+		default:
+			t.Fatal("peer wait did not return on shutdown")
+		}
+	})
+}
 
 func TestService_Constants(t *testing.T) {
 	if params.BeaconConfig().MaxPeersToSync*flags.Get().BlockBatchLimit > 1000 {
@@ -201,6 +235,102 @@ func TestService_InitStartStop(t *testing.T) {
 	}
 }
 
+func useMinimalInitialSyncConfig(t *testing.T) {
+	t.Helper()
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MinimalSpecConfig().Copy()
+	params.OverrideBeaconConfig(cfg)
+
+	prev := *flags.Get()
+	next := prev
+	next.MinimumSyncPeers = 1
+	if next.BlockBatchLimit == 0 {
+		next.BlockBatchLimit = 64
+	}
+	if next.BlockBatchLimitBurstFactor == 0 {
+		next.BlockBatchLimitBurstFactor = 10
+	}
+	flags.Init(&next)
+	t.Cleanup(func() {
+		prevCopy := prev
+		flags.Init(&prevCopy)
+	})
+}
+
+func newClockAtSlot(slot primitives.Slot) (*startup.Clock, time.Time) {
+	genesisTime := time.Unix(1_700_000_000, 0)
+	var validatorsRoot [32]byte
+	return startup.NewClock(genesisTime, validatorsRoot, startup.WithSlotAsNow(slot)), genesisTime
+}
+
+// TestService_Start_DoesNotMarkSyncedWhenStillBehindInSameEpoch verifies startup does not skip sync when head and current slot share an epoch but differ by slots.
+func TestService_Start_DoesNotMarkSyncedWhenStillBehindInSameEpoch(t *testing.T) {
+	useMinimalInitialSyncConfig(t)
+
+	headSlot := primitives.Slot(88)
+	currentSlot := primitives.Slot(95)
+
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(headSlot))
+
+	clock, genesisTime := newClockAtSlot(currentSlot)
+	gs := startup.NewClockSynchronizer()
+	require.NoError(t, gs.SetClock(clock))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	initialSyncComplete := make(chan struct{})
+	mc := &mock.ChainService{
+		State: st,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+		Genesis:        genesisTime,
+		ValidatorsRoot: [32]byte{},
+	}
+
+	s := NewService(ctx, &Config{
+		P2P:                 p2ptest.NewTestP2P(t),
+		Chain:               mc,
+		ClockWaiter:         gs,
+		StateNotifier:       &mock.MockStateNotifier{},
+		InitialSyncComplete: initialSyncComplete,
+	})
+	s.verifierWaiter = verification.NewInitializerWaiter(gs, nil, nil, nil)
+	s.blobRetentionChecker = func(primitives.Slot) bool { return true }
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		s.Start()
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+
+	select {
+	case <-done:
+		t.Fatal("initial sync exited early while the node was still seven slots behind in the current epoch")
+	default:
+	}
+	require.Equal(t, true, s.Syncing(), "service should still be syncing while behind in the current epoch")
+	require.Equal(t, false, s.Synced(), "service should not report synced while behind in the current epoch")
+	select {
+	case <-initialSyncComplete:
+		t.Fatal("service closed InitialSyncComplete while still behind in the current epoch")
+	default:
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(6 * time.Second):
+		t.Fatal("initial sync did not stop after context cancellation")
+	}
+}
+
 func TestService_waitForStateInitialization(t *testing.T) {
 	hook := logTest.NewGlobal()
 	newService := func(ctx context.Context, mc *mock.ChainService) (*Service, *startup.ClockSynchronizer) {
@@ -210,8 +340,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			cfg:                  &Config{Chain: mc, StateNotifier: mc.StateNotifier(), ClockWaiter: cs, InitialSyncComplete: make(chan struct{})},
 			ctx:                  ctx,
 			cancel:               cancel,
-			synced:               abool.New(),
-			chainStarted:         abool.New(),
+			synced:               &atomic.Bool{},
+			chainStarted:         &atomic.Bool{},
 			counter:              ratecounter.NewRateCounter(counterSeconds * time.Second),
 			genesisChan:          make(chan time.Time),
 			blobRetentionChecker: func(primitives.Slot) bool { return true },
@@ -220,7 +350,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		syWait := func() (das.SyncNeeds, error) {
 			clock, err := cs.WaitForClock(ctx)
 			require.NoError(t, err)
-			return das.NewSyncNeeds(clock.CurrentSlot, nil, primitives.Epoch(0))
+			return das.NewSyncNeeds(clock.CurrentSlot, nil, nil, primitives.Epoch(0))
 		}
 		s.cfg.SyncNeedsWaiter = syWait
 		return s, cs
@@ -320,11 +450,11 @@ func TestService_markSynced(t *testing.T) {
 		InitialSyncComplete: make(chan struct{}),
 	})
 	require.NotNil(t, s)
-	assert.Equal(t, false, s.chainStarted.IsSet())
-	assert.Equal(t, false, s.synced.IsSet())
+	assert.Equal(t, false, s.chainStarted.Load())
+	assert.Equal(t, false, s.synced.Load())
 	assert.Equal(t, true, s.Syncing())
 	assert.NoError(t, s.Status())
-	s.chainStarted.Set()
+	s.chainStarted.Store(true)
 	assert.ErrorContains(t, "syncing", s.Status())
 
 	go func() {
@@ -425,17 +555,17 @@ func TestService_Initialized(t *testing.T) {
 	s := NewService(t.Context(), &Config{
 		StateNotifier: &mock.MockStateNotifier{},
 	})
-	s.chainStarted.Set()
+	s.chainStarted.Store(true)
 	assert.Equal(t, true, s.Initialized())
-	s.chainStarted.UnSet()
+	s.chainStarted.Store(false)
 	assert.Equal(t, false, s.Initialized())
 }
 
 func TestService_Synced(t *testing.T) {
 	s := NewService(t.Context(), &Config{})
-	s.synced.UnSet()
+	s.synced.Store(false)
 	assert.Equal(t, false, s.Synced())
-	s.synced.Set()
+	s.synced.Store(true)
 	assert.Equal(t, true, s.Synced())
 }
 
@@ -540,7 +670,7 @@ func TestFetchOriginSidecars(t *testing.T) {
 
 	genesisValidatorRoot := [fieldparams.RootLength]byte{}
 
-	t.Run("out of retention period", func(t *testing.T) {
+	t.Run("Fulu origin outside retention skips sidecar prefetch", func(t *testing.T) {
 		// Create an origin block.
 		block := util.NewBeaconBlockFulu()
 		signedBlock, err := blocks.NewSignedBeaconBlock(block)
@@ -572,7 +702,7 @@ func TestFetchOriginSidecars(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("no commitments", func(t *testing.T) {
+	t.Run("Fulu origin without commitments skips sidecar prefetch", func(t *testing.T) {
 		// Create an origin block.
 		block := util.NewBeaconBlockFulu()
 		signedBlock, err := blocks.NewSignedBeaconBlock(block)
@@ -605,7 +735,37 @@ func TestFetchOriginSidecars(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("nominal", func(t *testing.T) {
+	t.Run("Gloas origin with commitments skips sidecar prefetch", func(t *testing.T) {
+		// The bid commits to blobs, but the payload may never have been revealed.
+		block := util.NewBeaconBlockGloas()
+		block.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = [][]byte{make([]byte, fieldparams.KzgCommitmentSize)}
+		signedBlock, err := blocks.NewSignedBeaconBlock(block)
+		require.NoError(t, err)
+		roBlock, err := blocks.NewROBlock(signedBlock)
+		require.NoError(t, err)
+
+		db := dbtest.SetupDB(t)
+		err = db.SaveOriginCheckpointBlockRoot(ctx, roBlock.Root())
+		require.NoError(t, err)
+		err = db.SaveBlock(ctx, roBlock)
+		require.NoError(t, err)
+
+		// Within the DA period. No P2P or column storage is wired, so any fetch attempt would fail.
+		nowWrtGenesisSecs := retentionEpochs.Mul(secondsPerEpoch)
+		now := genesisTime.Add(time.Duration(nowWrtGenesisSecs) * time.Second)
+		nower := func() time.Time { return now }
+		clock := startup.NewClock(genesisTime, genesisValidatorRoot, startup.WithNower(nower))
+
+		service := &Service{
+			cfg:   &Config{DB: db},
+			clock: clock,
+		}
+
+		require.Equal(t, true, params.WithinDAPeriod(slots.ToEpoch(roBlock.Block().Slot()), clock.CurrentEpoch()))
+		require.NoError(t, service.fetchOriginSidecars(nil))
+	})
+
+	t.Run("Fulu origin within retention saves required columns", func(t *testing.T) {
 		samplesPerSlot := params.BeaconConfig().SamplesPerSlot
 
 		// Start the trusted setup.
@@ -641,7 +801,7 @@ func TestFetchOriginSidecars(t *testing.T) {
 		// Save all sidecars except what we need.
 		toSave := make([]blocks.VerifiedRODataColumn, 0, uint64(len(verifiedRoSidecars))-samplingSize)
 		for _, sidecar := range verifiedRoSidecars {
-			if !info.CustodyColumns[sidecar.Index] {
+			if !info.CustodyColumns[sidecar.Index()] {
 				toSave = append(toSave, sidecar)
 			}
 		}
@@ -816,7 +976,7 @@ func TestFetchOriginColumns(t *testing.T) {
 			assert.DeepEqual(t, expectedRequests[attempt], actualRequest)
 
 			for _, column := range toRespondByAttempt[attempt] {
-				err = prysmSync.WriteDataColumnSidecarChunk(stream, clock, other.Encoding(), verifiedRoSidecars[column].DataColumnSidecar)
+				err = prysmSync.WriteDataColumnSidecarChunk(stream, clock, other.Encoding(), verifiedRoSidecars[column].RODataColumn)
 				assert.NoError(t, err)
 			}
 

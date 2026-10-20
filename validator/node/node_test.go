@@ -6,10 +6,15 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/OffchainLabs/prysm/v7/cmd"
 	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/io/file"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
@@ -18,6 +23,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/validator/db/kv"
 	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
 	remoteweb3signer "github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer"
+	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -85,25 +91,16 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 	nonExistingWalletDir := t.TempDir()
 
 	testCases := []struct {
-		name                      string
-		isInteropNumValidatorsSet bool
-		isWeb3SignerURLFlagSet    bool
-		dataDir                   string
-		dataFile                  string
-		walletDir                 string
-		validatorClient           *ValidatorClient
-		wallet                    *wallet.Wallet
-		expectedDataDir           string
-		expectedDataFile          string
+		name                   string
+		isWeb3SignerURLFlagSet bool
+		dataDir                string
+		dataFile               string
+		walletDir              string
+		validatorClient        *ValidatorClient
+		wallet                 *wallet.Wallet
+		expectedDataDir        string
+		expectedDataFile       string
 	}{
-		{
-			name:                      "interop num validators set",
-			isInteropNumValidatorsSet: true,
-			dataDir:                   dataDir,
-			dataFile:                  dataFile,
-			expectedDataDir:           dataDir,
-			expectedDataFile:          dataFile,
-		},
 		{
 			name:             "dataDir differs from default",
 			dataDir:          dataDir,
@@ -153,12 +150,8 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 			dataDir:                cmd.DefaultDataDir(),
 			dataFile:               nonExistingDataFile,
 			walletDir:              nonExistingWalletDir,
-			wallet: wallet.New(&wallet.Config{
-				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Derived,
-			}),
-			expectedDataDir:  cmd.DefaultDataDir(),
-			expectedDataFile: nonExistingDataFile,
+			expectedDataDir:        cmd.DefaultDataDir(),
+			expectedDataFile:       nonExistingDataFile,
 		},
 		{
 			name:                   "web3signer url is set and legacy data file does exist",
@@ -166,12 +159,8 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 			dataDir:                cmd.DefaultDataDir(),
 			dataFile:               nonExistingDataFile,
 			walletDir:              walletDir,
-			wallet: wallet.New(&wallet.Config{
-				WalletDir:      walletDir,
-				KeymanagerKind: keymanager.Derived,
-			}),
-			expectedDataDir:  walletDir,
-			expectedDataFile: path.Join(walletDir, kv.ProtectionDbFileName),
+			expectedDataDir:        walletDir,
+			expectedDataFile:       path.Join(walletDir, kv.ProtectionDbFileName),
 		},
 	}
 
@@ -179,7 +168,6 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validatorClient := &ValidatorClient{wallet: tt.wallet}
 			actualDataDir, actualDataFile, err := validatorClient.getLegacyDatabaseLocation(
-				tt.isInteropNumValidatorsSet,
 				tt.isWeb3SignerURLFlagSet,
 				tt.dataDir,
 				tt.dataFile,
@@ -210,10 +198,14 @@ func TestClearDB(t *testing.T) {
 
 // TestWeb3SignerConfig tests the web3 signer config returns the correct values.
 func TestWeb3SignerConfig(t *testing.T) {
+	existingKeyFile := filepath.Join(t.TempDir(), "keyfile.txt")
+	require.NoError(t, file.WriteFile(existingKeyFile, []byte("0x800077e04f8d7496099b3d30ac5430aea64873a45e5bcfe004d2095babcbf55e21138ff0d5691abc29da190aa32755c6\n")))
+
 	type args struct {
 		baseURL          string
 		publicKeysOrURLs []string
 		persistentFile   string
+		pollInterval     time.Duration
 	}
 	tests := []struct {
 		name       string
@@ -252,6 +244,19 @@ func TestWeb3SignerConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "happy path with external url and poll interval",
+			args: &args{
+				baseURL:          "http://localhost:8545",
+				publicKeysOrURLs: []string{"http://localhost:8545/api/v1/eth2/publicKeys"},
+				pollInterval:     5 * time.Minute,
+			},
+			want: &remoteweb3signer.SetupConfig{
+				BaseEndpoint:  "http://localhost:8545",
+				PublicKeysURL: "http://localhost:8545/api/v1/eth2/publicKeys",
+				PollInterval:  5 * time.Minute,
+			},
+		},
+		{
 			name: "Bad base URL",
 			args: &args{
 				baseURL: "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88,",
@@ -259,7 +264,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 					"0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b"},
 			},
 			want:       nil,
-			wantErrMsg: "web3signer url 0xa99a76ed7796f7be22d5b7e85deeb7c5677e88, is invalid: parse \"0xa99a76ed7796f7be22d5b7e85deeb7c5677e88,\": invalid URI for request",
+			wantErrMsg: "web3signer url 0xa99a76ed7796f7be22d5b7e85deeb7c5677e88, is invalid: invalid URL: parse \"0xa99a76ed7796f7be22d5b7e85deeb7c5677e88,\": invalid URI for request",
 		},
 		{
 			name: "Base URL missing scheme or host",
@@ -268,18 +273,35 @@ func TestWeb3SignerConfig(t *testing.T) {
 				publicKeysOrURLs: []string{"localhost"},
 			},
 			want:       nil,
-			wantErrMsg: "web3signer url must be in the format of http(s)://host:port url used: localhost:8545",
+			wantErrMsg: "web3signer url localhost:8545 is invalid: missing scheme or host",
 		},
 		{
 			name: "happy path with persistentFile",
 			args: &args{
 				baseURL:        "http://localhost:8545",
-				persistentFile: "/remote/key/file.txt",
+				persistentFile: existingKeyFile,
 			},
 			want: &remoteweb3signer.SetupConfig{
 				BaseEndpoint: "http://localhost:8545",
-				KeyFilePath:  "/remote/key/file.txt",
+				KeyFilePath:  existingKeyFile,
 			},
+		},
+		{
+			name: "key file does not exist",
+			args: &args{
+				baseURL:        "http://localhost:8545",
+				persistentFile: "/remote/key/file.txt",
+			},
+			want:       nil,
+			wantErrMsg: "no file exists in remote signer key file path /remote/key/file.txt",
+		},
+		{
+			name: "no public keys or key file provided",
+			args: &args{
+				baseURL: "http://localhost:8545",
+			},
+			want:       nil,
+			wantErrMsg: "no web3signer public keys or key file path provided",
 		},
 	}
 	for _, tt := range tests {
@@ -299,6 +321,10 @@ func TestWeb3SignerConfig(t *testing.T) {
 			}
 			if tt.args.persistentFile != "" {
 				require.NoError(t, set.Set(flags.Web3SignerKeyFileFlag.Name, tt.args.persistentFile))
+			}
+			set.Duration(flags.Web3SignerKeyPollIntervalFlag.Name, 0, "")
+			if tt.args.pollInterval != 0 {
+				require.NoError(t, set.Set(flags.Web3SignerKeyPollIntervalFlag.Name, tt.args.pollInterval.String()))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
 			got, err := Web3SignerConfig(cliCtx)
@@ -323,4 +349,192 @@ func Test_parseBeaconApiHeaders(t *testing.T) {
 		assert.Equal(t, 1, len(h))
 		assert.DeepEqual(t, []string{"value1"}, h["key1"])
 	})
+}
+
+func TestStatelessMode(t *testing.T) {
+	const (
+		restSingle = "http://host1:3500"
+		restMulti  = "http://host1:3500,http://host2:3500"
+		grpcSingle = "host1:4000"
+		grpcMulti  = "host1:4000,host2:4000"
+	)
+	enableLog := "Multiple beacon nodes configured"
+	overrideLog := "Ignoring"
+
+	tests := []struct {
+		name          string
+		restEndpoints string
+		grpcEndpoints string
+		setStateless  string
+		wantLogSubstr string
+		gloasEpoch    primitives.Epoch
+		wantLogLevel  logrus.Level
+		restApi       bool
+		want          bool
+	}{
+		{
+			name:          "single rest host stays off",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restSingle,
+			want:          false,
+		},
+		{
+			name:          "multiple rest hosts force stateless on",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restMulti,
+			want:          true,
+			wantLogSubstr: enableLog,
+			wantLogLevel:  logrus.InfoLevel,
+		},
+		{
+			name:          "rest provider flag alone selects rest",
+			restApi:       false,
+			gloasEpoch:    100,
+			restEndpoints: restMulti,
+			want:          true,
+			wantLogSubstr: enableLog,
+			wantLogLevel:  logrus.InfoLevel,
+		},
+		{
+			name:          "rest selection ignores grpc hosts",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restSingle,
+			grpcEndpoints: grpcMulti,
+			want:          false,
+		},
+		{
+			name:          "explicit false is overridden with a warning",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restMulti,
+			setStateless:  "false",
+			want:          true,
+			wantLogSubstr: overrideLog,
+			wantLogLevel:  logrus.WarnLevel,
+		},
+		{
+			name:          "explicit true stays on",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restSingle,
+			setStateless:  "true",
+			want:          true,
+		},
+		{
+			name:          "explicit true with multiple hosts stays on silently",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restMulti,
+			setStateless:  "true",
+			want:          true,
+		},
+		{
+			name:          "gloas not scheduled stays off silently",
+			restApi:       true,
+			gloasEpoch:    params.BeaconConfig().FarFutureEpoch,
+			restEndpoints: restMulti,
+			want:          false,
+		},
+		{
+			name:          "multiple grpc hosts force stateless on",
+			restApi:       false,
+			gloasEpoch:    100,
+			grpcEndpoints: grpcMulti,
+			want:          true,
+			wantLogSubstr: enableLog,
+			wantLogLevel:  logrus.InfoLevel,
+		},
+		{
+			name:          "single grpc host stays off",
+			restApi:       false,
+			gloasEpoch:    100,
+			grpcEndpoints: grpcSingle,
+			want:          false,
+		},
+		{
+			name:          "trailing comma is not a second host",
+			restApi:       true,
+			gloasEpoch:    100,
+			restEndpoints: restSingle + ",",
+			want:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.GloasForkEpoch = tt.gloasEpoch
+			params.OverrideBeaconConfig(cfg)
+
+			resetCfg := features.InitWithReset(&features.Flags{EnableBeaconRESTApi: tt.restApi})
+			defer resetCfg()
+
+			hook := logtest.NewGlobal()
+			app := cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			set.String(flags.BeaconRESTApiProviderFlag.Name, "", "")
+			set.String(flags.BeaconRPCProviderFlag.Name, "", "")
+			set.Bool(flags.EnableStatelessFlag.Name, false, "")
+			if tt.restEndpoints != "" {
+				require.NoError(t, set.Set(flags.BeaconRESTApiProviderFlag.Name, tt.restEndpoints))
+			}
+			if tt.grpcEndpoints != "" {
+				require.NoError(t, set.Set(flags.BeaconRPCProviderFlag.Name, tt.grpcEndpoints))
+			}
+			if tt.setStateless != "" {
+				require.NoError(t, set.Set(flags.EnableStatelessFlag.Name, tt.setStateless))
+			}
+			cliCtx := cli.NewContext(&app, set, nil)
+
+			assert.Equal(t, tt.want, statelessMode(cliCtx))
+			if tt.wantLogSubstr == "" {
+				require.LogsDoNotContain(t, hook, enableLog)
+				require.LogsDoNotContain(t, hook, overrideLog)
+				return
+			}
+			require.LogsContain(t, hook, tt.wantLogSubstr)
+			for _, entry := range hook.AllEntries() {
+				if strings.Contains(entry.Message, tt.wantLogSubstr) {
+					assert.Equal(t, tt.wantLogLevel, entry.Level)
+				}
+			}
+		})
+	}
+}
+
+func TestRegisterValidatorService_DistributedFlag(t *testing.T) {
+	tests := []struct {
+		name                string
+		enableBeaconRESTApi bool
+		wantErrMsg          string
+	}{
+		{
+			name:                "fails when distributed is true but REST API is false",
+			enableBeaconRESTApi: false,
+			wantErrMsg:          "--distributed requires --enable-beacon-rest-api",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetCfg := features.InitWithReset(&features.Flags{EnableBeaconRESTApi: tt.enableBeaconRESTApi})
+			defer resetCfg()
+
+			app := cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			set.Bool(flags.EnableDistributed.Name, false, "")
+			require.NoError(t, set.Set(flags.EnableDistributed.Name, "true"))
+			cliCtx := cli.NewContext(&app, set, nil)
+
+			c := &ValidatorClient{}
+			err := c.registerValidatorService(cliCtx)
+
+			require.NotNil(t, err)
+			require.ErrorContains(t, tt.wantErrMsg, err)
+		})
+	}
 }
