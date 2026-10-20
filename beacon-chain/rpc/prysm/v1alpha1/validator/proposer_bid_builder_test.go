@@ -843,7 +843,6 @@ func TestSetExecutionPayloadBid_PrefersBuilderBid(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -855,8 +854,10 @@ func TestSetExecutionPayloadBid_PrefersBuilderBid(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceBuilderAPI, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.Equal(t, primitives.BuilderIndex(7), signedBid.Message.BuilderIndex)
 	require.Equal(t, primitives.Gwei(1000), signedBid.Message.Value)
 }

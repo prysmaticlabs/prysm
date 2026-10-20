@@ -73,8 +73,10 @@ func TestSetSelfBuildExecutionPayloadBid(t *testing.T) {
 	require.Equal(t, bidSourceSelfBuild, src)
 
 	// Verify the signed bid was set on the block.
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.NotNil(t, signedBid)
 	require.NotNil(t, signedBid.Message)
 
@@ -140,8 +142,10 @@ func TestSetSelfBuildExecutionPayloadBid_BlobCommitments(t *testing.T) {
 	_, err = vs.setExecutionPayloadBid(t.Context(), sBlk, nil, local, nil, nil, true)
 	require.NoError(t, err)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.NotNil(t, signedBid.Message)
 
 	// Verify blob KZG commitments are set on the bid (not empty).
@@ -218,7 +222,6 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -232,8 +235,10 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceP2P, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.NotNil(t, signedBid)
 
 	// Should use the P2P bid, not the self-build bid.
@@ -293,7 +298,6 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	})
@@ -307,8 +311,10 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.Equal(t, params.BeaconConfig().BuilderIndexSelfBuild, signedBid.Message.BuilderIndex)
 }
 
@@ -363,7 +369,6 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -377,8 +382,10 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.NotNil(t, signedBid)
 
 	// Local value is higher, so self-build should be used.
@@ -437,7 +444,6 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}
@@ -451,8 +457,10 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.NotNil(t, signedBid)
 
 	// selfBuildOnly forces self-build even when P2P bid is higher.
@@ -503,8 +511,10 @@ func TestSetExecutionPayloadBid_FallsBackToSelfBuildWhenNoCachedBid(t *testing.T
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.NotNil(t, signedBid)
 
 	// Should fall back to self-build.

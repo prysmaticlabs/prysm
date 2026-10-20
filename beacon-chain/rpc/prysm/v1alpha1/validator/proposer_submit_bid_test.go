@@ -36,7 +36,6 @@ func testSignedBid(slot primitives.Slot, parentRoot [32]byte) *ethpb.SignedExecu
 			Slot:                  slot,
 			Value:                 100,
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	}

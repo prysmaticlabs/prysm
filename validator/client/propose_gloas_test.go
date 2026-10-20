@@ -109,7 +109,9 @@ func TestProposeSelfBuildEnvelope_MissingBid(t *testing.T) {
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	err = validator.proposeSelfBuildEnvelope(t.Context(), 1, pubKey, signedBlock)
-	require.ErrorContains(t, "no execution payload bid found in block body", err)
+	// The RO bid getter rejects the nil bid before the nil check in
+	// proposeSelfBuildEnvelope is reached.
+	require.ErrorContains(t, "attempted to wrap nil object", err)
 }
 
 func TestProposeSelfBuildEnvelope_ClientError(t *testing.T) {

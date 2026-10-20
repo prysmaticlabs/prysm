@@ -316,7 +316,7 @@ func TestBeaconBlock(t *testing.T) {
 				heze, ok := got.GetBlock().(*eth.GenericBeaconBlock_Heze)
 				require.Equal(t, true, ok)
 				require.Equal(t, hezeBlock, heze.Heze)
-				cachedEnv, blobs, proofs := vc.envelopeCache.Peek(slot)
+				cachedEnv, blobs, proofs := vc.envelopeCache.PeekHeze(slot)
 				require.NotNil(t, cachedEnv)
 				require.Equal(t, slot, cachedEnv.Payload.SlotNumber)
 				require.Equal(t, 1, len(blobs))

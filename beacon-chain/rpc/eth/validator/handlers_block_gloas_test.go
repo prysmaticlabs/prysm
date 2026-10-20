@@ -58,6 +58,7 @@ func testEnvelope() *eth.ExecutionPayloadEnvelope {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          0,
+		BeaconBlockRoot:       make([]byte, 32),
 		ParentBeaconBlockRoot: make([]byte, 32),
 	}
 }

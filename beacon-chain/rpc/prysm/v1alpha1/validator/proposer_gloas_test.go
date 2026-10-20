@@ -62,7 +62,6 @@ func TestSetRemoteBidFallback(t *testing.T) {
 				PrevRandao:            make([]byte, 32),
 				BlobKzgCommitments:    [][]byte{},
 				ExecutionRequestsRoot: make([]byte, 32),
-				PayloadChunksRoot:     make([]byte, 32),
 			},
 			Signature: make([]byte, 96),
 		}
@@ -105,8 +104,10 @@ func TestSetRemoteBidFallback(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.wantSrc, src)
-			signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+			roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 			require.NoError(t, err)
+			signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+			require.Equal(t, true, ok)
 			require.NotNil(t, signedBid)
 			require.Equal(t, tt.wantIdx, signedBid.Message.BuilderIndex)
 		})
@@ -161,7 +162,6 @@ func TestSetRemoteBidFallback_GloasForkBoundary(t *testing.T) {
 			PrevRandao:            make([]byte, 32),
 			BlobKzgCommitments:    [][]byte{},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
 	})
@@ -171,8 +171,10 @@ func TestSetRemoteBidFallback_GloasForkBoundary(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceP2P, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
+	roBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
+	signedBid, ok := roBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+	require.Equal(t, true, ok)
 	require.Equal(t, primitives.BuilderIndex(7), signedBid.Message.BuilderIndex)
 }
 
@@ -208,12 +210,13 @@ func TestGloasPayloadValue(t *testing.T) {
 
 func TestBundleBlockContents(t *testing.T) {
 	envelope := &ethpb.ExecutionPayloadEnvelope{BuilderIndex: 1}
+	envelopeHeze := &ethpb.ExecutionPayloadEnvelopeHeze{BuilderIndex: 1}
 	proofs, blobs := [][]byte{{1}}, [][]byte{{2}}
 
 	t.Run("gloas", func(t *testing.T) {
 		block := util.NewBeaconBlockGloas().Block
 		blk := &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: block}}
-		require.NoError(t, bundleBlockContents(blk, envelope, proofs, blobs))
+		require.NoError(t, bundleBlockContents(blk, envelope, nil, proofs, blobs))
 		got := blk.GetGloasContents()
 		require.NotNil(t, got)
 		require.Equal(t, block, got.Block)
@@ -224,16 +227,21 @@ func TestBundleBlockContents(t *testing.T) {
 	t.Run("heze", func(t *testing.T) {
 		block := util.NewBeaconBlockHeze().Block
 		blk := &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: block}}
-		require.NoError(t, bundleBlockContents(blk, envelope, proofs, blobs))
+		require.NoError(t, bundleBlockContents(blk, nil, envelopeHeze, proofs, blobs))
 		got := blk.GetHezeContents()
 		require.NotNil(t, got)
 		require.Equal(t, block, got.Block)
-		require.Equal(t, envelope, got.ExecutionPayloadEnvelope)
+		require.Equal(t, envelopeHeze, got.ExecutionPayloadEnvelope)
 		require.DeepEqual(t, proofs, got.KzgProofs)
 		require.DeepEqual(t, blobs, got.Blobs)
 	})
+	t.Run("heze without heze envelope errors", func(t *testing.T) {
+		block := util.NewBeaconBlockHeze().Block
+		blk := &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: block}}
+		require.ErrorContains(t, "no Heze envelope to bundle", bundleBlockContents(blk, envelope, nil, proofs, blobs))
+	})
 	t.Run("unexpected block type", func(t *testing.T) {
 		blk := &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Fulu{}}
-		require.ErrorContains(t, "unexpected block type", bundleBlockContents(blk, envelope, proofs, blobs))
+		require.ErrorContains(t, "unexpected block type", bundleBlockContents(blk, envelope, envelopeHeze, proofs, blobs))
 	})
 }
