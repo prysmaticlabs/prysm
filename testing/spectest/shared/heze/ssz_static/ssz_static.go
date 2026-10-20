@@ -22,11 +22,14 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 
 	switch folderName {
 	// Heze types still match Gloas, so skip the types that the Heze EIPs change.
-	case "ExecutionPayloadBid", "SignedExecutionPayloadBid",
-		"BeaconBlock", "BeaconBlockBody", "BeaconState", "SignedBeaconBlock":
-		t.Skip("Heze types match Gloas until the Heze EIPs are implemented")
+	case "BeaconBlock", "BeaconBlockBody", "BeaconState", "SignedBeaconBlock":
+		t.Skip("eth1 fields stay until EIP-8015")
 
 	// Heze specific types
+	case "ExecutionPayloadBid":
+		obj = &ethpb.ExecutionPayloadBidHeze{}
+	case "SignedExecutionPayloadBid":
+		obj = &ethpb.SignedExecutionPayloadBidHeze{}
 	case "InclusionList":
 		obj = &ethpb.InclusionList{}
 	case "SignedInclusionList":

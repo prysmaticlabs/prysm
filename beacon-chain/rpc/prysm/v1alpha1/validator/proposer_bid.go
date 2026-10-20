@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/builder"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
@@ -26,6 +27,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/io/logs"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -67,7 +69,8 @@ func (vs *Server) setExecutionPayloadBid(
 		return bidSourceSelfBuild, errors.New("local execution payload is nil")
 	}
 
-	if !selfBuildOnly {
+	// Remote bids are Gloas-shaped and signed over the Gloas root, so a Heze block can only self-build.
+	if !selfBuildOnly && sBlk.Version() < version.Heze {
 		p2pBid := vs.cachedP2PBid(sBlk, local)
 		if bestBid, src, effective := bestBid(head, local, p2pBid, builderWin, builderConfig); bestBid != nil {
 			ro, err := consensusblocks.WrappedROSignedExecutionPayloadBid(bestBid)
@@ -94,11 +97,33 @@ func (vs *Server) setExecutionPayloadBid(
 	}
 
 	// Per spec, self-build bids must use G2 point-at-infinity as the signature.
-	signedBid := &ethpb.SignedExecutionPayloadBid{
-		Message:   bid,
-		Signature: common.InfiniteSignature[:],
+	var ro interfaces.ROSignedExecutionPayloadBid
+	if sBlk.Version() >= version.Heze {
+		// For now, use empty inclusion list bits until the proposer inclusion list handling lands.
+		ro, err = consensusblocks.WrappedROSignedExecutionPayloadBidHeze(&ethpb.SignedExecutionPayloadBidHeze{
+			Message: &ethpb.ExecutionPayloadBidHeze{
+				ParentBlockHash:       bid.ParentBlockHash,
+				ParentBlockRoot:       bid.ParentBlockRoot,
+				BlockHash:             bid.BlockHash,
+				PrevRandao:            bid.PrevRandao,
+				FeeRecipient:          bid.FeeRecipient,
+				GasLimit:              bid.GasLimit,
+				BuilderIndex:          bid.BuilderIndex,
+				Slot:                  bid.Slot,
+				Value:                 bid.Value,
+				ExecutionPayment:      bid.ExecutionPayment,
+				BlobKzgCommitments:    bid.BlobKzgCommitments,
+				ExecutionRequestsRoot: bid.ExecutionRequestsRoot,
+				InclusionListBits:     bitfield.NewBitvector16(),
+			},
+			Signature: common.InfiniteSignature[:],
+		})
+	} else {
+		ro, err = consensusblocks.WrappedROSignedExecutionPayloadBid(&ethpb.SignedExecutionPayloadBid{
+			Message:   bid,
+			Signature: common.InfiniteSignature[:],
+		})
 	}
-	ro, err := consensusblocks.WrappedROSignedExecutionPayloadBid(signedBid)
 	if err != nil {
 		return bidSourceSelfBuild, errors.Wrap(err, "could not wrap signed execution payload bid")
 	}
@@ -533,6 +558,9 @@ func (vs *Server) setRemoteBidFallback(
 	builderWin *winningBuilderBid,
 	builderConfig *ethpb.BuilderConfig,
 ) (bidSource, error) {
+	if sBlk.Version() >= version.Heze {
+		return bidSourceSelfBuild, errors.New("remote bids are not supported for Heze blocks")
+	}
 	slot := sBlk.Block().Slot()
 	var p2pBid *ethpb.SignedExecutionPayloadBid
 	if vs.HighestBidCache != nil {

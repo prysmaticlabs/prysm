@@ -861,7 +861,7 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 		pendingPartialWithdrawals:     st.PendingPartialWithdrawals,
 		pendingConsolidations:         st.PendingConsolidations,
 		proposerLookahead:             proposerLookahead,
-		latestExecutionPayloadBid:     st.LatestExecutionPayloadBid,
+		latestExecutionPayloadBidHeze: st.LatestExecutionPayloadBid,
 		builders:                      st.Builders,
 		nextWithdrawalBuilderIndex:    st.NextWithdrawalBuilderIndex,
 		executionPayloadAvailability:  st.ExecutionPayloadAvailability,
@@ -1005,6 +1005,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella.Copy(),
 		latestExecutionPayloadHeaderDeneb:   b.latestExecutionPayloadHeaderDeneb.Copy(),
 		latestExecutionPayloadBid:           b.latestExecutionPayloadBid.Copy(),
+		latestExecutionPayloadBidHeze:       b.latestExecutionPayloadBidHeze.Copy(),
 		nextWithdrawalBuilderIndex:          b.nextWithdrawalBuilderIndex,
 		executionPayloadAvailability:        b.executionPayloadAvailabilityVal(),
 		builderPendingPayments:              b.builderPendingPaymentsVal(),
@@ -1523,13 +1524,14 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		return stateutil.ProposerLookaheadRoot(b.proposerLookahead)
 	case types.LatestExecutionPayloadBid:
 		return b.latestExecutionPayloadBid.HashTreeRoot()
+	case types.LatestExecutionPayloadBidHeze:
+		return b.latestExecutionPayloadBidHeze.HashTreeRoot()
 	case types.Builders:
 		return stateutil.BuildersRoot(b.version, b.builders)
 	case types.NextWithdrawalBuilderIndex:
 		return ssz.Uint64Root(uint64(b.nextWithdrawalBuilderIndex)), nil
 	case types.ExecutionPayloadAvailability:
 		return stateutil.ExecutionPayloadAvailabilityRoot(b.executionPayloadAvailability)
-
 	case types.BuilderPendingPayments:
 		return stateutil.BuilderPendingPaymentsRoot(b.builderPendingPayments)
 	case types.BuilderPendingWithdrawals:
