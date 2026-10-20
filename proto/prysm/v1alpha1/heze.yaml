@@ -26,4 +26,6 @@ types:
       Builders:                   {type: "ProgressiveList"}
       BuilderPendingWithdrawals:  {type: "ProgressiveList"}
       PayloadExpectedWithdrawals: {type: "ProgressiveList"}
+  - name: "InclusionList"
   - name: "SignedBeaconBlockHeze"
+  - name: "SignedInclusionList"

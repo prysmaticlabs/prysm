@@ -2328,6 +2328,130 @@ func (c *BeaconStateHeze) ProgressiveHashTreeRootWith(hh *ssz.Hasher) (err error
 	return nil
 }
 
+func (c *InclusionList) SizeSSZ() int {
+	size := 52
+	if c.Transactions == nil {
+		c.Transactions = new(v1.ProgressiveTransactionList)
+	}
+	size += c.Transactions.SizeSSZ()
+	return size
+}
+
+func (c *InclusionList) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, c.SizeSSZ())
+	return c.MarshalSSZTo(buf[:0])
+}
+
+func (c *InclusionList) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := 52
+
+	// Field 0: Slot
+	if dst, err = c.Slot.MarshalSSZTo(dst); err != nil {
+		return nil, fmt.Errorf("Slot: %w", err)
+	}
+
+	// Field 1: ValidatorIndex
+	if dst, err = c.ValidatorIndex.MarshalSSZTo(dst); err != nil {
+		return nil, fmt.Errorf("ValidatorIndex: %w", err)
+	}
+
+	// Field 2: DependentRoot
+	if len(c.DependentRoot) != 32 {
+		return nil, ssz.ErrBytesLength
+	}
+	dst = append(dst, c.DependentRoot...)
+
+	// Field 3: Transactions
+	if c.Transactions == nil {
+		c.Transactions = new(v1.ProgressiveTransactionList)
+	}
+	dst = ssz.WriteOffset(dst, offset)
+	offset += c.Transactions.SizeSSZ()
+
+	// Field 3: Transactions
+	if dst, err = c.Transactions.MarshalSSZTo(dst); err != nil {
+		return nil, fmt.Errorf("Transactions: %w", err)
+	}
+	return dst, err
+}
+
+func (c *InclusionList) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 52 {
+		return ssz.ErrSize
+	}
+
+	sszSlice0 := buf[0:8]   // c.Slot
+	sszSlice1 := buf[8:16]  // c.ValidatorIndex
+	sszSlice2 := buf[16:48] // c.DependentRoot
+
+	sszVarOffset3 := ssz.ReadOffset(buf[48:52]) // c.Transactions
+	if sszVarOffset3 != 52 {
+		return ssz.ErrInvalidVariableOffset
+	}
+	if sszVarOffset3 > size {
+		return ssz.ErrOffset
+	}
+	sszSlice3 := buf[sszVarOffset3:] // c.Transactions
+
+	// Field 0: Slot
+	if err = c.Slot.UnmarshalSSZ(sszSlice0); err != nil {
+		return fmt.Errorf("Slot: %w", err)
+	}
+
+	// Field 1: ValidatorIndex
+	if err = c.ValidatorIndex.UnmarshalSSZ(sszSlice1); err != nil {
+		return fmt.Errorf("ValidatorIndex: %w", err)
+	}
+
+	// Field 2: DependentRoot
+	c.DependentRoot = make([]byte, 0, 32)
+	c.DependentRoot = append(c.DependentRoot, sszSlice2...)
+
+	// Field 3: Transactions
+	c.Transactions = new(v1.ProgressiveTransactionList)
+	if err = c.Transactions.UnmarshalSSZ(sszSlice3); err != nil {
+		return fmt.Errorf("Transactions: %w", err)
+	}
+	return err
+}
+
+func (c *InclusionList) HashTreeRoot() ([32]byte, error) {
+	hh := ssz.DefaultHasherPool.Get()
+	if err := c.HashTreeRootWith(hh); err != nil {
+		ssz.DefaultHasherPool.Put(hh)
+		return [32]byte{}, err
+	}
+	root, err := hh.HashRoot()
+	ssz.DefaultHasherPool.Put(hh)
+	return root, err
+}
+
+func (c *InclusionList) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+	// Field 0: Slot
+	if err := c.Slot.HashTreeRootWith(hh); err != nil {
+		return fmt.Errorf("Slot: %w", err)
+	}
+	// Field 1: ValidatorIndex
+	if err := c.ValidatorIndex.HashTreeRootWith(hh); err != nil {
+		return fmt.Errorf("ValidatorIndex: %w", err)
+	}
+	// Field 2: DependentRoot
+	if len(c.DependentRoot) != 32 {
+		return ssz.ErrBytesLength
+	}
+	hh.PutBytes(c.DependentRoot)
+	// Field 3: Transactions
+	if err := c.Transactions.HashTreeRootWith(hh); err != nil {
+		return fmt.Errorf("Transactions: %w", err)
+	}
+	hh.Merkleize(indx)
+	return nil
+}
+
 func (c *SignedBeaconBlockHeze) SizeSSZ() int {
 	size := 100
 	if c.Block == nil {
@@ -2412,6 +2536,100 @@ func (c *SignedBeaconBlockHeze) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field 0: Block
 	if err := c.Block.HashTreeRootWith(hh); err != nil {
 		return fmt.Errorf("Block: %w", err)
+	}
+	// Field 1: Signature
+	if len(c.Signature) != 96 {
+		return ssz.ErrBytesLength
+	}
+	hh.PutBytes(c.Signature)
+	hh.Merkleize(indx)
+	return nil
+}
+
+func (c *SignedInclusionList) SizeSSZ() int {
+	size := 100
+	if c.Message == nil {
+		c.Message = new(InclusionList)
+	}
+	size += c.Message.SizeSSZ()
+	return size
+}
+
+func (c *SignedInclusionList) MarshalSSZ() ([]byte, error) {
+	buf := make([]byte, c.SizeSSZ())
+	return c.MarshalSSZTo(buf[:0])
+}
+
+func (c *SignedInclusionList) MarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := 100
+
+	// Field 0: Message
+	if c.Message == nil {
+		c.Message = new(InclusionList)
+	}
+	dst = ssz.WriteOffset(dst, offset)
+	offset += c.Message.SizeSSZ()
+
+	// Field 1: Signature
+	if len(c.Signature) != 96 {
+		return nil, ssz.ErrBytesLength
+	}
+	dst = append(dst, c.Signature...)
+
+	// Field 0: Message
+	if dst, err = c.Message.MarshalSSZTo(dst); err != nil {
+		return nil, fmt.Errorf("Message: %w", err)
+	}
+	return dst, err
+}
+
+func (c *SignedInclusionList) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size < 100 {
+		return ssz.ErrSize
+	}
+
+	sszSlice1 := buf[4:100] // c.Signature
+
+	sszVarOffset0 := ssz.ReadOffset(buf[0:4]) // c.Message
+	if sszVarOffset0 != 100 {
+		return ssz.ErrInvalidVariableOffset
+	}
+	if sszVarOffset0 > size {
+		return ssz.ErrOffset
+	}
+	sszSlice0 := buf[sszVarOffset0:] // c.Message
+
+	// Field 0: Message
+	c.Message = new(InclusionList)
+	if err = c.Message.UnmarshalSSZ(sszSlice0); err != nil {
+		return fmt.Errorf("Message: %w", err)
+	}
+
+	// Field 1: Signature
+	c.Signature = make([]byte, 0, 96)
+	c.Signature = append(c.Signature, sszSlice1...)
+	return err
+}
+
+func (c *SignedInclusionList) HashTreeRoot() ([32]byte, error) {
+	hh := ssz.DefaultHasherPool.Get()
+	if err := c.HashTreeRootWith(hh); err != nil {
+		ssz.DefaultHasherPool.Put(hh)
+		return [32]byte{}, err
+	}
+	root, err := hh.HashRoot()
+	ssz.DefaultHasherPool.Put(hh)
+	return root, err
+}
+
+func (c *SignedInclusionList) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+	// Field 0: Message
+	if err := c.Message.HashTreeRootWith(hh); err != nil {
+		return fmt.Errorf("Message: %w", err)
 	}
 	// Field 1: Signature
 	if len(c.Signature) != 96 {

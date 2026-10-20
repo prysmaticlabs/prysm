@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ethereum.eth.v1alpha1;
 
+import "proto/engine/v1/execution_engine.proto";
 import "proto/engine/v1/gloas.proto";
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
@@ -17,6 +18,40 @@ option go_package = "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1;eth";
 // This file implements the Heze fork of the Ethereum consensus specification
 // Reference:
 // https://github.com/ethereum/consensus-specs/blob/master/specs/heze/beacon-chain.md
+
+// InclusionList is the list of transactions that an inclusion list committee
+// member requests for the next payload.
+//
+// Spec:
+// class InclusionList(Container):
+//     slot: Slot
+//     validator_index: ValidatorIndex
+//     dependent_root: Root
+//     transactions: Transactions
+message InclusionList {
+  uint64 slot = 1 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  uint64 validator_index = 2
+      [ (ethereum.eth.ext.cast_type) =
+            "github.com/OffchainLabs/prysm/v7/consensus-types/"
+            "primitives.ValidatorIndex" ];
+  bytes dependent_root = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  ethereum.engine.v1.ProgressiveTransactionList transactions = 4;
+}
+
+// SignedInclusionList wraps an inclusion list with the committee member's
+// signature.
+//
+// Spec:
+// class SignedInclusionList(Container):
+//     message: InclusionList
+//     signature: BLSSignature
+message SignedInclusionList {
+  InclusionList message = 1;
+  bytes signature = 2 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}
 
 // BeaconBlockHeze represents a beacon block in the Heze fork.
 message BeaconBlockHeze {
