@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 
 	lruwrpr "github.com/OffchainLabs/prysm/v7/cache/lru"
@@ -107,7 +108,11 @@ func (c *CommitteeCache) CompressCommitteeCache() {
 func (c *CommitteeCache) Committee(ctx context.Context, slot primitives.Slot, seed [32]byte, index primitives.CommitteeIndex) ([]primitives.ValidatorIndex, error) {
 	_, span := trace.StartSpan(ctx, "committeeCache.Committee")
 	defer span.End()
-	span.SetAttributes(trace.Int64Attribute("slot", int64(slot)), trace.Int64Attribute("index", int64(index))) // lint:ignore uintcast -- OK for tracing.
+
+	// Values that do not fit in an int64 are not traced.
+	if slot <= math.MaxInt64 && index <= math.MaxInt64 {
+		span.SetAttributes(trace.Int64Attribute("slot", int64(slot)), trace.Int64Attribute("index", int64(index))) // lint:ignore uintcast -- Bounds checked above.
+	}
 
 	obj, exists := c.CommitteeCache.Get(key(seed))
 	span.SetAttributes(trace.BoolAttribute("cache_hit", exists))

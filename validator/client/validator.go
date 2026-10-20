@@ -330,6 +330,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
+	if chainStartRes.GenesisTime > math.MaxInt64 {
+		return errors.Errorf("genesis time %d is out of range", chainStartRes.GenesisTime)
+	}
+
 	v.genesisTimeLock.Lock()
 	v.genesisTime = time.Unix(int64(chainStartRes.GenesisTime), 0)
 	v.genesisTimeLock.Unlock()
