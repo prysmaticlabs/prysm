@@ -1465,6 +1465,17 @@ func (s *Server) GetPTCDuties(w http.ResponseWriter, r *http.Request) {
 	if requestedEpoch == nextEpoch {
 		epochForState = currentEpoch
 	}
+	// The fork epoch PTC comes from initialize_ptc_window, which needs the post-upgrade state.
+	if requestedEpoch == params.BeaconConfig().GloasForkEpoch && currentEpoch < requestedEpoch {
+		forkStart, err := slots.StartTime(s.TimeFetcher.GenesisTime(), slots.UnsafeEpochStart(requestedEpoch))
+		if err != nil || time.Until(forkStart) > params.BeaconConfig().MaximumGossipClockDisparityDuration() {
+			httputil.HandleError(w,
+				fmt.Sprintf("PTC duties for the Gloas fork epoch %d are not available until the fork", requestedEpoch),
+				http.StatusBadRequest)
+			return
+		}
+		epochForState = requestedEpoch
+	}
 	st, err := s.Stater.StateByEpoch(ctx, epochForState)
 	if err != nil {
 		shared.WriteStateFetchError(w, err)

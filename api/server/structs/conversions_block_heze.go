@@ -140,6 +140,15 @@ func (b *BeaconBlockBodyHeze) ToConsensus() (*eth.BeaconBlockBodyHeze, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
+	if b.Eth1Data == nil {
+		return nil, server.NewDecodeError(errNilValue, "Eth1Data")
+	}
+	if b.SyncAggregate == nil {
+		return nil, server.NewDecodeError(errNilValue, "SyncAggregate")
+	}
+	if b.SignedExecutionPayloadBid == nil {
+		return nil, server.NewDecodeError(errNilValue, "SignedExecutionPayloadBid")
+	}
 
 	randaoReveal, err := bytesutil.DecodeHexWithLength(b.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
