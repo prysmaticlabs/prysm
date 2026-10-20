@@ -512,30 +512,22 @@ func (s *Service) fetchAndQueuePayloadEnvelopesForRoots(
 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
-	// EIP-8411: envelopes no longer carry beacon_block_root, so a multi-root
-	// response cannot be attributed when the peer skips missing entries. This
-	// is a cold recovery path; request one root at a time so the binding is
-	// unambiguous.
-	for _, root := range envelopeRoots {
-		singleRoot := p2ptypes.ExecutionPayloadEnvelopesByRootReq{root}
-		envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, pid, s.ctxMap, &singleRoot)
-		if err != nil {
-			log.WithError(err).Debug("Could not request execution payload envelope by root")
-			return
-		}
-		if len(envelopes) == 0 {
-			continue
-		}
-		env := envelopes[0]
+	envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, pid, s.ctxMap, &envelopeRoots)
+	if err != nil {
+		log.WithError(err).Debug("Could not request execution payload envelopes by root")
+		return
+	}
+
+	for _, env := range envelopes {
 		if env == nil || env.Message == nil {
 			continue
 		}
-		s.queuePendingPayloadEnvelopeFromRootRequest(env, root)
+		s.queuePendingPayloadEnvelopeFromRootRequest(env)
 	}
 }
 
 // Signature is not verified here, processing revalidates fully and the slot bound plus caps bound memory.
-func (s *Service) queuePendingPayloadEnvelopeFromRootRequest(signedEnvelope *ethpb.SignedExecutionPayloadEnvelope, root [32]byte) {
+func (s *Service) queuePendingPayloadEnvelopeFromRootRequest(signedEnvelope *ethpb.SignedExecutionPayloadEnvelope) {
 	if signedEnvelope == nil || signedEnvelope.Message == nil || signedEnvelope.Message.Payload == nil {
 		return
 	}
@@ -546,6 +538,7 @@ func (s *Service) queuePendingPayloadEnvelopeFromRootRequest(signedEnvelope *eth
 		return
 	}
 
+	root := bytesutil.ToBytes32(signedEnvelope.Message.BeaconBlockRoot)
 	builderIdx := uint64(signedEnvelope.Message.BuilderIndex)
 
 	s.pendingEnvelopeLock.Lock()

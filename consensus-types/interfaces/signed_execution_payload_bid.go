@@ -3,9 +3,12 @@ package interfaces
 import (
 	field_params "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"google.golang.org/protobuf/proto"
 )
 
 type ROSignedExecutionPayloadBid interface {
+	Proto() proto.Message
+	HashTreeRoot() ([32]byte, error)
 	Bid() (ROExecutionPayloadBid, error)
 	Signature() [field_params.BLSSignatureLength]byte
 	SigningRoot([]byte) ([32]byte, error)

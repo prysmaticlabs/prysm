@@ -45,7 +45,24 @@ func TestUpgradeToHeze(t *testing.T) {
 		require.DeepEqual(t, preProto.LatestBlockHash, got.LatestBlockHash)
 		require.DeepEqual(t, preProto.PtcWindow, got.PtcWindow)
 
-		require.DeepEqual(t, preProto.LatestExecutionPayloadBid, got.LatestExecutionPayloadBid)
+		// The bid is lifted into the Heze container with a zeroed EIP-8411 chunk
+		// commitment: the pre-fork payload was distributed as a single envelope.
+		preBid := preProto.LatestExecutionPayloadBid
+		require.DeepEqual(t, &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       preBid.ParentBlockHash,
+			ParentBlockRoot:       preBid.ParentBlockRoot,
+			BlockHash:             preBid.BlockHash,
+			PrevRandao:            preBid.PrevRandao,
+			FeeRecipient:          preBid.FeeRecipient,
+			GasLimit:              preBid.GasLimit,
+			BuilderIndex:          preBid.BuilderIndex,
+			Slot:                  preBid.Slot,
+			Value:                 preBid.Value,
+			ExecutionPayment:      preBid.ExecutionPayment,
+			BlobKzgCommitments:    preBid.BlobKzgCommitments,
+			ExecutionRequestsRoot: preBid.ExecutionRequestsRoot,
+			PayloadChunksRoot:     make([]byte, 32),
+		}, got.LatestExecutionPayloadBid)
 
 		// The upgraded state must hash like the generated SSZ of the same Heze state.
 		wantRoot, err := got.HashTreeRoot()

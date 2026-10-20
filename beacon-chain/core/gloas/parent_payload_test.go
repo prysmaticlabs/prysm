@@ -76,7 +76,6 @@ func TestApplyParentExecutionPayload_SettlesPaymentBeforeBuilderExit(t *testing.
 			FeeRecipient:          addr,
 			Value:                 10,
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 	})
 	require.NoError(t, err)

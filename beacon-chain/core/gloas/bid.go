@@ -7,7 +7,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/params"
-	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls/common"
@@ -75,14 +74,9 @@ import (
 //	    state.latest_execution_payload_bid = bid
 //	</spec>
 func ProcessExecutionPayloadBid(st state.BeaconState, block interfaces.ReadOnlyBeaconBlock) error {
-	signedBid, err := block.Body().SignedExecutionPayloadBid()
+	wrappedBid, err := block.Body().SignedExecutionPayloadBid()
 	if err != nil {
 		return errors.Wrap(err, "failed to get signed execution payload bid")
-	}
-
-	wrappedBid, err := blocks.WrappedROSignedExecutionPayloadBid(signedBid)
-	if err != nil {
-		return errors.Wrap(err, "failed to wrap signed bid")
 	}
 
 	bid, err := wrappedBid.Bid()

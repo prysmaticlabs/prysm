@@ -92,7 +92,7 @@ func (c *beaconApiValidatorClient) beaconBlockV4(ctx context.Context, slot primi
 	var (
 		decodedData     []byte
 		decodedBlock    *ethpb.GenericBeaconBlock
-		decodedContents blockContents
+		decodedContents *blockContents
 	)
 	decode := func(data []byte, header http.Header) (*ethpb.GenericBeaconBlock, error) {
 		block, contents, err := decodeBlockV4Response(data, header, queryUrl)
@@ -119,8 +119,13 @@ func (c *beaconApiValidatorClient) beaconBlockV4(ctx context.Context, slot primi
 	}
 
 	// Cache the envelope only for the winning response.
-	if c.stateless && contents != nil && contents.GetExecutionPayloadEnvelope() != nil {
-		c.envelopeCache.Add(slot, contents.GetExecutionPayloadEnvelope(), contents.GetBlobs(), contents.GetKzgProofs())
+	if c.stateless && contents != nil {
+		if contents.envelope != nil {
+			c.envelopeCache.Add(slot, contents.envelope, contents.blobs, contents.kzgProofs)
+		}
+		if contents.envelopeHeze != nil {
+			c.envelopeCache.AddHeze(slot, contents.envelopeHeze, contents.blobs, contents.kzgProofs)
+		}
 	}
 
 	return block, nil
@@ -157,14 +162,16 @@ func decodeBlockV3Response(data []byte, header http.Header, queryUrl string) (*e
 }
 
 // blockContents is the payload data that a payload-included V4 response carries with the block.
-type blockContents interface {
-	GetExecutionPayloadEnvelope() *ethpb.ExecutionPayloadEnvelope
-	GetBlobs() [][]byte
-	GetKzgProofs() [][]byte
+// Exactly one envelope arm is set, matching the block's fork.
+type blockContents struct {
+	envelope     *ethpb.ExecutionPayloadEnvelope
+	envelopeHeze *ethpb.ExecutionPayloadEnvelopeHeze
+	blobs        [][]byte
+	kzgProofs    [][]byte
 }
 
 // decodeBlockV4Response turns a raw V4 response into a generic block.
-func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*ethpb.GenericBeaconBlock, blockContents, error) {
+func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*ethpb.GenericBeaconBlock, *blockContents, error) {
 	payloadIncluded := header.Get(api.ExecutionPayloadIncludedHeader) == "true"
 	isSSZ := strings.Contains(header.Get("Content-Type"), api.OctetStreamMediaType)
 
@@ -178,7 +185,7 @@ func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*e
 
 	var (
 		blk      *ethpb.GenericBeaconBlock
-		contents blockContents
+		contents *blockContents
 		err      error
 	)
 	switch header.Get(api.VersionHeader) {
@@ -196,14 +203,15 @@ func decodeBlockV4Response(data []byte, header http.Header, queryUrl string) (*e
 }
 
 // decodeGloasBlockV4Response decodes a Gloas block, and its contents when the payload is included, from a v4 response.
-func decodeGloasBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, blockContents, error) {
+func decodeGloasBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, *blockContents, error) {
 	if isSSZ {
 		if payloadIncluded {
 			contents := &ethpb.BeaconBlockContentsGloas{}
 			if err := contents.UnmarshalSSZ(data); err != nil {
 				return nil, nil, fmt.Errorf("contents unmarshal SSZ: %w", err)
 			}
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: contents.Block}}, contents, nil
+			bc := &blockContents{envelope: contents.ExecutionPayloadEnvelope, blobs: contents.Blobs, kzgProofs: contents.KzgProofs}
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: contents.Block}}, bc, nil
 		}
 		block := &ethpb.BeaconBlockGloas{}
 		if err := block.UnmarshalSSZ(data); err != nil {
@@ -227,14 +235,15 @@ func decodeGloasBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethp
 }
 
 // decodeHezeBlockV4Response decodes a Heze block, and its contents when the payload is included, from a v4 response.
-func decodeHezeBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, blockContents, error) {
+func decodeHezeBlockV4Response(data []byte, isSSZ, payloadIncluded bool) (*ethpb.GenericBeaconBlock, *blockContents, error) {
 	if isSSZ {
 		if payloadIncluded {
 			contents := &ethpb.BeaconBlockContentsHeze{}
 			if err := contents.UnmarshalSSZ(data); err != nil {
 				return nil, nil, fmt.Errorf("contents unmarshal SSZ: %w", err)
 			}
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: contents.Block}}, contents, nil
+			bc := &blockContents{envelopeHeze: contents.ExecutionPayloadEnvelope, blobs: contents.Blobs, kzgProofs: contents.KzgProofs}
+			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: contents.Block}}, bc, nil
 		}
 		block := &ethpb.BeaconBlockHeze{}
 		if err := block.UnmarshalSSZ(data); err != nil {

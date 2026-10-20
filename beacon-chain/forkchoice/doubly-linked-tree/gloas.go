@@ -9,7 +9,6 @@ import (
 	"github.com/OffchainLabs/go-bitfield"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
-	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	forkchoice2 "github.com/OffchainLabs/prysm/v7/consensus-types/forkchoice"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
@@ -42,13 +41,9 @@ func (f *ForkChoice) CanonicalNodeAtSlot(slot primitives.Slot) ([32]byte, bool) 
 }
 
 func (s *Store) resolveParentPayloadStatus(block interfaces.ReadOnlyBeaconBlock) (*PayloadNode, [32]byte, primitives.BuilderIndex, error) {
-	sb, err := block.Body().SignedExecutionPayloadBid()
+	wb, err := block.Body().SignedExecutionPayloadBid()
 	if err != nil {
 		return nil, [32]byte{}, 0, err
-	}
-	wb, err := blocks.WrappedROSignedExecutionPayloadBid(sb)
-	if err != nil {
-		return nil, [32]byte{}, 0, errors.Wrap(err, "failed to wrap signed bid")
 	}
 	bid, err := wb.Bid()
 	if err != nil {

@@ -224,7 +224,6 @@ func gloasGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execu
 			FeeRecipient:          make([]byte, 20),
 			BlobKzgCommitments:    make([][]byte, 0),
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		}
 	}
 	return &ethpb.BeaconBlockGloas{
@@ -255,20 +254,36 @@ func gloasGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.Execu
 	}
 }
 
-// hezeGenesisBlock is gloasGenesisBlock for a Heze state.
-func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.ExecutionPayloadBid) *ethpb.BeaconBlockHeze {
-	g := gloasGenesisBlock(root, latestBid)
+// hezeGenesisBlock is gloasGenesisBlock for a Heze state (EIP-8411 bid container).
+func hezeGenesisBlock(root [fieldparams.RootLength]byte, latestBid *ethpb.ExecutionPayloadBidHeze) *ethpb.BeaconBlockHeze {
+	bidMessage := latestBid.Copy()
+	if bidMessage == nil {
+		bidMessage = &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       make([]byte, 32),
+			ParentBlockRoot:       make([]byte, 32),
+			BlockHash:             make([]byte, 32),
+			PrevRandao:            make([]byte, 32),
+			FeeRecipient:          make([]byte, 20),
+			BlobKzgCommitments:    make([][]byte, 0),
+			ExecutionRequestsRoot: make([]byte, 32),
+			PayloadChunksRoot:     make([]byte, 32),
+		}
+	}
+	g := gloasGenesisBlock(root, nil)
 	return &ethpb.BeaconBlockHeze{
 		ParentRoot: g.ParentRoot,
 		StateRoot:  g.StateRoot,
 		Body: &ethpb.BeaconBlockBodyHeze{
-			RandaoReveal:              g.Body.RandaoReveal,
-			Eth1Data:                  g.Body.Eth1Data,
-			Graffiti:                  g.Body.Graffiti,
-			SyncAggregate:             g.Body.SyncAggregate,
-			SignedExecutionPayloadBid: g.Body.SignedExecutionPayloadBid,
-			PayloadAttestations:       g.Body.PayloadAttestations,
-			ParentExecutionRequests:   g.Body.ParentExecutionRequests,
+			RandaoReveal:  g.Body.RandaoReveal,
+			Eth1Data:      g.Body.Eth1Data,
+			Graffiti:      g.Body.Graffiti,
+			SyncAggregate: g.Body.SyncAggregate,
+			SignedExecutionPayloadBid: &ethpb.SignedExecutionPayloadBidHeze{
+				Message:   bidMessage,
+				Signature: make([]byte, 96),
+			},
+			PayloadAttestations:     g.Body.PayloadAttestations,
+			ParentExecutionRequests: g.Body.ParentExecutionRequests,
 		},
 	}
 }

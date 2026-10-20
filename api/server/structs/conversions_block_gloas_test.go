@@ -28,26 +28,19 @@ func testEnvelopeProto() *eth.ExecutionPayloadEnvelope {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          7,
+		BeaconBlockRoot:       fillByteSlice(32, 0x33),
 		ParentBeaconBlockRoot: fillByteSlice(32, 0x44),
 	}
 }
 
-// testEnvelopeRoot is the out-of-band binding passed alongside the envelope.
-func testEnvelopeRoot() [32]byte {
-	var r [32]byte
-	copy(r[:], fillByteSlice(32, 0x33))
-	return r
-}
-
 func TestExecutionPayloadEnvelopeFromConsensus(t *testing.T) {
 	env := testEnvelopeProto()
-	root := testEnvelopeRoot()
-	result, err := ExecutionPayloadEnvelopeFromConsensus(env, root)
+	result, err := ExecutionPayloadEnvelopeFromConsensus(env)
 	require.NoError(t, err)
 	require.NotNil(t, result.Payload)
 	require.Equal(t, hexutil.Encode(env.Payload.ParentHash), result.Payload.ParentHash)
 	require.Equal(t, "7", result.BuilderIndex)
-	require.Equal(t, hexutil.Encode(root[:]), result.BeaconBlockRoot)
+	require.Equal(t, hexutil.Encode(env.BeaconBlockRoot), result.BeaconBlockRoot)
 	require.Equal(t, hexutil.Encode(env.ParentBeaconBlockRoot), result.ParentBeaconBlockRoot)
 	require.Equal(t, "42", result.Payload.SlotNumber)
 	require.NotNil(t, result.ExecutionRequests)
@@ -56,7 +49,7 @@ func TestExecutionPayloadEnvelopeFromConsensus(t *testing.T) {
 func TestExecutionPayloadEnvelopeFromConsensus_NilRequests(t *testing.T) {
 	env := testEnvelopeProto()
 	env.ExecutionRequests = nil
-	result, err := ExecutionPayloadEnvelopeFromConsensus(env, testEnvelopeRoot())
+	result, err := ExecutionPayloadEnvelopeFromConsensus(env)
 	require.NoError(t, err)
 	require.Equal(t, (*ExecutionRequestsGloas)(nil), result.ExecutionRequests)
 }
@@ -72,8 +65,7 @@ func TestBlockContentsGloasFromConsensus(t *testing.T) {
 	require.NotNil(t, result.Block)
 	require.NotNil(t, result.Block.Body)
 	require.NotNil(t, result.ExecutionPayloadEnvelope)
-	// Block contents are produced before signing; the binding is a zero root.
-	require.Equal(t, hexutil.Encode(make([]byte, 32)), result.ExecutionPayloadEnvelope.BeaconBlockRoot)
+	require.Equal(t, hexutil.Encode(env.BeaconBlockRoot), result.ExecutionPayloadEnvelope.BeaconBlockRoot)
 	require.Equal(t, 1, len(result.KzgProofs))
 	require.Equal(t, hexutil.Encode(proofs[0]), result.KzgProofs[0])
 	require.Equal(t, 1, len(result.Blobs))

@@ -77,10 +77,14 @@ func (v *validator) proposeSelfBuildEnvelope(
 	if err != nil {
 		return err
 	}
-	if bid == nil || bid.Message == nil {
+	if bid == nil {
 		return errors.New("no execution payload bid found in block body")
 	}
-	if bid.Message.BuilderIndex != params.BeaconConfig().BuilderIndexSelfBuild {
+	bidMsg, err := bid.Bid()
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload bid")
+	}
+	if bidMsg.BuilderIndex() != params.BeaconConfig().BuilderIndexSelfBuild {
 		// only used for self build
 		return nil
 	}
@@ -102,7 +106,7 @@ func (v *validator) proposeSelfBuildEnvelope(
 		return errors.Wrap(err, "could not sign execution payload envelope")
 	}
 
-	if _, err := v.validatorClient.PublishExecutionPayloadEnvelope(ctx, signedEnvelope, blockRoot); err != nil {
+	if _, err := v.validatorClient.PublishExecutionPayloadEnvelope(ctx, signedEnvelope); err != nil {
 		validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("failed").Inc()
 		return errors.Wrap(err, "failed to publish execution payload envelope")
 	}

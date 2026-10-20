@@ -108,7 +108,26 @@ func (b *BeaconState) SetExecutionPayloadBid(h interfaces.ROExecutionPayloadBid)
 	blobKzgCommitments := h.BlobKzgCommitments()
 	feeRecipient := h.FeeRecipient()
 	executionRequestsRoot := h.ExecutionRequestsRoot()
-	payloadChunksRoot := h.PayloadChunksRoot()
+	if b.version >= version.Heze {
+		payloadChunksRoot := h.PayloadChunksRoot()
+		b.latestExecutionPayloadBidHeze = &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       parentBlockHash[:],
+			ParentBlockRoot:       parentBlockRoot[:],
+			BlockHash:             blockHash[:],
+			PrevRandao:            randao[:],
+			GasLimit:              h.GasLimit(),
+			BuilderIndex:          h.BuilderIndex(),
+			Slot:                  h.Slot(),
+			Value:                 h.Value(),
+			ExecutionPayment:      h.ExecutionPayment(),
+			BlobKzgCommitments:    blobKzgCommitments,
+			FeeRecipient:          feeRecipient[:],
+			ExecutionRequestsRoot: executionRequestsRoot[:],
+			PayloadChunksRoot:     payloadChunksRoot[:],
+		}
+		b.markFieldAsDirty(types.LatestExecutionPayloadBid)
+		return nil
+	}
 	b.latestExecutionPayloadBid = &ethpb.ExecutionPayloadBid{
 		ParentBlockHash:       parentBlockHash[:],
 		ParentBlockRoot:       parentBlockRoot[:],
@@ -122,7 +141,6 @@ func (b *BeaconState) SetExecutionPayloadBid(h interfaces.ROExecutionPayloadBid)
 		BlobKzgCommitments:    blobKzgCommitments,
 		FeeRecipient:          feeRecipient[:],
 		ExecutionRequestsRoot: executionRequestsRoot[:],
-		PayloadChunksRoot:     payloadChunksRoot[:],
 	}
 	b.markFieldAsDirty(types.LatestExecutionPayloadBid)
 
@@ -178,14 +196,26 @@ func (b *BeaconState) QueueBuilderPaymentForSlot(parentSlot primitives.Slot) err
 	if parentEpoch+1 == currentEpoch {
 		return b.queueBuilderPaymentAtIndex(parentSlot % slotsPerEpoch)
 	}
-	bid := b.latestExecutionPayloadBid
-	if bid == nil || bid.Value == 0 {
-		return nil
+	var feeRecipient []byte
+	var value primitives.Gwei
+	var builderIdx primitives.BuilderIndex
+	if b.version >= version.Heze {
+		bid := b.latestExecutionPayloadBidHeze
+		if bid == nil || bid.Value == 0 {
+			return nil
+		}
+		feeRecipient, value, builderIdx = bid.FeeRecipient, bid.Value, bid.BuilderIndex
+	} else {
+		bid := b.latestExecutionPayloadBid
+		if bid == nil || bid.Value == 0 {
+			return nil
+		}
+		feeRecipient, value, builderIdx = bid.FeeRecipient, bid.Value, bid.BuilderIndex
 	}
 	b.appendBuilderPendingWithdrawalsLockFree([]*ethpb.BuilderPendingWithdrawal{{
-		FeeRecipient: bytesutil.SafeCopyBytes(bid.FeeRecipient),
-		Amount:       bid.Value,
-		BuilderIndex: bid.BuilderIndex,
+		FeeRecipient: bytesutil.SafeCopyBytes(feeRecipient),
+		Amount:       value,
+		BuilderIndex: builderIdx,
 	}})
 	return nil
 }

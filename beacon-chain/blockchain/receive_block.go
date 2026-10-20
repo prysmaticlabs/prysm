@@ -438,16 +438,21 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 		if e == nil {
 			continue
 		}
-		protoEnv, ok := e.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
-		if !ok {
-			return errors.New("could not type assert signed envelope to proto")
-		}
-		envelope, err := e.Envelope()
-		if err != nil {
-			return errors.Wrap(err, "could not get envelope")
-		}
-		if err := s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv, envelope.BeaconBlockRoot()); err != nil {
-			return errors.Wrap(err, "could not save execution payload envelope")
+		switch protoEnv := e.Proto().(type) {
+		case *ethpb.SignedExecutionPayloadEnvelope:
+			if err := s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv); err != nil {
+				return errors.Wrap(err, "could not save execution payload envelope")
+			}
+		case *ethpb.SignedExecutionPayloadEnvelopeHeze:
+			envelope, err := e.Envelope()
+			if err != nil {
+				return errors.Wrap(err, "could not get envelope")
+			}
+			if err := s.cfg.BeaconDB.SaveExecutionPayloadEnvelopeHeze(ctx, protoEnv, envelope.BeaconBlockRoot()); err != nil {
+				return errors.Wrap(err, "could not save execution payload envelope")
+			}
+		default:
+			return errors.New("unknown signed execution payload envelope type")
 		}
 	}
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()

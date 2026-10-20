@@ -5,13 +5,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
-	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
@@ -202,14 +203,16 @@ func ExecutionPayloadEnvelopeSignatureBatch(
 	st state.BeaconState,
 	signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope,
 ) (*bls.SignatureBatch, error) {
-	// EIP-8411 prototype: signature-less envelopes authenticate against the
-	// bid's chunk commitment instead; nothing to batch when that holds.
-	if IsChunkAuthenticatedEnvelope(signedEnvelope) {
-		if err := verifyEnvelopeChunkCommitment(st, signedEnvelope); err != nil {
+	// EIP-8411 (Heze): a zero-signature envelope was reconstructed from
+	// proof-verified payload chunks and authenticates against the bid's chunk
+	// commitment; there is no BLS signature to defer.
+	if signedEnvelope.Version() >= version.Heze && heze.IsChunkAuthenticatedEnvelope(signedEnvelope) {
+		if err := heze.VerifyEnvelopeChunkCommitment(st, signedEnvelope); err != nil {
 			return nil, err
 		}
 		return bls.NewSet(), nil
 	}
+
 	envelope, err := signedEnvelope.Envelope()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get envelope: %w", err)
@@ -265,11 +268,13 @@ func ExecutionPayloadEnvelopeSignatureBatch(
 //	    return bls.Verify(pubkey, signing_root, signed_envelope.signature)
 //	</spec>
 func verifyExecutionPayloadEnvelopeSignature(st state.BeaconState, signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) error {
-	// EIP-8411 prototype: signature-less envelopes authenticate against the
-	// bid's chunk commitment instead of a BLS signature.
-	if IsChunkAuthenticatedEnvelope(signedEnvelope) {
-		return verifyEnvelopeChunkCommitment(st, signedEnvelope)
+	// EIP-8411 (Heze): a zero-signature envelope was reconstructed from
+	// proof-verified payload chunks and authenticates against the bid's chunk
+	// commitment instead of a BLS signature.
+	if signedEnvelope.Version() >= version.Heze && heze.IsChunkAuthenticatedEnvelope(signedEnvelope) {
+		return heze.VerifyEnvelopeChunkCommitment(st, signedEnvelope)
 	}
+
 	envelope, err := signedEnvelope.Envelope()
 	if err != nil {
 		return fmt.Errorf("failed to get envelope: %w", err)
@@ -307,42 +312,6 @@ func verifyExecutionPayloadEnvelopeSignature(st state.BeaconState, signedEnvelop
 		return fmt.Errorf("signature verification failed: %w", signing.ErrSigFailedToVerify)
 	}
 
-	return nil
-}
-
-// IsChunkAuthenticatedEnvelope reports whether the signed envelope carries the
-// all-zero sentinel signature used for envelopes distributed as EIP-8411
-// payload chunks. The sentinel is only a marker, never proof: verification
-// routes such envelopes through verifyEnvelopeChunkCommitment, so an untrusted
-// peer cannot bypass authentication by zeroing the signature bytes.
-func IsChunkAuthenticatedEnvelope(signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) bool {
-	return signedEnvelope.Signature() == [96]byte{}
-}
-
-// verifyEnvelopeChunkCommitment authenticates a signature-less envelope by
-// recomputing its EIP-8411 chunk commitment and comparing it against the
-// payload_chunks_root committed by the state's latest (signed) bid. Matching
-// bytes mean the envelope IS the committed chunk set, which is the same
-// authenticity the chunk inclusion proofs establish on gossip.
-func verifyEnvelopeChunkCommitment(st state.BeaconState, signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) error {
-	protoSigned, ok := signedEnvelope.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
-	if !ok || protoSigned.Message == nil {
-		return fmt.Errorf("could not type assert signed envelope to proto")
-	}
-	got, err := PayloadChunksRootForEnvelope(protoSigned.Message)
-	if err != nil {
-		return fmt.Errorf("could not compute payload chunks root: %w", err)
-	}
-	bid, err := st.LatestExecutionPayloadBid()
-	if err != nil {
-		return fmt.Errorf("could not get latest execution payload bid: %w", err)
-	}
-	if bid == nil {
-		return fmt.Errorf("nil latest execution payload bid")
-	}
-	if committed := bid.PayloadChunksRoot(); got != committed {
-		return fmt.Errorf("envelope chunk commitment %#x does not match bid payload_chunks_root %#x", got, committed)
-	}
 	return nil
 }
 

@@ -327,7 +327,6 @@ func upgradeToGloas(beaconState state.BeaconState) (state.BeaconState, error) {
 			BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
 			Slot:                  latestBlockHeader.Slot,
 			ExecutionRequestsRoot: emptyExecutionRequestsRoot[:],
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		NextWithdrawalIndex:           wi,
 		NextWithdrawalValidatorIndex:  vi,

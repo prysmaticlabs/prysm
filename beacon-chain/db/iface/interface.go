@@ -117,7 +117,10 @@ type NoHeadAccessDatabase interface {
 	SaveLightClientBootstrap(ctx context.Context, blockRoot []byte, bootstrap interfaces.LightClientBootstrap) error
 
 	// Execution payload envelope operations (Gloas+).
-	SaveExecutionPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) error
+	SaveExecutionPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedExecutionPayloadEnvelope) error
+	// SaveExecutionPayloadEnvelopeHeze persists a Heze envelope; the container carries no beacon
+	// block root (EIP-8411), so the binding is passed out of band.
+	SaveExecutionPayloadEnvelopeHeze(ctx context.Context, envelope *ethpb.SignedExecutionPayloadEnvelopeHeze, beaconBlockRoot [32]byte) error
 	DeleteExecutionPayloadEnvelope(ctx context.Context, blockRoot [32]byte) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error

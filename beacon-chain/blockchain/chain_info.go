@@ -464,15 +464,19 @@ func (s *Service) builtOnFullParentInForkchoice(blk interfaces.ReadOnlyBeaconBlo
 	if blk.Version() < version.Gloas {
 		return true
 	}
-	bid, err := blk.Body().SignedExecutionPayloadBid()
-	if err != nil || bid == nil || bid.Message == nil {
+	sbid, err := blk.Body().SignedExecutionPayloadBid()
+	if err != nil || sbid == nil {
+		return false
+	}
+	bid, err := sbid.Bid()
+	if err != nil {
 		return false
 	}
 	blockHash, err := s.cfg.ForkChoiceStore.BlockHash(blk.ParentRoot())
 	if err != nil {
 		return false
 	}
-	return [32]byte(bid.Message.ParentBlockHash) == blockHash
+	return bid.ParentBlockHash() == blockHash
 }
 
 // BuiltOnFullParent returns true if the block's bid builds on its parent's committed payload.

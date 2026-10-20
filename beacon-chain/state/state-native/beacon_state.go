@@ -72,16 +72,17 @@ type BeaconState struct {
 	proposerLookahead             []primitives.ValidatorIndex       // proposer_look_ahead: List[uint64, (MIN_LOOKAHEAD + 1)*SLOTS_PER_EPOCH]
 
 	// Gloas fields
-	latestExecutionPayloadBid    *ethpb.ExecutionPayloadBid
-	builders                     []*ethpb.Builder
-	builderIdxMap                map[[fieldparams.BLSPubkeyLength]byte]primitives.BuilderIndex
-	nextWithdrawalBuilderIndex   primitives.BuilderIndex
-	executionPayloadAvailability []byte
-	builderPendingPayments       []*ethpb.BuilderPendingPayment
-	builderPendingWithdrawals    []*ethpb.BuilderPendingWithdrawal
-	latestBlockHash              []byte
-	payloadExpectedWithdrawals   []*enginev1.Withdrawal
-	ptcWindow                    []*ethpb.PTCs
+	latestExecutionPayloadBid     *ethpb.ExecutionPayloadBid
+	latestExecutionPayloadBidHeze *ethpb.ExecutionPayloadBidHeze
+	builders                      []*ethpb.Builder
+	builderIdxMap                 map[[fieldparams.BLSPubkeyLength]byte]primitives.BuilderIndex
+	nextWithdrawalBuilderIndex    primitives.BuilderIndex
+	executionPayloadAvailability  []byte
+	builderPendingPayments        []*ethpb.BuilderPendingPayment
+	builderPendingWithdrawals     []*ethpb.BuilderPendingWithdrawal
+	latestBlockHash               []byte
+	payloadExpectedWithdrawals    []*enginev1.Withdrawal
+	ptcWindow                     []*ethpb.PTCs
 
 	id                    uint64
 	lock                  sync.RWMutex

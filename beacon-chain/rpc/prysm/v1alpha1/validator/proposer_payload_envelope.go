@@ -7,7 +7,6 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
@@ -40,21 +39,15 @@ func (vs *Server) storeExecutionPayloadEnvelope(
 		return nil, errors.Wrap(err, "could not compute block hash tree root")
 	}
 
-	envelope := selfBuildEnvelope(local, sBlk.Block().ParentRoot())
+	payload := extractExecutionPayloadGloas(local)
 
-	// EIP-8411: precompute the 64 chunk messages (with proofs) during
-	// ProposeBeaconBlock slack so the reveal only broadcasts.
-	chunkMsgs, chunksRoot, err := gloas.BuildPayloadChunkMessages(envelope, sBlk.Block().Slot(), blockRoot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not build payload chunk messages")
-	}
-	if sbid, bidErr := sBlk.Block().Body().SignedExecutionPayloadBid(); bidErr == nil && sbid != nil && sbid.Message != nil {
-		if bytesutil.ToBytes32(sbid.Message.PayloadChunksRoot) != chunksRoot {
-			log.WithFields(logrus.Fields{
-				"bidRoot":      fmt.Sprintf("%#x", sbid.Message.PayloadChunksRoot),
-				"envelopeRoot": fmt.Sprintf("%#x", chunksRoot),
-			}).Error("Envelope chunk commitment does not match the bid in the proposed block")
-		}
+	parentRoot := sBlk.Block().ParentRoot()
+	envelope := &ethpb.ExecutionPayloadEnvelope{
+		Payload:               payload,
+		ExecutionRequests:     local.ExecutionRequestsGloas,
+		BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
+		BeaconBlockRoot:       blockRoot[:],
+		ParentBeaconBlockRoot: parentRoot[:],
 	}
 
 	// Precompute sidecars here (during ProposeBeaconBlock slack) so publish stays fast.
@@ -81,11 +74,9 @@ func (vs *Server) storeExecutionPayloadEnvelope(
 	}
 
 	vs.ExecutionPayloadEnvelopeCache.Set(&cache.ExecutionPayloadContents{
-		Envelope:        envelope,
-		BeaconBlockRoot: blockRoot,
-		Chunks:          chunkMsgs,
-		DataColumns:     roSidecars,
-		PartialColumns:  partialColumns,
+		Envelope:       envelope,
+		DataColumns:    roSidecars,
+		PartialColumns: partialColumns,
 	})
 	return envelope, nil
 }
@@ -142,12 +133,6 @@ func (vs *Server) GetExecutionPayloadEnvelopeV2(
 		return nil, status.Errorf(codes.NotFound,
 			"execution payload envelope not found for slot %d", req.Slot)
 	}
-	// EIP-8411: the envelope cannot self-identify its block, so the binding is
-	// checked here against the root the caller is proposing for.
-	if len(req.BeaconBlockRoot) == fieldparams.RootLength && bytesutil.ToBytes32(req.BeaconBlockRoot) != contents.BeaconBlockRoot {
-		return nil, status.Errorf(codes.NotFound,
-			"cached execution payload envelope is not for beacon block root %#x", req.BeaconBlockRoot)
-	}
 
 	return &ethpb.ExecutionPayloadEnvelopeResponse{
 		Envelope: contents.Envelope,
@@ -184,20 +169,7 @@ func (vs *Server) PublishExecutionPayloadEnvelopeV2(
 			"execution payload envelopes are not supported before Gloas fork (slot %d)", envSlot)
 	}
 
-	// EIP-8411: the envelope no longer carries its beacon block root. Prefer the
-	// out-of-band root from the request; fall back to the producer cache.
-	var beaconBlockRoot [32]byte
-	switch {
-	case len(req.BeaconBlockRoot) == fieldparams.RootLength:
-		beaconBlockRoot = bytesutil.ToBytes32(req.BeaconBlockRoot)
-	default:
-		cached, ok := vs.ExecutionPayloadEnvelopeCache.Contents()
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument,
-				"publish request carries no beacon_block_root and the beacon node has no cached envelope to resolve it")
-		}
-		beaconBlockRoot = cached.BeaconBlockRoot
-	}
+	beaconBlockRoot := bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)
 	span.SetAttributes(
 		trace.StringAttribute("slot", fmt.Sprintf("%d", envSlot)),
 		trace.StringAttribute("builderIndex", fmt.Sprintf("%d", signed.Message.BuilderIndex)),
@@ -225,7 +197,7 @@ func (vs *Server) PublishExecutionPayloadEnvelopeV2(
 		}
 	}
 
-	roSigned, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signed, beaconBlockRoot)
+	roSigned, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signed)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not wrap signed envelope: %v", err)
 	}
@@ -245,16 +217,8 @@ func (vs *Server) PublishExecutionPayloadEnvelopeV2(
 		}
 	}
 
-	// EIP-8411: the envelope bytes travel as 64 PayloadChunk messages on the
-	// execution_payload_chunks topic instead of a single envelope message.
-	chunkMsgs, err := vs.chunksForPublish(signed, envSlot, beaconBlockRoot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to build payload chunks: %v", err)
-	}
-	for _, chunk := range chunkMsgs {
-		if err := vs.P2P.Broadcast(ctx, chunk); err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to broadcast payload chunk %d: %v", chunk.Index, err)
-		}
+	if err := vs.P2P.Broadcast(ctx, signed); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to broadcast execution payload envelope: %v", err)
 	}
 
 	// Import in the background so the reveal is not delayed past the PTC deadline.
@@ -278,27 +242,6 @@ func (vs *Server) importPublishedEnvelope(log *logrus.Entry, sidecars []consensu
 		return
 	}
 	log.WithField("duration", time.Since(start)).Debug("Imported published execution payload envelope")
-}
-
-// chunksForPublish returns the precomputed chunk set when the published
-// envelope is the cached one, otherwise chunks the submitted envelope on the
-// fly. Hints are (re)stamped with the known slot and beacon block root.
-func (vs *Server) chunksForPublish(signed *ethpb.SignedExecutionPayloadEnvelope, slot primitives.Slot, beaconBlockRoot [32]byte) ([]*ethpb.PayloadChunk, error) {
-	if cached, ok := vs.ExecutionPayloadEnvelopeCache.Contents(); ok && len(cached.Chunks) > 0 && cached.Envelope != nil {
-		cachedRoot, err := cached.Envelope.HashTreeRoot()
-		if err == nil {
-			submittedRoot, err := signed.Message.HashTreeRoot()
-			if err == nil && cachedRoot == submittedRoot {
-				gloas.StampPayloadChunkHints(cached.Chunks, slot, beaconBlockRoot)
-				return cached.Chunks, nil
-			}
-		}
-	}
-	msgs, _, err := gloas.BuildPayloadChunkMessages(signed.Message, slot, beaconBlockRoot)
-	if err != nil {
-		return nil, err
-	}
-	return msgs, nil
 }
 
 // cachedDataColumns returns the precomputed data columns and partial columns when the published

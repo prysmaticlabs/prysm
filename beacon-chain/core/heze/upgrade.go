@@ -63,9 +63,33 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		ExecutionPayloadAvailability:  pre.ExecutionPayloadAvailability,
 		BuilderPendingPayments:        pre.BuilderPendingPayments,
 		BuilderPendingWithdrawals:     pre.BuilderPendingWithdrawals,
-		LatestExecutionPayloadBid:     pre.LatestExecutionPayloadBid,
+		LatestExecutionPayloadBid:     bidToHeze(pre.LatestExecutionPayloadBid),
 		PayloadExpectedWithdrawals:    pre.PayloadExpectedWithdrawals,
 		PtcWindow:                     pre.PtcWindow,
 	}
 	return state_native.InitializeFromProtoUnsafeHeze(s)
+}
+
+// bidToHeze lifts a Gloas bid into the Heze container. The EIP-8411 chunk
+// commitment starts zeroed: the pre-fork payload was distributed as a single
+// envelope, so no chunk set exists for it.
+func bidToHeze(bid *ethpb.ExecutionPayloadBid) *ethpb.ExecutionPayloadBidHeze {
+	if bid == nil {
+		return nil
+	}
+	return &ethpb.ExecutionPayloadBidHeze{
+		ParentBlockHash:       bid.ParentBlockHash,
+		ParentBlockRoot:       bid.ParentBlockRoot,
+		BlockHash:             bid.BlockHash,
+		PrevRandao:            bid.PrevRandao,
+		FeeRecipient:          bid.FeeRecipient,
+		GasLimit:              bid.GasLimit,
+		BuilderIndex:          bid.BuilderIndex,
+		Slot:                  bid.Slot,
+		Value:                 bid.Value,
+		ExecutionPayment:      bid.ExecutionPayment,
+		BlobKzgCommitments:    bid.BlobKzgCommitments,
+		ExecutionRequestsRoot: bid.ExecutionRequestsRoot,
+		PayloadChunksRoot:     make([]byte, 32),
+	}
 }

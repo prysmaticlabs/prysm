@@ -11,11 +11,13 @@ import (
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
+	"github.com/pkg/errors"
 )
 
 func runExecutionPayloadBidTest(t *testing.T, config string, fork string, objName string, block blockWithSSZObject, sszToState SSZToState, operationFn BlockOperation) {
@@ -48,13 +50,17 @@ func RunExecutionPayloadBidTest(t *testing.T, config string, fork string, block 
 		if err != nil {
 			return nil, err
 		}
+		bidPb, ok := signedBid.Proto().(*ethpb.SignedExecutionPayloadBid)
+		if !ok {
+			return nil, errors.New("signed execution payload bid is not a Gloas bid")
+		}
 		proposerIndex, err := helpers.BeaconProposerIndex(ctx, s)
 		if err != nil {
 			return nil, err
 		}
 		blk := util.NewBeaconBlockGloas()
 		blk.Block.ProposerIndex = proposerIndex
-		blk.Block.Body.SignedExecutionPayloadBid = signedBid
+		blk.Block.Body.SignedExecutionPayloadBid = bidPb
 		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		if err != nil {
 			return nil, err

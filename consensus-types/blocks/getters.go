@@ -1331,10 +1331,11 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get signed execution payload bid")
 		}
-		if signedBid == nil || signedBid.Message == nil {
-			return nil, errors.New("nil execution payload bid or bid message")
+		bid, err := signedBid.Bid()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload bid")
 		}
-		return signedBid.Message.BlobKzgCommitments, nil
+		return bid.BlobKzgCommitments(), nil
 	}
 	if b.version >= version.Deneb {
 		return b.blobKzgCommitments, nil
@@ -1361,12 +1362,18 @@ func (b *BeaconBlockBody) PayloadAttestations() ([]*eth.PayloadAttestation, erro
 	return nil, consensus_types.ErrNotSupported("PayloadAttestations", b.version)
 }
 
-// SignedExecutionPayloadBid returns the signed execution payload header in the block.
-func (b *BeaconBlockBody) SignedExecutionPayloadBid() (*eth.SignedExecutionPayloadBid, error) {
-	if b.version >= version.Gloas {
-		return b.signedExecutionPayloadBid, nil
+// SignedExecutionPayloadBid returns the block's signed execution payload bid as
+// a read-only wrapper. The concrete container differs per fork (EIP-8411 adds
+// payload_chunks_root in Heze), so consumers go through the interface.
+func (b *BeaconBlockBody) SignedExecutionPayloadBid() (interfaces.ROSignedExecutionPayloadBid, error) {
+	switch {
+	case b.version >= version.Heze:
+		return WrappedROSignedExecutionPayloadBidHeze(b.signedExecutionPayloadBidHeze)
+	case b.version >= version.Gloas:
+		return WrappedROSignedExecutionPayloadBid(b.signedExecutionPayloadBid)
+	default:
+		return nil, consensus_types.ErrNotSupported("SignedExecutionPayloadBid", b.version)
 	}
-	return nil, consensus_types.ErrNotSupported("SignedExecutionPayloadBid", b.version)
 }
 
 // ParentExecutionRequests returns the parent's deferred execution requests.

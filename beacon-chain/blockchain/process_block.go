@@ -259,7 +259,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			if err != nil {
 				return nil, err
 			}
-			if idx := sbid.Message.BuilderIndex; idx != params.BeaconConfig().BuilderIndexSelfBuild {
+			bid, err := sbid.Bid()
+			if err != nil {
+				return nil, err
+			}
+			if idx := bid.BuilderIndex(); idx != params.BeaconConfig().BuilderIndexSelfBuild {
 				pk, err := preState.BuilderPubkey(idx)
 				if err != nil {
 					return nil, err
@@ -288,7 +292,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 				return nil, err
 			}
 			if matches {
-				rewrapped, err := rewrapEnvelopeWithRoot(envelopes[eidx], b.Root())
+				rewrapped, err := consensusblocks.RebindEnvelopeRoot(envelopes[eidx], b.Root())
 				if err != nil {
 					return nil, err
 				}
@@ -358,7 +362,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	if applied {
 		// The applied envelope belongs to the first block's parent; by-range
 		// wrappers carry no root, so rebind before the forkchoice insert.
-		rewrapped, err := rewrapEnvelopeWithRoot(envelopes[0], blks[0].Block().ParentRoot())
+		rewrapped, err := consensusblocks.RebindEnvelopeRoot(envelopes[0], blks[0].Block().ParentRoot())
 		if err != nil {
 			return nil, err
 		}
@@ -394,21 +398,14 @@ func envelopeMatchesBlockBid(signed interfaces.ROSignedExecutionPayloadEnvelope,
 	if err != nil {
 		return false, err
 	}
-	if sbid == nil || sbid.Message == nil {
+	if sbid == nil {
 		return false, nil
 	}
-	bh := env.BlockHash()
-	return bytes.Equal(sbid.Message.BlockHash, bh[:]), nil
-}
-
-// rewrapEnvelopeWithRoot rebinds a signed envelope wrapper to the given beacon
-// block root once the owning block is known.
-func rewrapEnvelopeWithRoot(signed interfaces.ROSignedExecutionPayloadEnvelope, root [32]byte) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
-	protoEnv, ok := signed.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
-	if !ok {
-		return nil, errors.New("could not type assert signed envelope to proto")
+	bid, err := sbid.Bid()
+	if err != nil {
+		return false, err
 	}
-	return consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnv, root)
+	return bid.BlockHash() == env.BlockHash(), nil
 }
 
 func (s *Service) notifyEngineAndSaveData(

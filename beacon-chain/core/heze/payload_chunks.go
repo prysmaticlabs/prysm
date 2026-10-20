@@ -1,10 +1,12 @@
-package gloas
+package heze
 
 import (
 	"bytes"
 	"crypto/sha256"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/pkg/errors"
@@ -79,7 +81,7 @@ func ComputePayloadChunksRoot(chunks [][]byte) ([32]byte, error) {
 
 // PayloadChunksRootForEnvelope serializes the envelope and returns its chunk
 // commitment; this is the value the builder places in the bid.
-func PayloadChunksRootForEnvelope(envelope *ethpb.ExecutionPayloadEnvelope) ([32]byte, error) {
+func PayloadChunksRootForEnvelope(envelope *ethpb.ExecutionPayloadEnvelopeHeze) ([32]byte, error) {
 	data, err := envelope.MarshalSSZ()
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal envelope")
@@ -95,7 +97,7 @@ func PayloadChunksRootForEnvelope(envelope *ethpb.ExecutionPayloadEnvelope) ([32
 // PayloadChunk gossip messages with their inclusion proofs. The slot and
 // beacon block root are unauthenticated routing hints; the root may be zero at
 // bid time and stamped later via StampPayloadChunkHints.
-func BuildPayloadChunkMessages(envelope *ethpb.ExecutionPayloadEnvelope, slot primitives.Slot, beaconBlockRoot [32]byte) ([]*ethpb.PayloadChunk, [32]byte, error) {
+func BuildPayloadChunkMessages(envelope *ethpb.ExecutionPayloadEnvelopeHeze, slot primitives.Slot, beaconBlockRoot [32]byte) ([]*ethpb.PayloadChunk, [32]byte, error) {
 	data, err := envelope.MarshalSSZ()
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, "could not marshal envelope")
@@ -173,10 +175,10 @@ func VerifyPayloadChunkInclusionProof(chunk *ethpb.PayloadChunk) error {
 }
 
 // ReconstructPayloadEnvelope concatenates a complete, proof-verified chunk set
-// in index order and strictly decodes the Heze/Gloas envelope. A round-trip
+// in index order and strictly decodes the Heze envelope. A round-trip
 // re-serialization guard rejects any decoder leniency: the committed byte
 // string must be exactly what the envelope re-serializes to.
-func ReconstructPayloadEnvelope(chunks [][]byte) (*ethpb.ExecutionPayloadEnvelope, error) {
+func ReconstructPayloadEnvelope(chunks [][]byte) (*ethpb.ExecutionPayloadEnvelopeHeze, error) {
 	if len(chunks) != fieldparams.TotalExecutionPayloadChunks {
 		return nil, errChunkSetIncomplete
 	}
@@ -188,7 +190,7 @@ func ReconstructPayloadEnvelope(chunks [][]byte) (*ethpb.ExecutionPayloadEnvelop
 	for _, c := range chunks {
 		data = append(data, c...)
 	}
-	envelope := &ethpb.ExecutionPayloadEnvelope{}
+	envelope := &ethpb.ExecutionPayloadEnvelopeHeze{}
 	if err := envelope.UnmarshalSSZ(data); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal reconstructed envelope")
 	}
@@ -200,4 +202,40 @@ func ReconstructPayloadEnvelope(chunks [][]byte) (*ethpb.ExecutionPayloadEnvelop
 		return nil, errEnvelopeRoundTrip
 	}
 	return envelope, nil
+}
+
+// IsChunkAuthenticatedEnvelope reports whether the signed envelope carries the
+// all-zero signature sentinel marking an envelope reconstructed from
+// proof-verified payload chunks (EIP-8411). Such envelopes are authenticated
+// against the bid's chunk commitment instead of a BLS signature.
+func IsChunkAuthenticatedEnvelope(signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) bool {
+	return signedEnvelope.Signature() == [fieldparams.BLSSignatureLength]byte{}
+}
+
+// VerifyEnvelopeChunkCommitment authenticates a chunk-reconstructed Heze
+// envelope by recomputing its chunk commitment and comparing it against the
+// payload_chunks_root the state's committed bid signed over. Every chunk was
+// individually proof-verified against that root on gossip, so a matching
+// recomputation proves the envelope bytes are exactly the ones the builder
+// committed to.
+func VerifyEnvelopeChunkCommitment(st state.BeaconState, signedEnvelope interfaces.ROSignedExecutionPayloadEnvelope) error {
+	signed, ok := signedEnvelope.Proto().(*ethpb.SignedExecutionPayloadEnvelopeHeze)
+	if !ok {
+		return errors.New("chunk-authenticated envelope is not a Heze envelope")
+	}
+	root, err := PayloadChunksRootForEnvelope(signed.Message)
+	if err != nil {
+		return errors.Wrap(err, "could not compute envelope chunk commitment")
+	}
+	bid, err := st.LatestExecutionPayloadBid()
+	if err != nil {
+		return errors.Wrap(err, "could not get latest execution payload bid")
+	}
+	if bid == nil {
+		return errors.New("latest execution payload bid is nil")
+	}
+	if root != bid.PayloadChunksRoot() {
+		return errors.New("envelope chunk commitment does not match the committed bid payload_chunks_root")
+	}
+	return nil
 }

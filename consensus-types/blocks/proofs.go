@@ -300,11 +300,17 @@ func ExecutionBlockHashProof(ctx context.Context, block interfaces.ReadOnlyBeaco
 	if !ok {
 		return nil, errors.New("failed to cast block body")
 	}
-	signedBid, err := blockBody.SignedExecutionPayloadBid()
+	roBid, err := blockBody.SignedExecutionPayloadBid()
 	if err != nil {
 		return nil, err
 	}
-	if signedBid == nil || signedBid.Message == nil {
+	// Bid field proofs are container-specific; the Heze bid (EIP-8411) adds a
+	// field and is not supported by the light client proof builder yet.
+	signedBid, ok := roBid.Proto().(*eth.SignedExecutionPayloadBid)
+	if !ok {
+		return nil, errors.New("execution payload bid proofs are only supported for Gloas bids")
+	}
+	if signedBid.Message == nil {
 		return nil, errors.New("signed execution payload bid is nil")
 	}
 
@@ -357,7 +363,6 @@ func executionPayloadBidFieldRoots(bid *eth.ExecutionPayloadBid) ([][]byte, erro
 		{index: 3, value: bid.PrevRandao, length: fieldparams.RootLength},
 		{index: 4, value: bid.FeeRecipient, length: fieldparams.FeeRecipientLength},
 		{index: 11, value: bid.ExecutionRequestsRoot, length: fieldparams.RootLength},
-		{index: 12, value: bid.PayloadChunksRoot, length: fieldparams.RootLength},
 	}
 	for _, field := range fixedFields {
 		root, err := fixedByteVectorRoot(field.value, field.length)

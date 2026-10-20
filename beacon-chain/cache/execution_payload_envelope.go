@@ -10,14 +10,8 @@ import (
 // ExecutionPayloadContents holds the producer's envelope with precomputed
 // data column sidecars; raw blobs/proofs are derived from the columns at read
 // time so the publish hot path skips the KZG cell extension.
-// BeaconBlockRoot carries the block binding out of band since EIP-8411 removed
-// it from the envelope container.
 type ExecutionPayloadContents struct {
-	Envelope        *ethpb.ExecutionPayloadEnvelope
-	BeaconBlockRoot [32]byte
-	// Chunks are the precomputed EIP-8411 PayloadChunk messages for the
-	// envelope, with slot and beacon block root hints already stamped.
-	Chunks         []*ethpb.PayloadChunk
+	Envelope       *ethpb.ExecutionPayloadEnvelope
 	DataColumns    []consensusblocks.RODataColumn
 	PartialColumns []consensusblocks.PartialDataColumn
 }

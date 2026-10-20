@@ -167,7 +167,9 @@ type ValidatorClient interface {
 	EnsureReady(ctx context.Context) bool
 	ConnectionGeneration() uint64
 	GetExecutionPayloadEnvelope(ctx context.Context, slot primitives.Slot, beaconBlockRoot [32]byte) (*ethpb.ExecutionPayloadEnvelope, error)
-	PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) (*empty.Empty, error)
+	PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope) (*empty.Empty, error)
+	GetExecutionPayloadEnvelopeHeze(ctx context.Context, slot primitives.Slot, beaconBlockRoot [32]byte) (*ethpb.ExecutionPayloadEnvelopeHeze, error)
+	PublishExecutionPayloadEnvelopeHeze(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelopeHeze, beaconBlockRoot [32]byte) (*empty.Empty, error)
 	PayloadAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.PayloadAttestationData, error)
 	SubmitPayloadAttestation(ctx context.Context, in *ethpb.PayloadAttestationMessage) (*empty.Empty, error)
 }

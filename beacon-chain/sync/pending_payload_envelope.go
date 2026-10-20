@@ -41,7 +41,7 @@ func (s *Service) processPendingPayloadEnvelope(ctx context.Context, root [32]by
 	s.pendingEnvelopeLock.Unlock()
 
 	for _, signedEnvelope := range inner {
-		e, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedEnvelope, root)
+		e, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedEnvelope)
 		if err != nil {
 			log.WithError(err).Debug("Could not wrap pending signed execution payload envelope")
 			continue
@@ -67,8 +67,9 @@ func (s *Service) processPendingPayloadEnvelope(ctx context.Context, root [32]by
 			continue
 		}
 		s.setSeenPayloadEnvelope(root, env.BuilderIndex())
-		// EIP-8411: no re-broadcast; the execution_payload gossip topic is
-		// retired and payload bytes propagate as chunks.
+		if err := s.cfg.p2p.Broadcast(ctx, signedEnvelope); err != nil {
+			log.WithError(err).Warn("Could not broadcast pending payload envelope")
+		}
 	}
 }
 

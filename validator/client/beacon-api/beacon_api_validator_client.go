@@ -430,12 +430,32 @@ func (c *beaconApiValidatorClient) GetExecutionPayloadEnvelope(ctx context.Conte
 	})
 }
 
-func (c *beaconApiValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) (*empty.Empty, error) {
+func (c *beaconApiValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-api.PublishExecutionPayloadEnvelope")
 	defer span.End()
 
 	return wrapInMetrics[*empty.Empty]("PublishExecutionPayloadEnvelope", func() (*empty.Empty, error) {
-		return c.publishExecutionPayloadEnvelope(ctx, in, beaconBlockRoot)
+		return c.publishExecutionPayloadEnvelope(ctx, in)
+	})
+}
+
+// Heze (EIP-8411) fork methods
+
+func (c *beaconApiValidatorClient) GetExecutionPayloadEnvelopeHeze(ctx context.Context, slot primitives.Slot, beaconBlockRoot [32]byte) (*ethpb.ExecutionPayloadEnvelopeHeze, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.GetExecutionPayloadEnvelopeHeze")
+	defer span.End()
+
+	return wrapInMetrics[*ethpb.ExecutionPayloadEnvelopeHeze]("GetExecutionPayloadEnvelopeHeze", func() (*ethpb.ExecutionPayloadEnvelopeHeze, error) {
+		return c.getExecutionPayloadEnvelopeHeze(ctx, slot, beaconBlockRoot)
+	})
+}
+
+func (c *beaconApiValidatorClient) PublishExecutionPayloadEnvelopeHeze(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelopeHeze, beaconBlockRoot [32]byte) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-api.PublishExecutionPayloadEnvelopeHeze")
+	defer span.End()
+
+	return wrapInMetrics[*empty.Empty]("PublishExecutionPayloadEnvelopeHeze", func() (*empty.Empty, error) {
+		return c.publishExecutionPayloadEnvelopeHeze(ctx, in, beaconBlockRoot)
 	})
 }
 

@@ -112,17 +112,9 @@ func (f *blocksFetcher) validatePayloadBlockConsistency(r *fetchRequestResponse)
 	}
 	if pidx < len(r.envelopes) {
 		// Check if the next envelope belongs to the last block in the batch.
-		// EIP-8411: by-range envelopes carry no beacon block root, so the match
-		// is by the block hash the last block's bid commits to.
 		lastBlock := r.bwb[len(r.bwb)-1]
-		matches := false
-		if sbid, bidErr := lastBlock.Block.Block().Body().SignedExecutionPayloadBid(); bidErr == nil && sbid != nil && sbid.Message != nil {
-			if env, envErr := r.envelopes[pidx].Envelope(); envErr == nil {
-				ph := env.BlockHash()
-				matches = ph != ([32]byte{}) && bytes.Equal(sbid.Message.BlockHash, ph[:])
-			}
-		}
-		if matches {
+		env, err := r.envelopes[pidx].Envelope()
+		if err == nil && env.BeaconBlockRoot() == lastBlock.Block.Root() {
 			r.envelopes = r.envelopes[:pidx+1]
 		} else {
 			log.Debug("Not enough blocks in batch, truncating envelopes")
@@ -215,10 +207,7 @@ func (f *blocksFetcher) fetchPayloadEnvelopesFromPeer(
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
 		roEnvelopes := make([]interfaces.ROSignedExecutionPayloadEnvelope, 0, len(envelopes))
 		for _, env := range envelopes {
-			// EIP-8411: the wire envelope carries no beacon block root; wrap with a
-			// zero root here and let batch processing bind each envelope to its
-			// block via the bid's block hash.
-			wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env, [32]byte{})
+			wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
 			if err != nil {
 				log.WithField("peer", p).WithError(err).Debug("Invalid payload envelope in response")
 				continue

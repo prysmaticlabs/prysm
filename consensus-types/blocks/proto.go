@@ -754,7 +754,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			VoluntaryExits:            b.voluntaryExits,
 			SyncAggregate:             b.syncAggregate,
 			BlsToExecutionChanges:     b.blsToExecutionChanges,
-			SignedExecutionPayloadBid: b.signedExecutionPayloadBid,
+			SignedExecutionPayloadBid: b.signedExecutionPayloadBidHeze,
 			PayloadAttestations:       b.payloadAttestations,
 			ParentExecutionRequests:   b.parentExecutionRequests,
 		}, nil
@@ -1699,9 +1699,9 @@ func initBlockBodyFromProtoHeze(pb *eth.BeaconBlockBodyHeze) (*BeaconBlockBody, 
 		voluntaryExits:            pb.VoluntaryExits,
 		syncAggregate:             pb.SyncAggregate,
 		blsToExecutionChanges:     pb.BlsToExecutionChanges,
-		signedExecutionPayloadBid: pb.SignedExecutionPayloadBid,
-		payloadAttestations:       pb.PayloadAttestations,
-		parentExecutionRequests:   per,
+		signedExecutionPayloadBidHeze: pb.SignedExecutionPayloadBid,
+		payloadAttestations:           pb.PayloadAttestations,
+		parentExecutionRequests:       per,
 	}
 	return b, nil
 }

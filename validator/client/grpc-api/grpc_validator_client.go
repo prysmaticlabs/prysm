@@ -223,7 +223,7 @@ func (c *grpcValidatorClient) BeaconBlock(ctx context.Context, in *ethpb.BlockRe
 	case *ethpb.GenericBeaconBlock_HezeContents:
 		hc := b.HezeContents
 		if c.stateless && hc.GetExecutionPayloadEnvelope() != nil {
-			c.envelopeCache.Add(in.Slot, hc.ExecutionPayloadEnvelope, hc.Blobs, hc.KzgProofs)
+			c.envelopeCache.AddHeze(in.Slot, hc.ExecutionPayloadEnvelope, hc.Blobs, hc.KzgProofs)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: hc.Block}}, nil
 	default:
@@ -418,13 +418,13 @@ func (c *grpcValidatorClient) GetExecutionPayloadEnvelope(ctx context.Context, s
 
 // PublishExecutionPayloadEnvelope publishes the contents arm when blobs/proofs were cached during
 // block production, and the bare signed_envelope arm otherwise (BN attaches cached blob data).
-func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope, beaconBlockRoot [32]byte) (*empty.Empty, error) {
+func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope) (*empty.Empty, error) {
 	var cachedEnv *ethpb.ExecutionPayloadEnvelope
 	var blobs, kzgProofs [][]byte
 	if in.GetMessage().GetPayload() != nil {
 		cachedEnv, blobs, kzgProofs = c.envelopeCache.Take(primitives.Slot(in.Message.Payload.SlotNumber))
 	}
-	generic := &ethpb.GenericSignedExecutionPayloadEnvelope{BeaconBlockRoot: beaconBlockRoot[:]}
+	generic := &ethpb.GenericSignedExecutionPayloadEnvelope{}
 	if cachedEnv == nil {
 		generic.Envelope = &ethpb.GenericSignedExecutionPayloadEnvelope_SignedEnvelope{SignedEnvelope: in}
 	} else {
@@ -437,6 +437,52 @@ func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Contex
 		}
 	}
 	return c.getClient().PublishExecutionPayloadEnvelopeV2(ctx, generic)
+}
+
+// GetExecutionPayloadEnvelopeHeze fetches the Heze (EIP-8411) envelope to sign; the binding to
+// the proposed block is checked server-side via the request's beacon_block_root.
+func (c *grpcValidatorClient) GetExecutionPayloadEnvelopeHeze(ctx context.Context, slot primitives.Slot, beaconBlockRoot [32]byte) (*ethpb.ExecutionPayloadEnvelopeHeze, error) {
+	if envelope, _, _ := c.envelopeCache.PeekHeze(slot); envelope != nil {
+		return envelope, nil
+	}
+	req := &ethpb.ExecutionPayloadEnvelopeRequest{
+		Slot:            slot,
+		BeaconBlockRoot: beaconBlockRoot[:],
+	}
+	resp, err := c.getClient().GetExecutionPayloadEnvelopeV3(ctx, req)
+	if err != nil {
+		return nil, errors.Wrap(
+			client.ErrConnectionIssue,
+			errors.Wrap(err, "GetExecutionPayloadEnvelopeV3").Error(),
+		)
+	}
+	if resp.Envelope == nil {
+		return nil, errors.New("beacon node returned nil execution payload envelope")
+	}
+	return resp.Envelope, nil
+}
+
+// PublishExecutionPayloadEnvelopeHeze publishes the signed Heze envelope; the beacon node
+// reveals it as PayloadChunk messages. The beacon block root travels out of band.
+func (c *grpcValidatorClient) PublishExecutionPayloadEnvelopeHeze(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelopeHeze, beaconBlockRoot [32]byte) (*empty.Empty, error) {
+	var cachedEnv *ethpb.ExecutionPayloadEnvelopeHeze
+	var blobs, kzgProofs [][]byte
+	if in.GetMessage().GetPayload() != nil {
+		cachedEnv, blobs, kzgProofs = c.envelopeCache.TakeHeze(primitives.Slot(in.Message.Payload.SlotNumber))
+	}
+	generic := &ethpb.GenericSignedExecutionPayloadEnvelopeHeze{BeaconBlockRoot: beaconBlockRoot[:]}
+	if cachedEnv == nil {
+		generic.Envelope = &ethpb.GenericSignedExecutionPayloadEnvelopeHeze_SignedEnvelope{SignedEnvelope: in}
+	} else {
+		generic.Envelope = &ethpb.GenericSignedExecutionPayloadEnvelopeHeze_Contents{
+			Contents: &ethpb.SignedExecutionPayloadEnvelopeContentsHeze{
+				SignedExecutionPayloadEnvelope: in,
+				KzgProofs:                      kzgProofs,
+				Blobs:                          blobs,
+			},
+		}
+	}
+	return c.getClient().PublishExecutionPayloadEnvelopeV3(ctx, generic)
 }
 
 func (c *grpcValidatorClient) PayloadAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.PayloadAttestationData, error) {

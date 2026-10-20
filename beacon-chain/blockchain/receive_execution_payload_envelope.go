@@ -327,8 +327,13 @@ func (s *Service) notifyNewEnvelopeFromBlock(ctx context.Context, b blocks.ROBlo
 	if err != nil {
 		return false, errors.Wrap(err, "could not get signed execution payload bid from block")
 	}
-	versionedHashes := make([]common.Hash, len(sbid.Message.BlobKzgCommitments))
-	for i, c := range sbid.Message.BlobKzgCommitments {
+	bid, err := sbid.Bid()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get execution payload bid from block")
+	}
+	commitments := bid.BlobKzgCommitments()
+	versionedHashes := make([]common.Hash, len(commitments))
+	for i, c := range commitments {
 		versionedHashes[i] = primitives.ConvertKzgCommitmentToVersionedHash(c)
 	}
 	return s.callNewPayload(ctx, payload, versionedHashes, common.Hash(envelope.ParentBeaconBlockRoot()), envelope.ExecutionRequests(), envelope.Slot())
@@ -385,11 +390,7 @@ func (s *Service) savePostPayload(ctx context.Context, signed interfaces.ROSigne
 	if !ok {
 		return errors.New("could not type assert signed envelope to proto")
 	}
-	envelope, err := signed.Envelope()
-	if err != nil {
-		return errors.Wrap(err, "could not get envelope")
-	}
-	return s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv, envelope.BeaconBlockRoot())
+	return s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv)
 }
 
 func (s *Service) recordPayloadArrival(root [32]byte, slot primitives.Slot, arrivedAt time.Time) {
@@ -433,7 +434,11 @@ func (s *Service) DataAvailable(ctx context.Context, root [32]byte, slot primiti
 	if err != nil {
 		return false, errors.Wrap(err, "could not get signed execution payload bid from block")
 	}
-	return len(sbid.GetMessage().GetBlobKzgCommitments()) == 0, nil
+	bid, err := sbid.Bid()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get execution payload bid from block")
+	}
+	return bid.BlobKzgCommitmentCount() == 0, nil
 }
 
 // notifyForkchoiceUpdateGloas takes the block hash directly because Gloas

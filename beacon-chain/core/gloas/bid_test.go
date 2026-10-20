@@ -10,6 +10,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
@@ -51,8 +52,8 @@ func (s stubBlockBody) ExecutionRequests() (*enginev1.ExecutionRequests, error) 
 func (s stubBlockBody) PayloadAttestations() ([]*ethpb.PayloadAttestation, error) {
 	return nil, nil
 }
-func (s stubBlockBody) SignedExecutionPayloadBid() (*ethpb.SignedExecutionPayloadBid, error) {
-	return s.signedBid, nil
+func (s stubBlockBody) SignedExecutionPayloadBid() (interfaces.ROSignedExecutionPayloadBid, error) {
+	return blocks.WrappedROSignedExecutionPayloadBid(s.signedBid)
 }
 func (s stubBlockBody) ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error) {
 	return nil, nil
@@ -232,7 +233,6 @@ func TestProcessExecutionPayloadBid_SelfBuildSuccess(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	signed := &ethpb.SignedExecutionPayloadBid{
 		Message:   bid,
@@ -275,7 +275,6 @@ func TestProcessExecutionPayloadBid_SelfBuildNonZeroAmountFails(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0xDD}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	signed := &ethpb.SignedExecutionPayloadBid{
 		Message:   bid,
@@ -322,7 +321,6 @@ func TestProcessExecutionPayloadBid_PendingPaymentAndCacheBid(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
@@ -385,7 +383,6 @@ func TestProcessExecutionPayloadBid_BuilderNotActive(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0x06}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -440,7 +437,6 @@ func TestProcessExecutionPayloadBid_CannotCoverBid(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -484,7 +480,6 @@ func TestProcessExecutionPayloadBid_InvalidSignature(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	// Use an invalid signature.
 	invalidSig := [96]byte{1}
@@ -520,7 +515,6 @@ func TestProcessExecutionPayloadBid_TooManyBlobCommitments(t *testing.T) {
 		BlobKzgCommitments:    tooManyBlobCommitmentsForSlot(slot),
 		FeeRecipient:          bytes.Repeat([]byte{0xFF}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	signed := &ethpb.SignedExecutionPayloadBid{
 		Message:   bid,
@@ -566,7 +560,6 @@ func TestProcessExecutionPayloadBid_SlotMismatch(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0xDD}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -610,7 +603,6 @@ func TestProcessExecutionPayloadBid_ParentHashMismatch(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -654,7 +646,6 @@ func TestProcessExecutionPayloadBid_BlockHashEqualsParent(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -699,7 +690,6 @@ func TestProcessExecutionPayloadBid_ParentRootMismatch(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)
@@ -743,7 +733,6 @@ func TestProcessExecutionPayloadBid_PrevRandaoMismatch(t *testing.T) {
 		BlobKzgCommitments:    blobCommitmentsForSlot(slot, 1),
 		FeeRecipient:          bytes.Repeat([]byte{0x55}, 20),
 		ExecutionRequestsRoot: make([]byte, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 	}
 	genesis := bytesutil.ToBytes32(state.GenesisValidatorsRoot())
 	sig := signBid(t, sk, bid, state.Fork(), genesis)

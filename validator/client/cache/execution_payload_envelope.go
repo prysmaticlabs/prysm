@@ -13,9 +13,10 @@ import (
 // contents bundles the cached execution payload envelope with the raw blobs and KZG proofs so the
 // stateless publish path can submit them together to the beacon node.
 type contents struct {
-	envelope  *ethpb.ExecutionPayloadEnvelope
-	blobs     [][]byte
-	kzgProofs [][]byte
+	envelope     *ethpb.ExecutionPayloadEnvelope
+	envelopeHeze *ethpb.ExecutionPayloadEnvelopeHeze
+	blobs        [][]byte
+	kzgProofs    [][]byte
 }
 
 // ExecutionPayloadEnvelopeCache is a slot-keyed cache that carries the execution payload envelope
@@ -81,4 +82,46 @@ func (c *ExecutionPayloadEnvelopeCache) evictOlderThan(slot primitives.Slot) {
 			delete(c.entries, s)
 		}
 	}
+}
+
+// AddHeze stores a Heze (EIP-8411) envelope and its blob data for the slot.
+func (c *ExecutionPayloadEnvelopeCache) AddHeze(slot primitives.Slot, envelope *ethpb.ExecutionPayloadEnvelopeHeze, blobs, kzgProofs [][]byte) {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.evictOlderThan(slot)
+	c.entries[slot] = &contents{envelopeHeze: envelope, blobs: blobs, kzgProofs: kzgProofs}
+}
+
+// PeekHeze returns the cached Heze envelope and blob data for the slot without removing the entry.
+func (c *ExecutionPayloadEnvelopeCache) PeekHeze(slot primitives.Slot) (*ethpb.ExecutionPayloadEnvelopeHeze, [][]byte, [][]byte) {
+	if c == nil {
+		return nil, nil, nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.evictOlderThan(slot)
+	entry, ok := c.entries[slot]
+	if !ok {
+		return nil, nil, nil
+	}
+	return entry.envelopeHeze, entry.blobs, entry.kzgProofs
+}
+
+// TakeHeze returns the cached Heze envelope and blob data for the slot and removes the entry.
+func (c *ExecutionPayloadEnvelopeCache) TakeHeze(slot primitives.Slot) (*ethpb.ExecutionPayloadEnvelopeHeze, [][]byte, [][]byte) {
+	if c == nil {
+		return nil, nil, nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.evictOlderThan(slot)
+	entry, ok := c.entries[slot]
+	if !ok || entry.envelopeHeze == nil {
+		return nil, nil, nil
+	}
+	delete(c.entries, slot)
+	return entry.envelopeHeze, entry.blobs, entry.kzgProofs
 }

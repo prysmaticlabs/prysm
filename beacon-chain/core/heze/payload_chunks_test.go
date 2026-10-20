@@ -1,4 +1,4 @@
-package gloas
+package heze
 
 import (
 	"bytes"
@@ -11,11 +11,11 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
-func chunkTestEnvelope(t *testing.T) *ethpb.ExecutionPayloadEnvelope {
+func chunkTestEnvelope(t *testing.T) *ethpb.ExecutionPayloadEnvelopeHeze {
 	t.Helper()
 	txs, err := enginev1.NewProgressiveTransactionList([][]byte{bytes.Repeat([]byte{0xaa}, 100), bytes.Repeat([]byte{0xbb}, 7000)})
 	require.NoError(t, err)
-	return &ethpb.ExecutionPayloadEnvelope{
+	return &ethpb.ExecutionPayloadEnvelopeHeze{
 		Payload: &enginev1.ExecutionPayloadGloas{
 			ParentHash:    bytesutil.PadTo([]byte("parent"), 32),
 			FeeRecipient:  bytesutil.PadTo([]byte("fee"), 20),

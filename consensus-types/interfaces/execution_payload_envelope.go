@@ -13,6 +13,7 @@ type ROSignedExecutionPayloadEnvelope interface {
 	SigningRoot([]byte) ([32]byte, error)
 	IsNil() bool
 	Proto() proto.Message
+	Version() int
 }
 
 // ROBlindedExecutionPayloadEnvelope contains the fields common to both
@@ -31,4 +32,5 @@ type ROBlindedExecutionPayloadEnvelope interface {
 type ROExecutionPayloadEnvelope interface {
 	ROBlindedExecutionPayloadEnvelope
 	Execution() (ExecutionData, error)
+	Version() int
 }
