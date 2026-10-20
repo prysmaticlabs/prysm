@@ -28,6 +28,7 @@ var gossipTopicMappings = map[string]func() proto.Message{
 	LightClientFinalityUpdateTopicFormat:      func() proto.Message { return &ethpb.LightClientFinalityUpdateAltair{} },
 	DataColumnSubnetTopicFormat:               func() proto.Message { return &ethpb.DataColumnSidecar{} },
 	PayloadAttestationMessageTopicFormat:      func() proto.Message { return &ethpb.PayloadAttestationMessage{} },
+	ExecutionPayloadEnvelopeTopicFormat:       func() proto.Message { return &ethpb.SignedExecutionPayloadEnvelope{} },
 	PayloadChunkTopicFormat:                   func() proto.Message { return &ethpb.PayloadChunk{} },
 	ExecutionPayloadBidTopicFormat:            func() proto.Message { return &ethpb.SignedExecutionPayloadBid{} },
 	SignedProposerPreferencesTopicFormat:      func() proto.Message { return &ethpb.SignedProposerPreferences{} },
@@ -105,6 +106,11 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 			return &ethpb.DataColumnSidecarGloas{}
 		}
 		return gossipMessage(topic)
+	case ExecutionPayloadBidTopicFormat:
+		if epoch >= params.BeaconConfig().HezeForkEpoch {
+			return &ethpb.SignedExecutionPayloadBidHeze{}
+		}
+		return gossipMessage(topic)
 	default:
 		return gossipMessage(topic)
 	}
@@ -167,6 +173,7 @@ func init() {
 
 	// Specially handle Heze objects.
 	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockHeze]()] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedExecutionPayloadBidHeze]()] = ExecutionPayloadBidTopicFormat
 
 	// Payload attestation messages.
 	GossipTypeMapping[reflect.TypeFor[*ethpb.PayloadAttestationMessage]()] = PayloadAttestationMessageTopicFormat

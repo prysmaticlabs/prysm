@@ -23,7 +23,7 @@ const (
 	payloadFieldIndex                   = 9
 	signedExecutionPayloadBidFieldIndex = 10
 	parentBlockHashFieldIndex           = 0
-	executionPayloadBidFieldCount       = 13
+	executionPayloadBidFieldCount       = 12
 	beaconBlockBodyFieldCount           = 13
 )
 

@@ -120,7 +120,12 @@ func (s *Service) streamCanonicalEnvelopes(ctx context.Context, rp rangeParams, 
 	if successorBlock == nil {
 		return nil
 	}
-	bid, err := successorBlock.Block().Body().SignedExecutionPayloadBid()
+	sbid, err := successorBlock.Block().Body().SignedExecutionPayloadBid()
+	if err != nil {
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		return errors.Wrap(err, "could not get bid from successor block")
+	}
+	bid, err := sbid.Bid()
 	if err != nil {
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		return errors.Wrap(err, "could not get bid from successor block")
@@ -128,9 +133,9 @@ func (s *Service) streamCanonicalEnvelopes(ctx context.Context, rp rangeParams, 
 	// A successor at or below rp.end is the head-root fallback: the chain tip itself, with no
 	// descendant committing to its payload. Start the walk from the tip's own payload when fork
 	// choice selects its full variant, otherwise from the payload the tip builds on.
-	blockHash := bytesutil.ToBytes32(bid.Message.ParentBlockHash)
+	blockHash := bid.ParentBlockHash()
 	if successorBlock.Block().Slot() <= rp.end && s.cfg.chain.FullBeatsEmpty(successorRoot) {
-		blockHash = bytesutil.ToBytes32(bid.Message.BlockHash)
+		blockHash = bid.BlockHash()
 	}
 
 	wQuota := params.BeaconConfig().MaxRequestPayloads
@@ -185,19 +190,9 @@ func (s *Service) streamCanonicalEnvelopes(ctx context.Context, rp rangeParams, 
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return errors.Errorf("missing reconstructed payload for block hash %#x", c.blockHash)
 		}
-		fullEnv := &pb.SignedExecutionPayloadEnvelope{
-			Message: &pb.ExecutionPayloadEnvelope{
-				Payload:               payload,
-				ExecutionRequests:     c.env.Message.ExecutionRequests,
-				BuilderIndex:          c.env.Message.BuilderIndex,
-				BeaconBlockRoot:       c.env.Message.BeaconBlockRoot,
-				ParentBeaconBlockRoot: c.env.Message.ParentBeaconBlockRoot,
-			},
-			Signature: c.env.Signature,
-		}
 
 		SetStreamWriteDeadline(stream, defaultWriteDuration)
-		if chunkErr := WriteExecutionPayloadEnvelopeChunk(stream, s.cfg.p2p.Encoding(), fullEnv); chunkErr != nil {
+		if chunkErr := writeEnvelopeChunkFromBlinded(stream, s.cfg.p2p.Encoding(), c.env, payload); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send execution payload envelope chunk")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, chunkErr)

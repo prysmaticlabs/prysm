@@ -856,11 +856,13 @@ func downscorePeer(p2p p2p.P2P, peerID peer.ID, reason string, fields ...logrus.
 // ---------------------------------
 
 // SendExecutionPayloadEnvelopesByRootRequest sends ExecutionPayloadEnvelopesByRoot
-// and returns fetched envelopes, if any.
+// and returns fetched envelopes, if any. Heze wire envelopes carry no beacon block
+// root (EIP-8411), so their wrappers come back with a zero binding; callers that
+// know the owning root rebind via blocks.RebindEnvelopeRoot.
 func SendExecutionPayloadEnvelopesByRootRequest(
 	ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.P2P, pid peer.ID,
 	ctxMap ContextByteVersions, req *p2ptypes.ExecutionPayloadEnvelopesByRootReq,
-) ([]*ethpb.SignedExecutionPayloadEnvelope, error) {
+) ([]interfaces.ROSignedExecutionPayloadEnvelope, error) {
 	if uint64(len(*req)) > params.BeaconConfig().MaxRequestPayloads {
 		return nil, errors.Wrapf(p2ptypes.ErrMaxPayloadEnvelopeReqExceeded, "length=%d", len(*req))
 	}
@@ -886,7 +888,7 @@ func SendExecutionPayloadEnvelopesByRootRequest(
 		pendingRoots[root]++
 	}
 
-	envelopes := make([]*ethpb.SignedExecutionPayloadEnvelope, 0, len(*req))
+	envelopes := make([]interfaces.ROSignedExecutionPayloadEnvelope, 0, len(*req))
 	for i := range max + 1 {
 		envelope, err := readChunkedExecutionPayloadEnvelope(stream, p2pApi.Encoding(), ctxMap)
 		if errors.Is(err, io.EOF) {
@@ -899,8 +901,14 @@ func SendExecutionPayloadEnvelopesByRootRequest(
 			return nil, errors.New("peer returned more execution payload envelopes than requested")
 		}
 		// Validate that the returned envelope was actually requested and not a duplicate.
-		if envelope.Message != nil {
-			root := bytesutil.ToBytes32(envelope.Message.BeaconBlockRoot)
+		// Heze envelopes carry no root on the wire, so they cannot be attributed here;
+		// the per-envelope cap above still bounds them.
+		if envelope.Version() < version.Heze {
+			msg, err := envelope.Envelope()
+			if err != nil {
+				return nil, errors.Wrap(ErrInvalidFetchedData, "invalid execution payload envelope")
+			}
+			root := msg.BeaconBlockRoot()
 			remaining, ok := pendingRoots[root]
 			if !ok || remaining <= 0 {
 				return nil, errors.Errorf("received unrequested or duplicate execution payload envelope for root %#x", root)
@@ -913,11 +921,15 @@ func SendExecutionPayloadEnvelopesByRootRequest(
 	return envelopes, nil
 }
 
+// readChunkedExecutionPayloadEnvelope decodes one envelope response chunk using the wire
+// proto selected by the chunk's fork-digest context bytes: the Gloas container through
+// the Heze fork, the rootless Heze container from it (EIP-8411). Heze envelopes are
+// wrapped with a zero beacon block root binding.
 func readChunkedExecutionPayloadEnvelope(
 	stream network.Stream,
 	encoding encoder.NetworkEncoding,
 	ctxMap ContextByteVersions,
-) (*ethpb.SignedExecutionPayloadEnvelope, error) {
+) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
 	code, msg, err := ReadStatusCode(stream, encoding)
 	if err != nil {
 		return nil, err
@@ -937,11 +949,26 @@ func readChunkedExecutionPayloadEnvelope(
 	if v < version.Gloas {
 		return nil, errors.Errorf("unexpected context bytes for ExecutionPayloadEnvelope, ctx=%#x, v=%s", ctxb, version.String(v))
 	}
+	if v >= version.Heze {
+		envelope := &ethpb.SignedExecutionPayloadEnvelopeHeze{}
+		if err := encoding.DecodeWithMaxLength(stream, envelope); err != nil {
+			return nil, errors.Wrap(err, "failed to decode execution payload envelope from RPC chunk stream")
+		}
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelopeHeze(envelope, [32]byte{})
+		if err != nil {
+			return nil, errors.Wrap(ErrInvalidFetchedData, "invalid execution payload envelope")
+		}
+		return wrapped, nil
+	}
 	envelope := &ethpb.SignedExecutionPayloadEnvelope{}
 	if err := encoding.DecodeWithMaxLength(stream, envelope); err != nil {
 		return nil, errors.Wrap(err, "failed to decode execution payload envelope from RPC chunk stream")
 	}
-	return envelope, nil
+	wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(envelope)
+	if err != nil {
+		return nil, errors.Wrap(ErrInvalidFetchedData, "invalid execution payload envelope")
+	}
+	return wrapped, nil
 }
 
 func DataColumnSidecarsByRangeRequest(columns []uint64, start, end primitives.Slot) (*ethpb.DataColumnSidecarsByRangeRequest, error) {
@@ -955,7 +982,9 @@ func DataColumnSidecarsByRangeRequest(columns []uint64, start, end primitives.Sl
 	}, nil
 }
 
-// SendExecutionPayloadEnvelopesByRangeRequest sends ExecutionPayloadEnvelopesByRange and returns fetched envelopes, if any.
+// SendExecutionPayloadEnvelopesByRangeRequest sends ExecutionPayloadEnvelopesByRange and
+// returns fetched envelopes, if any. Heze wire envelopes carry no beacon block root
+// (EIP-8411); their wrappers come back with a zero binding.
 func SendExecutionPayloadEnvelopesByRangeRequest(
 	ctx context.Context,
 	tor blockchain.TemporalOracle,
@@ -963,7 +992,7 @@ func SendExecutionPayloadEnvelopesByRangeRequest(
 	pid peer.ID,
 	ctxMap ContextByteVersions,
 	req *ethpb.ExecutionPayloadEnvelopesByRangeRequest,
-) ([]*ethpb.SignedExecutionPayloadEnvelope, error) {
+) ([]interfaces.ROSignedExecutionPayloadEnvelope, error) {
 	topic, err := p2p.TopicFromMessage(p2p.ExecutionPayloadEnvelopesByRangeName, slots.ToEpoch(tor.CurrentSlot()))
 	if err != nil {
 		return nil, err
@@ -981,7 +1010,7 @@ func SendExecutionPayloadEnvelopesByRangeRequest(
 
 	max := min(req.Count, params.BeaconConfig().MaxRequestPayloads)
 
-	envelopes := make([]*ethpb.SignedExecutionPayloadEnvelope, 0, max)
+	envelopes := make([]interfaces.ROSignedExecutionPayloadEnvelope, 0, max)
 	var prevSlot primitives.Slot
 	var prevHash []byte
 	for i := uint64(0); i < max+1; i++ {
@@ -1008,17 +1037,22 @@ func SendExecutionPayloadEnvelopesByRangeRequest(
 }
 
 func validateExecutionPayloadEnvelopeByRangeResponse(
-	env *ethpb.SignedExecutionPayloadEnvelope,
+	env interfaces.ROSignedExecutionPayloadEnvelope,
 	req *ethpb.ExecutionPayloadEnvelopesByRangeRequest,
 	prevSlot primitives.Slot,
 	prevHash []byte,
 	hasPrevious bool,
 ) (primitives.Slot, []byte, error) {
-	if _, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env); err != nil {
+	msg, err := env.Envelope()
+	if err != nil {
+		return 0, nil, errors.Wrap(ErrInvalidFetchedData, "invalid execution payload envelope")
+	}
+	exec, err := msg.Execution()
+	if err != nil {
 		return 0, nil, errors.Wrap(ErrInvalidFetchedData, "invalid execution payload envelope")
 	}
 
-	envSlot := primitives.Slot(env.Message.Payload.SlotNumber)
+	envSlot := msg.Slot()
 	endSlot := req.StartSlot.Add(req.Count)
 	if envSlot < req.StartSlot || envSlot >= endSlot {
 		return 0, nil, errors.Wrapf(ErrInvalidFetchedData, "envelope slot %d outside requested range [%d, %d)", envSlot, req.StartSlot, endSlot)
@@ -1026,8 +1060,8 @@ func validateExecutionPayloadEnvelopeByRangeResponse(
 	if hasPrevious && envSlot <= prevSlot {
 		return 0, nil, errors.Wrapf(ErrInvalidFetchedData, "envelope slot %d not greater than previous slot %d", envSlot, prevSlot)
 	}
-	if len(prevHash) != 0 && !bytes.Equal(env.Message.Payload.ParentHash, prevHash) {
-		return 0, nil, errors.Wrapf(ErrInvalidFetchedData, "envelope parent hash %x does not match previous hash %x", env.Message.Payload.ParentHash, prevHash)
+	if len(prevHash) != 0 && !bytes.Equal(exec.ParentHash(), prevHash) {
+		return 0, nil, errors.Wrapf(ErrInvalidFetchedData, "envelope parent hash %x does not match previous hash %x", exec.ParentHash(), prevHash)
 	}
-	return envSlot, env.Message.Payload.BlockHash, nil
+	return envSlot, exec.BlockHash(), nil
 }

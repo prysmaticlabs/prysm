@@ -41,14 +41,9 @@ func testProtoEnvelope() *ethpb.ExecutionPayloadEnvelope {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          primitives.BuilderIndex(42),
+		BeaconBlockRoot:       bytesutil.PadTo([]byte("beacon-root"), 32),
 		ParentBeaconBlockRoot: bytesutil.PadTo([]byte("parent-beacon-root"), 32),
 	}
-}
-
-// testEnvelopeRoot is the out-of-band beacon block root the fixture envelope
-// is published for.
-func testEnvelopeRoot() [32]byte {
-	return bytesutil.ToBytes32(bytesutil.PadTo([]byte("beacon-root"), 32))
 }
 
 func TestGetExecutionPayloadEnvelope_CachedHit(t *testing.T) {
@@ -65,7 +60,7 @@ func TestGetExecutionPayloadEnvelope_CachedHit(t *testing.T) {
 	}
 	client.envelopeCache.Add(100, envelope, nil, nil)
 
-	full, err := client.getExecutionPayloadEnvelope(t.Context(), 100, testEnvelopeRoot())
+	full, err := client.getExecutionPayloadEnvelope(t.Context(), 100, bytesutil.ToBytes32(envelope.BeaconBlockRoot))
 	require.NoError(t, err)
 	require.NotNil(t, full)
 	assert.Equal(t, primitives.BuilderIndex(42), full.BuilderIndex)
@@ -73,6 +68,26 @@ func TestGetExecutionPayloadEnvelope_CachedHit(t *testing.T) {
 	// Peek must leave the entry in the cache so the publish path can read blob data.
 	cached, _, _ := client.envelopeCache.Peek(100)
 	require.NotNil(t, cached)
+}
+
+// A cached envelope for a different block root must not be returned for the requested block.
+func TestGetExecutionPayloadEnvelope_CachedRootMismatch(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	handler := mock.NewMockHandler(ctrl)
+	// No Get expectation: the root mismatch must error before any HTTP call.
+
+	envelope := testProtoEnvelope()
+	client := &beaconApiValidatorClient{
+		handler:       handler,
+		envelopeCache: cache.NewExecutionPayloadEnvelopeCache(),
+	}
+	client.envelopeCache.Add(100, envelope, nil, nil)
+
+	full, err := client.getExecutionPayloadEnvelope(t.Context(), 100, [32]byte{})
+	require.ErrorContains(t, "does not match requested block", err)
+	require.IsNil(t, full)
 }
 
 // Stateful: on a local cache miss the VC fetches the full envelope from the BN.
@@ -84,7 +99,7 @@ func TestGetExecutionPayloadEnvelope_StatefulFetchesEnvelope(t *testing.T) {
 	body, err := envelope.MarshalSSZ()
 	require.NoError(t, err)
 
-	root := testEnvelopeRoot()
+	root := bytesutil.ToBytes32(envelope.BeaconBlockRoot)
 	respHeader := http.Header{}
 	respHeader.Set("Content-Type", api.OctetStreamMediaType)
 
@@ -125,7 +140,7 @@ func TestPublishExecutionPayloadEnvelope_StatefulSendsBareEnvelope(t *testing.T)
 	).Return(nil)
 
 	client := &beaconApiValidatorClient{handler: handler, envelopeCache: cache.NewExecutionPayloadEnvelopeCache()}
-	resp, err := client.publishExecutionPayloadEnvelope(t.Context(), signed, testEnvelopeRoot())
+	resp, err := client.publishExecutionPayloadEnvelope(t.Context(), signed)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 }
@@ -135,7 +150,7 @@ func TestPublishExecutionPayloadEnvelope_StatefulJSONFallbackOn415(t *testing.T)
 	defer ctrl.Finish()
 
 	signed := &ethpb.SignedExecutionPayloadEnvelope{Message: testProtoEnvelope(), Signature: bytesutil.PadTo([]byte("sig"), 96)}
-	msg, err := structs.SignedExecutionPayloadEnvelopeFromConsensus(signed, testEnvelopeRoot())
+	msg, err := structs.SignedExecutionPayloadEnvelopeFromConsensus(signed)
 	require.NoError(t, err)
 	expectedJSON, err := json.Marshal(msg)
 	require.NoError(t, err)
@@ -158,7 +173,7 @@ func TestPublishExecutionPayloadEnvelope_StatefulJSONFallbackOn415(t *testing.T)
 	).Return(nil)
 
 	client := &beaconApiValidatorClient{handler: handler, envelopeCache: cache.NewExecutionPayloadEnvelopeCache()}
-	resp, err := client.publishExecutionPayloadEnvelope(t.Context(), signed, testEnvelopeRoot())
+	resp, err := client.publishExecutionPayloadEnvelope(t.Context(), signed)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 }
@@ -202,7 +217,7 @@ func TestPublishExecutionPayloadEnvelope_StatelessSendsContents(t *testing.T) {
 	}
 	client.envelopeCache.Add(primitives.Slot(envelope.Payload.SlotNumber), envelope, [][]byte{blob}, [][]byte{proof})
 
-	resp, err := client.publishExecutionPayloadEnvelope(t.Context(), signed, testEnvelopeRoot())
+	resp, err := client.publishExecutionPayloadEnvelope(t.Context(), signed)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
@@ -230,13 +245,13 @@ func TestPublishExecutionPayloadEnvelope_Error(t *testing.T) {
 	client := &beaconApiValidatorClient{handler: handler, envelopeCache: cache.NewExecutionPayloadEnvelopeCache()}
 	client.envelopeCache.Add(primitives.Slot(envelope.Payload.SlotNumber), envelope, nil, nil)
 
-	_, err := client.publishExecutionPayloadEnvelope(t.Context(), signed, testEnvelopeRoot())
+	_, err := client.publishExecutionPayloadEnvelope(t.Context(), signed)
 	assert.ErrorContains(t, "server error", err)
 }
 
 func TestEnvelopeRoundTrip(t *testing.T) {
 	envelope := testProtoEnvelope()
-	jsonEnvelope, err := structs.ExecutionPayloadEnvelopeFromConsensus(envelope, testEnvelopeRoot())
+	jsonEnvelope, err := structs.ExecutionPayloadEnvelopeFromConsensus(envelope)
 	require.NoError(t, err)
 
 	roundTripped, err := jsonEnvelope.ToConsensus()
@@ -244,8 +259,6 @@ func TestEnvelopeRoundTrip(t *testing.T) {
 
 	assert.Equal(t, envelope.BuilderIndex, roundTripped.BuilderIndex)
 	assert.Equal(t, envelope.Payload.SlotNumber, roundTripped.Payload.SlotNumber)
-	root, err := jsonEnvelope.ParsedBeaconBlockRoot()
-	require.NoError(t, err)
-	assert.Equal(t, testEnvelopeRoot(), root)
+	assert.DeepEqual(t, envelope.BeaconBlockRoot, roundTripped.BeaconBlockRoot)
 	assert.Equal(t, hexutil.Encode(envelope.Payload.BlockHash), hexutil.Encode(roundTripped.Payload.BlockHash))
 }

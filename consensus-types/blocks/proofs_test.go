@@ -3,7 +3,6 @@ package blocks
 import (
 	"testing"
 
-	methodicalssz "github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/container/trie"
@@ -244,7 +243,7 @@ func TestProgressiveContainerActiveFields(t *testing.T) {
 		{
 			name:      "execution payload bid",
 			container: executionPayloadBidProgressiveContainer,
-			want:      [32]byte{0xff, 0x1f},
+			want:      [32]byte{0xff, 0x0f},
 		},
 		{
 			name:      "beacon block body",
@@ -297,25 +296,24 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		require.NoError(t, err)
 		signedBid, err := block.Body().SignedExecutionPayloadBid()
 		require.NoError(t, err)
+		bid, err := signedBid.Bid()
+		require.NoError(t, err)
+		parentBlockHash := bid.ParentBlockHash()
 		require.Equal(t, true, trie.VerifyMerkleProof(
-			bodyRoot[:], signedBid.Message.ParentBlockHash, 2856, proof,
+			bodyRoot[:], parentBlockHash[:], 2856, proof,
 		))
 	})
 
-	t.Run("proves Heze parent block hash", func(t *testing.T) {
+	t.Run("rejects Heze bid", func(t *testing.T) {
+		// EIP-8411: the Heze bid adds payload_chunks_root; the light client proof
+		// builder is Gloas-specific and must refuse rather than mis-prove.
 		body := hydrateBeaconBlockBodyHeze()
 		body.SignedExecutionPayloadBid.Message.ParentBlockHash[0] = 0x42
 		block, err := NewBeaconBlock(&eth.BeaconBlockHeze{Body: body})
 		require.NoError(t, err)
 
-		proof, err := ExecutionBlockHashProof(t.Context(), block)
-		require.NoError(t, err)
-		require.Equal(t, 11, len(proof))
-		bodyRoot, err := block.Body().HashTreeRoot()
-		require.NoError(t, err)
-		require.Equal(t, true, trie.VerifyMerkleProof(
-			bodyRoot[:], body.SignedExecutionPayloadBid.Message.ParentBlockHash, 2856, proof,
-		))
+		_, err = ExecutionBlockHashProof(t.Context(), block)
+		require.ErrorContains(t, "only supported for Gloas bids", err)
 	})
 
 	t.Run("rejects pre-Gloas block", func(t *testing.T) {
@@ -331,7 +329,7 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorContains(t, "bid is nil", err)
+		require.ErrorContains(t, "attempted to wrap nil object", err)
 	})
 
 	t.Run("rejects invalid bid field", func(t *testing.T) {
@@ -340,7 +338,7 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid.Message.ParentBlockHash = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorIs(t, err, methodicalssz.ErrBytesLength)
+		require.ErrorContains(t, "attempted to wrap nil object", err)
 	})
 
 	t.Run("rejects invalid commitment", func(t *testing.T) {
@@ -349,7 +347,7 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid.Message.BlobKzgCommitments[0] = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorIs(t, err, methodicalssz.ErrBytesLength)
+		require.ErrorContains(t, "attempted to wrap nil object", err)
 	})
 
 	t.Run("rejects invalid signature", func(t *testing.T) {
@@ -358,6 +356,6 @@ func TestExecutionBlockHashProof(t *testing.T) {
 		block := newGloasBlock(t)
 		block.body.signedExecutionPayloadBid.Signature = nil
 		_, err := ExecutionBlockHashProof(t.Context(), block)
-		require.ErrorIs(t, err, methodicalssz.ErrBytesLength)
+		require.ErrorContains(t, "attempted to wrap nil object", err)
 	})
 }

@@ -21,6 +21,7 @@ import (
 	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
 	engpb "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
@@ -49,6 +50,7 @@ func testSignedEnvelope(slot primitives.Slot, beaconBlockRoot []byte) *pb.Signed
 				SlotNumber:    slot,
 			},
 			ExecutionRequests:     &engpb.ExecutionRequestsGloas{},
+			BeaconBlockRoot:       root,
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
@@ -136,24 +138,23 @@ func TestValidateEnvelopesByRange(t *testing.T) {
 }
 
 func TestValidateExecutionPayloadEnvelopeByRangeResponseRejectsMalformedEnvelope(t *testing.T) {
-	req := &pb.ExecutionPayloadEnvelopesByRangeRequest{StartSlot: 5, Count: 1}
-
+	// Malformed envelopes are rejected at wrap time, before
+	// validateExecutionPayloadEnvelopeByRangeResponse ever sees them (see
+	// readChunkedExecutionPayloadEnvelope).
 	t.Run("nil message", func(t *testing.T) {
 		env := testSignedEnvelope(5, make([]byte, 32))
 		env.Message = nil
 
-		_, _, err := validateExecutionPayloadEnvelopeByRangeResponse(env, req, 0, nil, false)
+		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "invalid execution payload envelope", err)
 	})
 
 	t.Run("nil payload", func(t *testing.T) {
 		env := testSignedEnvelope(5, make([]byte, 32))
 		env.Message.Payload = nil
 
-		_, _, err := validateExecutionPayloadEnvelopeByRangeResponse(env, req, 0, nil, false)
+		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, "invalid execution payload envelope", err)
 	})
 }
 
@@ -299,7 +300,7 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 			if sl <= 30 {
 				env := testSignedEnvelope(sl, htr[:])
 				copy(env.Message.Payload.ParentHash, parentRoot[:])
-				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, htr))
+				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
 			}
 		}
 
@@ -345,7 +346,9 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 				}
 				assert.NoError(t, readErr)
 				if env != nil {
-					receivedSlots = append(receivedSlots, primitives.Slot(env.Message.Payload.SlotNumber))
+					msg, msgErr := env.Envelope()
+					assert.NoError(t, msgErr)
+					receivedSlots = append(receivedSlots, msg.Slot())
 				}
 			}
 		})
@@ -406,7 +409,7 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 				if i != 1 {
 					copy(env.Message.Payload.ParentHash, parentRoot[:])
 				}
-				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, htr))
+				require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
 			}
 		}
 
@@ -452,7 +455,9 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 				}
 				assert.NoError(t, readErr)
 				if env != nil {
-					receivedSlots = append(receivedSlots, primitives.Slot(env.Message.Payload.SlotNumber))
+					msg, msgErr := env.Envelope()
+					assert.NoError(t, msgErr)
+					receivedSlots = append(receivedSlots, msg.Slot())
 				}
 			}
 		})
@@ -517,7 +522,7 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 			// Replace (not copy over) the payload block hash: the helper aliases it to BeaconBlockRoot.
 			env.Message.Payload.BlockHash = h[:]
 			copy(env.Message.Payload.ParentHash, prevHash[:])
-			require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env, htr))
+			require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
 
 			prevRoot, prevHash = htr, h
 		}
@@ -574,7 +579,9 @@ func TestExecutionPayloadEnvelopesByRangeRPCHandler(t *testing.T) {
 				}
 				assert.NoError(t, readErr)
 				if env != nil {
-					receivedSlots = append(receivedSlots, primitives.Slot(env.Message.Payload.SlotNumber))
+					msg, msgErr := env.Envelope()
+					assert.NoError(t, msgErr)
+					receivedSlots = append(receivedSlots, msg.Slot())
 				}
 			}
 		})
@@ -656,9 +663,9 @@ func TestSendExecutionPayloadEnvelopesByRangeRequest(t *testing.T) {
 		envelopes, recvErr := SendExecutionPayloadEnvelopesByRangeRequest(ctx, clock, p1, p2.PeerID(), ctxMap, req)
 		require.NoError(t, recvErr)
 		require.Equal(t, int(count), len(envelopes))
-		assert.Equal(t, startSlot, primitives.Slot(envelopes[0].Message.Payload.SlotNumber))
-		assert.Equal(t, startSlot+1, primitives.Slot(envelopes[1].Message.Payload.SlotNumber))
-		assert.Equal(t, startSlot+2, primitives.Slot(envelopes[2].Message.Payload.SlotNumber))
+		assert.Equal(t, startSlot, primitives.Slot(gloasEnvelopeProto(t, envelopes[0]).Message.Payload.SlotNumber))
+		assert.Equal(t, startSlot+1, primitives.Slot(gloasEnvelopeProto(t, envelopes[1]).Message.Payload.SlotNumber))
+		assert.Equal(t, startSlot+2, primitives.Slot(gloasEnvelopeProto(t, envelopes[2]).Message.Payload.SlotNumber))
 	})
 
 	t.Run("empty response from remote peer", func(t *testing.T) {

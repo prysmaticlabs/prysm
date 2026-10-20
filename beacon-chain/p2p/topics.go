@@ -48,8 +48,10 @@ const (
 	GossipDataColumnSidecarMessage = "data_column_sidecar"
 	// GossipPayloadAttestationMessageMessage is the name for the payload attestation message type.
 	GossipPayloadAttestationMessageMessage = "payload_attestation_message"
+	// GossipExecutionPayloadEnvelopeMessage is the name for the execution payload envelope message type.
+	GossipExecutionPayloadEnvelopeMessage = "execution_payload"
 	// GossipPayloadChunkMessage is the name for the EIP-8411 execution payload
-	// chunk message type, replacing the retired execution_payload topic.
+	// chunk message type, replacing the execution_payload topic from the Heze fork.
 	GossipPayloadChunkMessage = "execution_payload_chunks"
 	// GossipExecutionPayloadBidMessage is the name for the execution payload bid message type.
 	GossipExecutionPayloadBidMessage = "execution_payload_bid"
@@ -86,6 +88,8 @@ const (
 	DataColumnSubnetTopicFormat = GossipProtocolAndDigest + GossipDataColumnSidecarMessage + "_%d"
 	// PayloadAttestationMessageTopicFormat is the topic format for payload attestation messages.
 	PayloadAttestationMessageTopicFormat = GossipProtocolAndDigest + GossipPayloadAttestationMessageMessage
+	// ExecutionPayloadEnvelopeTopicFormat is the topic format for execution payload envelopes.
+	ExecutionPayloadEnvelopeTopicFormat = GossipProtocolAndDigest + GossipExecutionPayloadEnvelopeMessage
 	// PayloadChunkTopicFormat is the topic format for EIP-8411 execution payload chunks.
 	PayloadChunkTopicFormat = GossipProtocolAndDigest + GossipPayloadChunkMessage
 	// ExecutionPayloadBidTopicFormat is the topic format for execution payload bids.
@@ -158,7 +162,7 @@ func (s *Service) allTopics() []topic {
 	cfg := params.BeaconConfig()
 	// bellatrix: no special topics; electra: blobs topics handled all together
 	genesis, altair, capella := cfg.GenesisEpoch, cfg.AltairForkEpoch, cfg.CapellaForkEpoch
-	deneb, fulu, gloas, future := cfg.DenebForkEpoch, cfg.FuluForkEpoch, cfg.GloasForkEpoch, cfg.FarFutureEpoch
+	deneb, fulu, gloas, heze, future := cfg.DenebForkEpoch, cfg.FuluForkEpoch, cfg.GloasForkEpoch, cfg.HezeForkEpoch, cfg.FarFutureEpoch
 	// Templates are starter topics - they have a placeholder digest and the subnet is set to the maximum value
 	// for the subnet (see how this is used in allSubnetsBelow). These are not directly returned by the method,
 	// they are copied and modified for each digest where they apply based on the start and end epochs.
@@ -176,7 +180,9 @@ func (s *Service) allTopics() []topic {
 		newTopic(altair, future, empty, GossipLightClientFinalityUpdateMessage),
 		newTopic(capella, future, empty, GossipBlsToExecutionChangeMessage),
 		newTopic(gloas, future, empty, GossipPayloadAttestationMessageMessage),
-		newTopic(gloas, future, empty, GossipPayloadChunkMessage),
+		// EIP-8411: the envelope topic retires at Heze, replaced by payload chunks.
+		newTopic(gloas, heze, empty, GossipExecutionPayloadEnvelopeMessage),
+		newTopic(heze, future, empty, GossipPayloadChunkMessage),
 		newTopic(gloas, future, empty, GossipExecutionPayloadBidMessage),
 		newTopic(gloas, future, empty, GossipSignedProposerPreferencesMessage),
 	}

@@ -86,7 +86,6 @@ func TestGetBlockRewardsData_GloasParentPayload(t *testing.T) {
 		Slot:                  parentSlot,
 		BlockHash:             parentBlockHash[:],
 		ExecutionRequestsRoot: emptyRequestsRoot[:],
-		PayloadChunksRoot:     make([]byte, 32),
 	}))
 	require.NoError(t, err)
 	require.NoError(t, st.SetExecutionPayloadBid(parentBid))

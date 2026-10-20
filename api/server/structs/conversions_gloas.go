@@ -30,7 +30,12 @@ func ROExecutionPayloadBidFromConsensus(b interfaces.ROExecutionPayloadBid) *Exe
 		blobKzgCommitments = append(blobKzgCommitments, hexutil.Encode(commitment))
 	}
 	erRoot := b.ExecutionRequestsRoot()
-	chunksRoot := b.PayloadChunksRoot()
+	// EIP-8411: only Heze bids commit to chunked envelope bytes; Gloas bids
+	// report a zero root, which is omitted to keep Gloas responses unchanged.
+	var chunksRootStr string
+	if chunksRoot := b.PayloadChunksRoot(); chunksRoot != ([32]byte{}) {
+		chunksRootStr = hexutil.Encode(chunksRoot[:])
+	}
 	return &ExecutionPayloadBid{
 		ParentBlockHash:       hexutil.Encode(pbh[:]),
 		ParentBlockRoot:       hexutil.Encode(pbr[:]),
@@ -44,7 +49,7 @@ func ROExecutionPayloadBidFromConsensus(b interfaces.ROExecutionPayloadBid) *Exe
 		ExecutionPayment:      fmt.Sprintf("%d", b.ExecutionPayment()),
 		BlobKzgCommitments:    blobKzgCommitments,
 		ExecutionRequestsRoot: hexutil.Encode(erRoot[:]),
-		PayloadChunksRoot:     hexutil.Encode(chunksRoot[:]),
+		PayloadChunksRoot:     chunksRootStr,
 	}
 }
 

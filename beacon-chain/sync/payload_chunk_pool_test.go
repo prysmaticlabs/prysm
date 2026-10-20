@@ -7,11 +7,12 @@ import (
 	"time"
 
 	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	dbtest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
 	lruwrpr "github.com/OffchainLabs/prysm/v7/cache/lru"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
@@ -31,6 +32,7 @@ func newChunkTestService(t *testing.T, blockRoot [32]byte) *Service {
 		ctx:                      context.Background(),
 		chainStarted:             &atomic.Bool{},
 		pendingPayloadEnvelopes:  make(map[[32]byte]map[uint64]*ethpb.SignedExecutionPayloadEnvelope),
+		pendingHezeEnvelopes:     make(map[[32]byte]interfaces.ROSignedExecutionPayloadEnvelope),
 		pendingPayloadChunks:     make(map[[32]byte]*pendingChunkEntry),
 		payloadChunkPool:         newPayloadChunkPool(),
 		payloadChunkCommitments:  newSlotAwareCache(16),
@@ -53,7 +55,7 @@ func TestReconstructedEnvelopeBindingRetry(t *testing.T) {
 	builderIdx := primitives.BuilderIndex(7)
 	blockRoot := [32]byte{0xAB, 0xCD}
 	blockHash := [32]byte{0xBB}
-	envelope := testSignedExecutionPayloadEnvelope(t, slot, builderIdx, [32]byte{}, blockHash).Message
+	envelope := testSignedExecutionPayloadEnvelopeHeze(t, slot, builderIdx, blockHash).Message
 
 	waitSeen := func(t *testing.T, s *Service) {
 		t.Helper()
@@ -69,7 +71,7 @@ func TestReconstructedEnvelopeBindingRetry(t *testing.T) {
 
 	t.Run("zero hint waits for the binding", func(t *testing.T) {
 		s := newChunkTestService(t, blockRoot)
-		chunks, chunksRoot, err := gloas.BuildPayloadChunkMessages(envelope, slot, [32]byte{})
+		chunks, chunksRoot, err := heze.BuildPayloadChunkMessages(envelope, slot, [32]byte{})
 		require.NoError(t, err)
 
 		// The bid was seen on gossip only: commitment known, binding unknown.
@@ -90,7 +92,7 @@ func TestReconstructedEnvelopeBindingRetry(t *testing.T) {
 	t.Run("forged hint is corrected by the binding", func(t *testing.T) {
 		s := newChunkTestService(t, blockRoot)
 		forged := [32]byte{0xFF, 0xEE}
-		chunks, chunksRoot, err := gloas.BuildPayloadChunkMessages(envelope, slot, forged)
+		chunks, chunksRoot, err := heze.BuildPayloadChunkMessages(envelope, slot, forged)
 		require.NoError(t, err)
 
 		s.registerPayloadChunkCommitment(slot, chunksRoot, [32]byte{})
@@ -100,9 +102,9 @@ func TestReconstructedEnvelopeBindingRetry(t *testing.T) {
 		// Misrouted: parked under the forged root, nothing imported, and the
 		// pool entry is not marked imported (hint routing is not authoritative).
 		require.Equal(t, false, s.hasSeenPayloadEnvelope(blockRoot, builderIdx))
-		s.pendingEnvelopeLock.Lock()
-		_, parked := s.pendingPayloadEnvelopes[forged]
-		s.pendingEnvelopeLock.Unlock()
+		s.pendingHezeEnvelopesLock.Lock()
+		_, parked := s.pendingHezeEnvelopes[forged]
+		s.pendingHezeEnvelopesLock.Unlock()
 		require.Equal(t, true, parked)
 		_, done := s.payloadChunkPool.completedChunks(chunksRoot, slot)
 		require.Equal(t, true, done)
@@ -113,7 +115,7 @@ func TestReconstructedEnvelopeBindingRetry(t *testing.T) {
 
 	t.Run("authoritative routing is not retried", func(t *testing.T) {
 		s := newChunkTestService(t, blockRoot)
-		chunks, chunksRoot, err := gloas.BuildPayloadChunkMessages(envelope, slot, blockRoot)
+		chunks, chunksRoot, err := heze.BuildPayloadChunkMessages(envelope, slot, blockRoot)
 		require.NoError(t, err)
 
 		// Binding known before completion: import happens inline and the pool
@@ -182,4 +184,20 @@ func TestPayloadChunkPoolEviction(t *testing.T) {
 		s.acceptVerifiedPayloadChunk(s.ctx, c)
 		require.Equal(t, false, s.hasSeenPayloadChunk(root, c.Index))
 	})
+}
+
+// testSignedExecutionPayloadEnvelopeHeze lifts the Gloas envelope fixture into
+// the Heze container, which carries no beacon block root (EIP-8411).
+func testSignedExecutionPayloadEnvelopeHeze(t *testing.T, slot primitives.Slot, builderIdx primitives.BuilderIndex, blockHash [32]byte) *ethpb.SignedExecutionPayloadEnvelopeHeze {
+	t.Helper()
+	gloasSigned := testSignedExecutionPayloadEnvelope(t, slot, builderIdx, [32]byte{}, blockHash)
+	return &ethpb.SignedExecutionPayloadEnvelopeHeze{
+		Message: &ethpb.ExecutionPayloadEnvelopeHeze{
+			Payload:               gloasSigned.Message.Payload,
+			ExecutionRequests:     gloasSigned.Message.ExecutionRequests,
+			BuilderIndex:          gloasSigned.Message.BuilderIndex,
+			ParentBeaconBlockRoot: gloasSigned.Message.ParentBeaconBlockRoot,
+		},
+		Signature: gloasSigned.Signature,
+	}
 }

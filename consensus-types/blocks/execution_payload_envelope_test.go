@@ -49,27 +49,29 @@ func validExecutionPayloadEnvelope() *ethpb.ExecutionPayloadEnvelope {
 			},
 		},
 		BuilderIndex:          10,
+		BeaconBlockRoot:       bytes.Repeat([]byte{0xAA}, 32),
 		ParentBeaconBlockRoot: bytes.Repeat([]byte{0xCC}, 32),
 	}
-}
-
-// envelopeTestRoot is the beacon block root the wrapper is bound to at
-// construction (EIP-8411 removed the root from the container).
-func envelopeTestRoot() [32]byte {
-	return [32]byte(bytes.Repeat([]byte{0xAA}, 32))
 }
 
 func TestWrappedROExecutionPayloadEnvelope(t *testing.T) {
 	t.Run("returns error on nil payload", func(t *testing.T) {
 		invalid := validExecutionPayloadEnvelope()
 		invalid.Payload = nil
-		_, err := blocks.WrappedROExecutionPayloadEnvelope(invalid, envelopeTestRoot())
+		_, err := blocks.WrappedROExecutionPayloadEnvelope(invalid)
+		require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
+	})
+
+	t.Run("returns error on invalid beacon root length", func(t *testing.T) {
+		invalid := validExecutionPayloadEnvelope()
+		invalid.BeaconBlockRoot = []byte{0x01}
+		_, err := blocks.WrappedROExecutionPayloadEnvelope(invalid)
 		require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 	})
 
 	t.Run("wraps and exposes fields", func(t *testing.T) {
 		env := validExecutionPayloadEnvelope()
-		wrapped, err := blocks.WrappedROExecutionPayloadEnvelope(env, envelopeTestRoot())
+		wrapped, err := blocks.WrappedROExecutionPayloadEnvelope(env)
 		require.NoError(t, err)
 
 		require.Equal(t, primitives.BuilderIndex(10), wrapped.BuilderIndex())
@@ -97,12 +99,12 @@ func TestWrappedROSignedExecutionPayloadEnvelope(t *testing.T) {
 			Message:   validExecutionPayloadEnvelope(),
 			Signature: bytes.Repeat([]byte{0xAA}, 95),
 		}
-		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed, envelopeTestRoot())
+		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed)
 		require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 	})
 
 	t.Run("returns error on nil envelope", func(t *testing.T) {
-		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(nil, envelopeTestRoot())
+		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(nil)
 		require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 	})
 
@@ -110,7 +112,7 @@ func TestWrappedROSignedExecutionPayloadEnvelope(t *testing.T) {
 		signed := &ethpb.SignedExecutionPayloadEnvelope{
 			Signature: bytes.Repeat([]byte{0xAA}, 96),
 		}
-		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed, envelopeTestRoot())
+		_, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed)
 		require.Equal(t, consensus_types.ErrNilObjectWrapped, err)
 	})
 
@@ -121,7 +123,7 @@ func TestWrappedROSignedExecutionPayloadEnvelope(t *testing.T) {
 			Signature: sig,
 		}
 
-		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed, envelopeTestRoot())
+		wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed)
 		require.NoError(t, err)
 
 		gotSig := wrapped.Signature()
@@ -155,11 +157,12 @@ func gloasBlockWithBid(t *testing.T, parentRoot, parentBlockHash [32]byte) block
 
 func signedEnvelopeFor(t *testing.T, beaconBlockRoot, blockHash [32]byte) interfaces.ROSignedExecutionPayloadEnvelope {
 	env := validExecutionPayloadEnvelope()
+	env.BeaconBlockRoot = beaconBlockRoot[:]
 	env.Payload.BlockHash = blockHash[:]
 	signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(&ethpb.SignedExecutionPayloadEnvelope{
 		Message:   env,
 		Signature: bytes.Repeat([]byte{0xAB}, 96),
-	}, beaconBlockRoot)
+	})
 	require.NoError(t, err)
 	return signed
 }

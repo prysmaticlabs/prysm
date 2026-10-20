@@ -27,7 +27,10 @@ func checkAllBlocksBuildOnEmpty(blks []blocks.BlockWithROSidecars) error {
 	if err != nil {
 		return errors.Wrap(err, "get execution payload bid from block")
 	}
-	firstBid := s.Message
+	firstBid, err := s.Bid()
+	if err != nil {
+		return errors.Wrap(err, "get execution payload bid from block")
+	}
 	for i := 1; i < len(blks); i++ {
 		next := blks[i].Block
 		if next.ReadOnlySignedBeaconBlock == nil {
@@ -40,7 +43,11 @@ func checkAllBlocksBuildOnEmpty(blks []blocks.BlockWithROSidecars) error {
 		if err != nil {
 			return errors.Wrap(err, "get execution payload bid from block")
 		}
-		if !bytes.Equal(nextSignedBid.Message.ParentBlockHash, firstBid.ParentBlockHash) {
+		nextBid, err := nextSignedBid.Bid()
+		if err != nil {
+			return errors.Wrap(err, "get execution payload bid from block")
+		}
+		if nextBid.ParentBlockHash() != firstBid.ParentBlockHash() {
 			return fmt.Errorf("block with root %#x does not build on top of the empty block", next.Root())
 		}
 		b = next
@@ -113,14 +120,43 @@ func (f *blocksFetcher) validatePayloadBlockConsistency(r *fetchRequestResponse)
 	if pidx < len(r.envelopes) {
 		// Check if the next envelope belongs to the last block in the batch.
 		lastBlock := r.bwb[len(r.bwb)-1]
-		env, err := r.envelopes[pidx].Envelope()
-		if err == nil && env.BeaconBlockRoot() == lastBlock.Block.Root() {
+		if envelopeMatchesBlock(r.envelopes[pidx], lastBlock.Block) {
 			r.envelopes = r.envelopes[:pidx+1]
 		} else {
 			log.Debug("Not enough blocks in batch, truncating envelopes")
 			r.envelopes = r.envelopes[:pidx]
 		}
 	}
+}
+
+// envelopeMatchesBlock reports whether env is the payload the block's own bid commits
+// to. Gloas envelopes carry the beacon block root inline; Heze wire envelopes do not
+// (EIP-8411), so the binding falls back to the bid's block hash, guarded non-zero.
+func envelopeMatchesBlock(signed interfaces.ROSignedExecutionPayloadEnvelope, blk blocks.ROBlock) bool {
+	env, err := signed.Envelope()
+	if err != nil {
+		return false
+	}
+	if root := env.BeaconBlockRoot(); root != ([32]byte{}) {
+		return root == blk.Root()
+	}
+	sbid, err := blk.Block().Body().SignedExecutionPayloadBid()
+	if err != nil || sbid == nil {
+		return false
+	}
+	bid, err := sbid.Bid()
+	if err != nil {
+		return false
+	}
+	bh := bid.BlockHash()
+	if bh == ([32]byte{}) {
+		return false
+	}
+	exec, err := env.Execution()
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(exec.BlockHash(), bh[:])
 }
 
 // fetchPayloads fetches execution payload envelopes correponding to blocks in
@@ -152,13 +188,32 @@ func (f *blocksFetcher) fetchPayloads(ctx context.Context, r *fetchRequestRespon
 		return
 	}
 
-	// The whole block batch is gloas
+	// The whole block batch is at least gloas.
+	count := r.count
+	firstHezeIndex, err := findFirstForkIndex(r.bwb, version.Heze)
+	if err != nil {
+		r.err = errors.Wrap(err, "find first Heze index")
+		r.payloadsFrom = ""
+		return
+	}
+	if firstHezeIndex > 0 && firstHezeIndex < len(r.bwb) {
+		// EIP-8411: Gloas and Heze envelopes travel as different wire containers;
+		// cut the batch at the fork boundary so one batch never mixes both
+		// envelope protocols, and bound the envelope request to the kept blocks.
+		log.Debug("Batch across the Gloas/Heze fork, truncating it")
+		r.bwb = r.bwb[:firstHezeIndex]
+		lastSlot := r.bwb[len(r.bwb)-1].Block.Block().Slot()
+		if lastSlot >= r.start {
+			count = min(count, uint64(lastSlot-r.start)+1)
+		}
+	}
+
 	start := r.start
 	gloasStart, err := slots.EpochStart(params.BeaconConfig().GloasForkEpoch)
 	if err == nil && start > gloasStart {
 		start--
 	}
-	envelopes, pid, err := f.fetchPayloadEnvelopesFromPeer(ctx, start, r.count, r.blocksFrom, peers)
+	envelopes, pid, err := f.fetchPayloadEnvelopesFromPeer(ctx, start, count, r.blocksFrom, peers)
 	if err != nil {
 		r.err = errors.Wrap(err, "fetch payload envelopes from peer")
 		r.payloadsFrom = ""
@@ -205,16 +260,7 @@ func (f *blocksFetcher) fetchPayloadEnvelopesFromPeer(
 			continue
 		}
 		f.p2p.Peers().Scorers().BlockProviderScorer().Touch(p)
-		roEnvelopes := make([]interfaces.ROSignedExecutionPayloadEnvelope, 0, len(envelopes))
-		for _, env := range envelopes {
-			wrapped, err := blocks.WrappedROSignedExecutionPayloadEnvelope(env)
-			if err != nil {
-				log.WithField("peer", p).WithError(err).Debug("Invalid payload envelope in response")
-				continue
-			}
-			roEnvelopes = append(roEnvelopes, wrapped)
-		}
-		return roEnvelopes, p, nil
+		return envelopes, p, nil
 	}
 	return nil, "", errNoPeersAvailable
 }

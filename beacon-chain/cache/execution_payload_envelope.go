@@ -10,10 +10,17 @@ import (
 // ExecutionPayloadContents holds the producer's envelope with precomputed
 // data column sidecars; raw blobs/proofs are derived from the columns at read
 // time so the publish hot path skips the KZG cell extension.
+// Exactly one of Envelope (Gloas) and EnvelopeHeze (Heze, EIP-8411) is set.
+// The Heze container carries no beacon block root, so BeaconBlockRoot records
+// the binding out of band, and Chunks holds the precomputed PayloadChunk
+// gossip messages for the publish hot path.
 type ExecutionPayloadContents struct {
-	Envelope       *ethpb.ExecutionPayloadEnvelope
-	DataColumns    []consensusblocks.RODataColumn
-	PartialColumns []consensusblocks.PartialDataColumn
+	Envelope        *ethpb.ExecutionPayloadEnvelope
+	EnvelopeHeze    *ethpb.ExecutionPayloadEnvelopeHeze
+	BeaconBlockRoot [32]byte
+	Chunks          []*ethpb.PayloadChunk
+	DataColumns     []consensusblocks.RODataColumn
+	PartialColumns  []consensusblocks.PartialDataColumn
 }
 
 // ExecutionPayloadEnvelopeCache holds the most recent ExecutionPayloadContents
@@ -28,9 +35,14 @@ func NewExecutionPayloadEnvelopeCache() *ExecutionPayloadEnvelopeCache {
 }
 
 // Set replaces the cached contents. No-op on nil receiver/contents/envelope so
-// readers can treat Envelope and Envelope.Payload as non-nil on a hit.
+// readers can treat the set envelope's Payload as non-nil on a hit.
 func (c *ExecutionPayloadEnvelopeCache) Set(contents *ExecutionPayloadContents) {
-	if c == nil || contents == nil || contents.Envelope == nil || contents.Envelope.Payload == nil {
+	if c == nil || contents == nil {
+		return
+	}
+	hasGloas := contents.Envelope != nil && contents.Envelope.Payload != nil
+	hasHeze := contents.EnvelopeHeze != nil && contents.EnvelopeHeze.Payload != nil
+	if !hasGloas && !hasHeze {
 		return
 	}
 	c.mu.Lock()

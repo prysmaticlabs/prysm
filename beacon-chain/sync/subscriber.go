@@ -358,16 +358,17 @@ func (s *Service) registerSubscribers(nse params.NetworkScheduleEntry) bool {
 			)
 		})
 
-		// EIP-8411: execution payload chunks replace the retired
-		// execution_payload envelope topic.
-		s.spawn(func() {
-			s.subscribe(
-				p2p.PayloadChunkTopicFormat,
-				s.validatePayloadChunk,
-				s.payloadChunkSubscriber,
-				nse,
-			)
-		})
+		// EIP-8411: the envelope topic retires at Heze, replaced by payload chunks.
+		if nse.Epoch < params.BeaconConfig().HezeForkEpoch {
+			s.spawn(func() {
+				s.subscribe(
+					p2p.ExecutionPayloadEnvelopeTopicFormat,
+					s.validateExecutionPayloadEnvelope,
+					s.executionPayloadEnvelopeSubscriber,
+					nse,
+				)
+			})
+		}
 
 		s.spawn(func() {
 			s.subscribe(
@@ -383,6 +384,18 @@ func (s *Service) registerSubscribers(nse params.NetworkScheduleEntry) bool {
 				p2p.SignedProposerPreferencesTopicFormat,
 				s.validateSignedProposerPreferencesGossip,
 				s.signedProposerPreferencesSubscriber,
+				nse,
+			)
+		})
+	}
+
+	// New gossip topic in Heze: execution payload chunks (EIP-8411).
+	if params.BeaconConfig().HezeForkEpoch <= nse.Epoch {
+		s.spawn(func() {
+			s.subscribe(
+				p2p.PayloadChunkTopicFormat,
+				s.validatePayloadChunk,
+				s.payloadChunkSubscriber,
 				nse,
 			)
 		})

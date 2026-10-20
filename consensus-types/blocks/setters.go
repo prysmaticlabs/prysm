@@ -223,9 +223,19 @@ func (b *SignedBeaconBlock) SetParentExecutionRequests(r *enginev1.ExecutionRequ
 
 // SetSignedExecutionPayloadBid sets the signed execution payload header in the block.
 func (b *SignedBeaconBlock) SetSignedExecutionPayloadBid(header *eth.SignedExecutionPayloadBid) error {
-	if b.version < version.Gloas {
+	if b.version < version.Gloas || b.version >= version.Heze {
 		return consensus_types.ErrNotSupported("SetSignedExecutionPayloadBid", b.version)
 	}
 	b.block.body.signedExecutionPayloadBid = header
+	return nil
+}
+
+// SetSignedExecutionPayloadBidHeze sets the signed Heze execution payload bid in the block.
+// The Heze bid carries the EIP-8411 payload_chunks_root commitment.
+func (b *SignedBeaconBlock) SetSignedExecutionPayloadBidHeze(header *eth.SignedExecutionPayloadBidHeze) error {
+	if b.version < version.Heze {
+		return consensus_types.ErrNotSupported("SetSignedExecutionPayloadBidHeze", b.version)
+	}
+	b.block.body.signedExecutionPayloadBidHeze = header
 	return nil
 }

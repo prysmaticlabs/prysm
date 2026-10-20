@@ -3,7 +3,7 @@ package sync
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
@@ -85,7 +85,7 @@ func (s *Service) validatePayloadChunk(ctx context.Context, pid peer.ID, msg *pu
 
 	// [REJECT] the inclusion proof is valid. Checked before the commitment rule
 	// so the unknown-root buffer only ever holds internally consistent chunks.
-	if err := gloas.VerifyPayloadChunkInclusionProof(c); err != nil {
+	if err := heze.VerifyPayloadChunkInclusionProof(c); err != nil {
 		return pubsub.ValidationReject, err
 	}
 

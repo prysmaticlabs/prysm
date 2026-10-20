@@ -25,6 +25,7 @@ func (s *Service) processPendingPayloadEnvelopeQueue() {
 			return
 		}
 		s.processPendingPayloadEnvelopes(s.ctx)
+		s.processPendingPayloadEnvelopesHeze(s.ctx)
 	})
 }
 

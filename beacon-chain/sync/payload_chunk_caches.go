@@ -67,17 +67,22 @@ func (s *Service) payloadChunkCommitmentBlockRoot(slot primitives.Slot, chunksRo
 	return root, true
 }
 
-// registerPayloadChunkCommitmentFromBlock extracts the bid from a Gloas block
-// and binds its chunk commitment to the block root.
+// registerPayloadChunkCommitmentFromBlock extracts the bid from a Heze block
+// and binds its chunk commitment to the block root. Gloas bids predate the
+// chunk commitment (EIP-8411).
 func (s *Service) registerPayloadChunkCommitmentFromBlock(blk interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte) {
-	if blk.Version() < version.Gloas {
+	if blk.Version() < version.Heze {
 		return
 	}
 	sbid, err := blk.Body().SignedExecutionPayloadBid()
-	if err != nil || sbid == nil || sbid.Message == nil {
+	if err != nil || sbid == nil {
 		return
 	}
-	s.registerPayloadChunkCommitment(sbid.Message.Slot, bytesutil.ToBytes32(sbid.Message.PayloadChunksRoot), blockRoot)
+	bid, err := sbid.Bid()
+	if err != nil {
+		return
+	}
+	s.registerPayloadChunkCommitment(bid.Slot(), bid.PayloadChunksRoot(), blockRoot)
 }
 
 func (s *Service) hasSeenPayloadChunk(chunksRoot [32]byte, index uint64) bool {

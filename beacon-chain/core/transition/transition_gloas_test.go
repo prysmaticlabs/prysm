@@ -80,7 +80,6 @@ func newGloasState(t *testing.T, slot primitives.Slot, availability []byte) stat
 			FeeRecipient:          make([]byte, 20),
 			BlobKzgCommitments:    [][]byte{make([]byte, 48)},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: make([]byte, 32),

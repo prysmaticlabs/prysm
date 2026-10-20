@@ -38,6 +38,7 @@ func makeSignedEnvelope(root [32]byte, slot primitives.Slot) *ethpb.SignedExecut
 				BlockHash:     make([]byte, fieldparams.RootLength),
 				SlotNumber:    slot,
 			},
+			BeaconBlockRoot:       root[:],
 			ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
 		},
 		Signature: make([]byte, fieldparams.BLSSignatureLength),
@@ -116,7 +117,7 @@ func TestQueuePendingPayloadEnvelopeFromRootRequest_RejectsFutureSlot(t *testing
 	p1 := p2ptest.NewTestP2P(t)
 	r := newEnvelopeFetchService(t, p1)
 
-	r.queuePendingPayloadEnvelopeFromRootRequest(makeSignedEnvelope([32]byte{0xDD}, 1_000_000), [32]byte{0xDD})
+	r.queuePendingPayloadEnvelopeFromRootRequest(makeSignedEnvelope([32]byte{0xDD}, 1_000_000))
 
 	r.pendingEnvelopeLock.RLock()
 	defer r.pendingEnvelopeLock.RUnlock()
@@ -129,9 +130,9 @@ func TestQueuePendingPayloadEnvelopeFromRootRequest_RootsCap(t *testing.T) {
 	r := newEnvelopeFetchService(t, p1)
 
 	for i := range maxPendingPayloadRoots {
-		r.queuePendingPayloadEnvelopeFromRootRequest(makeSignedEnvelope([32]byte{byte(i), byte(i >> 8)}, 1), [32]byte{byte(i), byte(i >> 8)})
+		r.queuePendingPayloadEnvelopeFromRootRequest(makeSignedEnvelope([32]byte{byte(i), byte(i >> 8)}, 1))
 	}
-	r.queuePendingPayloadEnvelopeFromRootRequest(makeSignedEnvelope([32]byte{0xFF, 0xFF, 0xFF}, 1), [32]byte{0xFF, 0xFF, 0xFF})
+	r.queuePendingPayloadEnvelopeFromRootRequest(makeSignedEnvelope([32]byte{0xFF, 0xFF, 0xFF}, 1))
 
 	r.pendingEnvelopeLock.RLock()
 	defer r.pendingEnvelopeLock.RUnlock()
@@ -147,7 +148,7 @@ func TestQueuePendingPayloadEnvelopeFromRootRequest_BuildersPerRootCap(t *testin
 	for i := 0; i <= maxPendingBuildersPerRoot; i++ {
 		env := makeSignedEnvelope(root, 1)
 		env.Message.BuilderIndex = primitives.BuilderIndex(i)
-		r.queuePendingPayloadEnvelopeFromRootRequest(env, root)
+		r.queuePendingPayloadEnvelopeFromRootRequest(env)
 	}
 
 	r.pendingEnvelopeLock.RLock()
@@ -197,7 +198,7 @@ func TestFetchAndQueuePayloadEnvelopesForRoots_SkipsRootAlreadyInDB(t *testing.T
 
 	root := bytesutil.ToBytes32([]byte{0xCC})
 	env := makeSignedEnvelope(root, 1)
-	require.NoError(t, r.cfg.beaconDB.SaveExecutionPayloadEnvelope(t.Context(), env, root))
+	require.NoError(t, r.cfg.beaconDB.SaveExecutionPayloadEnvelope(t.Context(), env))
 
 	protocolID := fmt.Sprintf("%s/ssz_snappy", p2p.RPCExecutionPayloadEnvelopesByRootTopicV1)
 	p2.SetStreamHandler(protocolID, func(network.Stream) {

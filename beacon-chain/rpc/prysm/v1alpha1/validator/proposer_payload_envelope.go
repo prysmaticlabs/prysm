@@ -129,7 +129,7 @@ func (vs *Server) GetExecutionPayloadEnvelopeV2(
 	}
 
 	contents, ok := vs.ExecutionPayloadEnvelopeCache.Contents()
-	if !ok || contents.Envelope.Payload.SlotNumber != req.Slot {
+	if !ok || contents.Envelope == nil || contents.Envelope.Payload.SlotNumber != req.Slot {
 		return nil, status.Errorf(codes.NotFound,
 			"execution payload envelope not found for slot %d", req.Slot)
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/builder"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
@@ -26,6 +27,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/io/logs"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -67,7 +69,13 @@ func (vs *Server) setExecutionPayloadBid(
 		return bidSourceSelfBuild, errors.New("local execution payload is nil")
 	}
 
-	if !selfBuildOnly {
+	// EIP-8411 prototype: external bids carry no chunk commitment handling yet, so
+	// Heze blocks are self-build only.
+	isHeze := sBlk.Version() >= version.Heze
+	if !selfBuildOnly && isHeze {
+		log.WithField("slot", sBlk.Block().Slot()).Debug("Skipping external payload bids for Heze block, self-build only")
+	}
+	if !selfBuildOnly && !isHeze {
 		p2pBid := vs.cachedP2PBid(sBlk, local)
 		if bestBid, src, effective := bestBid(head, local, p2pBid, builderWin, builderConfig); bestBid != nil {
 			if err := sBlk.SetSignedExecutionPayloadBid(bestBid); err != nil {
@@ -84,18 +92,32 @@ func (vs *Server) setExecutionPayloadBid(
 	}
 
 	// Fall back to self-build bid.
-	bid, err := vs.createSelfBuildExecutionPayloadBid(local, sBlk.Block())
-	if err != nil {
-		return bidSourceSelfBuild, errors.Wrap(err, "could not create execution payload bid")
-	}
-
-	// Per spec, self-build bids must use G2 point-at-infinity as the signature.
-	signedBid := &ethpb.SignedExecutionPayloadBid{
-		Message:   bid,
-		Signature: common.InfiniteSignature[:],
-	}
-	if err := sBlk.SetSignedExecutionPayloadBid(signedBid); err != nil {
-		return bidSourceSelfBuild, errors.Wrap(err, "could not set signed execution payload bid")
+	if isHeze {
+		bid, err := vs.createSelfBuildExecutionPayloadBidHeze(local, sBlk.Block())
+		if err != nil {
+			return bidSourceSelfBuild, errors.Wrap(err, "could not create execution payload bid")
+		}
+		// Per spec, self-build bids must use G2 point-at-infinity as the signature.
+		signedBid := &ethpb.SignedExecutionPayloadBidHeze{
+			Message:   bid,
+			Signature: common.InfiniteSignature[:],
+		}
+		if err := sBlk.SetSignedExecutionPayloadBidHeze(signedBid); err != nil {
+			return bidSourceSelfBuild, errors.Wrap(err, "could not set signed execution payload bid")
+		}
+	} else {
+		bid, err := vs.createSelfBuildExecutionPayloadBid(local, sBlk.Block())
+		if err != nil {
+			return bidSourceSelfBuild, errors.Wrap(err, "could not create execution payload bid")
+		}
+		// Per spec, self-build bids must use G2 point-at-infinity as the signature.
+		signedBid := &ethpb.SignedExecutionPayloadBid{
+			Message:   bid,
+			Signature: common.InfiniteSignature[:],
+		}
+		if err := sBlk.SetSignedExecutionPayloadBid(signedBid); err != nil {
+			return bidSourceSelfBuild, errors.Wrap(err, "could not set signed execution payload bid")
+		}
 	}
 
 	log.WithFields(logrus.Fields{
@@ -600,5 +622,49 @@ func (vs *Server) createSelfBuildExecutionPayloadBid(
 		ExecutionPayment:      0,
 		BlobKzgCommitments:    local.BlobsBundler.GetKzgCommitments(),
 		ExecutionRequestsRoot: executionRequestsRoot[:],
+	}, nil
+}
+
+// createSelfBuildExecutionPayloadBidHeze creates the Heze self-build bid, which additionally
+// commits to the chunked envelope bytes via payload_chunks_root (EIP-8411). The commitment is
+// computed over the same envelope the proposer later reveals: at bid time the beacon block root
+// is unknown and the Heze envelope container carries no root, so the serialization is final.
+func (vs *Server) createSelfBuildExecutionPayloadBidHeze(
+	local *consensusblocks.GetPayloadResponse,
+	block interfaces.ReadOnlyBeaconBlock,
+) (*ethpb.ExecutionPayloadBidHeze, error) {
+	gloasBid, err := vs.createSelfBuildExecutionPayloadBid(local, block)
+	if err != nil {
+		return nil, err
+	}
+	payload := extractExecutionPayloadGloas(local)
+	if payload == nil {
+		return nil, errors.New("local payload is not a Gloas execution payload")
+	}
+	parentBlockRoot := block.ParentRoot()
+	envelope := &ethpb.ExecutionPayloadEnvelopeHeze{
+		Payload:               payload,
+		ExecutionRequests:     local.ExecutionRequestsGloas,
+		BuilderIndex:          params.BeaconConfig().BuilderIndexSelfBuild,
+		ParentBeaconBlockRoot: bytesutil.SafeCopyBytes(parentBlockRoot[:]),
+	}
+	chunksRoot, err := heze.PayloadChunksRootForEnvelope(envelope)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute payload chunks root")
+	}
+	return &ethpb.ExecutionPayloadBidHeze{
+		ParentBlockHash:       gloasBid.ParentBlockHash,
+		ParentBlockRoot:       gloasBid.ParentBlockRoot,
+		BlockHash:             gloasBid.BlockHash,
+		PrevRandao:            gloasBid.PrevRandao,
+		FeeRecipient:          gloasBid.FeeRecipient,
+		GasLimit:              gloasBid.GasLimit,
+		BuilderIndex:          gloasBid.BuilderIndex,
+		Slot:                  gloasBid.Slot,
+		Value:                 gloasBid.Value,
+		ExecutionPayment:      gloasBid.ExecutionPayment,
+		BlobKzgCommitments:    gloasBid.BlobKzgCommitments,
+		ExecutionRequestsRoot: gloasBid.ExecutionRequestsRoot,
+		PayloadChunksRoot:     chunksRoot[:],
 	}, nil
 }

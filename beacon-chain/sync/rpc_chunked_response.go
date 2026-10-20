@@ -9,6 +9,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
@@ -176,6 +177,47 @@ func WriteExecutionPayloadEnvelopeChunk(stream libp2pcore.Stream, encoding encod
 	}
 	_, err := encoding.EncodeWithMaxLength(stream, envelope)
 	return err
+}
+
+// WriteExecutionPayloadEnvelopeChunkHeze writes a Heze execution payload envelope chunk to stream.
+// response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
+func WriteExecutionPayloadEnvelopeChunkHeze(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, envelope *ethpb.SignedExecutionPayloadEnvelopeHeze) error {
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	ctxBytes := params.ForkDigest(slots.ToEpoch(primitives.Slot(envelope.Message.Payload.SlotNumber)))
+	if err := writeContextToStream(ctxBytes[:], stream); err != nil {
+		return err
+	}
+	_, err := encoding.EncodeWithMaxLength(stream, envelope)
+	return err
+}
+
+// writeEnvelopeChunkFromBlinded rebuilds the slot's fork-correct wire envelope from a stored
+// blinded envelope plus its reconstructed payload and writes it with the slot's fork-digest
+// context bytes. Heze removed beacon_block_root from the wire container (EIP-8411).
+func writeEnvelopeChunkFromBlinded(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, blinded *ethpb.SignedBlindedExecutionPayloadEnvelope, payload *enginev1.ExecutionPayloadGloas) error {
+	if slots.ToEpoch(blinded.Message.Slot) >= params.BeaconConfig().HezeForkEpoch {
+		return WriteExecutionPayloadEnvelopeChunkHeze(stream, encoding, &ethpb.SignedExecutionPayloadEnvelopeHeze{
+			Message: &ethpb.ExecutionPayloadEnvelopeHeze{
+				Payload:               payload,
+				ExecutionRequests:     blinded.Message.ExecutionRequests,
+				BuilderIndex:          blinded.Message.BuilderIndex,
+				ParentBeaconBlockRoot: blinded.Message.ParentBeaconBlockRoot,
+			},
+			Signature: blinded.Signature,
+		})
+	}
+	return WriteExecutionPayloadEnvelopeChunk(stream, encoding, &ethpb.SignedExecutionPayloadEnvelope{
+		Message: &ethpb.ExecutionPayloadEnvelope{
+			Payload:               payload,
+			ExecutionRequests:     blinded.Message.ExecutionRequests,
+			BuilderIndex:          blinded.Message.BuilderIndex,
+			BeaconBlockRoot:       blinded.Message.BeaconBlockRoot,
+			ParentBeaconBlockRoot: blinded.Message.ParentBeaconBlockRoot,
+		},
+		Signature: blinded.Signature,
+	})
 }
 
 // WriteDataColumnSidecarChunk writes data column chunk object to stream.

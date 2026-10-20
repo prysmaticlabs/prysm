@@ -284,6 +284,7 @@ func TestFetchPayloadEnvelope_ReceiveHasDeadline(t *testing.T) {
 				BlockHash:     make([]byte, fieldparams.RootLength),
 				SlotNumber:    1,
 			},
+			BeaconBlockRoot:       root[:],
 			ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
 		},
 		Signature: make([]byte, fieldparams.BLSSignatureLength),

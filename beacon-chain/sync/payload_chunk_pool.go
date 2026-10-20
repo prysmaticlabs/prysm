@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -185,7 +186,7 @@ func (s *Service) acceptVerifiedPayloadChunk(ctx context.Context, c *ethpb.Paylo
 // chunks were honestly relayed, so there is no one to penalize and the payload
 // will simply be voted absent.
 func (s *Service) importReconstructedEnvelope(ctx context.Context, slot primitives.Slot, chunksRoot, hint [32]byte, chunks [][]byte) {
-	envelope, err := gloas.ReconstructPayloadEnvelope(chunks)
+	envelope, err := heze.ReconstructPayloadEnvelope(chunks)
 	if err != nil {
 		payloadChunkReconstructionTotal.WithLabelValues("decode_failed").Inc()
 		log.WithError(err).WithFields(logrus.Fields{
@@ -216,29 +217,29 @@ func (s *Service) importReconstructedEnvelope(ctx context.Context, slot primitiv
 	payloadChunkReconstructionTotal.WithLabelValues("ok").Inc()
 
 	// The zero signature marks the envelope as chunk-authenticated; see
-	// gloas.IsChunkAuthenticatedEnvelope.
-	signed := &ethpb.SignedExecutionPayloadEnvelope{
+	// heze.IsChunkAuthenticatedEnvelope.
+	signed := &ethpb.SignedExecutionPayloadEnvelopeHeze{
 		Message:   envelope,
 		Signature: make([]byte, fieldparams.BLSSignatureLength),
 	}
-
-	if s.cfg.chain.HasBlock(ctx, root) {
-		s.receiveReconstructedEnvelope(ctx, signed, root)
-		return
-	}
-	// Block not yet processed: park in the pending-envelope pool, which the
-	// block-processed event and the half-slot sweep both drain.
-	s.queuePendingPayloadEnvelopeFromRootRequest(signed, root)
-}
-
-// receiveReconstructedEnvelope imports a reconstructed envelope, mirroring the
-// semantics of the retired envelope gossip subscriber.
-func (s *Service) receiveReconstructedEnvelope(ctx context.Context, signed *ethpb.SignedExecutionPayloadEnvelope, root [32]byte) {
-	e, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signed, root)
+	e, err := blocks.WrappedROSignedExecutionPayloadEnvelopeHeze(signed, root)
 	if err != nil {
 		log.WithError(err).Error("Could not wrap reconstructed execution payload envelope")
 		return
 	}
+
+	if s.cfg.chain.HasBlock(ctx, root) {
+		s.receiveReconstructedEnvelope(ctx, e, root)
+		return
+	}
+	// Block not yet processed: park in the Heze pending-envelope map, which the
+	// block-processed event and the half-slot sweep both drain.
+	s.queuePendingPayloadEnvelopeHeze(e, root)
+}
+
+// receiveReconstructedEnvelope imports a reconstructed envelope, mirroring the
+// semantics of the retired envelope gossip subscriber.
+func (s *Service) receiveReconstructedEnvelope(ctx context.Context, e interfaces.ROSignedExecutionPayloadEnvelope, root [32]byte) {
 	env, err := e.Envelope()
 	if err != nil {
 		log.WithError(err).Error("Could not get reconstructed execution payload envelope")

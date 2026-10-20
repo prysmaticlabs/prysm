@@ -96,6 +96,7 @@ type SignedBeaconBlock interface {
 	SetExecutionRequests(er *enginev1.ExecutionRequests) error
 	SetPayloadAttestations(pa []*ethpb.PayloadAttestation) error
 	SetSignedExecutionPayloadBid(header *ethpb.SignedExecutionPayloadBid) error
+	SetSignedExecutionPayloadBidHeze(header *ethpb.SignedExecutionPayloadBidHeze) error
 	SetParentExecutionRequests(r *enginev1.ExecutionRequestsGloas) error
 	Unblind(e ExecutionData) error
 }

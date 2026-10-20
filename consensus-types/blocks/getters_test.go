@@ -89,7 +89,10 @@ func Test_SignedBeaconBlock_Copy(t *testing.T) {
 
 	t.Run("gloas deep copy", func(t *testing.T) {
 		payload := []*eth.PayloadAttestation{{Signature: []byte{0x01}}}
-		payloadBid := &eth.SignedExecutionPayloadBid{Signature: []byte{0x02}}
+		// The RO bid getter validates field lengths, so the fixture must be a
+		// fully hydrated bid.
+		payloadBid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+		payloadBid.Signature[0] = 0x02
 		sb := &SignedBeaconBlock{
 			version: version.Gloas,
 			block: &BeaconBlock{
@@ -119,10 +122,12 @@ func Test_SignedBeaconBlock_Copy(t *testing.T) {
 
 		bid, err := cp.Block().Body().SignedExecutionPayloadBid()
 		require.NoError(t, err)
-		require.DeepEqual(t, payloadBid, bid)
-		origBidSig := bid.Signature[0]
+		require.DeepEqual(t, payloadBid, bid.Proto())
+		bidSig := bid.Signature()
+		origBidSig := bidSig[0]
 		payloadBid.Signature[0] ^= 0xFF
-		require.Equal(t, origBidSig, bid.Signature[0])
+		bidSig = bid.Signature()
+		require.Equal(t, origBidSig, bidSig[0])
 	})
 }
 
@@ -441,7 +446,8 @@ func Test_BeaconBlockBody_SignedExecutionPayloadBid(t *testing.T) {
 	})
 
 	t.Run("gloas returns bid", func(t *testing.T) {
-		bid := &eth.SignedExecutionPayloadBid{Signature: []byte{0xFF}}
+		bid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+		bid.Signature[0] = 0xFF
 		sb := &SignedBeaconBlock{
 			version: version.Gloas,
 			block:   &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}},
@@ -449,7 +455,7 @@ func Test_BeaconBlockBody_SignedExecutionPayloadBid(t *testing.T) {
 		require.NoError(t, sb.SetSignedExecutionPayloadBid(bid))
 		got, err := sb.Block().Body().SignedExecutionPayloadBid()
 		require.NoError(t, err)
-		require.DeepEqual(t, bid, got)
+		require.DeepEqual(t, bid, got.Proto())
 	})
 }
 
@@ -465,18 +471,17 @@ func Test_BeaconBlockBody_BlobKzgCommitments(t *testing.T) {
 	}{
 		{
 			name: "gloas returns commitments from bid",
-			body: &BeaconBlockBody{
-				version: version.Gloas,
-				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{
-					Message: &eth.ExecutionPayloadBid{BlobKzgCommitments: commitments},
-				},
-			},
+			body: func() *BeaconBlockBody {
+				bid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+				bid.Message.BlobKzgCommitments = commitments
+				return &BeaconBlockBody{version: version.Gloas, signedExecutionPayloadBid: bid}
+			}(),
 			want: commitments,
 		},
 		{
 			name:       "gloas nil signed bid",
 			body:       &BeaconBlockBody{version: version.Gloas, signedExecutionPayloadBid: nil},
-			wantErrMsg: "nil execution payload bid or bid message",
+			wantErrMsg: "could not get signed execution payload bid",
 		},
 		{
 			name: "gloas nil bid message",
@@ -484,7 +489,7 @@ func Test_BeaconBlockBody_BlobKzgCommitments(t *testing.T) {
 				version:                   version.Gloas,
 				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{Message: nil},
 			},
-			wantErrMsg: "nil execution payload bid or bid message",
+			wantErrMsg: "could not get signed execution payload bid",
 		},
 		{
 			name: "deneb returns commitments",
@@ -748,14 +753,28 @@ func hydrateBeaconBlockBodyCapella() *eth.BeaconBlockBodyCapella {
 
 func hydrateBeaconBlockBodyHeze() *eth.BeaconBlockBodyHeze {
 	g := hydrateBeaconBlockBodyGloas()
+	gBid := g.SignedExecutionPayloadBid.Message
 	return &eth.BeaconBlockBodyHeze{
-		RandaoReveal:              g.RandaoReveal,
-		Eth1Data:                  g.Eth1Data,
-		Graffiti:                  g.Graffiti,
-		SyncAggregate:             g.SyncAggregate,
-		SignedExecutionPayloadBid: g.SignedExecutionPayloadBid,
-		ParentExecutionRequests:   g.ParentExecutionRequests,
-		PayloadAttestations:       g.PayloadAttestations,
+		RandaoReveal:  g.RandaoReveal,
+		Eth1Data:      g.Eth1Data,
+		Graffiti:      g.Graffiti,
+		SyncAggregate: g.SyncAggregate,
+		// EIP-8411: the Heze bid additionally commits to the chunked envelope bytes.
+		SignedExecutionPayloadBid: &eth.SignedExecutionPayloadBidHeze{
+			Message: &eth.ExecutionPayloadBidHeze{
+				ParentBlockHash:       gBid.ParentBlockHash,
+				ParentBlockRoot:       gBid.ParentBlockRoot,
+				BlockHash:             gBid.BlockHash,
+				PrevRandao:            gBid.PrevRandao,
+				FeeRecipient:          gBid.FeeRecipient,
+				BlobKzgCommitments:    gBid.BlobKzgCommitments,
+				ExecutionRequestsRoot: gBid.ExecutionRequestsRoot,
+				PayloadChunksRoot:     make([]byte, fieldparams.RootLength),
+			},
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ParentExecutionRequests: g.ParentExecutionRequests,
+		PayloadAttestations:     g.PayloadAttestations,
 	}
 }
 
@@ -783,7 +802,6 @@ func hydrateBeaconBlockBodyGloas() *eth.BeaconBlockBodyGloas {
 				FeeRecipient:          make([]byte, 20),
 				BlobKzgCommitments:    [][]byte{make([]byte, fieldparams.BLSPubkeyLength)},
 				ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
-				PayloadChunksRoot:     make([]byte, 32),
 			},
 			Signature: make([]byte, fieldparams.BLSSignatureLength),
 		},

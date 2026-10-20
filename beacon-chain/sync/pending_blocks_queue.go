@@ -62,6 +62,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	// Remove old blocks from our expiration cache.
 	s.deleteExpiredBlocksFromCache()
 	s.prunePendingPayloadEnvelopes()
+	s.prunePendingPayloadEnvelopesHeze()
 	s.prunePendingPayloadAttestations()
 
 	// Validate pending slots before processing.
@@ -163,6 +164,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			// Columns first: the envelope's availability check reads them from storage.
 			s.processPendingGloasColumns(s.ctx, blkRoot, b)
 			s.processPendingPayloadEnvelope(ctx, blkRoot)
+			s.processPendingPayloadEnvelopeHeze(ctx, blkRoot)
 			s.processPendingPayloadAttestation(ctx, blkRoot)
 			blkRoots = append(blkRoots, blkRoot)
 
@@ -512,14 +514,49 @@ func (s *Service) fetchAndQueuePayloadEnvelopesForRoots(
 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
+
+	// EIP-8411: Heze wire envelopes carry no beacon block root, so a multi-root
+	// response cannot be attributed to its roots. Once the wall clock passes the
+	// Heze fork, request each root individually and bind by request.
+	hezeStartSlot, err := slots.EpochStart(params.BeaconConfig().HezeForkEpoch)
+	if err == nil && s.cfg.clock.CurrentSlot() >= hezeStartSlot {
+		for _, root := range envelopeRoots {
+			req := p2ptypes.ExecutionPayloadEnvelopesByRootReq{root}
+			envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, pid, s.ctxMap, &req)
+			if err != nil {
+				log.WithError(err).Debug("Could not request execution payload envelope by root")
+				continue
+			}
+			if len(envelopes) == 0 || envelopes[0] == nil {
+				continue
+			}
+			switch env := envelopes[0].Proto().(type) {
+			case *ethpb.SignedExecutionPayloadEnvelope:
+				s.queuePendingPayloadEnvelopeFromRootRequest(env)
+			case *ethpb.SignedExecutionPayloadEnvelopeHeze:
+				bound, err := blocks.RebindEnvelopeRoot(envelopes[0], root)
+				if err != nil {
+					log.WithError(err).Debug("Could not bind fetched Heze payload envelope to its block root")
+					continue
+				}
+				s.queuePendingPayloadEnvelopeHeze(bound, root)
+			}
+		}
+		return
+	}
+
 	envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, pid, s.ctxMap, &envelopeRoots)
 	if err != nil {
 		log.WithError(err).Debug("Could not request execution payload envelopes by root")
 		return
 	}
 
-	for _, env := range envelopes {
-		if env == nil || env.Message == nil {
+	for _, e := range envelopes {
+		if e == nil {
+			continue
+		}
+		env, ok := e.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
+		if !ok || env.Message == nil {
 			continue
 		}
 		s.queuePendingPayloadEnvelopeFromRootRequest(env)

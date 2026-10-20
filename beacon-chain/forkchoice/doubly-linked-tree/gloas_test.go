@@ -76,7 +76,6 @@ func prepareGloasForkchoiceState(
 			FeeRecipient:          make([]byte, 20),
 			BlobKzgCommitments:    [][]byte{make([]byte, 48)},
 			ExecutionRequestsRoot: make([]byte, 32),
-			PayloadChunksRoot:     make([]byte, 32),
 		},
 		Builders:                     make([]*ethpb.Builder, 0),
 		BuilderPendingPayments:       builderPendingPayments,
@@ -120,10 +119,11 @@ func prepareGloasForkchoicePayload(
 	blockRoot [32]byte,
 ) (interfaces.ROExecutionPayloadEnvelope, error) {
 	env := &ethpb.ExecutionPayloadEnvelope{
+		BeaconBlockRoot:       blockRoot[:],
 		ParentBeaconBlockRoot: make([]byte, 32),
 		Payload:               &enginev1.ExecutionPayloadGloas{},
 	}
-	return blocks.WrappedROExecutionPayloadEnvelope(env, blockRoot)
+	return blocks.WrappedROExecutionPayloadEnvelope(env)
 }
 
 func TestInsertGloasBlock_EmptyNodeOnly(t *testing.T) {
@@ -2303,10 +2303,11 @@ func TestGasLimit_GloasEmptyNodeWalksToFullAncestor(t *testing.T) {
 
 	const gl = uint64(42_000_000)
 	env := &ethpb.ExecutionPayloadEnvelope{
+		BeaconBlockRoot:       rootA[:],
 		ParentBeaconBlockRoot: make([]byte, 32),
 		Payload:               &enginev1.ExecutionPayloadGloas{GasLimit: gl},
 	}
-	pe, err := blocks.WrappedROExecutionPayloadEnvelope(env, rootA)
+	pe, err := blocks.WrappedROExecutionPayloadEnvelope(env)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayload(pe))
 
@@ -2343,9 +2344,10 @@ func TestGasLimit_GloasParentPayloadVsOwnPayload(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, st, roblock))
 	const glA = uint64(42_000_000)
 	pe, err := blocks.WrappedROExecutionPayloadEnvelope(&ethpb.ExecutionPayloadEnvelope{
+		BeaconBlockRoot:       rootA[:],
 		ParentBeaconBlockRoot: make([]byte, 32),
 		Payload:               &enginev1.ExecutionPayloadGloas{GasLimit: glA},
-	}, rootA)
+	})
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayload(pe))
 
@@ -2366,9 +2368,10 @@ func TestGasLimit_GloasParentPayloadVsOwnPayload(t *testing.T) {
 
 	const glB = uint64(43_000_000)
 	pe, err = blocks.WrappedROExecutionPayloadEnvelope(&ethpb.ExecutionPayloadEnvelope{
+		BeaconBlockRoot:       rootB[:],
 		ParentBeaconBlockRoot: rootA[:],
 		Payload:               &enginev1.ExecutionPayloadGloas{GasLimit: glB},
-	}, rootB)
+	})
 	require.NoError(t, err)
 	require.NoError(t, f.InsertPayload(pe))
 

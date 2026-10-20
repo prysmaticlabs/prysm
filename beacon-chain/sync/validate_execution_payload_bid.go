@@ -45,11 +45,19 @@ func (s *Service) validateExecutionPayloadBidGossip(ctx context.Context, pid pee
 		return pubsub.ValidationReject, err
 	}
 
-	signedBid, ok := m.(*ethpb.SignedExecutionPayloadBid)
-	if !ok {
+	// The topic carries the Gloas bid container before Heze and the Heze bid
+	// container (with payload_chunks_root, EIP-8411) from it.
+	var b interfaces.ROSignedExecutionPayloadBid
+	var isHezeBid bool
+	switch signedBid := m.(type) {
+	case *ethpb.SignedExecutionPayloadBid:
+		b, err = blocks.WrappedROSignedExecutionPayloadBid(signedBid)
+	case *ethpb.SignedExecutionPayloadBidHeze:
+		b, err = blocks.WrappedROSignedExecutionPayloadBidHeze(signedBid)
+		isHezeBid = true
+	default:
 		return pubsub.ValidationReject, errWrongMessage
 	}
-	b, err := blocks.WrappedROSignedExecutionPayloadBid(signedBid)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -124,10 +132,12 @@ func (s *Service) validateExecutionPayloadBidGossip(ctx context.Context, pid pee
 		return pubsub.ValidationReject, err
 	}
 	s.setSeenExecutionPayloadBid(bid.Slot(), tupleKey)
-	// EIP-8411: every signature-valid bid registers its chunk commitment, even
-	// if a later rule IGNOREs the bid (e.g. not the highest). Chunks for losing
-	// bids must still validate at the first hop.
-	s.registerPayloadChunkCommitment(bid.Slot(), bid.PayloadChunksRoot(), [32]byte{})
+	if isHezeBid {
+		// EIP-8411: every signature-valid Heze bid registers its chunk commitment,
+		// even if a later rule IGNOREs the bid (e.g. not the highest). Chunks for
+		// losing bids must still validate at the first hop.
+		s.registerPayloadChunkCommitment(bid.Slot(), bid.PayloadChunksRoot(), [32]byte{})
+	}
 	// [IGNORE] this bid is the highest value bid seen for the tuple (bid.slot, bid.parent_block_hash, bid.parent_block_root).
 	if !s.isHighestExecutionPayloadBid(bid) {
 		return pubsub.ValidationIgnore, nil
@@ -173,23 +183,31 @@ func (s *Service) validateExecutionPayloadBidGossip(ctx context.Context, pid pee
 	if err := v.VerifyBidSlotHigherThanParent(parentSlot); err != nil {
 		return pubsub.ValidationReject, err
 	}
-	msg.ValidatorData = signedBid
+	msg.ValidatorData = m
 	return pubsub.ValidationAccept, nil
 }
 
 func (s *Service) executionPayloadBidSubscriber(_ context.Context, msg proto.Message) error {
-	signedBid, ok := msg.(*ethpb.SignedExecutionPayloadBid)
-	if !ok {
+	switch signedBid := msg.(type) {
+	case *ethpb.SignedExecutionPayloadBid:
+		if signedBid.Message == nil {
+			return errNilMessage
+		}
+		s.setHighestExecutionPayloadBid(signedBid)
+		s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
+			Type: opfeed.ExecutionPayloadBidReceived,
+			Data: &opfeed.ExecutionPayloadBidReceivedData{Bid: signedBid},
+		})
+	case *ethpb.SignedExecutionPayloadBidHeze:
+		// EIP-8411 prototype: external Heze bids are relayed and their chunk
+		// commitments registered during validation, but they are not yet consumed
+		// as block-production candidates (self-build only).
+		if signedBid.Message == nil {
+			return errNilMessage
+		}
+	default:
 		return errWrongMessage
 	}
-	if signedBid.Message == nil {
-		return errNilMessage
-	}
-	s.setHighestExecutionPayloadBid(signedBid)
-	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
-		Type: opfeed.ExecutionPayloadBidReceived,
-		Data: &opfeed.ExecutionPayloadBidReceivedData{Bid: signedBid},
-	})
 	return nil
 }
 

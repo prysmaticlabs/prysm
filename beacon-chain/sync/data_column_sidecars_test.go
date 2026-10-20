@@ -1222,7 +1222,10 @@ func TestComputeTotalCount(t *testing.T) {
 
 func TestVerifyByRootDataColumnSidecars_SeedsGloasBidCommitments(t *testing.T) {
 	root := [fieldparams.RootLength]byte{1}
-	commitments := [][]byte{{0xaa}, {0xbb}}
+	// The RO bid wrapper validates commitment lengths, so use full-size commitments.
+	commitmentA, commitmentB := make([]byte, 48), make([]byte, 48)
+	commitmentA[0], commitmentB[0] = 0xaa, 0xbb
+	commitments := [][]byte{commitmentA, commitmentB}
 
 	// Gloas block whose bid carries the commitments.
 	pb := util.NewBeaconBlockGloas()

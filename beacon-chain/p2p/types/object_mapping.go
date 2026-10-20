@@ -46,6 +46,9 @@ var (
 	LightClientFinalityUpdateMap map[[4]byte]func() (interfaces.LightClientFinalityUpdate, error)
 	// DataColumnSidecarMap maps the fork-version to the underlying data column sidecar type.
 	DataColumnSidecarMap map[[4]byte]func() (ssz.Unmarshaler, error)
+	// ExecutionPayloadBidMap maps the fork-version to the underlying signed execution
+	// payload bid type.
+	ExecutionPayloadBidMap map[[4]byte]func() (ssz.Unmarshaler, error)
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -289,6 +292,16 @@ func InitializeDataMaps() {
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().HezeForkVersion): func() (ssz.Unmarshaler, error) {
 			return &ethpb.DataColumnSidecarGloas{}, nil
+		},
+	}
+
+	// EIP-8411: the Heze bid adds payload_chunks_root.
+	ExecutionPayloadBidMap = map[[4]byte]func() (ssz.Unmarshaler, error){
+		bytesutil.ToBytes4(params.BeaconConfig().GloasForkVersion): func() (ssz.Unmarshaler, error) {
+			return &ethpb.SignedExecutionPayloadBid{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().HezeForkVersion): func() (ssz.Unmarshaler, error) {
+			return &ethpb.SignedExecutionPayloadBidHeze{}, nil
 		},
 	}
 }
