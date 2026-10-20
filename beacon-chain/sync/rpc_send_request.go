@@ -102,23 +102,7 @@ func SendBeaconBlocksByRangeRequest(
 		currentEpoch := slots.ToEpoch(tor.CurrentSlot())
 		maxBlocks := params.MaxRequestBlock(currentEpoch)
 		if i >= req.Count || i >= maxBlocks {
-			// Check for one more byte instead of decoding a chunk we would reject.
-			SetStreamReadDeadline(stream, respTimeout)
-			_, err := io.ReadFull(stream, make([]byte, 1))
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if err != nil {
-				return nil, errors.Wrap(err, "read after last expected block")
-			}
-			log.WithFields(logrus.Fields{
-				"blockIndex":     i,
-				"requestedCount": req.Count,
-				"maxBlocks":      maxBlocks,
-				"currentEpoch":   currentEpoch,
-				"peer":           pid,
-			}).Debug("Peer returned invalid data: too many blocks")
-			return nil, ErrInvalidFetchedData
+			break
 		}
 		isFirstChunk := i == 0
 		blk, err := ReadChunkedBlock(stream, tor, p2pProvider, isFirstChunk)

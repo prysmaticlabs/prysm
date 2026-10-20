@@ -188,8 +188,8 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			params.OverrideBeaconConfig(cfg)
 			return nil
 		})
-		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
-		assert.Equal(t, 0, len(blocks))
+		require.NoError(t, err)
+		assert.Equal(t, 3, len(blocks))
 	})
 
 	t.Run("extra data after requested count", func(t *testing.T) {
@@ -218,8 +218,11 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 			Step:      1,
 		}
 		blocks, err := SendBeaconBlocksByRangeRequest(ctx, startup.NewClock(time.Now(), [32]byte{}), p1, p2.PeerID(), req, nil)
-		require.ErrorIs(t, err, ErrInvalidFetchedData)
-		assert.Equal(t, 0, len(blocks))
+		require.NoError(t, err)
+		require.Equal(t, 4, len(blocks))
+		for i, blk := range blocks {
+			assert.Equal(t, primitives.Slot(20+i), blk.Block().Slot())
+		}
 	})
 
 	t.Run("process custom error", func(t *testing.T) {
