@@ -44,7 +44,8 @@ func (h executionPayloadBidGloas) IsNil() bool {
 		len(h.payload.ParentBlockRoot) != 32 ||
 		len(h.payload.BlockHash) != 32 ||
 		len(h.payload.PrevRandao) != 32 ||
-		len(h.payload.FeeRecipient) != 20 {
+		len(h.payload.FeeRecipient) != 20 ||
+		len(h.payload.ExecutionRequestsRoot) != 32 {
 		return true
 	}
 
@@ -154,8 +155,5 @@ func (h executionPayloadBidGloas) FeeRecipient() [20]byte {
 
 // ExecutionRequestsRoot returns the hash tree root of the execution requests.
 func (h executionPayloadBidGloas) ExecutionRequestsRoot() [32]byte {
-	if h.payload == nil || len(h.payload.ExecutionRequestsRoot) < 32 {
-		return [32]byte{}
-	}
 	return [32]byte(h.payload.ExecutionRequestsRoot)
 }

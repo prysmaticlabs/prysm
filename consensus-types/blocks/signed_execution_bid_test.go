@@ -60,6 +60,10 @@ func TestWrappedROExecutionPayloadBid(t *testing.T) {
 				name:   "fee recipient",
 				mutate: func(b *ethpb.ExecutionPayloadBid) { b.FeeRecipient = []byte{0x06} },
 			},
+			{
+				name:   "execution requests root",
+				mutate: func(b *ethpb.ExecutionPayloadBid) { b.ExecutionRequestsRoot = []byte{0x07} },
+			},
 		}
 
 		for _, tc := range testCases {
