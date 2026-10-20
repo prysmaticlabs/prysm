@@ -285,6 +285,10 @@ func (b *BeaconBlockBody) SignedExecutionPayloadBid() (*eth.SignedExecutionPaylo
 	panic("implement me")
 }
 
+func (b *BeaconBlockBody) ExecutionPayloadBid() (interfaces.ROExecutionPayloadBid, error) {
+	panic("implement me")
+}
+
 func (b *BeaconBlockBody) ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error) {
 	panic("implement me")
 }

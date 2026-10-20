@@ -467,16 +467,18 @@ func Test_BeaconBlockBody_BlobKzgCommitments(t *testing.T) {
 			name: "gloas returns commitments from bid",
 			body: &BeaconBlockBody{
 				version: version.Gloas,
-				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{
-					Message: &eth.ExecutionPayloadBid{BlobKzgCommitments: commitments},
-				},
+				signedExecutionPayloadBid: func() *eth.SignedExecutionPayloadBid {
+					bid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+					bid.Message.BlobKzgCommitments = commitments
+					return bid
+				}(),
 			},
 			want: commitments,
 		},
 		{
-			name:       "gloas nil signed bid",
-			body:       &BeaconBlockBody{version: version.Gloas, signedExecutionPayloadBid: nil},
-			wantErrMsg: "nil execution payload bid or bid message",
+			name:    "gloas nil signed bid",
+			body:    &BeaconBlockBody{version: version.Gloas, signedExecutionPayloadBid: nil},
+			wantErr: consensus_types.ErrNilObjectWrapped,
 		},
 		{
 			name: "gloas nil bid message",
@@ -484,7 +486,7 @@ func Test_BeaconBlockBody_BlobKzgCommitments(t *testing.T) {
 				version:                   version.Gloas,
 				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{Message: nil},
 			},
-			wantErrMsg: "nil execution payload bid or bid message",
+			wantErr: consensus_types.ErrNilObjectWrapped,
 		},
 		{
 			name: "deneb returns commitments",

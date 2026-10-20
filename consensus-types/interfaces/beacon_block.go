@@ -71,6 +71,7 @@ type ReadOnlyBeaconBlockBody interface {
 	ExecutionRequests() (*enginev1.ExecutionRequests, error)
 	PayloadAttestations() ([]*ethpb.PayloadAttestation, error)
 	SignedExecutionPayloadBid() (*ethpb.SignedExecutionPayloadBid, error)
+	ExecutionPayloadBid() (ROExecutionPayloadBid, error)
 	ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error)
 }
 

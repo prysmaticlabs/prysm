@@ -10,6 +10,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
@@ -53,6 +54,13 @@ func (s stubBlockBody) PayloadAttestations() ([]*ethpb.PayloadAttestation, error
 }
 func (s stubBlockBody) SignedExecutionPayloadBid() (*ethpb.SignedExecutionPayloadBid, error) {
 	return s.signedBid, nil
+}
+func (s stubBlockBody) ExecutionPayloadBid() (interfaces.ROExecutionPayloadBid, error) {
+	signedBid, err := blocks.WrappedROSignedExecutionPayloadBid(s.signedBid)
+	if err != nil {
+		return nil, err
+	}
+	return signedBid.Bid()
 }
 func (s stubBlockBody) ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error) {
 	return nil, nil
