@@ -1272,7 +1272,7 @@ func TestComputeTotalCount(t *testing.T) {
 
 func TestVerifyByRootDataColumnSidecars_SeedsGloasBidCommitments(t *testing.T) {
 	root := [fieldparams.RootLength]byte{1}
-	commitments := [][]byte{bytesutil.PadTo([]byte{0xaa}, fieldparams.KZGCommitmentSize), bytesutil.PadTo([]byte{0xbb}, fieldparams.BLSPubkeyLength)}
+	commitments := [][]byte{bytesutil.PadTo([]byte{0xaa}, fieldparams.KzgCommitmentSize), bytesutil.PadTo([]byte{0xbb}, fieldparams.KzgCommitmentSize)}
 
 	// Gloas block whose bid carries the commitments.
 	pb := util.NewBeaconBlockGloas()
