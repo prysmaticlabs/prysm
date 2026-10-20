@@ -107,6 +107,20 @@ func TestEpochEndSlot_OK(t *testing.T) {
 	}
 }
 
+func TestShufflingLookaheadEpoch(t *testing.T) {
+	tests := []struct {
+		epoch, want primitives.Epoch
+	}{
+		{epoch: 0, want: 0},
+		{epoch: 1, want: 0},
+		{epoch: 2, want: 1},
+		{epoch: 10, want: 9},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, ShufflingLookaheadEpoch(tt.epoch), "ShufflingLookaheadEpoch(%d)", tt.epoch)
+	}
+}
+
 func TestShufflingDependentSlot(t *testing.T) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	tests := []struct {
@@ -447,78 +461,6 @@ func TestSinceSlotStart(t *testing.T) {
 	}
 }
 
-func TestDuration(t *testing.T) {
-	oneSlot := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-	cases := []struct {
-		name     string
-		start    time.Time
-		endDelta time.Duration
-		expected primitives.Slot
-	}{
-		{
-			name:     "end before start",
-			start:    time.Now(),
-			endDelta: -64 * time.Second,
-			expected: 0,
-		},
-		{
-			name:     "end equals start",
-			start:    time.Now(),
-			endDelta: 0,
-			expected: 0,
-		},
-		{
-			name:     "one slot apart",
-			start:    time.Now(),
-			endDelta: oneSlot,
-			expected: 1,
-		},
-		{
-			name:     "same slot",
-			start:    time.Now(),
-			endDelta: time.Second,
-			expected: 0,
-		},
-		{
-			name:     "don't round up",
-			start:    time.Now(),
-			endDelta: oneSlot - time.Second,
-			expected: 0,
-		},
-		{
-			name:     "don't round up pt 2",
-			start:    time.Now(),
-			endDelta: 2*oneSlot - time.Second,
-			expected: 1,
-		},
-		{
-			name:     "2 slots",
-			start:    time.Now(),
-			endDelta: 2 * oneSlot,
-			expected: 2,
-		},
-		{
-			name:     "1 epoch",
-			start:    time.Now(),
-			endDelta: time.Duration(params.BeaconConfig().SlotsPerEpoch) * oneSlot,
-			expected: params.BeaconConfig().SlotsPerEpoch,
-		},
-		{
-			name:     "1 epoch and change",
-			start:    time.Now(),
-			endDelta: oneSlot + time.Second + time.Duration(params.BeaconConfig().SlotsPerEpoch)*oneSlot,
-			expected: params.BeaconConfig().SlotsPerEpoch + 1,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			end := c.start.Add(c.endDelta)
-			a := Duration(c.start, end)
-			require.Equal(t, c.expected, a)
-		})
-	}
-}
-
 func TestWithinVotingWindow(t *testing.T) {
 	genesisTime := time.Now().Add(-37 * time.Second)
 	require.Equal(t, true, WithinVotingWindow(genesisTime, 3))
@@ -792,4 +734,89 @@ func TestMaxEpoch(t *testing.T) {
 	require.NoError(t, err)
 	_, err = EpochStart(maxEpoch)
 	require.NoError(t, err)
+}
+
+func TestStartTimeAndAtWithSlotSchedule(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.HezeForkEpoch = 1
+	cfg.SlotDurationMillisHeze = 6000
+	params.OverrideBeaconConfig(cfg)
+
+	genesis := time.Unix(1600000000, 0)
+	epochSpan := 32 * 12 * time.Second
+
+	cases := []struct {
+		slot  primitives.Slot
+		start time.Duration
+	}{
+		{slot: 0, start: 0},
+		{slot: 31, start: 31 * 12 * time.Second},
+		{slot: 32, start: epochSpan},
+		{slot: 33, start: epochSpan + 6*time.Second},
+		{slot: 96, start: epochSpan + 64*6*time.Second},
+	}
+	for _, tc := range cases {
+		st, err := StartTime(genesis, tc.slot)
+		require.NoError(t, err)
+		assert.Equal(t, genesis.Add(tc.start), st)
+		assert.Equal(t, tc.slot, At(genesis, st))
+		if tc.slot > 0 {
+			assert.Equal(t, tc.slot-1, At(genesis, st.Add(-time.Millisecond)))
+		}
+		since, err := SinceSlotStart(tc.slot, genesis, st.Add(time.Second))
+		require.NoError(t, err)
+		assert.Equal(t, time.Second, since)
+	}
+}
+
+func TestSlotsDurationFrom(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.HezeForkEpoch = 1
+	cfg.SlotDurationMillisHeze = 6000
+	params.OverrideBeaconConfig(cfg)
+
+	cases := []struct {
+		name  string
+		start primitives.Slot
+		count primitives.Slot
+		want  time.Duration
+	}{
+		{name: "zero slots", start: 5, count: 0, want: 0},
+		{name: "before the change", start: 0, count: 2, want: 24 * time.Second},
+		{name: "across the change", start: 31, count: 2, want: 18 * time.Second},
+		{name: "after the change", start: 40, count: 2, want: 12 * time.Second},
+		{name: "overflow falls back to the constant duration", start: math.MaxUint64, count: 1, want: 12 * time.Second},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, SlotsDurationFrom(tc.start, tc.count))
+		})
+	}
+}
+
+func TestEpochsDurationFrom(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.HezeForkEpoch = 1
+	cfg.SlotDurationMillisHeze = 6000
+	params.OverrideBeaconConfig(cfg)
+
+	require.Equal(t, 32*12*time.Second, EpochsDurationFrom(0, 1))
+	require.Equal(t, 32*(12+6)*time.Second, EpochsDurationFrom(0, 2))
+	require.Equal(t, 32*6*time.Second, EpochsDurationFrom(1, 1))
+}
+
+func TestDivideSlotBy(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	require.Equal(t, time.Duration(0), DivideSlotBy(0))
+	require.Equal(t, 6*time.Second, DivideSlotBy(2))
+
+	// The shortest scheduled slot duration is divided.
+	cfg.HezeForkEpoch = 1
+	cfg.SlotDurationMillisHeze = 6000
+	params.OverrideBeaconConfig(cfg)
+	require.Equal(t, 3*time.Second, DivideSlotBy(2))
 }

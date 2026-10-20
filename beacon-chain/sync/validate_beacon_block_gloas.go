@@ -28,11 +28,7 @@ func (s *Service) validateExecutionPayloadBid(ctx context.Context, blk interface
 	if err != nil {
 		return pubsub.ValidationIgnore, errors.Wrap(err, "unable to read bid from block")
 	}
-	wrappedBid, err := consensusblocks.WrappedROSignedExecutionPayloadBid(signedBid)
-	if err != nil {
-		return pubsub.ValidationIgnore, errors.Wrap(err, "unable to wrap signed execution payload bid")
-	}
-	bid, err := wrappedBid.Bid()
+	bid, err := signedBid.Bid()
 	if err != nil {
 		return pubsub.ValidationIgnore, errors.Wrap(err, "unable to read bid from signed execution payload bid")
 	}
@@ -148,7 +144,7 @@ func (s *Service) fetchPayloadEnvelope(root [32]byte) {
 			log.WithError(err).Debug("Could not wrap requested payload envelope")
 			continue
 		}
-		ctx, cancel := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDuration())
+		ctx, cancel := context.WithTimeout(s.ctx, params.BeaconConfig().SlotDurationAt(s.cfg.clock.CurrentSlot()))
 		err = s.cfg.chain.ReceiveExecutionPayloadEnvelope(ctx, wrapped)
 		cancel()
 		if err != nil {

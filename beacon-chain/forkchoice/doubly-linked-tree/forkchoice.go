@@ -151,7 +151,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 	if features.Get().TrackEquivocations {
 		if slotStart, err := slots.StartTime(f.store.genesisTime, roblock.Block().Slot()); err == nil {
 			cfg := params.BeaconConfig()
-			deadline := slotStart.Add(cfg.SlotComponentDuration(cfg.EquivocationEarlyDueBPS))
+			deadline := slotStart.Add(cfg.SlotFractionAt(cfg.EquivocationEarlyDueBPS, roblock.Block().Slot()))
 			now := time.Now()
 			if !now.Before(slotStart) && now.Before(deadline) {
 				f.RecordBlockForEquivocation(roblock.Block().Slot(), roblock.Block().ProposerIndex(), roblock.Root())
@@ -512,7 +512,7 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) e
 		return errInvalidNilCheckpoint
 	}
 	f.store.finalizedCheckpoint = fc
-	f.store.finalizedPayloadBlockHash = f.store.checkpointPayloadHashForRoot(fc.Root)
+	f.store.finalizedPayloadBlockHash = f.store.checkpointPayloadHashForRoot(f.store.clampCheckpointRoot(fc.Epoch, fc.Root))
 	finalizedSlot, err := slots.EpochStart(fc.Epoch)
 	if err == nil {
 		for key := range f.store.blockRootsBySlotProposer {
@@ -616,15 +616,16 @@ func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.B
 				if err != nil {
 					return errors.Wrap(err, "could not get signed execution payload bid")
 				}
-				if sbid == nil || sbid.Message == nil {
-					return errors.New("nil execution payload bid for full node")
+				bid, err := sbid.Bid()
+				if err != nil {
+					return errors.Wrap(err, "could not get execution payload bid for full node")
 				}
 				f.store.fullNodeByRoot[root] = &PayloadNode{
 					node:       en.node,
 					optimistic: true,
 					timestamp:  time.Now(),
 					full:       true,
-					gasLimit:   sbid.Message.GasLimit,
+					gasLimit:   bid.GasLimit(),
 					children:   make([]*Node, 0),
 				}
 			}
@@ -663,12 +664,14 @@ func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
 
 // JustifiedPayloadBlockHash returns the hash of the payload at the justified checkpoint
 func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
-	return f.store.checkpointPayloadHashForRoot(f.JustifiedCheckpoint().Root)
+	jc := f.JustifiedCheckpoint()
+	return f.store.checkpointPayloadHashForRoot(f.store.clampCheckpointRoot(jc.Epoch, jc.Root))
 }
 
 // UnrealizedJustifiedPayloadBlockHash returns the hash of the payload at the unrealized justified checkpoint
 func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
-	return f.store.checkpointPayloadHashForRoot(f.store.unrealizedJustifiedCheckpoint.Root)
+	ujc := f.store.unrealizedJustifiedCheckpoint
+	return f.store.checkpointPayloadHashForRoot(f.store.clampCheckpointRoot(ujc.Epoch, ujc.Root))
 }
 
 // ForkChoiceDump returns a full dump of forkchoice.

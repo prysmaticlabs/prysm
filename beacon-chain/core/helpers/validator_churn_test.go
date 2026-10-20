@@ -6,6 +6,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 )
 
@@ -68,5 +69,46 @@ func TestActivationExitChurnLimit(t *testing.T) {
 func FuzzConsolidationChurnLimit(f *testing.F) {
 	f.Fuzz(func(t *testing.T, activeBalance uint64) {
 		helpers.ConsolidationChurnLimit(primitives.Gwei(activeBalance))
+	})
+}
+
+func TestGloasChurnLimits_SlotDurationChange(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.HezeForkEpoch = 10
+	cfg.SlotDurationMillisHeze = 6000
+	params.OverrideBeaconConfig(cfg)
+
+	activeBalance := primitives.Gwei(cfg.MaxEffectiveBalance * 1e6)
+	increment := primitives.Gwei(cfg.EffectiveBalanceIncrement)
+	for _, tc := range []struct {
+		name  string
+		limit func(int, primitives.Gwei, primitives.Epoch) primitives.Gwei
+	}{
+		{"activation", helpers.ActivationChurnLimitForVersion},
+		{"exit", helpers.ExitChurnLimitForVersion},
+		{"consolidation", helpers.ConsolidationChurnLimitForVersion},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := tc.limit(version.Gloas, activeBalance, 9)
+			after := tc.limit(version.Gloas, activeBalance, 10)
+			assert.Equal(t, primitives.Gwei(0), before%increment)
+			assert.Equal(t, primitives.Gwei(0), after%increment)
+			assert.Equal(t, before/2-before/2%increment, after)
+			// Pre-Gloas limits are not scaled.
+			assert.Equal(t, tc.limit(version.Fulu, activeBalance, 9), tc.limit(version.Fulu, activeBalance, 10))
+		})
+	}
+
+	t.Run("heze at genesis", func(t *testing.T) {
+		// Scaling is relative to SLOT_DURATION_MS, so a network starting at Heze is scaled too.
+		afterFork := helpers.ExitChurnLimitForVersion(version.Gloas, activeBalance, 10)
+
+		genesisCfg := cfg.Copy()
+		genesisCfg.HezeForkEpoch = 0
+		params.OverrideBeaconConfig(genesisCfg)
+		defer params.OverrideBeaconConfig(cfg)
+
+		assert.Equal(t, afterFork, helpers.ExitChurnLimitForVersion(version.Gloas, activeBalance, 0))
 	})
 }

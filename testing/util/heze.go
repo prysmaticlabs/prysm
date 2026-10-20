@@ -43,11 +43,6 @@ func NewBeaconStateHeze(options ...func(state *ethpb.BeaconStateHeze) error) (st
 		RandaoMixes:                filledByteSlice2D(uint64(params.BeaconConfig().EpochsPerHistoricalVector), 32),
 		Validators:                 make([]*ethpb.Validator, 0),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
-		Eth1Data: &ethpb.Eth1Data{
-			DepositRoot: make([]byte, fieldparams.RootLength),
-			BlockHash:   make([]byte, 32),
-		},
-		Eth1DataVotes: make([]*ethpb.Eth1Data, 0),
 		Fork: &ethpb.Fork{
 			PreviousVersion: make([]byte, 4),
 			CurrentVersion:  make([]byte, 4),
@@ -68,7 +63,7 @@ func NewBeaconStateHeze(options ...func(state *ethpb.BeaconStateHeze) error) (st
 			AggregatePubkey: make([]byte, fieldparams.BLSPubkeyLength),
 		},
 		ProposerLookahead:            make([]primitives.ValidatorIndex, (params.BeaconConfig().MinSeedLookahead+1)*primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)),
-		LatestExecutionPayloadBid:    HydrateExecutionPayloadBid(nil),
+		LatestExecutionPayloadBid:    HydrateExecutionPayloadBidHeze(nil),
 		Builders:                     make([]*ethpb.Builder, 0),
 		ExecutionPayloadAvailability: make([]byte, params.BeaconConfig().SlotsPerHistoricalRoot/8),
 		BuilderPendingPayments:       builderPendingPayments,
@@ -133,24 +128,52 @@ func HydrateBeaconBlockBodyHeze(b *ethpb.BeaconBlockBodyHeze) *ethpb.BeaconBlock
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, fieldparams.RootLength)
 	}
-	if b.Eth1Data == nil {
-		b.Eth1Data = &ethpb.Eth1Data{
-			DepositRoot: make([]byte, fieldparams.RootLength),
-			BlockHash:   make([]byte, fieldparams.RootLength),
-		}
-	}
 	if b.SyncAggregate == nil {
 		b.SyncAggregate = &ethpb.SyncAggregate{
 			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
 			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
 		}
 	}
-	b.SignedExecutionPayloadBid = HydrateSignedExecutionPayloadBid(b.SignedExecutionPayloadBid)
+	if b.SignedExecutionPayloadBid == nil {
+		b.SignedExecutionPayloadBid = &ethpb.SignedExecutionPayloadBidHeze{}
+	}
+	if b.SignedExecutionPayloadBid.Signature == nil {
+		b.SignedExecutionPayloadBid.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.SignedExecutionPayloadBid.Message = HydrateExecutionPayloadBidHeze(b.SignedExecutionPayloadBid.Message)
 	if b.PayloadAttestations == nil {
 		b.PayloadAttestations = make([]*ethpb.PayloadAttestation, 0)
 	}
 	if b.ParentExecutionRequests == nil {
 		b.ParentExecutionRequests = &enginev1.ExecutionRequestsGloas{}
+	}
+	return b
+}
+
+// HydrateExecutionPayloadBidHeze hydrates an execution payload bid with correct field length sizes
+// to comply with SSZ marshalling and unmarshalling rules.
+func HydrateExecutionPayloadBidHeze(b *ethpb.ExecutionPayloadBidHeze) *ethpb.ExecutionPayloadBidHeze {
+	if b == nil {
+		b = &ethpb.ExecutionPayloadBidHeze{}
+	}
+	g := HydrateExecutionPayloadBid(&ethpb.ExecutionPayloadBid{
+		ParentBlockHash:       b.ParentBlockHash,
+		ParentBlockRoot:       b.ParentBlockRoot,
+		BlockHash:             b.BlockHash,
+		PrevRandao:            b.PrevRandao,
+		FeeRecipient:          b.FeeRecipient,
+		BlobKzgCommitments:    b.BlobKzgCommitments,
+		ExecutionRequestsRoot: b.ExecutionRequestsRoot,
+	})
+	b.ParentBlockHash = g.ParentBlockHash
+	b.ParentBlockRoot = g.ParentBlockRoot
+	b.BlockHash = g.BlockHash
+	b.PrevRandao = g.PrevRandao
+	b.FeeRecipient = g.FeeRecipient
+	b.BlobKzgCommitments = g.BlobKzgCommitments
+	b.ExecutionRequestsRoot = g.ExecutionRequestsRoot
+	if b.InclusionListBits == nil {
+		b.InclusionListBits = bitfield.NewBitvector16()
 	}
 	return b
 }

@@ -77,6 +77,7 @@ type BeaconChainConfig struct {
 	MinAttestationInclusionDelay     primitives.Slot  `yaml:"MIN_ATTESTATION_INCLUSION_DELAY" spec:"true"` // MinAttestationInclusionDelay defines how many slots validator has to wait to include attestation for beacon block.
 	SecondsPerSlot                   uint64           `yaml:"SECONDS_PER_SLOT" spec:"true"`                // Deprecated: use SlotDuration() or SlotDurationMillis() instead.
 	SlotDurationMilliseconds         uint64           `yaml:"SLOT_DURATION_MS" spec:"true"`                // SlotDurationMilliseconds is the slot time expressed in milliseconds.
+	SlotDurationMillisHeze           uint64           `yaml:"SLOT_DURATION_MS_HEZE" spec:"true"`           // SlotDurationMillisHeze is the slot time from the Heze fork epoch, expressed in milliseconds (EIP-8198).
 	SlotsPerEpoch                    primitives.Slot  `yaml:"SLOTS_PER_EPOCH" spec:"true"`                 // SlotsPerEpoch is the number of slots in an epoch.
 	SqrRootSlotsPerEpoch             primitives.Slot  // SqrRootSlotsPerEpoch is a hard coded value where we take the square root of `SlotsPerEpoch` and round down.
 	MinSeedLookahead                 primitives.Epoch `yaml:"MIN_SEED_LOOKAHEAD" spec:"true"`                  // MinSeedLookahead is the duration of randao look ahead seed.
@@ -166,6 +167,7 @@ type BeaconChainConfig struct {
 	DomainProposerPreferences         [4]byte `yaml:"DOMAIN_PROPOSER_PREFERENCES" spec:"true"`           // DomainProposerPreferences defines the BLS signature domain for proposer preferences.
 	DomainBuilderRequestAuth          [4]byte `yaml:"DOMAIN_BUILDER_REQUEST_AUTH" spec:"true"`           // DomainBuilderRequestAuth defines the BLS signature domain for builder bid request authentication.
 	DomainBuilderDeposit              [4]byte `yaml:"DOMAIN_BUILDER_DEPOSIT" spec:"true"`                // DomainBuilderDeposit defines the BLS signature domain for builder deposit requests (EIP-8282).
+	DomainInclusionListCommittee      [4]byte `yaml:"DOMAIN_INCLUSION_LIST_COMMITTEE" spec:"true"`       // DomainInclusionListCommittee defines the BLS signature domain for inclusion list committee members (EIP-7805).
 
 	// Prysm constants.
 	GenesisValidatorsRoot          [32]byte        // GenesisValidatorsRoot is the root hash of the genesis validators.
@@ -333,6 +335,7 @@ type BeaconChainConfig struct {
 	NumberOfCustodyGroups                 uint64           `yaml:"NUMBER_OF_CUSTODY_GROUPS" spec:"true"`                     // NumberOfCustodyGroups available for nodes to custody.
 	CustodyRequirement                    uint64           `yaml:"CUSTODY_REQUIREMENT" spec:"true"`                          // CustodyRequirement is minimum number of custody groups an honest node custodies and serves samples from.
 	MinEpochsForDataColumnSidecarsRequest primitives.Epoch `yaml:"MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" spec:"true"` // MinEpochsForDataColumnSidecarsRequest is the minimum number of epochs the node will keep the data columns for.
+	MinBlobDataRetentionMillis            uint64           `yaml:"MIN_BLOB_DATA_RETENTION_MS" spec:"true"`                   // MinBlobDataRetentionMillis replaces MinEpochsForDataColumnSidecarsRequest from Heze, as a wall-clock duration (EIP-8198).
 	DataColumnSidecarSubnetCount          uint64           `yaml:"DATA_COLUMN_SIDECAR_SUBNET_COUNT" spec:"true"`             // DataColumnSidecarSubnetCount is the number of data column sidecar subnets used in the gossipsub protocol
 	MaxRequestDataColumnSidecars          uint64           `yaml:"MAX_REQUEST_DATA_COLUMN_SIDECARS" spec:"true"`             // MaxRequestDataColumnSidecars is the maximum number of data column sidecars in a single request
 	ValidatorCustodyRequirement           uint64           `yaml:"VALIDATOR_CUSTODY_REQUIREMENT" spec:"true"`                // ValidatorCustodyRequirement is the minimum number of custody groups an honest node with validators attached custodies and serves samples from
@@ -347,6 +350,13 @@ type BeaconChainConfig struct {
 	MaxPerEpochActivationChurnLimitGloas uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" spec:"true"` // MaxPerEpochActivationChurnLimitGloas is the per-epoch cap on activation churn in Gloas (EIP-8061).
 	MaxBuilderDepositRequestsPerPayload  uint64 `yaml:"MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD" spec:"true"`   // MaxBuilderDepositRequestsPerPayload is the maximum number of builder deposit requests in each payload (EIP-8282).
 	MaxBuilderExitRequestsPerPayload     uint64 `yaml:"MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD" spec:"true"`      // MaxBuilderExitRequestsPerPayload is the maximum number of builder exit requests in each payload (EIP-8282).
+
+	// Values introduced in Heze upgrade
+	// EIP-7805
+	InclusionListDueBPS                  primitives.BP `yaml:"INCLUSION_LIST_DUE_BPS" spec:"true"`                    // InclusionListDueBPS defines the inclusion list due time in basis points of the slot.
+	MaxRequestInclusionList              uint64        `yaml:"MAX_REQUEST_INCLUSION_LIST" spec:"true"`                // MaxRequestInclusionList is the maximum number of inclusion lists in a single request.
+	MinSlotsForInclusionListsRequests    uint64        `yaml:"MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" spec:"true"`    // MinSlotsForInclusionListsRequests is the minimum number of slots the node will keep inclusion lists for.
+	MaxTransactionsBytesPerInclusionList uint64        `yaml:"MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST" spec:"true"` // MaxTransactionsBytesPerInclusionList bounds the total size in bytes of the transactions in an inclusion list.
 
 	// Networking Specific Parameters
 	MaxPayloadSize                  uint64          `yaml:"MAX_PAYLOAD_SIZE" spec:"true"`                   // MAX_PAYLOAD_SIZE is the maximum allowed size of uncompressed payload in gossip messages and rpc chunks.
@@ -823,16 +833,28 @@ func GloasEnabled() bool {
 	return BeaconConfig().GloasForkEpoch < math.MaxUint64
 }
 
-// WithinDAPeriod checks if the block epoch is within the data availability retention period.
-func WithinDAPeriod(block, current primitives.Epoch) bool {
-	if block >= BeaconConfig().FuluForkEpoch {
-		return block+BeaconConfig().MinEpochsForDataColumnSidecarsRequest >= current
-	}
-
-	return block+BeaconConfig().MinEpochsForBlobsSidecarsRequest >= current
+// HezeEnabled centralizes the check to determine if code paths that are specific to Heze should be allowed to execute.
+func HezeEnabled() bool {
+	return BeaconConfig().HezeForkEpoch < math.MaxUint64
 }
 
-// EpochsDuration returns the time duration of the given number of epochs.
+// WithinDAPeriod checks if the block epoch is within the data availability retention period.
+func WithinDAPeriod(block, current primitives.Epoch) (bool, error) {
+	cfg := BeaconConfig()
+	if block >= cfg.FuluForkEpoch {
+		start, err := cfg.BlobDataRetentionStartEpoch(current)
+		if err != nil {
+			return false, fmt.Errorf("blob data retention start epoch: %w", err)
+		}
+
+		return block >= start, nil
+	}
+
+	return block+cfg.MinEpochsForBlobsSidecarsRequest >= current, nil
+}
+
+// EpochsDuration returns the time duration of the given number of epochs at the genesis slot duration.
+// Use slots.EpochsDurationFrom for the wall-clock span of actual epochs.
 func EpochsDuration(count primitives.Epoch, b *BeaconChainConfig) time.Duration {
 	return SlotsDuration(SlotsForEpochs(count, b), b)
 }
@@ -842,39 +864,23 @@ func SlotsForEpochs(count primitives.Epoch, b *BeaconChainConfig) primitives.Slo
 	return primitives.Slot(count) * b.SlotsPerEpoch
 }
 
-// SlotsDuration returns the time duration of the given number of slots.
+// SlotsDuration returns the time duration of the given number of slots at the genesis slot duration.
+// Use slots.SlotsDurationFrom for the wall-clock span of actual slots.
 func SlotsDuration(count primitives.Slot, b *BeaconChainConfig) time.Duration {
 	return time.Duration(count) * b.SlotDuration()
 }
 
-// SecondsPerSlot returns the time duration of a single slot.
-func SecondsPerSlot(b *BeaconChainConfig) time.Duration {
-	return b.SlotDuration()
-}
-
-// SlotDuration returns the configured slot duration as a time.Duration.
+// SlotDuration returns the genesis slot duration (SLOT_DURATION_MS) as a time.Duration.
+// It ignores slot duration changes, use SlotDurationAt for the duration of a given slot.
 func (b *BeaconChainConfig) SlotDuration() time.Duration {
 	return time.Duration(b.SlotDurationMillis()) * time.Millisecond
 }
 
-// SlotDurationMillis returns the configured slot duration in milliseconds.
+// SlotDurationMillis returns the genesis slot duration (SLOT_DURATION_MS) in milliseconds.
+// It ignores slot duration changes, use SlotDurationMillisAtEpoch for the duration in effect at a given epoch.
 func (b *BeaconChainConfig) SlotDurationMillis() uint64 {
 	if b.SlotDurationMilliseconds > 0 {
 		return b.SlotDurationMilliseconds
 	}
 	return b.SecondsPerSlot * 1000
-}
-
-// SlotComponentDuration returns the duration representing the given portion (in basis points) of a slot.
-func (b *BeaconChainConfig) SlotComponentDuration(bp primitives.BP) time.Duration {
-	ms := uint64(bp) * b.SlotDurationMillis() / uint64(BasisPoints)
-	return time.Duration(ms) * time.Millisecond
-}
-
-// AttestationDueBPSAtSlot returns the attestation due time in basis points of the slot.
-func (b *BeaconChainConfig) AttestationDueBPSAtSlot(slot primitives.Slot) primitives.BP {
-	if primitives.Epoch(slot.DivSlot(b.SlotsPerEpoch)) >= b.GloasForkEpoch {
-		return b.AttestationDueBPSGloas
-	}
-	return b.AttestationDueBPS
 }

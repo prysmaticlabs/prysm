@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
@@ -32,7 +33,8 @@ const maxFutureStatusHeadSlot = 1
 // maintainPeerStatuses maintains peer statuses by polling peers for their latest status twice per epoch.
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
-	interval := params.SlotsDuration(params.BeaconConfig().SlotsPerEpoch.Div(2), params.BeaconConfig())
+	cfg := params.BeaconConfig()
+	interval := time.Duration(cfg.SlotsPerEpoch.Div(2)) * cfg.ShortestSlotDuration()
 	async.RunEvery(s.ctx, interval, func() {
 		wg := new(sync.WaitGroup)
 		for _, id := range s.cfg.p2p.Peers().Connected() {
@@ -97,7 +99,7 @@ func (s *Service) maintainPeerStatuses() {
 // by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
 	// Run sixteen times per epoch.
-	interval := params.EpochsDuration(1, params.BeaconConfig()) / 16
+	interval := params.BeaconConfig().ShortestEpochDuration() / 16
 	async.RunEvery(s.ctx, interval, func() {
 		if s.shouldReSync() {
 			syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())

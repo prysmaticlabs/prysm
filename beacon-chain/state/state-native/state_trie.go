@@ -44,7 +44,7 @@ const (
 	electraSharedFieldRefCount   = 10
 	fuluSharedFieldRefCount      = 11
 	gloasSharedFieldRefCount     = 13 // Fulu 11 + Builders, BuilderPendingWithdrawals, PTCWindow - LatestExecutionPayloadHeaderDeneb
-	hezeSharedFieldRefCount      = 13
+	hezeSharedFieldRefCount      = 12 // Gloas set minus Eth1DataVotes (EIP-8015)
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -836,9 +836,6 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 		fork:                          st.Fork,
 		latestBlockHeader:             st.LatestBlockHeader,
 		historicalRoots:               hRoots,
-		eth1Data:                      st.Eth1Data,
-		eth1DataVotes:                 st.Eth1DataVotes,
-		eth1DepositIndex:              st.Eth1DepositIndex,
 		slashings:                     st.Slashings,
 		previousEpochParticipation:    st.PreviousEpochParticipation,
 		currentEpochParticipation:     st.CurrentEpochParticipation,
@@ -851,7 +848,6 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 		nextWithdrawalIndex:           st.NextWithdrawalIndex,
 		nextWithdrawalValidatorIndex:  st.NextWithdrawalValidatorIndex,
 		historicalSummaries:           st.HistoricalSummaries,
-		depositRequestsStartIndex:     st.DepositRequestsStartIndex,
 		depositBalanceToConsume:       st.DepositBalanceToConsume,
 		exitBalanceToConsume:          st.ExitBalanceToConsume,
 		earliestExitEpoch:             st.EarliestExitEpoch,
@@ -861,7 +857,7 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 		pendingPartialWithdrawals:     st.PendingPartialWithdrawals,
 		pendingConsolidations:         st.PendingConsolidations,
 		proposerLookahead:             proposerLookahead,
-		latestExecutionPayloadBid:     st.LatestExecutionPayloadBid,
+		latestExecutionPayloadBidHeze: st.LatestExecutionPayloadBid,
 		builders:                      st.Builders,
 		nextWithdrawalBuilderIndex:    st.NextWithdrawalBuilderIndex,
 		executionPayloadAvailability:  st.ExecutionPayloadAvailability,
@@ -903,7 +899,6 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 
 	// Initialize field reference tracking for shared data.
 	b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.Slashings] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
@@ -912,9 +907,9 @@ func InitializeFromProtoUnsafeHeze(st *ethpb.BeaconStateHeze) (state.BeaconState
 	b.sharedFieldReferences[types.PendingPartialWithdrawals] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.PendingConsolidations] = stateutil.NewRef(1)
 	b.sharedFieldReferences[types.ProposerLookahead] = stateutil.NewRef(1)
-	b.sharedFieldReferences[types.Builders] = stateutil.NewRef(1)                  // New in Gloas.
-	b.sharedFieldReferences[types.BuilderPendingWithdrawals] = stateutil.NewRef(1) // New in Gloas.
-	b.sharedFieldReferences[types.PTCWindow] = stateutil.NewRef(1)                 // New in Gloas.
+	b.sharedFieldReferences[types.Builders] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.BuilderPendingWithdrawals] = stateutil.NewRef(1)
+	b.sharedFieldReferences[types.PTCWindow] = stateutil.NewRef(1)
 
 	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
@@ -1005,6 +1000,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		latestExecutionPayloadHeaderCapella: b.latestExecutionPayloadHeaderCapella.Copy(),
 		latestExecutionPayloadHeaderDeneb:   b.latestExecutionPayloadHeaderDeneb.Copy(),
 		latestExecutionPayloadBid:           b.latestExecutionPayloadBid.Copy(),
+		latestExecutionPayloadBidHeze:       b.latestExecutionPayloadBidHeze.Copy(),
 		nextWithdrawalBuilderIndex:          b.nextWithdrawalBuilderIndex,
 		executionPayloadAvailability:        b.executionPayloadAvailabilityVal(),
 		builderPendingPayments:              b.builderPendingPaymentsVal(),
@@ -1154,12 +1150,17 @@ func (b *BeaconState) initializeProgressiveMerkleTree(ctx context.Context) error
 		return nil
 	}
 
-	fieldRoots := make([][]byte, len(schema.Fields()))
-	for fieldIndex, field := range schema.Fields() {
+	// Inactive positions stay zero leaves so that active fields keep stable generalized indices.
+	fieldRoots := make([][]byte, len(schema.ActiveFields()))
+	for i := range fieldRoots {
+		fieldRoots[i] = make([]byte, 32)
+	}
+	for _, field := range schema.Fields() {
 		root, err := b.rootSelector(ctx, field)
 		if err != nil {
 			return fmt.Errorf("could not compute progressive field %s: %w", field.String(), err)
 		}
+		fieldIndex, _ := schema.GetFieldIndex(field)
 		fieldRoots[fieldIndex] = bytesutil.SafeCopyBytes(root[:])
 	}
 
@@ -1522,6 +1523,9 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.ProposerLookahead:
 		return stateutil.ProposerLookaheadRoot(b.proposerLookahead)
 	case types.LatestExecutionPayloadBid:
+		if b.version >= version.Heze {
+			return b.latestExecutionPayloadBidHeze.HashTreeRoot()
+		}
 		return b.latestExecutionPayloadBid.HashTreeRoot()
 	case types.Builders:
 		return stateutil.BuildersRoot(b.version, b.builders)

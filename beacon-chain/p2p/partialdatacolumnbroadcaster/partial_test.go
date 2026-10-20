@@ -1498,7 +1498,7 @@ func TestPartialColumnBroadcaster_handleIncomingRPC_servesPublishedUnsubscribedT
 	require.Equal(t, 2, ps.publishedColumnCount())
 
 	// Once the published group expires, the topic reverts to fully ignored.
-	for range TTLInSlots + 1 {
+	for range groupTTLTicks() + 1 {
 		h.broadcaster.evictExpiredGroups()
 	}
 	_, published = h.broadcaster.publishedTopics.Load(topic)
@@ -2975,6 +2975,29 @@ func TestPartialColumnBroadcaster_loopDrainsOnShutdown(t *testing.T) {
 		}
 	}
 	require.Equal(t, true, stopped > 0)
+}
+
+func TestGroupTTLTicks(t *testing.T) {
+	t.Run("constant slot duration", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.HezeForkEpoch = cfg.FarFutureEpoch
+		params.OverrideBeaconConfig(cfg)
+
+		require.Equal(t, int8(TTLInSlots), groupTTLTicks())
+	})
+
+	t.Run("slot duration change", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.HezeForkEpoch = 10
+		cfg.SlotDurationMilliseconds = 12000
+		cfg.SlotDurationMillisHeze = 10000
+		params.OverrideBeaconConfig(cfg)
+
+		// 3 slots of 12s need 4 ticks of 10s.
+		require.Equal(t, int8(4), groupTTLTicks())
+	})
 }
 
 func TestPartialColumnBroadcaster_evictExpiredGroups(t *testing.T) {

@@ -92,9 +92,23 @@ func TestConfig_WithinDAPeriod(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			require.Equal(t, c.within, params.WithinDAPeriod(c.block, c.current))
+			within, err := params.WithinDAPeriod(c.block, c.current)
+			require.NoError(t, err)
+			require.Equal(t, c.within, within)
 		})
 	}
+
+	t.Run("retention start overflow", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.FuluForkEpoch = 0
+		cfg.GloasForkEpoch = 1
+		cfg.HezeForkEpoch = 2
+		params.OverrideBeaconConfig(cfg)
+
+		_, err := params.WithinDAPeriod(0, primitives.Epoch(math.MaxUint64/32))
+		require.ErrorContains(t, "overflows", err)
+	})
 }
 
 func TestConfigGenesisValidatorRoot(t *testing.T) {
@@ -301,7 +315,7 @@ func TestBeaconChainConfigSlotDurationMillis(t *testing.T) {
 	}
 }
 
-func TestBeaconChainConfigSlotComponentDuration(t *testing.T) {
+func TestBeaconChainConfigSlotFractionAt(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -312,31 +326,31 @@ func TestBeaconChainConfigSlotComponentDuration(t *testing.T) {
 	}{
 		{
 			name: "zero basis points produces zero duration",
-			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			cfg:  params.BeaconChainConfig{SlotsPerEpoch: 32, SlotDurationMilliseconds: 12_000},
 			bp:   0,
 			want: 0,
 		},
 		{
 			name: "full slot basis points matches slot duration",
-			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			cfg:  params.BeaconChainConfig{SlotsPerEpoch: 32, SlotDurationMilliseconds: 12_000},
 			bp:   params.BasisPoints,
 			want: 12 * time.Second,
 		},
 		{
 			name: "quarter slot with explicit milliseconds",
-			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			cfg:  params.BeaconChainConfig{SlotsPerEpoch: 32, SlotDurationMilliseconds: 12_000},
 			bp:   params.BasisPoints / 4,
 			want: 3 * time.Second,
 		},
 		{
 			name: "fractional slot rounds down",
-			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 1_001},
+			cfg:  params.BeaconChainConfig{SlotsPerEpoch: 32, SlotDurationMilliseconds: 1_001},
 			bp:   params.BasisPoints / 3,
 			want: 333 * time.Millisecond,
 		},
 		{
 			name: "uses seconds per slot fallback",
-			cfg:  params.BeaconChainConfig{SecondsPerSlot: 9},
+			cfg:  params.BeaconChainConfig{SlotsPerEpoch: 32, SecondsPerSlot: 9},
 			bp:   params.BasisPoints / 2,
 			want: 4500 * time.Millisecond,
 		},
@@ -345,7 +359,7 @@ func TestBeaconChainConfigSlotComponentDuration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tt.want, tt.cfg.SlotComponentDuration(tt.bp))
+			require.Equal(t, tt.want, tt.cfg.SlotFractionAt(tt.bp, 0))
 		})
 	}
 }

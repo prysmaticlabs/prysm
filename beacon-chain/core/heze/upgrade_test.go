@@ -3,6 +3,7 @@ package heze_test
 import (
 	"testing"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
@@ -19,8 +20,10 @@ func TestUpgradeToHeze(t *testing.T) {
 			s.Slot = 64
 			s.Fork.CurrentVersion = params.BeaconConfig().GloasForkVersion
 			s.Eth1DepositIndex = 7
+			s.DepositRequestsStartIndex = 7
 			s.LatestExecutionPayloadBid.BlockHash[0] = 0xaa
 			s.LatestExecutionPayloadBid.Value = 9
+			s.LatestExecutionPayloadBid.ExecutionPayment = 13
 			s.LatestBlockHash[0] = 0xbb
 			return nil
 		})
@@ -40,12 +43,25 @@ func TestUpgradeToHeze(t *testing.T) {
 			Epoch:           time.CurrentEpoch(pre),
 		}, got.Fork)
 		require.Equal(t, preProto.Slot, got.Slot)
-		require.Equal(t, preProto.Eth1DepositIndex, got.Eth1DepositIndex)
-		require.DeepEqual(t, preProto.Eth1Data, got.Eth1Data)
 		require.DeepEqual(t, preProto.LatestBlockHash, got.LatestBlockHash)
 		require.DeepEqual(t, preProto.PtcWindow, got.PtcWindow)
 
-		require.DeepEqual(t, preProto.LatestExecutionPayloadBid, got.LatestExecutionPayloadBid)
+		preBid := preProto.LatestExecutionPayloadBid
+		require.DeepEqual(t, &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       preBid.ParentBlockHash,
+			ParentBlockRoot:       preBid.ParentBlockRoot,
+			BlockHash:             preBid.BlockHash,
+			PrevRandao:            preBid.PrevRandao,
+			FeeRecipient:          preBid.FeeRecipient,
+			GasLimit:              preBid.GasLimit,
+			BuilderIndex:          preBid.BuilderIndex,
+			Slot:                  preBid.Slot,
+			Value:                 preBid.Value,
+			ExecutionPayment:      preBid.ExecutionPayment,
+			BlobKzgCommitments:    preBid.BlobKzgCommitments,
+			ExecutionRequestsRoot: preBid.ExecutionRequestsRoot,
+			InclusionListBits:     bitfield.NewBitvector16(),
+		}, got.LatestExecutionPayloadBid)
 
 		// The upgraded state must hash like the generated SSZ of the same Heze state.
 		wantRoot, err := got.HashTreeRoot()
@@ -55,4 +71,24 @@ func TestUpgradeToHeze(t *testing.T) {
 		require.Equal(t, wantRoot, gotRoot)
 	})
 
+	t.Run("rejects an active eth1 deposit mechanism", func(t *testing.T) {
+		pre, err := util.NewBeaconStateGloas(func(s *ethpb.BeaconStateGloas) error {
+			s.Eth1DepositIndex = 3
+			s.DepositRequestsStartIndex = 7
+			return nil
+		})
+		require.NoError(t, err)
+		_, err = heze.UpgradeToHeze(pre)
+		require.ErrorContains(t, "eth1 deposit index 3 does not equal deposit requests start index 7", err)
+	})
+
+	t.Run("rejects a nil latest execution payload bid", func(t *testing.T) {
+		pre, err := util.NewBeaconStateGloas(func(s *ethpb.BeaconStateGloas) error {
+			s.LatestExecutionPayloadBid = nil
+			return nil
+		})
+		require.NoError(t, err)
+		_, err = heze.UpgradeToHeze(pre)
+		require.ErrorContains(t, "nil latest execution payload bid", err)
+	})
 }

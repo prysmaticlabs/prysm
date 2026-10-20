@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/async/event"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch/precompute"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
 	blockfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/block"
@@ -30,6 +31,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -102,6 +104,10 @@ type ChainService struct {
 	Blobs                       []blocks.VerifiedROBlob
 	DataColumns                 []blocks.VerifiedRODataColumn
 	SyncCommitteeDomain         []byte
+	ILStore                     *cache.InclusionListStore
+	InclusionListsReceived      []*ethpb.SignedInclusionList
+	OnInclusionListErr          error
+	LookaheadStateCB            func([32]byte, primitives.Epoch) (state.ReadOnlyBeaconState, error)
 }
 
 type EquivocationKey struct {
@@ -497,7 +503,7 @@ func (s *ChainService) CurrentSlot() primitives.Slot {
 	if s.Slot != nil {
 		return *s.Slot
 	}
-	return primitives.Slot(uint64(time.Since(s.Genesis).Milliseconds()) / params.BeaconConfig().SlotDurationMillis())
+	return slots.CurrentSlot(s.Genesis)
 }
 
 // Participation mocks the same method in the chain service.
@@ -1069,4 +1075,35 @@ type MockSyncChecker struct {
 // Synced satisfies the blockchain.Checker interface.
 func (m *MockSyncChecker) Synced() bool {
 	return m.synced
+}
+
+// InclusionListStore mocks the same method in the chain service.
+func (s *ChainService) InclusionListStore() *cache.InclusionListStore {
+	if s.ILStore == nil {
+		s.ILStore = cache.NewInclusionListStore()
+	}
+	return s.ILStore
+}
+
+// OnInclusionList mocks the same method in the chain service. It stores the list as timely when OnInclusionListErr is nil.
+func (s *ChainService) OnInclusionList(_ context.Context, signed *ethpb.SignedInclusionList) error {
+	if s.OnInclusionListErr != nil {
+		return s.OnInclusionListErr
+	}
+	s.InclusionListsReceived = append(s.InclusionListsReceived, signed)
+	s.InclusionListStore().Process(signed, true)
+	return nil
+}
+
+// LookaheadState mocks the same method in the chain service. Without LookaheadStateCB it returns State.
+func (s *ChainService) LookaheadState(_ context.Context, dependentRoot [32]byte, dependentEpoch primitives.Epoch) (state.ReadOnlyBeaconState, error) {
+	if s.LookaheadStateCB != nil {
+		return s.LookaheadStateCB(dependentRoot, dependentEpoch)
+	}
+	return s.State, nil
+}
+
+// DependentState mocks the same method in the chain service. It returns State.
+func (s *ChainService) DependentState(context.Context, [32]byte, primitives.Epoch) (state.ReadOnlyBeaconState, error) {
+	return s.State, nil
 }

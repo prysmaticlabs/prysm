@@ -1,6 +1,7 @@
 package heze
 
 import (
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
@@ -9,12 +10,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-// UpgradeToHeze upgrades a Gloas state to a Heze state with the Heze fork version.
+// UpgradeToHeze upgrades a Gloas state to a Heze state.
 func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 	pre, err := state_native.ProtobufBeaconStateGloas(beaconState.ToProto())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert state to Gloas protobuf")
 	}
+	if pre.Eth1DepositIndex != pre.DepositRequestsStartIndex {
+		return nil, errors.Errorf("eth1 deposit index %d does not equal deposit requests start index %d", pre.Eth1DepositIndex, pre.DepositRequestsStartIndex)
+	}
+	bid := pre.LatestExecutionPayloadBid
+	if bid == nil {
+		return nil, errors.New("nil latest execution payload bid")
+	}
+
 	s := &ethpb.BeaconStateHeze{
 		GenesisTime:           pre.GenesisTime,
 		GenesisValidatorsRoot: pre.GenesisValidatorsRoot,
@@ -28,9 +37,6 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		BlockRoots:                    pre.BlockRoots,
 		StateRoots:                    pre.StateRoots,
 		HistoricalRoots:               pre.HistoricalRoots,
-		Eth1Data:                      pre.Eth1Data,
-		Eth1DataVotes:                 pre.Eth1DataVotes,
-		Eth1DepositIndex:              pre.Eth1DepositIndex,
 		Validators:                    pre.Validators,
 		Balances:                      pre.Balances,
 		RandaoMixes:                   pre.RandaoMixes,
@@ -48,7 +54,6 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		NextWithdrawalIndex:           pre.NextWithdrawalIndex,
 		NextWithdrawalValidatorIndex:  pre.NextWithdrawalValidatorIndex,
 		HistoricalSummaries:           pre.HistoricalSummaries,
-		DepositRequestsStartIndex:     pre.DepositRequestsStartIndex,
 		DepositBalanceToConsume:       pre.DepositBalanceToConsume,
 		ExitBalanceToConsume:          pre.ExitBalanceToConsume,
 		EarliestExitEpoch:             pre.EarliestExitEpoch,
@@ -63,9 +68,23 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		ExecutionPayloadAvailability:  pre.ExecutionPayloadAvailability,
 		BuilderPendingPayments:        pre.BuilderPendingPayments,
 		BuilderPendingWithdrawals:     pre.BuilderPendingWithdrawals,
-		LatestExecutionPayloadBid:     pre.LatestExecutionPayloadBid,
-		PayloadExpectedWithdrawals:    pre.PayloadExpectedWithdrawals,
-		PtcWindow:                     pre.PtcWindow,
+		LatestExecutionPayloadBid: &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       bid.ParentBlockHash,
+			ParentBlockRoot:       bid.ParentBlockRoot,
+			BlockHash:             bid.BlockHash,
+			PrevRandao:            bid.PrevRandao,
+			FeeRecipient:          bid.FeeRecipient,
+			GasLimit:              bid.GasLimit,
+			BuilderIndex:          bid.BuilderIndex,
+			Slot:                  bid.Slot,
+			Value:                 bid.Value,
+			ExecutionPayment:      bid.ExecutionPayment,
+			BlobKzgCommitments:    bid.BlobKzgCommitments,
+			ExecutionRequestsRoot: bid.ExecutionRequestsRoot,
+			InclusionListBits:     bitfield.NewBitvector16(),
+		},
+		PayloadExpectedWithdrawals: pre.PayloadExpectedWithdrawals,
+		PtcWindow:                  pre.PtcWindow,
 	}
 	return state_native.InitializeFromProtoUnsafeHeze(s)
 }

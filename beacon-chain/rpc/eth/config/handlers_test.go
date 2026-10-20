@@ -99,6 +99,7 @@ func TestGetSpec(t *testing.T) {
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
 	config.SlotDurationMilliseconds = 120
+	config.SlotDurationMillisHeze = 100
 	config.MinAttestationInclusionDelay = 26
 	config.SlotsPerEpoch = 27
 	config.MinSeedLookahead = 28
@@ -195,6 +196,7 @@ func TestGetSpec(t *testing.T) {
 	config.ChurnLimitQuotientGloas = 107
 	config.ConsolidationChurnLimitQuotient = 108
 	config.MaxPerEpochActivationChurnLimitGloas = 109
+	config.InclusionListDueBPS = primitives.BP(110)
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -247,7 +249,7 @@ func TestGetSpec(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	data, ok := resp.Data.(map[string]any)
 	require.Equal(t, true, ok)
-	assert.Equal(t, 218, len(data))
+	assert.Equal(t, 228, len(data))
 	for k, v := range data {
 		t.Run(k, func(t *testing.T) {
 			switch k {
@@ -335,6 +337,14 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "0x"+hex.EncodeToString([]byte("HezeForkVersion")), v)
 			case "HEZE_FORK_EPOCH":
 				assert.Equal(t, "133", v)
+			case "INCLUSION_LIST_DUE_BPS":
+				assert.Equal(t, "110", v)
+			case "MAX_REQUEST_INCLUSION_LIST":
+				assert.Equal(t, "16", v)
+			case "MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS":
+				assert.Equal(t, "1", v)
+			case "MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST":
+				assert.Equal(t, "8192", v)
 			case "MIN_BUILDER_WITHDRAWABILITY_DELAY":
 				assert.Equal(t, "111", v)
 			case "MAX_BUILDERS_PER_WITHDRAWALS_SWEEP":
@@ -355,6 +365,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "25", v)
 			case "SLOT_DURATION_MS":
 				assert.Equal(t, "120", v)
+			case "SLOT_DURATION_MS_HEZE":
+				assert.Equal(t, "100", v)
 			case "MIN_ATTESTATION_INCLUSION_DELAY":
 				assert.Equal(t, "26", v)
 			case "SLOTS_PER_EPOCH":
@@ -475,6 +487,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "0x31303031", v)
 			case "DOMAIN_BUILDER_DEPOSIT":
 				assert.Equal(t, "0x31303032", v)
+			case "DOMAIN_INCLUSION_LIST_COMMITTEE":
+				assert.Equal(t, "0x10000000", v)
 			case "DOMAIN_SYNC_COMMITTEE":
 				assert.Equal(t, "0x07000000", v)
 			case "DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF":
@@ -645,6 +659,8 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, "8", v)
 			case "MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS":
 				assert.Equal(t, "4096", v)
+			case "MIN_BLOB_DATA_RETENTION_MS":
+				assert.Equal(t, "1572864000", v)
 			case "MAX_BLOB_COMMITMENTS_PER_BLOCK":
 				assert.Equal(t, "94", v)
 			case "MAX_REQUEST_PAYLOADS":
@@ -711,6 +727,12 @@ func TestGetSpec(t *testing.T) {
 				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxAttesterSlashingSize), 10), v)
 			case "MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE":
 				assert.Equal(t, strconv.FormatUint(uint64(fieldparams.MaxSignedExecutionPayloadBidSize), 10), v)
+			case "INCLUSION_LIST_COMMITTEE_SIZE":
+				assert.Equal(t, "16", v)
+			case "MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE":
+				assert.Equal(t, "196934", v)
+			case "MAX_SIGNED_INCLUSION_LIST_SIZE":
+				assert.Equal(t, "41112", v)
 			default:
 				t.Errorf("Incorrect key: %s", k)
 			}

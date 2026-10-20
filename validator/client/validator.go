@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -329,6 +330,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
+	if chainStartRes.GenesisTime > math.MaxInt64 {
+		return errors.Errorf("genesis time %d is out of range", chainStartRes.GenesisTime)
+	}
+
 	v.genesisTimeLock.Lock()
 	v.genesisTime = time.Unix(int64(chainStartRes.GenesisTime), 0)
 	v.genesisTimeLock.Unlock()
@@ -463,8 +468,14 @@ func (v *validator) NextSlot() <-chan primitives.Slot {
 }
 
 // SlotDeadline is the start time of the next slot.
+// A start time too far to represent as a duration since genesis is a deadline that is never reached.
 func (v *validator) SlotDeadline(slot primitives.Slot) time.Time {
-	return v.genesisTime.Add(params.SlotsDuration(slot+1, params.BeaconConfig()))
+	deadline, err := slots.StartTime(v.genesisTime, slot+1)
+	if err != nil {
+		return v.genesisTime.Add(time.Duration(math.MaxInt64))
+	}
+
+	return deadline
 }
 
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
@@ -538,6 +549,10 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 
 		if slices.Contains(snap.ptcSlots(duty.ValidatorIndex), slot) {
 			roles = append(roles, rolePTCMember)
+		}
+
+		if slices.Contains(duty.InclusionListSlots, slot) {
+			roles = append(roles, roleInclusionListCommittee)
 		}
 
 		if len(roles) == 0 {
@@ -671,7 +686,7 @@ func (v *validator) getAttestationData(ctx context.Context, slot primitives.Slot
 	epoch := slots.ToEpoch(slot)
 	postElectra := epoch >= params.BeaconConfig().ElectraForkEpoch
 
-	ctx, err := v.withHeadHint(ctx, slot, attestationDueComponent(slot))
+	ctx, err := v.withHeadHint(ctx, slot, params.AttestationDue)
 	if err != nil {
 		return nil, fmt.Errorf("attach freshness hint: %w", err)
 	}
@@ -859,7 +874,7 @@ func (v *validator) pushPreferences(ctx context.Context, km keymanager.IKeymanag
 	}
 
 	if prefs := v.buildProposerPreferences(ctx, km, slot, forceFullPush || prefsChanged); len(prefs) > 0 {
-		submitAfterDelay(func(ctx context.Context) {
+		submitAfterDelay(slot, func(ctx context.Context) {
 			if v.submitProposerPreferenceBatch(ctx, prefs) {
 				v.connTracker.confirm(proposerPrefsPush, connGen)
 			}
@@ -871,7 +886,7 @@ func (v *validator) pushPreferences(ctx context.Context, km keymanager.IKeymanag
 	}
 
 	if entries := v.warmBuilderRequestAuths(ctx, km, slot, forceFullPush || builderPrefsChanged); len(entries) > 0 {
-		submitAfterDelay(func(ctx context.Context) {
+		submitAfterDelay(slot, func(ctx context.Context) {
 			if v.submitBuilderPreferenceBatch(ctx, entries) {
 				v.connTracker.confirm(builderPrefsPush, connGen)
 			}
@@ -1176,8 +1191,8 @@ func (v *validator) upgradeProposerSettingsToV2(ctx context.Context) {
 
 // submitAfterDelay runs submit half a slot from now, giving the beacon node
 // time to process the current slot's block, detached from the caller's context.
-func submitAfterDelay(submit func(ctx context.Context)) {
-	delay := params.BeaconConfig().SlotDuration() / 2
+func submitAfterDelay(slot primitives.Slot, submit func(ctx context.Context)) {
+	delay := params.BeaconConfig().SlotDurationAt(slot) / 2
 	time.AfterFunc(delay, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), delay)
 		defer cancel()
@@ -1540,11 +1555,11 @@ func (v *validator) resubmitPreferences(ctx context.Context) {
 	}
 	entries := v.warmBuilderRequestAuths(ctx, km, slot, true)
 	if len(entries) > 0 {
-		submitAfterDelay(func(ctx context.Context) { v.submitBuilderPreferenceBatch(ctx, entries) })
+		submitAfterDelay(slot, func(ctx context.Context) { v.submitBuilderPreferenceBatch(ctx, entries) })
 	}
 	prefs := v.buildProposerPreferences(ctx, km, slot, true)
 	if len(prefs) > 0 {
-		submitAfterDelay(func(ctx context.Context) { v.submitProposerPreferenceBatch(ctx, prefs) })
+		submitAfterDelay(slot, func(ctx context.Context) { v.submitProposerPreferenceBatch(ctx, prefs) })
 	}
 	if len(prefs) > 0 || len(entries) > 0 {
 		log.WithFields(logrus.Fields{

@@ -300,12 +300,9 @@ type BeaconStateHeze struct {
 	Slot                          primitives.Slot
 	Fork                          *Fork
 	LatestBlockHeader             *BeaconBlockHeader
-	BlockRoots                    [][]byte `ssz-size:"64,32"`
-	StateRoots                    [][]byte `ssz-size:"64,32"`
-	HistoricalRoots               [][]byte `ssz-max:"16777216" ssz-size:"?,32"`
-	Eth1Data                      *Eth1Data
-	Eth1DataVotes                 []*Eth1Data `ssz-max:"32"`
-	Eth1DepositIndex              uint64
+	BlockRoots                    [][]byte            `ssz-size:"64,32"`
+	StateRoots                    [][]byte            `ssz-size:"64,32"`
+	HistoricalRoots               [][]byte            `ssz-max:"16777216" ssz-size:"?,32"`
 	Validators                    []*Validator        `ssz-max:"1099511627776"`
 	Balances                      []uint64            `ssz-max:"1099511627776"`
 	RandaoMixes                   [][]byte            `ssz-size:"64,32"`
@@ -323,7 +320,6 @@ type BeaconStateHeze struct {
 	NextWithdrawalIndex           uint64
 	NextWithdrawalValidatorIndex  primitives.ValidatorIndex
 	HistoricalSummaries           []*HistoricalSummary `ssz-max:"16777216"`
-	DepositRequestsStartIndex     uint64
 	DepositBalanceToConsume       primitives.Gwei
 	ExitBalanceToConsume          primitives.Gwei
 	EarliestExitEpoch             primitives.Epoch
@@ -338,7 +334,7 @@ type BeaconStateHeze struct {
 	ExecutionPayloadAvailability  []byte                      `ssz-size:"8"`
 	BuilderPendingPayments        []*BuilderPendingPayment    `ssz-size:"16"`
 	BuilderPendingWithdrawals     []*BuilderPendingWithdrawal `ssz-max:"1048576"`
-	LatestExecutionPayloadBid     *ExecutionPayloadBid
+	LatestExecutionPayloadBid     *ExecutionPayloadBidHeze
 	PayloadExpectedWithdrawals    []*enginev1.Withdrawal `ssz-max:"4"`
 	PtcWindow                     []*PTCs                `ssz-size:"24"`
 }

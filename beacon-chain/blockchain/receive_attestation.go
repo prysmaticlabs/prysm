@@ -9,6 +9,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
 	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
@@ -21,10 +22,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
-
-// reorgLateBlockCountAttestations is the time until the end of the slot in which we count
-// attestations to see if we will reorg the incoming block
-const reorgLateBlockCountAttestations = 2 * time.Second
 
 // AttestationStateFetcher allows for retrieving a beacon state corresponding to the block
 // root of an attestation's target checkpoint.
@@ -91,8 +88,8 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			return
 		}
 
-		reorgInterval := params.BeaconConfig().SlotDuration() - reorgLateBlockCountAttestations
-		ticker := slots.NewSlotTickerWithIntervals(s.genesisTime, []time.Duration{0, reorgInterval})
+		reorgInterval := slots.IntervalFunc(doublylinkedtree.ProcessAttestationsThreshold)
+		ticker := slots.NewSlotTickerWithIntervalFuncs(s.genesisTime, []slots.IntervalFunc{slots.FixedInterval(0), reorgInterval})
 		for {
 			select {
 			case <-s.ctx.Done():
@@ -159,9 +156,10 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	start := time.Now()
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	// This function is only called at 10 seconds or 0 seconds into the slot
+	// This function is only called at the attestation processing threshold or at the start of the slot.
+	// Attestations up to the end of the slot are counted to see if we will reorg the incoming block.
 	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
-	disparity += reorgLateBlockCountAttestations
+	disparity += doublylinkedtree.ProcessAttestationsBeforeSlotEnd(s.CurrentSlot())
 
 	s.processAttestations(ctx, disparity)
 

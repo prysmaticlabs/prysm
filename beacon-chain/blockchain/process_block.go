@@ -37,8 +37,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// A custom slot deadline for processing state slots in our cache.
-const slotDeadline = 5 * time.Second
+// slotDeadlineBPS bounds the asynchronous cache updates following a block, 5 seconds of a 12 second slot.
+const slotDeadlineBPS = primitives.BP(4167)
+
+// slotDeadline returns the custom deadline for processing state slots in our cache.
+func slotDeadline(slot primitives.Slot) time.Duration {
+	return params.BeaconConfig().SlotFractionAt(slotDeadlineBPS, slot)
+}
 
 // A custom deadline for deposit trie insertion.
 const depositDeadline = 20 * time.Second
@@ -119,7 +124,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	// Pre-Fulu the caches are updated when computing the payload attributes
 	if cfg.postState.Version() >= version.Fulu {
 		go func() {
-			ctx, cancel := context.WithTimeout(s.ctx, slotDeadline)
+			ctx, cancel := context.WithTimeout(s.ctx, slotDeadline(cfg.roblock.Block().Slot()))
 			defer cancel()
 			cfg.ctx = ctx
 			s.updateCachesPostBlockProcessing(cfg)
@@ -173,7 +178,7 @@ func (s *Service) getBatchPrestate(ctx context.Context, b consensusblocks.ROBloc
 		if err != nil {
 			return nil, false, err
 		}
-		if _, err := s.notifyNewEnvelope(ctx, blockPreState, env); err != nil {
+		if _, _, err := s.notifyNewEnvelope(ctx, blockPreState, env, nil); err != nil {
 			return nil, false, err
 		}
 	}
@@ -265,7 +270,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			if err != nil {
 				return err
 			}
-			if idx := sbid.Message.BuilderIndex; idx != params.BeaconConfig().BuilderIndexSelfBuild {
+			bid, err := sbid.Bid()
+			if err != nil {
+				return err
+			}
+			if idx := bid.BuilderIndex(); idx != params.BeaconConfig().BuilderIndexSelfBuild {
 				pk, err := preState.BuilderPubkey(idx)
 				if err != nil {
 					return err
@@ -480,7 +489,7 @@ func (s *Service) areSidecarsAvailable(ctx context.Context, avs das.Availability
 			return nil
 		}
 		// Bound the wait so unavailable columns error and retry instead of stalling import.
-		daCtx, cancel := context.WithTimeout(ctx, params.BeaconConfig().SlotDuration())
+		daCtx, cancel := context.WithTimeout(ctx, params.BeaconConfig().SlotDurationAt(slot))
 		defer cancel()
 		if err := s.areDataColumnsAvailable(daCtx, roBlock.Root(), slot); err != nil {
 			return errors.Wrapf(err, "are data columns available for block %#x with slot %d", roBlock.Root(), slot)
@@ -510,7 +519,7 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.ReadOn
 		// Use a custom deadline here, since this method runs asynchronously.
 		// We ignore the parent method's context and instead create a new one
 		// with a custom deadline, therefore using the background context instead.
-		slotCtx, cancel := context.WithTimeout(s.ctx, slotDeadline)
+		slotCtx, cancel := context.WithTimeout(s.ctx, slotDeadline(st.Slot()))
 		defer cancel()
 
 		if err := helpers.UpdateCommitteeCache(slotCtx, st, ep+1); err != nil {
@@ -520,7 +529,7 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.ReadOn
 
 	// Prime the total active balance cache for the new epoch.
 	go func() {
-		slotCtx, cancel := context.WithTimeout(s.ctx, slotDeadline)
+		slotCtx, cancel := context.WithTimeout(s.ctx, slotDeadline(st.Slot()))
 		defer cancel()
 
 		if _, err := helpers.TotalActiveBalance(slotCtx, st); err != nil {
@@ -542,7 +551,7 @@ func (s *Service) refreshCaches(ctx context.Context, currentSlot primitives.Slot
 		s.updateCachesAndEpochBoundary(ctx, currentSlot, headState, headRoot, lastRoot, lastState)
 	} else {
 		go func() {
-			ctx, cancel := context.WithTimeout(s.ctx, slotDeadline)
+			ctx, cancel := context.WithTimeout(s.ctx, slotDeadline(currentSlot))
 			defer cancel()
 			s.updateCachesAndEpochBoundary(ctx, currentSlot, headState, headRoot, lastRoot, lastState)
 		}()
@@ -839,21 +848,15 @@ func (s *Service) runLateBlockTasks() {
 		return
 	}
 
-	cfg := params.BeaconConfig()
-	attDueBPS := cfg.AttestationDueBPSAtSlot(s.CurrentSlot())
-	attThreshold := cfg.SlotComponentDuration(attDueBPS)
-	ticker := slots.NewSlotTickerWithOffset(s.genesisTime, attThreshold, cfg.SlotDuration())
+	ticker := slots.NewSlotTickerWithOffsetFunc(s.genesisTime, slots.ComponentInterval(params.AttestationDue))
+	defer ticker.Done()
+
 	for {
 		select {
 		case slot := <-ticker.C():
-			if attDueBPS != cfg.AttestationDueBPSGloas && slots.ToEpoch(slot) >= cfg.GloasForkEpoch {
-				ticker.Done()
-				attDueBPS = cfg.AttestationDueBPSGloas
-				attThreshold = cfg.SlotComponentDuration(attDueBPS)
-				ticker = slots.NewSlotTickerWithOffset(s.genesisTime, attThreshold, cfg.SlotDuration())
-			}
 			s.goroutineCounter.sample(slot)
 			s.lateBlockTasks(s.ctx)
+
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
@@ -963,7 +966,11 @@ func (s *Service) isDataAvailable(
 
 // dataColumnsAvailableNow reports whether enough data columns for root are already stored, without blocking.
 func (s *Service) dataColumnsAvailableNow(ctx context.Context, root [fieldparams.RootLength]byte, slot primitives.Slot) (bool, error) {
-	if !params.WithinDAPeriod(slots.ToEpoch(slot), slots.ToEpoch(s.CurrentSlot())) {
+	withinDAPeriod, err := params.WithinDAPeriod(slots.ToEpoch(slot), slots.ToEpoch(s.CurrentSlot()))
+	if err != nil {
+		return false, fmt.Errorf("within DA period: %w", err)
+	}
+	if !withinDAPeriod {
 		return true, nil
 	}
 	custodyGroupCount, err := s.cfg.P2P.CustodyGroupCount(ctx)
@@ -995,7 +1002,11 @@ func (s *Service) areDataColumnsAvailable(
 	// We are only required to check within MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
 	currentSlot := s.CurrentSlot()
 	blockEpoch, currentEpoch := slots.ToEpoch(slot), slots.ToEpoch(currentSlot)
-	if !params.WithinDAPeriod(blockEpoch, currentEpoch) {
+	withinDAPeriod, err := params.WithinDAPeriod(blockEpoch, currentEpoch)
+	if err != nil {
+		return fmt.Errorf("within DA period: %w", err)
+	}
+	if !withinDAPeriod {
 		return nil
 	}
 
@@ -1125,7 +1136,11 @@ func (s *Service) areBlobsAvailable(ctx context.Context, root [fieldparams.RootL
 	blockSlot := block.Slot()
 
 	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-	if !params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot())) {
+	withinDAPeriod, err := params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot()))
+	if err != nil {
+		return fmt.Errorf("within DA period: %w", err)
+	}
+	if !withinDAPeriod {
 		return nil
 	}
 
@@ -1240,7 +1255,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		if full {
 			bh = bid.BlockHash()
 		}
-		id, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, bh, attribute)
+		id, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, headRoot, bh, attribute)
 		if err != nil {
 			log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 		}

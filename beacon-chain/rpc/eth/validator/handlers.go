@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server"
@@ -635,7 +634,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		if err != nil {
 			epochsToWatch = 0
 		}
-		totalDuration := params.EpochsDuration(1, params.BeaconConfig()) * time.Duration(epochsToWatch)
+		totalDuration := slots.EpochsDurationFrom(startEpoch, primitives.Epoch(epochsToWatch))
 
 		subcommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		seen := make(map[uint64]bool)

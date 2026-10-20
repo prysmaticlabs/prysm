@@ -112,6 +112,7 @@ type SignRequest struct {
 	//	*SignRequest_ProposerPreference
 	//	*SignRequest_BuilderRequestAuth
 	//	*SignRequest_BlockHeze
+	//	*SignRequest_InclusionList
 	Object        isSignRequest_Object                                             `protobuf_oneof:"object"`
 	SigningSlot   github_com_OffchainLabs_prysm_v7_consensus_types_primitives.Slot `protobuf:"varint,6,opt,name=signing_slot,json=signingSlot,proto3" json:"signing_slot,omitempty" cast-type:"github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"`
 	unknownFields protoimpl.UnknownFields
@@ -428,6 +429,15 @@ func (x *SignRequest) GetBlockHeze() *v1alpha1.BeaconBlockHeze {
 	return nil
 }
 
+func (x *SignRequest) GetInclusionList() *v1alpha1.InclusionList {
+	if x != nil {
+		if x, ok := x.Object.(*SignRequest_InclusionList); ok {
+			return x.InclusionList
+		}
+	}
+	return nil
+}
+
 func (x *SignRequest) GetSigningSlot() github_com_OffchainLabs_prysm_v7_consensus_types_primitives.Slot {
 	if x != nil {
 		return x.SigningSlot
@@ -551,6 +561,10 @@ type SignRequest_BlockHeze struct {
 	BlockHeze *v1alpha1.BeaconBlockHeze `protobuf:"bytes,128,opt,name=block_heze,json=blockHeze,proto3,oneof"`
 }
 
+type SignRequest_InclusionList struct {
+	InclusionList *v1alpha1.InclusionList `protobuf:"bytes,129,opt,name=inclusion_list,json=inclusionList,proto3,oneof"`
+}
+
 func (*SignRequest_Block) isSignRequest_Object() {}
 
 func (*SignRequest_AttestationData) isSignRequest_Object() {}
@@ -606,6 +620,8 @@ func (*SignRequest_ProposerPreference) isSignRequest_Object() {}
 func (*SignRequest_BuilderRequestAuth) isSignRequest_Object() {}
 
 func (*SignRequest_BlockHeze) isSignRequest_Object() {}
+
+func (*SignRequest_InclusionList) isSignRequest_Object() {}
 
 type SignResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1001,7 +1017,7 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_rawDesc = []byte
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x29, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x70, 0x72, 0x79,
 	0x73, 0x6d, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x73, 0x79, 0x6e, 0x63,
 	0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x22, 0x95, 0x16, 0x0a, 0x0b, 0x53, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x22, 0xe5, 0x16, 0x0a, 0x0b, 0x53, 0x69, 0x67, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12,
 	0x21, 0x0a, 0x0c, 0x73, 0x69, 0x67, 0x6e, 0x69, 0x6e, 0x67, 0x5f, 0x72, 0x6f, 0x6f, 0x74, 0x18,
@@ -1170,7 +1186,12 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_rawDesc = []byte
 	0x20, 0x01, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
 	0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x42, 0x65, 0x61,
 	0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x65, 0x7a, 0x65, 0x48, 0x00, 0x52, 0x09,
-	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x65, 0x7a, 0x65, 0x12, 0x67, 0x0a, 0x0c, 0x73, 0x69, 0x67,
+	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x48, 0x65, 0x7a, 0x65, 0x12, 0x4e, 0x0a, 0x0e, 0x69, 0x6e, 0x63,
+	0x6c, 0x75, 0x73, 0x69, 0x6f, 0x6e, 0x5f, 0x6c, 0x69, 0x73, 0x74, 0x18, 0x81, 0x01, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x49, 0x6e, 0x63, 0x6c, 0x75,
+	0x73, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73, 0x74, 0x48, 0x00, 0x52, 0x0d, 0x69, 0x6e, 0x63, 0x6c,
+	0x75, 0x73, 0x69, 0x6f, 0x6e, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x67, 0x0a, 0x0c, 0x73, 0x69, 0x67,
 	0x6e, 0x69, 0x6e, 0x67, 0x5f, 0x73, 0x6c, 0x6f, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x04, 0x42,
 	0x44, 0x82, 0xb5, 0x18, 0x40, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
 	0x4f, 0x66, 0x66, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x4c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79,
@@ -1373,6 +1394,7 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_goTypes = []any{
 	(*v1alpha1.ProposerPreferences)(nil),                 // 29: ethereum.eth.v1alpha1.ProposerPreferences
 	(*v1alpha1.BuilderRequestAuth)(nil),                  // 30: ethereum.eth.v1alpha1.BuilderRequestAuth
 	(*v1alpha1.BeaconBlockHeze)(nil),                     // 31: ethereum.eth.v1alpha1.BeaconBlockHeze
+	(*v1alpha1.InclusionList)(nil),                       // 32: ethereum.eth.v1alpha1.InclusionList
 }
 var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_depIdxs = []int32{
 	8,  // 0: ethereum.validator.accounts.v2.SignRequest.block:type_name -> ethereum.eth.v1alpha1.BeaconBlock
@@ -1400,17 +1422,18 @@ var file_proto_prysm_v1alpha1_validator_client_keymanager_proto_depIdxs = []int3
 	29, // 22: ethereum.validator.accounts.v2.SignRequest.proposer_preference:type_name -> ethereum.eth.v1alpha1.ProposerPreferences
 	30, // 23: ethereum.validator.accounts.v2.SignRequest.builder_request_auth:type_name -> ethereum.eth.v1alpha1.BuilderRequestAuth
 	31, // 24: ethereum.validator.accounts.v2.SignRequest.block_heze:type_name -> ethereum.eth.v1alpha1.BeaconBlockHeze
-	0,  // 25: ethereum.validator.accounts.v2.SignResponse.status:type_name -> ethereum.validator.accounts.v2.SignResponse.Status
-	4,  // 26: ethereum.validator.accounts.v2.ProposerOptionPayload.builder:type_name -> ethereum.validator.accounts.v2.BuilderConfig
-	5,  // 27: ethereum.validator.accounts.v2.BuilderConfig.builders:type_name -> ethereum.validator.accounts.v2.BuilderEntry
-	7,  // 28: ethereum.validator.accounts.v2.ProposerSettingsPayload.proposer_config:type_name -> ethereum.validator.accounts.v2.ProposerSettingsPayload.ProposerConfigEntry
-	3,  // 29: ethereum.validator.accounts.v2.ProposerSettingsPayload.default_config:type_name -> ethereum.validator.accounts.v2.ProposerOptionPayload
-	3,  // 30: ethereum.validator.accounts.v2.ProposerSettingsPayload.ProposerConfigEntry.value:type_name -> ethereum.validator.accounts.v2.ProposerOptionPayload
-	31, // [31:31] is the sub-list for method output_type
-	31, // [31:31] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	32, // 25: ethereum.validator.accounts.v2.SignRequest.inclusion_list:type_name -> ethereum.eth.v1alpha1.InclusionList
+	0,  // 26: ethereum.validator.accounts.v2.SignResponse.status:type_name -> ethereum.validator.accounts.v2.SignResponse.Status
+	4,  // 27: ethereum.validator.accounts.v2.ProposerOptionPayload.builder:type_name -> ethereum.validator.accounts.v2.BuilderConfig
+	5,  // 28: ethereum.validator.accounts.v2.BuilderConfig.builders:type_name -> ethereum.validator.accounts.v2.BuilderEntry
+	7,  // 29: ethereum.validator.accounts.v2.ProposerSettingsPayload.proposer_config:type_name -> ethereum.validator.accounts.v2.ProposerSettingsPayload.ProposerConfigEntry
+	3,  // 30: ethereum.validator.accounts.v2.ProposerSettingsPayload.default_config:type_name -> ethereum.validator.accounts.v2.ProposerOptionPayload
+	3,  // 31: ethereum.validator.accounts.v2.ProposerSettingsPayload.ProposerConfigEntry.value:type_name -> ethereum.validator.accounts.v2.ProposerOptionPayload
+	32, // [32:32] is the sub-list for method output_type
+	32, // [32:32] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_proto_prysm_v1alpha1_validator_client_keymanager_proto_init() }
@@ -1447,6 +1470,7 @@ func file_proto_prysm_v1alpha1_validator_client_keymanager_proto_init() {
 		(*SignRequest_ProposerPreference)(nil),
 		(*SignRequest_BuilderRequestAuth)(nil),
 		(*SignRequest_BlockHeze)(nil),
+		(*SignRequest_InclusionList)(nil),
 	}
 	file_proto_prysm_v1alpha1_validator_client_keymanager_proto_msgTypes[2].OneofWrappers = []any{}
 	file_proto_prysm_v1alpha1_validator_client_keymanager_proto_msgTypes[3].OneofWrappers = []any{}

@@ -42,20 +42,46 @@ func BeaconBlockHezeFromConsensus(b *eth.BeaconBlockHeze) (*BeaconBlockHeze, err
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyHeze{
 			RandaoReveal:              hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data:                  Eth1DataFromConsensus(b.Body.Eth1Data),
 			Graffiti:                  hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings:         ProposerSlashingsFromConsensus(b.Body.ProposerSlashings),
 			AttesterSlashings:         AttesterSlashingsGloasFromConsensus(b.Body.AttesterSlashings),
 			Attestations:              AttsGloasFromConsensus(b.Body.Attestations),
-			Deposits:                  DepositsFromConsensus(b.Body.Deposits),
 			VoluntaryExits:            SignedExitsFromConsensus(b.Body.VoluntaryExits),
 			SyncAggregate:             SyncAggregateFromConsensus(b.Body.SyncAggregate),
 			BLSToExecutionChanges:     SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
-			SignedExecutionPayloadBid: SignedExecutionPayloadBidFromConsensus(b.Body.SignedExecutionPayloadBid),
+			SignedExecutionPayloadBid: SignedExecutionPayloadBidHezeFromConsensus(b.Body.SignedExecutionPayloadBid),
 			PayloadAttestations:       payloadAttestations,
 			ParentExecutionRequests:   ExecutionRequestsGloasFromConsensus(b.Body.ParentExecutionRequests),
 		},
 	}, nil
+}
+
+func SignedExecutionPayloadBidHezeFromConsensus(b *eth.SignedExecutionPayloadBidHeze) *SignedExecutionPayloadBidHeze {
+	return &SignedExecutionPayloadBidHeze{
+		Message:   ExecutionPayloadBidHezeFromConsensus(b.Message),
+		Signature: hexutil.Encode(b.Signature),
+	}
+}
+
+func ExecutionPayloadBidHezeFromConsensus(b *eth.ExecutionPayloadBidHeze) *ExecutionPayloadBidHeze {
+	gloasBid := ExecutionPayloadBidFromConsensus(&eth.ExecutionPayloadBid{
+		ParentBlockHash:       b.ParentBlockHash,
+		ParentBlockRoot:       b.ParentBlockRoot,
+		BlockHash:             b.BlockHash,
+		PrevRandao:            b.PrevRandao,
+		FeeRecipient:          b.FeeRecipient,
+		GasLimit:              b.GasLimit,
+		BuilderIndex:          b.BuilderIndex,
+		Slot:                  b.Slot,
+		Value:                 b.Value,
+		ExecutionPayment:      b.ExecutionPayment,
+		BlobKzgCommitments:    b.BlobKzgCommitments,
+		ExecutionRequestsRoot: b.ExecutionRequestsRoot,
+	})
+	return &ExecutionPayloadBidHeze{
+		ExecutionPayloadBid: *gloasBid,
+		InclusionListBits:   hexutil.Encode(b.InclusionListBits),
+	}
 }
 
 func (b *SignedBeaconBlockHeze) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
@@ -97,9 +123,6 @@ func (b *BeaconBlockHeze) ToConsensus() (*eth.BeaconBlockHeze, error) {
 	if b.Body == nil {
 		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
-	if b.Body.Eth1Data == nil {
-		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
-	}
 	if b.Body.SyncAggregate == nil {
 		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
@@ -140,9 +163,6 @@ func (b *BeaconBlockBodyHeze) ToConsensus() (*eth.BeaconBlockBodyHeze, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
-	if b.Eth1Data == nil {
-		return nil, server.NewDecodeError(errNilValue, "Eth1Data")
-	}
 	if b.SyncAggregate == nil {
 		return nil, server.NewDecodeError(errNilValue, "SyncAggregate")
 	}
@@ -153,18 +173,6 @@ func (b *BeaconBlockBodyHeze) ToConsensus() (*eth.BeaconBlockBodyHeze, error) {
 	randaoReveal, err := bytesutil.DecodeHexWithLength(b.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, server.NewDecodeError(err, "RandaoReveal")
-	}
-	depositRoot, err := bytesutil.DecodeHexWithLength(b.Eth1Data.DepositRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Eth1Data.DepositRoot")
-	}
-	depositCount, err := strconv.ParseUint(b.Eth1Data.DepositCount, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Eth1Data.DepositCount")
-	}
-	blockHash, err := bytesutil.DecodeHexWithLength(b.Eth1Data.BlockHash, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Eth1Data.BlockHash")
 	}
 	graffiti, err := bytesutil.DecodeHexWithLength(b.Graffiti, fieldparams.RootLength)
 	if err != nil {
@@ -181,10 +189,6 @@ func (b *BeaconBlockBodyHeze) ToConsensus() (*eth.BeaconBlockBodyHeze, error) {
 	atts, err := AttsGloasToConsensus(b.Attestations)
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Attestations")
-	}
-	deposits, err := DepositsToConsensus(b.Deposits)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.VoluntaryExits)
 	if err != nil {
@@ -219,17 +223,11 @@ func (b *BeaconBlockBodyHeze) ToConsensus() (*eth.BeaconBlockBodyHeze, error) {
 	}
 
 	return &eth.BeaconBlockBodyHeze{
-		RandaoReveal: randaoReveal,
-		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  depositRoot,
-			DepositCount: depositCount,
-			BlockHash:    blockHash,
-		},
+		RandaoReveal:      randaoReveal,
 		Graffiti:          graffiti,
 		ProposerSlashings: proposerSlashings,
 		AttesterSlashings: attesterSlashings,
 		Attestations:      atts,
-		Deposits:          deposits,
 		VoluntaryExits:    exits,
 		SyncAggregate: &eth.SyncAggregate{
 			SyncCommitteeBits:      syncCommitteeBits,
@@ -274,5 +272,52 @@ func BlockContentsHezeFromConsensus(block *eth.BeaconBlockHeze, envelope *eth.Ex
 		ExecutionPayloadEnvelope: env,
 		KzgProofs:                encodedProofs,
 		Blobs:                    encodedBlobs,
+	}, nil
+}
+
+func (b *SignedExecutionPayloadBidHeze) ToConsensus() (*eth.SignedExecutionPayloadBidHeze, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	message, err := b.Message.ToConsensus()
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Message")
+	}
+	return &eth.SignedExecutionPayloadBidHeze{
+		Message:   message,
+		Signature: sig,
+	}, nil
+}
+
+func (b *ExecutionPayloadBidHeze) ToConsensus() (*eth.ExecutionPayloadBidHeze, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	bid, err := b.ExecutionPayloadBid.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	inclusionListBits, err := bytesutil.DecodeHexWithLength(b.InclusionListBits, (fieldparams.InclusionListCommitteeSize+7)/8)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "InclusionListBits")
+	}
+	return &eth.ExecutionPayloadBidHeze{
+		ParentBlockHash:       bid.ParentBlockHash,
+		ParentBlockRoot:       bid.ParentBlockRoot,
+		BlockHash:             bid.BlockHash,
+		PrevRandao:            bid.PrevRandao,
+		FeeRecipient:          bid.FeeRecipient,
+		GasLimit:              bid.GasLimit,
+		BuilderIndex:          bid.BuilderIndex,
+		Slot:                  bid.Slot,
+		Value:                 bid.Value,
+		ExecutionPayment:      bid.ExecutionPayment,
+		BlobKzgCommitments:    bid.BlobKzgCommitments,
+		ExecutionRequestsRoot: bid.ExecutionRequestsRoot,
+		InclusionListBits:     inclusionListBits,
 	}, nil
 }

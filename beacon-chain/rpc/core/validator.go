@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
-	"time"
 
 	"github.com/OffchainLabs/prysm/v7/api/server"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
@@ -752,7 +751,7 @@ func registerSyncSubnetInternal(
 	if err != nil {
 		epochsToWatch = 0
 	}
-	totalDuration := params.EpochsDuration(1, params.BeaconConfig()) * time.Duration(epochsToWatch)
+	totalDuration := slots.EpochsDurationFrom(currEpoch, primitives.Epoch(epochsToWatch))
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey, startEpoch, subs, totalDuration)
 }
 
@@ -960,7 +959,7 @@ func (s *Service) PayloadAttestationData(
 		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not compute slot start time: %w", err)}
 	}
 	cfg := params.BeaconConfig()
-	deadline := slotStart.Add(cfg.SlotComponentDuration(cfg.PayloadAttestationDueBPS))
+	deadline := slotStart.Add(cfg.SlotComponentDurationAt(params.PayloadAttestationDue, slot))
 
 	if cached := s.payloadAttestationData.Load(); cached != nil && cached.Slot == slot {
 		return cached, nil

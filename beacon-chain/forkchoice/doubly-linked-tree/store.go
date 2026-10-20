@@ -19,6 +19,7 @@ import (
 )
 
 // clampCheckpointRoot maps a checkpoint at or below the tree root onto the tree root.
+// A genesis store carries the zero-root checkpoints of the genesis state, so they map onto the tree root.
 func (s *Store) clampCheckpointRoot(epoch primitives.Epoch, root [32]byte) [32]byte {
 	if s.treeRootNode == nil {
 		return root
@@ -195,11 +196,7 @@ func (s *Store) insert(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("could not determine time since current slot started: %w", err)
 		}
-		bps := params.BeaconConfig().AttestationDueBPS
-		if block.Version() >= version.Gloas {
-			bps = params.BeaconConfig().AttestationDueBPSGloas
-		}
-		boostThreshold := params.BeaconConfig().SlotComponentDuration(bps)
+		boostThreshold := params.BeaconConfig().SlotComponentDurationAt(params.AttestationDue, slot)
 		isFirstBlock := s.proposerBoostRoot == [32]byte{}
 		if currentSlot == slot && sss < boostThreshold && isFirstBlock {
 			depEpoch := slots.ToEpoch(currentSlot)

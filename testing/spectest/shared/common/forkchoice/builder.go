@@ -24,6 +24,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -89,17 +90,30 @@ func (bb *Builder) Tick(t testing.TB, tick int64) {
 	now := time.Now()
 	bb.service.SetGenesisTime(time.Unix(now.Unix()-tick, 0))
 	bb.service.SetForkChoiceGenesisTime(now.Add(-1 * time.Duration(tick) * time.Second))
-	lastSlot := uint64(bb.lastTick) / params.BeaconConfig().SecondsPerSlot
-	currentSlot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
+	lastSlot := tickSlot(bb.lastTick)
+	currentSlot := tickSlot(tick)
 	for lastSlot < currentSlot {
 		lastSlot++
-		bb.service.SetForkChoiceGenesisTime(time.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot*lastSlot) * time.Second))
-		require.NoError(t, bb.service.NewSlot(t.Context(), primitives.Slot(lastSlot)))
+		bb.service.SetForkChoiceGenesisTime(time.Now().Add(-1 * slotStartSinceGenesis(t, lastSlot)))
+		require.NoError(t, bb.service.NewSlot(t.Context(), lastSlot))
 	}
-	if tick > int64(params.BeaconConfig().SecondsPerSlot*lastSlot) {
+	if time.Duration(tick)*time.Second > slotStartSinceGenesis(t, lastSlot) {
 		bb.service.SetForkChoiceGenesisTime(time.Now().Add(-1 * time.Duration(tick) * time.Second))
 	}
 	bb.lastTick = tick
+}
+
+// tickSlot returns the slot in progress tick seconds after genesis, following the slot duration schedule.
+func tickSlot(tick int64) primitives.Slot {
+	genesis := time.Unix(0, 0)
+	return slots.At(genesis, genesis.Add(time.Duration(tick)*time.Second))
+}
+
+// slotStartSinceGenesis returns the time from genesis to the start of the given slot, following the slot duration schedule.
+func slotStartSinceGenesis(t testing.TB, slot primitives.Slot) time.Duration {
+	since, err := params.BeaconConfig().SinceGenesis(slot)
+	require.NoError(t, err)
+	return since
 }
 
 // SetPayloadStatus sets the payload status that the engine will return
@@ -155,11 +169,14 @@ func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlo
 func (bb *Builder) recordIfEarly(b interfaces.ReadOnlySignedBeaconBlock, root [32]byte) {
 	cfg := params.BeaconConfig()
 	slot := b.Block().Slot()
-	if uint64(bb.lastTick)/cfg.SecondsPerSlot != uint64(slot) {
+	if tickSlot(bb.lastTick) != slot {
 		return
 	}
-	slotStart := int64(uint64(slot) * cfg.SecondsPerSlot)
-	if time.Duration(bb.lastTick-slotStart)*time.Second >= cfg.SlotComponentDuration(cfg.EquivocationEarlyDueBPS) {
+	slotStart, err := cfg.SinceGenesis(slot)
+	if err != nil {
+		return
+	}
+	if time.Duration(bb.lastTick)*time.Second-slotStart >= cfg.SlotFractionAt(cfg.EquivocationEarlyDueBPS, slot) {
 		return
 	}
 	bb.service.RecordBlockForEquivocation(slot, b.Block().ProposerIndex(), root)
@@ -218,7 +235,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	// The generator yields a checks step with FCR fields after every on_fast_confirmation call, so the rule runs once per such step, not on ticks.
 	if bb.fcr && hasFCRFields(c) {
-		bb.runFCR(ctx, primitives.Slot(uint64(bb.lastTick)/params.BeaconConfig().SecondsPerSlot))
+		bb.runFCR(ctx, tickSlot(bb.lastTick))
 	}
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)

@@ -59,7 +59,7 @@ func (s *Service) processPendingPayloadEnvelope(ctx context.Context, root [32]by
 			continue
 		}
 
-		receiveCtx, cancel := context.WithTimeout(ctx, params.BeaconConfig().SlotDuration())
+		receiveCtx, cancel := context.WithTimeout(ctx, params.BeaconConfig().SlotDurationAt(env.Slot()))
 		err = s.cfg.chain.ReceiveExecutionPayloadEnvelope(receiveCtx, e)
 		cancel()
 		if err != nil {
