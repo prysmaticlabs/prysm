@@ -172,6 +172,7 @@ func gloasEnvelope(blockRoot [32]byte, blockHash []byte) *ethpb.SignedExecutionP
 				BlockHash:     blockHash,
 			},
 			ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
+			BeaconBlockRoot:       blockRoot[:],
 			ParentBeaconBlockRoot: make([]byte, 32),
 		},
 		Signature: make([]byte, 96),
@@ -192,7 +193,7 @@ func Test_resolveChainPayloadStatus(t *testing.T) {
 		service, tr := minimalTestService(t)
 		ctx := tr.ctx
 		chain := newGloasChain(t)
-		require.NoError(t, service.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, gloasEnvelope(chain[1].Block.Root(), hashB), chain[1].Block.Root()))
+		require.NoError(t, service.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, gloasEnvelope(chain[1].Block.Root(), hashB)))
 		service.resolveChainPayloadStatus(ctx, chain)
 		require.Equal(t, true, chain[0].HasPayload)
 		require.Equal(t, true, chain[1].HasPayload)

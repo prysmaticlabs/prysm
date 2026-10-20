@@ -253,22 +253,52 @@ func (s *Server) ExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// EIP-8411: from the Heze fork the cached envelope is the Heze container,
+	// served via the V3 path with the binding checked against the requested root.
+	if slots.ToEpoch(primitives.Slot(slot)) >= params.BeaconConfig().HezeForkEpoch {
+		resp, err := s.V1Alpha1Server.GetExecutionPayloadEnvelopeV3(ctx, &eth.ExecutionPayloadEnvelopeRequest{
+			Slot:            primitives.Slot(slot),
+			BeaconBlockRoot: beaconBlockRoot,
+		})
+		if err != nil {
+			writeEnvelopeFetchError(w, err)
+			return
+		}
+		if resp.Envelope == nil {
+			httputil.HandleError(w, "execution payload envelope not found", http.StatusNotFound)
+			return
+		}
+		envelope := resp.Envelope
+
+		w.Header().Set(api.VersionHeader, version.String(version.Heze))
+
+		if httputil.RespondWithSsz(r) {
+			sszBytes, err := envelope.MarshalSSZ()
+			if err != nil {
+				httputil.HandleError(w, "could not marshal envelope to SSZ: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			httputil.WriteSsz(w, sszBytes)
+			return
+		}
+
+		jsonEnvelope, err := structs.ExecutionPayloadEnvelopeHezeFromConsensus(envelope, bytesutil.ToBytes32(beaconBlockRoot))
+		if err != nil {
+			httputil.HandleError(w, "could not convert envelope to JSON: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.WriteJson(w, &structs.GetValidatorExecutionPayloadEnvelopeResponse{
+			Version: version.String(version.Heze),
+			Data:    jsonEnvelope,
+		})
+		return
+	}
+
 	resp, err := s.V1Alpha1Server.GetExecutionPayloadEnvelopeV2(ctx, &eth.ExecutionPayloadEnvelopeRequest{
 		Slot: primitives.Slot(slot),
 	})
 	if err != nil {
-		if st, ok := status.FromError(err); ok {
-			switch st.Code() {
-			case codes.NotFound:
-				httputil.HandleError(w, st.Message(), http.StatusNotFound)
-			case codes.InvalidArgument:
-				httputil.HandleError(w, st.Message(), http.StatusBadRequest)
-			default:
-				httputil.HandleError(w, st.Message(), http.StatusInternalServerError)
-			}
-			return
-		}
-		httputil.HandleError(w, "could not get execution payload envelope: "+err.Error(), http.StatusInternalServerError)
+		writeEnvelopeFetchError(w, err)
 		return
 	}
 	if resp.Envelope == nil {
@@ -302,4 +332,20 @@ func (s *Server) ExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Request
 		Version: version.String(version.Gloas),
 		Data:    jsonEnvelope,
 	})
+}
+
+// writeEnvelopeFetchError maps v1alpha1 envelope fetch errors to HTTP status codes.
+func writeEnvelopeFetchError(w http.ResponseWriter, err error) {
+	if st, ok := status.FromError(err); ok {
+		switch st.Code() {
+		case codes.NotFound:
+			httputil.HandleError(w, st.Message(), http.StatusNotFound)
+		case codes.InvalidArgument:
+			httputil.HandleError(w, st.Message(), http.StatusBadRequest)
+		default:
+			httputil.HandleError(w, st.Message(), http.StatusInternalServerError)
+		}
+		return
+	}
+	httputil.HandleError(w, "could not get execution payload envelope: "+err.Error(), http.StatusInternalServerError)
 }

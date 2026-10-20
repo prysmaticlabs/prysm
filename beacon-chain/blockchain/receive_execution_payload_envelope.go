@@ -386,11 +386,18 @@ func (s *Service) savePostPayload(ctx context.Context, signed interfaces.ROSigne
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostPayload")
 	defer span.End()
 
-	protoEnv, ok := signed.Proto().(*ethpb.SignedExecutionPayloadEnvelope)
-	if !ok {
-		return errors.New("could not type assert signed envelope to proto")
+	switch protoEnv := signed.Proto().(type) {
+	case *ethpb.SignedExecutionPayloadEnvelope:
+		return s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv)
+	case *ethpb.SignedExecutionPayloadEnvelopeHeze:
+		envelope, err := signed.Envelope()
+		if err != nil {
+			return errors.Wrap(err, "could not get envelope")
+		}
+		return s.cfg.BeaconDB.SaveExecutionPayloadEnvelopeHeze(ctx, protoEnv, envelope.BeaconBlockRoot())
+	default:
+		return errors.New("unknown signed execution payload envelope type")
 	}
-	return s.cfg.BeaconDB.SaveExecutionPayloadEnvelope(ctx, protoEnv)
 }
 
 func (s *Service) recordPayloadArrival(root [32]byte, slot primitives.Slot, arrivedAt time.Time) {

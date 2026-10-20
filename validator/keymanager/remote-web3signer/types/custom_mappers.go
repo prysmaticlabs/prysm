@@ -428,6 +428,7 @@ func MapExecutionPayloadEnvelope(envelope *ethpb.ExecutionPayloadEnvelope) (*Exe
 		Payload:               payload,
 		ExecutionRequests:     requests,
 		BuilderIndex:          fmt.Sprint(envelope.BuilderIndex),
+		BeaconBlockRoot:       envelope.BeaconBlockRoot,
 		ParentBeaconBlockRoot: envelope.ParentBeaconBlockRoot,
 	}, nil
 }

@@ -45,7 +45,7 @@ type Reconstructor interface {
 	ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [fieldparams.RootLength]byte, hi func(uint64) bool) ([]blocks.VerifiedROBlob, error)
 	ConstructDataColumnSidecars(ctx context.Context, populator peerdas.ConstructionPopulator) ([]blocks.VerifiedRODataColumn, []blocks.PartialDataColumn, error)
 	ConstructPartialDataColumnSidecarsFromHasBlobs(ctx context.Context, populator peerdas.ConstructionPopulator) ([]blocks.PartialDataColumn, bool, error)
-	ReconstructExecutionPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedBlindedExecutionPayloadEnvelope) (*ethpb.SignedExecutionPayloadEnvelope, error)
+	ReconstructExecutionPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedBlindedExecutionPayloadEnvelope) (interfaces.ROSignedExecutionPayloadEnvelope, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -90,10 +90,12 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	return unb, nil
 }
 
-// ReconstructExecutionPayloadEnvelope reconstructs a full Gloas envelope from a blinded envelope.
+// ReconstructExecutionPayloadEnvelope reconstructs the slot's fork-correct full envelope from a
+// blinded envelope. The Heze wire container (EIP-8411) carries no beacon block root, so its
+// wrapper is bound to the root recorded in the blinded storage container.
 func (s *Service) ReconstructExecutionPayloadEnvelope(
 	ctx context.Context, envelope *ethpb.SignedBlindedExecutionPayloadEnvelope,
-) (*ethpb.SignedExecutionPayloadEnvelope, error) {
+) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
 	if envelope == nil || envelope.Message == nil {
 		return nil, errors.New("nil blinded execution payload envelope")
 	}
@@ -106,17 +108,35 @@ func (s *Service) ReconstructExecutionPayloadEnvelope(
 	if !ok || payload == nil {
 		return nil, errors.New("execution payload not found")
 	}
-	// The wire envelope no longer carries beacon_block_root (EIP-8411); the binding
-	// stays in the blinded storage container and is attached by callers at wrap time.
-	return &ethpb.SignedExecutionPayloadEnvelope{
+	return wrapBlindedEnvelopeWithPayload(envelope, payload)
+}
+
+// wrapBlindedEnvelopeWithPayload rebuilds the slot's fork-correct wire envelope from the blinded
+// storage container plus the reconstructed payload and wraps it read-only.
+func wrapBlindedEnvelopeWithPayload(envelope *ethpb.SignedBlindedExecutionPayloadEnvelope, payload *pb.ExecutionPayloadGloas) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
+	if slots.ToEpoch(envelope.Message.Slot) >= params.BeaconConfig().HezeForkEpoch {
+		full := &ethpb.SignedExecutionPayloadEnvelopeHeze{
+			Message: &ethpb.ExecutionPayloadEnvelopeHeze{
+				Payload:               payload,
+				ExecutionRequests:     envelope.Message.ExecutionRequests,
+				BuilderIndex:          envelope.Message.BuilderIndex,
+				ParentBeaconBlockRoot: envelope.Message.ParentBeaconBlockRoot,
+			},
+			Signature: envelope.Signature,
+		}
+		return blocks.WrappedROSignedExecutionPayloadEnvelopeHeze(full, bytesutil.ToBytes32(envelope.Message.BeaconBlockRoot))
+	}
+	full := &ethpb.SignedExecutionPayloadEnvelope{
 		Message: &ethpb.ExecutionPayloadEnvelope{
 			Payload:               payload,
 			ExecutionRequests:     envelope.Message.ExecutionRequests,
 			BuilderIndex:          envelope.Message.BuilderIndex,
+			BeaconBlockRoot:       envelope.Message.BeaconBlockRoot,
 			ParentBeaconBlockRoot: envelope.Message.ParentBeaconBlockRoot,
 		},
 		Signature: envelope.Signature,
-	}, nil
+	}
+	return blocks.WrappedROSignedExecutionPayloadEnvelope(full)
 }
 
 // ReconstructFullGloasExecutionPayloadsByHash reconstructs full Gloas payloads from EL data.

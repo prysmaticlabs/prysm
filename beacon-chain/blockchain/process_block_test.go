@@ -233,7 +233,7 @@ func TestGetBatchPrestate(t *testing.T) {
 			protoEnvelope := testSignedEnvelope(t, test.envelopeRoot, test.slot, test.payloadHash[:])
 			protoEnvelope.Message.Payload.SlotNumber = test.slot
 			protoEnvelope.Message.Payload.ParentHash = ancestorHash[:]
-			envelope, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnvelope, test.envelopeRoot)
+			envelope, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(protoEnvelope)
 			require.NoError(t, err)
 
 			got, applied, err := service.getBatchPrestate(tr.ctx, roChild, []interfaces.ROSignedExecutionPayloadEnvelope{envelope})

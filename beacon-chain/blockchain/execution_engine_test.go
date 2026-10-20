@@ -896,7 +896,6 @@ func Test_GetPayloadAttribute_GloasNoPreferenceFallback(t *testing.T) {
 		PrevRandao:            bytesutil.PadTo([]byte{}, 32),
 		FeeRecipient:          bytesutil.PadTo([]byte{}, 20),
 		ExecutionRequestsRoot: bytesutil.PadTo([]byte{}, 32),
-		PayloadChunksRoot:     make([]byte, 32),
 		GasLimit:              parentGasLimit,
 	}
 	wrapped, err := consensusblocks.WrappedROExecutionPayloadBid(updated)

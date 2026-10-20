@@ -83,6 +83,7 @@ func gloasEnvelopeFixture(t *testing.T, blockRoot [32]byte) (*ethpb.BeaconStateG
 	// Build and sign the envelope.
 	envelope := &ethpb.ExecutionPayloadEnvelope{
 		BuilderIndex:          0,
+		BeaconBlockRoot:       blockRoot[:],
 		ParentBeaconBlockRoot: parentBeaconRoot,
 		Payload:               payload,
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
@@ -142,7 +143,7 @@ func TestReceiveExecutionPayloadEnvelope_EmitEvents(t *testing.T) {
 			sub := s.cfg.StateNotifier.StateFeed().Subscribe(events)
 			defer sub.Unsubscribe()
 
-			signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, blockRoot)
+			signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
 			require.NoError(t, err)
 
 			err = s.ReceiveExecutionPayloadEnvelope(ctx, signed)
@@ -186,7 +187,7 @@ func TestReceiveExecutionPayloadEnvelope_EnvelopeSavedBeforeAvailableEvent(t *te
 		}
 	}()
 
-	signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, blockRoot)
+	signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
 	require.NoError(t, err)
 	require.NoError(t, s.ReceiveExecutionPayloadEnvelope(ctx, signed))
 
@@ -241,7 +242,7 @@ func TestReceiveExecutionPayloadEnvelope_EmitsHeadV2Event(t *testing.T) {
 		sub := s.cfg.StateNotifier.StateFeed().Subscribe(events)
 		t.Cleanup(sub.Unsubscribe)
 
-		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto, blockRoot)
+		signed, err := blocks.WrappedROSignedExecutionPayloadEnvelope(signedProto)
 		require.NoError(t, err)
 		return s, events, signed, blockRoot, blk.Block.Slot
 	}

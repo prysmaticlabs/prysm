@@ -62,6 +62,18 @@ func testEnvelope() *eth.ExecutionPayloadEnvelope {
 	}
 }
 
+// testEnvelopeHeze is the Heze (EIP-8411) envelope fixture; the container
+// carries no beacon block root.
+func testEnvelopeHeze() *eth.ExecutionPayloadEnvelopeHeze {
+	gloas := testEnvelope()
+	return &eth.ExecutionPayloadEnvelopeHeze{
+		Payload:               gloas.Payload,
+		ExecutionRequests:     gloas.ExecutionRequests,
+		BuilderIndex:          gloas.BuilderIndex,
+		ParentBeaconBlockRoot: gloas.ParentBeaconBlockRoot,
+	}
+}
+
 func gloasGenericBlock() *eth.GenericBeaconBlock {
 	return gloasGenericBlockWithBuilder(params.BeaconConfig().BuilderIndexSelfBuild)
 }
@@ -636,7 +648,7 @@ func TestProduceBlockV4_Heze(t *testing.T) {
 	hezeContents := func() *eth.GenericBeaconBlock {
 		return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_HezeContents{HezeContents: &eth.BeaconBlockContentsHeze{
 			Block:                    util.NewBeaconBlockHeze().Block,
-			ExecutionPayloadEnvelope: testEnvelope(),
+			ExecutionPayloadEnvelope: testEnvelopeHeze(),
 		}}}
 	}
 	produce := func(t *testing.T, blk *eth.GenericBeaconBlock, ssz bool) *httptest.ResponseRecorder {

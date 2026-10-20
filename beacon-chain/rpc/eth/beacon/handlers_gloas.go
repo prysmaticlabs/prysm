@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
@@ -59,10 +60,17 @@ func (s *Server) GetExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	w.Header().Set(api.VersionHeader, version.String(version.Gloas))
+	// The wire container is fork-specific: Heze (EIP-8411) carries no beacon block
+	// root, so its JSON form surfaces the binding out of band.
+	w.Header().Set(api.VersionHeader, version.String(full.Version()))
 
 	if httputil.RespondWithSsz(r) {
-		sszBytes, err := full.MarshalSSZ()
+		marshaler, ok := full.Proto().(ssz.Marshaler)
+		if !ok {
+			httputil.HandleError(w, "envelope does not support SSZ marshaling", http.StatusInternalServerError)
+			return
+		}
+		sszBytes, err := marshaler.MarshalSSZ()
 		if err != nil {
 			httputil.HandleError(w, "could not marshal envelope to SSZ: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -78,13 +86,21 @@ func (s *Server) GetExecutionPayloadEnvelope(w http.ResponseWriter, r *http.Requ
 	}
 	finalized := s.FinalizationFetcher.IsFinalized(ctx, root)
 
-	jsonEnvelope, err := structs.SignedExecutionPayloadEnvelopeFromConsensus(full)
+	var jsonEnvelope *structs.SignedExecutionPayloadEnvelope
+	switch pb := full.Proto().(type) {
+	case *eth.SignedExecutionPayloadEnvelopeHeze:
+		jsonEnvelope, err = structs.SignedExecutionPayloadEnvelopeHezeFromConsensus(pb, root)
+	case *eth.SignedExecutionPayloadEnvelope:
+		jsonEnvelope, err = structs.SignedExecutionPayloadEnvelopeFromConsensus(pb)
+	default:
+		err = errors.New("unknown signed execution payload envelope type")
+	}
 	if err != nil {
 		httputil.HandleError(w, "could not convert envelope to JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	httputil.WriteJson(w, &structs.GetExecutionPayloadEnvelopeResponse{
-		Version:             version.String(version.Gloas),
+		Version:             version.String(full.Version()),
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           finalized,
 		Data:                jsonEnvelope,
@@ -126,11 +142,90 @@ func (s *Server) PublishExecutionPayloadEnvelope(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// EIP-8411: Heze envelopes travel as payload chunks and publish through the V3
+	// path; the wire container carries no beacon block root.
+	if v >= version.Heze {
+		s.publishEnvelopeHeze(ctx, w, r, body, blobDataIncluded)
+		return
+	}
+
 	if blobDataIncluded {
 		s.publishEnvelopeContents(ctx, w, r, body)
 		return
 	}
 	s.publishBareEnvelope(ctx, w, r, body)
+}
+
+// publishEnvelopeHeze decodes a Heze envelope publish body (bare signed envelope or contents,
+// selected by Eth-Blob-Data-Included) and delegates to the v1alpha1 V3 publish path, which
+// reveals the envelope as PayloadChunk messages. The SSZ body carries no beacon block root; the
+// beacon node resolves the binding from its cached envelope, while the JSON form carries the
+// root in the shared struct.
+func (s *Server) publishEnvelopeHeze(ctx context.Context, w http.ResponseWriter, r *http.Request, body []byte, blobDataIncluded bool) {
+	generic := &eth.GenericSignedExecutionPayloadEnvelopeHeze{}
+	if blobDataIncluded {
+		contents := &eth.SignedExecutionPayloadEnvelopeContentsHeze{}
+		if httputil.IsRequestSsz(r) {
+			if err := contents.UnmarshalSSZ(body); err != nil {
+				httputil.HandleError(w, "could not decode SSZ envelope contents: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			var jsonContents structs.SignedExecutionPayloadEnvelopeContents
+			if err := json.Unmarshal(body, &jsonContents); err != nil {
+				httputil.HandleError(w, "could not decode envelope contents: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			signed, root, kzgProofs, blobs, err := jsonContents.ToConsensusHeze()
+			if err != nil {
+				httputil.HandleError(w, "invalid signed execution payload envelope contents: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			contents = &eth.SignedExecutionPayloadEnvelopeContentsHeze{
+				SignedExecutionPayloadEnvelope: signed,
+				KzgProofs:                      kzgProofs,
+				Blobs:                          blobs,
+			}
+			generic.BeaconBlockRoot = root[:]
+		}
+		if contents.SignedExecutionPayloadEnvelope == nil || contents.SignedExecutionPayloadEnvelope.Message == nil {
+			httputil.HandleError(w, "nil signed execution payload envelope contents", http.StatusBadRequest)
+			return
+		}
+		generic.Envelope = &eth.GenericSignedExecutionPayloadEnvelopeHeze_Contents{Contents: contents}
+	} else {
+		signed := &eth.SignedExecutionPayloadEnvelopeHeze{}
+		if httputil.IsRequestSsz(r) {
+			if err := signed.UnmarshalSSZ(body); err != nil {
+				httputil.HandleError(w, "could not decode SSZ envelope: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			var jsonEnvelope structs.SignedExecutionPayloadEnvelope
+			if err := json.Unmarshal(body, &jsonEnvelope); err != nil {
+				httputil.HandleError(w, "could not decode JSON envelope: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			consensus, root, err := jsonEnvelope.ToConsensusHeze()
+			if err != nil {
+				httputil.HandleError(w, "invalid signed envelope: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			signed = consensus
+			generic.BeaconBlockRoot = root[:]
+		}
+		if signed.Message == nil || signed.Message.Payload == nil {
+			httputil.HandleError(w, "envelope message or payload is nil", http.StatusBadRequest)
+			return
+		}
+		generic.Envelope = &eth.GenericSignedExecutionPayloadEnvelopeHeze_SignedEnvelope{SignedEnvelope: signed}
+	}
+
+	if _, err := s.V1Alpha1ValidatorServer.PublishExecutionPayloadEnvelopeV3(ctx, generic); err != nil {
+		writeEnvelopePublishError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // publishBareEnvelope handles the stateful flow (header=false): the body carries only the signed

@@ -103,7 +103,6 @@ func gloasBlock(t *testing.T, parent state.BeaconState, parentRoot [32]byte, slo
 					Slot:                  slot,
 					PrevRandao:            randaoMix,
 					ExecutionRequestsRoot: emptyRequestsRoot[:],
-					PayloadChunksRoot:     make([]byte, 32),
 				},
 				Signature: common.InfiniteSignature[:],
 			},
@@ -151,10 +150,11 @@ func gloasBlock(t *testing.T, parent state.BeaconState, parentRoot [32]byte, slo
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          cfg.BuilderIndexSelfBuild,
+		BeaconBlockRoot:       root[:],
 		ParentBeaconBlockRoot: parentRoot[:],
 	}
 	signedEnvelope := signGloasEnvelope(t, post, envelope, keys[proposerIdx])
-	wrapped, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signedEnvelope, root)
+	wrapped, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(signedEnvelope)
 	require.NoError(t, err)
 	require.NoError(t, gloas.VerifyExecutionPayloadEnvelope(ctx, post, wrapped))
 	return gloasChainLink{block: ro, envelope: signedEnvelope, state: post}
@@ -174,8 +174,9 @@ func wrapGloasEnvelopes(t *testing.T, envs ...*ethpb.SignedExecutionPayloadEnvel
 	t.Helper()
 	out := make([]interfaces.ROSignedExecutionPayloadEnvelope, len(envs))
 	for i, e := range envs {
-		// By-range envelopes carry no root; the batch binds them by block hash.
-		w, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(e, [32]byte{})
+		// Gloas by-range envelopes carry their root inline; the batch still pairs
+		// them with blocks by the bid's block hash.
+		w, err := consensusblocks.WrappedROSignedExecutionPayloadEnvelope(e)
 		require.NoError(t, err)
 		out[i] = w
 	}

@@ -94,6 +94,29 @@ func (v *validator) proposeSelfBuildEnvelope(
 		return errors.Wrap(err, "could not compute beacon block root")
 	}
 
+	// EIP-8411: Heze envelopes are a distinct container (no beacon block root) and
+	// are revealed by the beacon node as payload chunks.
+	if slots.ToEpoch(slot) >= params.BeaconConfig().HezeForkEpoch {
+		envelope, err := v.validatorClient.GetExecutionPayloadEnvelopeHeze(ctx, slot, blockRoot)
+		if err != nil {
+			validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("failed").Inc()
+			return errors.Wrap(err, "failed to get execution payload envelope for self-build")
+		}
+
+		signedEnvelope, err := v.signExecutionPayloadEnvelopeHeze(ctx, pubKey, slot, envelope)
+		if err != nil {
+			validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("failed").Inc()
+			return errors.Wrap(err, "could not sign execution payload envelope")
+		}
+
+		if _, err := v.validatorClient.PublishExecutionPayloadEnvelopeHeze(ctx, signedEnvelope, blockRoot); err != nil {
+			validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("failed").Inc()
+			return errors.Wrap(err, "failed to publish execution payload envelope")
+		}
+		validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("success").Inc()
+		return nil
+	}
+
 	envelope, err := v.validatorClient.GetExecutionPayloadEnvelope(ctx, slot, blockRoot)
 	if err != nil {
 		validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("failed").Inc()
@@ -113,4 +136,50 @@ func (v *validator) proposeSelfBuildEnvelope(
 	validatorSelfBuildEnvelopeSubmissionTotal.WithLabelValues("success").Inc()
 
 	return nil
+}
+
+// signExecutionPayloadEnvelopeHeze signs the Heze (EIP-8411) execution payload
+// envelope using the proposer's key with DomainBeaconBuilder, mirroring
+// signExecutionPayloadEnvelope for the Heze container.
+func (v *validator) signExecutionPayloadEnvelopeHeze(
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	slot primitives.Slot,
+	envelope *ethpb.ExecutionPayloadEnvelopeHeze,
+) (*ethpb.SignedExecutionPayloadEnvelopeHeze, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.signExecutionPayloadEnvelopeHeze")
+	defer span.End()
+
+	epoch := slots.ToEpoch(slot)
+
+	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconBuilder[:])
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get domain data")
+	}
+	if domain == nil {
+		return nil, errors.New("nil domain data")
+	}
+
+	signingRoot, err := signing.ComputeSigningRoot(envelope, domain.SignatureDomain)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute signing root")
+	}
+
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     signingRoot[:],
+		SignatureDomain: domain.SignatureDomain,
+		Object: &validatorpb.SignRequest_ExecutionPayloadEnvelopeHeze{
+			ExecutionPayloadEnvelopeHeze: envelope,
+		},
+		SigningSlot: slot,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not sign execution payload envelope")
+	}
+
+	return &ethpb.SignedExecutionPayloadEnvelopeHeze{
+		Message:   envelope,
+		Signature: sig.Marshal(),
+	}, nil
 }

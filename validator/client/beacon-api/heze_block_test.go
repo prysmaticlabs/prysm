@@ -53,7 +53,7 @@ func TestDecodeBlockV4Response_Heze(t *testing.T) {
 	t.Run("payload included ssz", func(t *testing.T) {
 		want := &ethpb.BeaconBlockContentsHeze{
 			Block:                    block,
-			ExecutionPayloadEnvelope: testhelpers.GenerateProtoExecutionPayloadEnvelope(),
+			ExecutionPayloadEnvelope: testhelpers.GenerateProtoExecutionPayloadEnvelopeHeze(),
 			KzgProofs:                [][]byte{make([]byte, 48)},
 			Blobs:                    [][]byte{make([]byte, fieldparams.BlobLength)},
 		}
@@ -67,9 +67,9 @@ func TestDecodeBlockV4Response_Heze(t *testing.T) {
 		got, contents, err := decodeBlockV4Response(data, header, "url")
 		require.NoError(t, err)
 		require.DeepEqual(t, block, got.GetHeze())
-		require.DeepEqual(t, want.ExecutionPayloadEnvelope, contents.GetExecutionPayloadEnvelope())
-		require.DeepEqual(t, want.KzgProofs, contents.GetKzgProofs())
-		require.DeepEqual(t, want.Blobs, contents.GetBlobs())
+		require.DeepEqual(t, want.ExecutionPayloadEnvelope, contents.envelopeHeze)
+		require.DeepEqual(t, want.KzgProofs, contents.kzgProofs)
+		require.DeepEqual(t, want.Blobs, contents.blobs)
 	})
 }
 

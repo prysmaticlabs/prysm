@@ -15,6 +15,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	pb "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
@@ -190,7 +191,7 @@ func (e *EngineClient) ConstructPartialDataColumnSidecarsFromHasBlobs(context.Co
 // ReconstructExecutionPayloadEnvelope --
 func (e *EngineClient) ReconstructExecutionPayloadEnvelope(
 	_ context.Context, envelope *ethpb.SignedBlindedExecutionPayloadEnvelope,
-) (*ethpb.SignedExecutionPayloadEnvelope, error) {
+) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
 	if e.Err != nil {
 		return nil, e.Err
 	}
@@ -203,14 +204,29 @@ func (e *EngineClient) ReconstructExecutionPayloadEnvelope(
 		return nil, err
 	}
 	p.SlotNumber = envelope.Message.Slot
-	return &ethpb.SignedExecutionPayloadEnvelope{
+	if slots.ToEpoch(envelope.Message.Slot) >= params.BeaconConfig().HezeForkEpoch {
+		full := &ethpb.SignedExecutionPayloadEnvelopeHeze{
+			Message: &ethpb.ExecutionPayloadEnvelopeHeze{
+				Payload:               p,
+				ExecutionRequests:     envelope.Message.ExecutionRequests,
+				ParentBeaconBlockRoot: envelope.Message.ParentBeaconBlockRoot,
+				BuilderIndex:          envelope.Message.BuilderIndex,
+			},
+			Signature: envelope.Signature,
+		}
+		return blocks.WrappedROSignedExecutionPayloadEnvelopeHeze(full, bytesutil.ToBytes32(envelope.Message.BeaconBlockRoot))
+	}
+	full := &ethpb.SignedExecutionPayloadEnvelope{
 		Message: &ethpb.ExecutionPayloadEnvelope{
-			Payload:           p,
-			ExecutionRequests: envelope.Message.ExecutionRequests,
-			BuilderIndex:      envelope.Message.BuilderIndex,
+			Payload:               p,
+			ExecutionRequests:     envelope.Message.ExecutionRequests,
+			BuilderIndex:          envelope.Message.BuilderIndex,
+			BeaconBlockRoot:       envelope.Message.BeaconBlockRoot,
+			ParentBeaconBlockRoot: envelope.Message.ParentBeaconBlockRoot,
 		},
 		Signature: envelope.Signature,
-	}, nil
+	}
+	return blocks.WrappedROSignedExecutionPayloadEnvelope(full)
 }
 
 func payloadToPayloadGloas(p *pb.ExecutionPayload) (*pb.ExecutionPayloadGloas, error) {

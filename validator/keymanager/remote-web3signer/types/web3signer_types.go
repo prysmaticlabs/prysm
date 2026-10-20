@@ -419,12 +419,11 @@ type VersionedExecutionPayloadEnvelope struct {
 }
 
 // ExecutionPayloadEnvelope a sub property of VersionedExecutionPayloadEnvelope (gloas).
-// beacon_block_root was removed from the container by EIP-8411; the signing root covers
-// the fields below only.
 type ExecutionPayloadEnvelope struct {
 	Payload               *ExecutionPayloadGloas  `json:"payload"`
 	ExecutionRequests     *ExecutionRequestsGloas `json:"execution_requests"`
 	BuilderIndex          string                  `json:"builder_index"` /* uint64 */
+	BeaconBlockRoot       hexutil.Bytes           `json:"beacon_block_root"`
 	ParentBeaconBlockRoot hexutil.Bytes           `json:"parent_beacon_block_root"`
 }
 

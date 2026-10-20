@@ -274,7 +274,7 @@ func TestBeaconBlock(t *testing.T) {
 		Block: &eth.GenericBeaconBlock_HezeContents{
 			HezeContents: &eth.BeaconBlockContentsHeze{
 				Block: hezeBlock,
-				ExecutionPayloadEnvelope: &eth.ExecutionPayloadEnvelope{
+				ExecutionPayloadEnvelope: &eth.ExecutionPayloadEnvelopeHeze{
 					Payload: &enginev1.ExecutionPayloadGloas{SlotNumber: slot},
 				},
 				Blobs:     [][]byte{[]byte("blob")},
@@ -429,7 +429,7 @@ func TestPublishExecutionPayloadEnvelope_ArmSelection(t *testing.T) {
 			})
 		vc := newTestGrpcValidatorClient(t, client, true)
 		vc.envelopeCache.Add(slot, signed.Message, [][]byte{{1}}, [][]byte{{2}})
-		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed, [32]byte{0x01})
+		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed)
 		require.NoError(t, err)
 	})
 
@@ -444,7 +444,7 @@ func TestPublishExecutionPayloadEnvelope_ArmSelection(t *testing.T) {
 				return &emptypb.Empty{}, nil
 			})
 		vc := newTestGrpcValidatorClient(t, client, false)
-		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed, [32]byte{0x01})
+		_, err := vc.PublishExecutionPayloadEnvelope(t.Context(), signed)
 		require.NoError(t, err)
 	})
 }

@@ -161,6 +161,19 @@ func GenerateProtoExecutionPayloadEnvelope() *ethpb.ExecutionPayloadEnvelope {
 		},
 		ExecutionRequests:     &enginev1.ExecutionRequestsGloas{},
 		BuilderIndex:          121,
+		BeaconBlockRoot:       FillByteSlice(32, 210),
 		ParentBeaconBlockRoot: FillByteSlice(32, 211),
+	}
+}
+
+// GenerateProtoExecutionPayloadEnvelopeHeze returns the Heze (EIP-8411) envelope,
+// which carries no beacon block root.
+func GenerateProtoExecutionPayloadEnvelopeHeze() *ethpb.ExecutionPayloadEnvelopeHeze {
+	gloas := GenerateProtoExecutionPayloadEnvelope()
+	return &ethpb.ExecutionPayloadEnvelopeHeze{
+		Payload:               gloas.Payload,
+		ExecutionRequests:     gloas.ExecutionRequests,
+		BuilderIndex:          gloas.BuilderIndex,
+		ParentBeaconBlockRoot: gloas.ParentBeaconBlockRoot,
 	}
 }
