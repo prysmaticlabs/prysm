@@ -60,7 +60,7 @@ func (s stubBlockBody) ExecutionPayloadBid() (interfaces.ROExecutionPayloadBid, 
 	if err != nil {
 		return nil, err
 	}
-	return signedBid.Bid()
+	return signedBid.Bid(), nil
 }
 func (s stubBlockBody) ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error) {
 	return nil, nil

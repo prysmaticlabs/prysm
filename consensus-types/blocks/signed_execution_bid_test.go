@@ -116,9 +116,7 @@ func TestWrappedROSignedExecutionPayloadBid(t *testing.T) {
 		wrapped, err := blocks.WrappedROSignedExecutionPayloadBid(signed)
 		require.NoError(t, err)
 
-		bid, err := wrapped.Bid()
-		require.NoError(t, err)
-		require.Equal(t, primitives.Gwei(8), bid.ExecutionPayment())
+		require.Equal(t, primitives.Gwei(8), wrapped.Bid().ExecutionPayment())
 
 		gotSig := wrapped.Signature()
 		assert.DeepEqual(t, [96]byte(sig), gotSig)

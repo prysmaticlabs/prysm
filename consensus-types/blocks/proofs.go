@@ -303,12 +303,7 @@ func ExecutionBlockHashProof(ctx context.Context, block interfaces.ReadOnlyBeaco
 	if err != nil {
 		return nil, err
 	}
-	bid, err := signedBid.Bid()
-	if err != nil {
-		return nil, fmt.Errorf("get bid from signed bid, %w", err)
-	}
-
-	bidFieldRoots, err := executionPayloadBidFieldRoots(bid)
+	bidFieldRoots, err := executionPayloadBidFieldRoots(signedBid.Bid())
 	if err != nil {
 		return nil, err
 	}

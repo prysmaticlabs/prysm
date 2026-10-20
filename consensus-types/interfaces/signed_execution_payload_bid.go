@@ -6,7 +6,7 @@ import (
 )
 
 type ROSignedExecutionPayloadBid interface {
-	Bid() (ROExecutionPayloadBid, error)
+	Bid() ROExecutionPayloadBid
 	Signature() [field_params.BLSSignatureLength]byte
 	SigningRoot([]byte) ([32]byte, error)
 	HashTreeRoot() ([32]byte, error)

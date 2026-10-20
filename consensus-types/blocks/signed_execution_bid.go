@@ -79,8 +79,8 @@ func WrappedROExecutionPayloadBid(pb *ethpb.ExecutionPayloadBid) (interfaces.ROE
 }
 
 // Bid returns the execution payload bid as a read-only interface.
-func (s signedExecutionPayloadBid) Bid() (interfaces.ROExecutionPayloadBid, error) {
-	return WrappedROExecutionPayloadBid(s.bid.Message)
+func (s signedExecutionPayloadBid) Bid() interfaces.ROExecutionPayloadBid {
+	return executionPayloadBidGloas{payload: s.bid.Message}
 }
 
 // SigningRoot computes the signing root for the execution payload bid with the given domain.

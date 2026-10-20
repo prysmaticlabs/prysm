@@ -47,7 +47,7 @@ func TestSignedBeaconBlock_SetPayloadAttestations(t *testing.T) {
 // stubSignedBid is a foreign ROSignedExecutionPayloadBid implementation that the setter cannot unwrap.
 type stubSignedBid struct{}
 
-func (stubSignedBid) Bid() (interfaces.ROExecutionPayloadBid, error) { return nil, nil }
+func (stubSignedBid) Bid() interfaces.ROExecutionPayloadBid { return nil }
 func (stubSignedBid) Signature() [96]byte                            { return [96]byte{} }
 func (stubSignedBid) SigningRoot([]byte) ([32]byte, error)           { return [32]byte{}, nil }
 func (stubSignedBid) HashTreeRoot() ([32]byte, error)                { return [32]byte{}, nil }

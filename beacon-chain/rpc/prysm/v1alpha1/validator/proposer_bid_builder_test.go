@@ -517,9 +517,7 @@ func TestGetBuilderExecutionPayloadBid(t *testing.T) {
 		vs := &Server{
 			BlockBuilder: &builderTest.MockBuilderService{PayloadBids: []beaconbuilder.PayloadBid{bid(1, 500), bid(2, 1500)}},
 			NewExecutionPayloadBidVerifier: func(b interfaces.ROSignedExecutionPayloadBid, _ []verification.Requirement) verification.ExecutionPayloadBidVerifier {
-				wrapped, err := b.Bid()
-				require.NoError(t, err)
-				if wrapped.BuilderIndex() == 2 {
+				if b.Bid().BuilderIndex() == 2 {
 					return &fakeBidVerifier{activeErr: errors.New("not active")}
 				}
 				return &fakeBidVerifier{}
@@ -859,8 +857,7 @@ func TestSetExecutionPayloadBid_PrefersBuilderBid(t *testing.T) {
 
 	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
-	bid, err := signedBid.Bid()
-	require.NoError(t, err)
+	bid := signedBid.Bid()
 	require.Equal(t, primitives.BuilderIndex(7), bid.BuilderIndex())
 	require.Equal(t, primitives.Gwei(1000), bid.Value())
 }

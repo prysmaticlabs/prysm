@@ -1372,7 +1372,7 @@ func (b *BeaconBlockBody) ExecutionPayloadBid() (interfaces.ROExecutionPayloadBi
 	if err != nil {
 		return nil, err
 	}
-	return signedBid.Bid()
+	return signedBid.Bid(), nil
 }
 
 // ParentExecutionRequests returns the parent's deferred execution requests.

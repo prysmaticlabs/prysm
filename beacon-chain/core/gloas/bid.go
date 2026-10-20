@@ -79,10 +79,7 @@ func ProcessExecutionPayloadBid(st state.BeaconState, block interfaces.ReadOnlyB
 		return errors.Wrap(err, "failed to get signed execution payload bid")
 	}
 
-	bid, err := signedBid.Bid()
-	if err != nil {
-		return errors.Wrap(err, "failed to get bid from signed bid")
-	}
+	bid := signedBid.Bid()
 
 	if bid.BlockHash() == bid.ParentBlockHash() {
 		return fmt.Errorf("bid block hash %x equals parent block hash", bid.BlockHash())
@@ -204,10 +201,7 @@ func validateBidConsistency(st state.BeaconState, bid interfaces.ROExecutionPayl
 // It validates that the signature was created by the builder specified in the bid
 // using the appropriate domain for the beacon builder.
 func ValidatePayloadBidSignature(st state.ReadOnlyBeaconState, signedBid interfaces.ROSignedExecutionPayloadBid) error {
-	bid, err := signedBid.Bid()
-	if err != nil {
-		return errors.Wrap(err, "failed to get bid")
-	}
+	bid := signedBid.Bid()
 
 	pubkey, err := st.BuilderPubkey(bid.BuilderIndex())
 	if err != nil {
