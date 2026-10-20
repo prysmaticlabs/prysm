@@ -535,6 +535,7 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 
+	log.WithFields(logrus.Fields{"peerID": info.ID, "multiaddrs": info.Addrs}).Debug("Dialing peer")
 	if err := s.host.Connect(ctx, info); err != nil {
 		s.downscorePeer(info.ID, "connectionError")
 		return errors.Wrap(err, "peer connect")
@@ -550,8 +551,8 @@ func (s *Service) connectToBootnodes() error {
 			return err
 		}
 		// do not dial bootnodes with their tcp ports not set
-		if err := bootNode.Record().Load(enr.WithEntry("tcp", new(enr.TCP))); err != nil {
-			if !enr.IsNotFound(err) {
+		if _, ok, err := getPort(bootNode, tcp); err != nil || !ok {
+			if err != nil {
 				log.WithError(err).Error("Could not retrieve tcp port")
 			}
 			continue
