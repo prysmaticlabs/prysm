@@ -8,12 +8,11 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"google.golang.org/protobuf/proto"
 )
 
 type epochOperation func(*testing.T, state.BeaconState) (state.BeaconState, error)
@@ -33,7 +32,7 @@ func RunEpochOperationTest(
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	preBeaconState, err := state_native.InitializeFromProtoDeneb(preBeaconStateBase)
+	preBeaconState, err := state_native.InitializeFromProtoUnsafeDeneb(preBeaconStateBase)
 	require.NoError(t, err)
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -60,9 +59,7 @@ func RunEpochOperationTest(
 
 		pbState, err := state_native.ProtobufBeaconStateDeneb(beaconState.ToProtoUnsafe())
 		require.NoError(t, err)
-		if !proto.Equal(pbState, postBeaconState) {
-			t.Fatal("Post state does not match expected")
-		}
+		require.DeepSSZEqual(t, pbState, postBeaconState, "Post state does not match expected")
 	} else {
 		// Note: This doesn't test anything worthwhile. It essentially tests
 		// that *any* error has occurred, not any specific error.

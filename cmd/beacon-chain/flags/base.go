@@ -3,9 +3,11 @@
 package flags
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -29,22 +31,29 @@ var (
 		Value: "",
 	}
 
-	// EnableBuilderSSZ enables Builder APIs to send and receive in SSZ format
-	EnableBuilderSSZ = &cli.BoolFlag{
-		Name:    "enable-builder-ssz",
-		Aliases: []string{"builder-ssz"},
-		Usage:   "Enables Builder APIs to send and receive in SSZ format",
+	// DisableBuilderSSZ turns off SSZ encoding for Builder APIs, falling back to JSON.
+	DisableBuilderSSZ = &cli.BoolFlag{
+		Name:  "disable-builder-ssz",
+		Usage: "Disables SSZ encoding for Builder API requests and responses, using JSON instead.",
+	}
+
+	// PostponeShutdownForProposals delays a graceful shutdown while a connected
+	// validator client still has an imminent block-proposal duty.
+	PostponeShutdownForProposals = &cli.BoolFlag{
+		Name: "postpone-shutdown-for-proposals",
+		Usage: "On a graceful shutdown signal (SIGINT/SIGTERM, e.g. Ctrl-C on Linux), postpone shutdown if a connected " +
+			"validator client must propose a block in the next 2 epochs. Send the signal again to force the node to stop immediately.",
 	}
 
 	MaxBuilderConsecutiveMissedSlots = &cli.IntFlag{
-		Name:  "max-builder-consecutive-missed-slots",
-		Usage: "Number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction",
-		Value: 3,
+		Name:        "max-builder-consecutive-missed-slots",
+		Usage:       "Number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction",
+		DefaultText: fmt.Sprintf("%d", params.BeaconConfig().MaxBuilderConsecutiveMissedSlots),
 	}
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
-		Name: "max-builder-epoch-missed-slots",
-		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window. " +
-			"The values are on the basis of the networks and the default value for mainnet is 5.",
+		Name:        "max-builder-epoch-missed-slots",
+		Usage:       "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
+		DefaultText: fmt.Sprintf("%d", params.BeaconConfig().MaxBuilderEpochMissedSlots),
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
@@ -69,6 +78,57 @@ var (
 		Usage: "An absolute value in Gwei that the builder bid has to have in order for this beacon node to use the builder's block. Anything less than this value" +
 			" and the beacon will revert to local building.",
 		Value: 0,
+	}
+	// BuilderHeaderTimeout bounds how long the beacon node waits for a builder relay `getHeader` response
+	// before giving up and using the locally built block.
+	BuilderHeaderTimeout = &cli.DurationFlag{
+		Name:  "builder-header-timeout",
+		Usage: "Timeout to use when fetching a block header from the builder API, as a duration (e.g. 1s, 2s, 2500ms). Must be greater than 0. Only effective up to the Fulu fork.",
+		Value: params.BeaconConfig().BuilderHeaderTimeout,
+	}
+	// BuilderAllowedFailures and the flags below tune the Gloas builder circuit breaker, which bans
+	// builders that win an auction and then fail to reveal the payload.
+	BuilderAllowedFailures = &cli.Uint64Flag{
+		Name:  "builder-allowed-failures",
+		Usage: "Number of payload delivery failures a builder is allowed before this node blacklists it.",
+		Value: params.BeaconConfig().BuilderAllowedFailures,
+	}
+	BuilderCriticalFailures = &cli.Uint64Flag{
+		Name:  "builder-critical-failures",
+		Usage: "Failure count at which a builder earns the longer blacklist set by --builder-critical-blacklist-period.",
+		Value: params.BeaconConfig().BuilderCriticalFailures,
+	}
+	BuilderBlacklistPeriod = &cli.Uint64Flag{
+		Name:  "builder-blacklist-period",
+		Usage: "Number of epochs a builder stays blacklisted on its first offense. Must be greater than 0.",
+		Value: uint64(params.BeaconConfig().BuilderBlacklistPeriod),
+	}
+	BuilderCriticalBlacklistPeriod = &cli.Uint64Flag{
+		Name:  "builder-critical-blacklist-period",
+		Usage: "Number of epochs a builder stays blacklisted once it reaches --builder-critical-failures.",
+		Value: uint64(params.BeaconConfig().BuilderCriticalBlacklistPeriod),
+	}
+	BuilderRelayBlacklistPeriod = &cli.Uint64Flag{
+		Name:  "builder-relay-blacklist-period",
+		Usage: "Maximum number of epochs a direct connection endpoint stays banned for serving a builder that failed to reveal a payload. Never exceeds the offending builder's own blacklist.",
+		Value: uint64(params.BeaconConfig().BuilderRelayBlacklistPeriod),
+	}
+	BuilderFailureBackOffPeriod = &cli.Uint64Flag{
+		Name:  "builder-failure-backoff-period",
+		Usage: "Number of epochs without a failure after which a builder's failure counter resets to zero.",
+		Value: uint64(params.BeaconConfig().BuilderFailureBackOffPeriod),
+	}
+	BuilderCriticalFailedBuilders = &cli.Uint64Flag{
+		Name:  "builder-critical-failed-builders",
+		Usage: "Number of concurrently blacklisted builders that forces this node to fall back to self-building. Must be greater than 0.",
+		Value: params.BeaconConfig().BuilderCriticalFailedBuilders,
+	}
+	// BuilderBidTimeout bounds how long the beacon node waits for builder relays to return
+	// execution payload bids before giving up and using the P2P bid or a self-built payload.
+	BuilderBidTimeout = &cli.DurationFlag{
+		Name:  "builder-bid-timeout",
+		Usage: "Timeout to use when fetching execution payload bids from the builder API, as a duration (e.g. 600ms, 1s). Must be greater than 0. Only effective from the Gloas fork onward.",
+		Value: params.BeaconConfig().BuilderBidTimeout,
 	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
@@ -133,13 +193,6 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
-	// HTTPModules define the set of enabled HTTP APIs.
-	HTTPModules = &cli.StringFlag{
-		Name:  "http-modules",
-		Usage: "Comma-separated list of API module names. Possible values: `" + PrysmAPIModule + `,` + EthAPIModule + "`.",
-		Value: PrysmAPIModule + `,` + EthAPIModule,
-	}
-
 	// HTTPServerHost specifies a HTTP server host for the validator client.
 	HTTPServerHost = &cli.StringFlag{
 		Name:    "http-host",
@@ -356,9 +409,32 @@ var (
 		Usage: "A comma-separated list of exponents (of 2) in decreasing order, defining the state diff hierarchy levels. The last exponent must be greater than or equal to 5.",
 		Value: cli.NewIntSlice(21, 18, 16, 13, 11, 9, 5),
 	}
+	// ArchiveOriginState points at an ssz-serialized beacon state to anchor the archive at.
+	ArchiveOriginState = &cli.PathFlag{
+		Name: "archive-origin-state",
+		Usage: "Path to an ssz-encoded beacon state at an epoch boundary slot, used as the oldest state an " +
+			"archive node will hold. Defaults to the genesis state. Requires --" + features.EnableArchive.Name + ".",
+	}
+	// DisableEphemeralLogFile disables the 24 hour debug log file.
+	DisableEphemeralLogFile = &cli.BoolFlag{
+		Name:  "disable-ephemeral-log-file",
+		Usage: "Disables the creation of a debug log file that keeps 24 hours of logs.",
+		Value: false,
+	}
 	// DisableGetBlobsV2 disables the engine_getBlobsV2 usage.
 	DisableGetBlobsV2 = &cli.BoolFlag{
-		Name:  "disable-get-blobs-v2",
-		Usage: "Disables the engine_getBlobsV2 usage.",
+		Name:   "disable-get-blobs-v2",
+		Usage:  "Disables the engine_getBlobsV2 usage.",
+		Hidden: true,
+	}
+	// DisablePartialDataColumns turns off cell-level dissemination for PeerDAS data columns, falling back to full column gossip.
+	DisablePartialDataColumns = &cli.BoolFlag{
+		Name:  "disable-partial-data-columns",
+		Usage: "Disables cell-level dissemination for PeerDAS data columns, falling back to full column gossip.",
+	}
+	// DisableGraffitiClientAppend disables appending consensus and execution client version info to the block graffiti.
+	DisableGraffitiClientAppend = &cli.BoolFlag{
+		Name:  "disable-graffiti-client-append",
+		Usage: "Disables appending consensus and execution client version information to the block graffiti",
 	}
 )

@@ -20,6 +20,7 @@ go_library(
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",
+        "//beacon-chain/core/gloas:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/time:go_default_library",
@@ -52,6 +53,7 @@ go_test(
         "block_test.go",
         "deposit_fuzz_test.go",
         "deposit_test.go",
+        "epoch_precompute_bench_test.go",
         "epoch_precompute_test.go",
         "epoch_spec_test.go",
         "exports_test.go",
@@ -89,6 +91,5 @@ go_test(
         "//time/slots:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

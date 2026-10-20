@@ -2,12 +2,15 @@ package kv
 
 import (
 	"context"
+	"fmt"
+	"slices"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/hdiff"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	bolt "go.etcd.io/bbolt"
 )
@@ -18,10 +21,22 @@ const (
 	balancesSuffix  = "_b"
 )
 
+var errSnapshotNotFound = errors.New("full snapshot not found")
+
 /*
 	We use a level-based approach to save state diffs. Each level corresponds to an exponent of 2 (exponents[lvl]).
 	The data at level 0 is saved every 2**exponent[0] slots and always contains a full state snapshot that is used as a base for the delta saved at other levels.
 */
+
+// SlotInDiffTree returns whether the given slot is a saving point in the diff tree.
+// If it is, it also returns the offset and level in the tree.
+func (s *Store) SlotInDiffTree(slot primitives.Slot) (uint64, int, error) {
+	offset := s.getOffset()
+	if uint64(slot) < offset {
+		return 0, -1, ErrSlotBeforeOffset
+	}
+	return offset, computeLevel(offset, slot), nil
+}
 
 // saveStateByDiff takes a state and decides between saving a full state snapshot or a diff.
 func (s *Store) saveStateByDiff(ctx context.Context, st state.ReadOnlyBeaconState) error {
@@ -33,15 +48,17 @@ func (s *Store) saveStateByDiff(ctx context.Context, st state.ReadOnlyBeaconStat
 	}
 
 	slot := st.Slot()
-	offset := s.getOffset()
-	if uint64(slot) < offset {
-		return ErrSlotBeforeOffset
+	offset, lvl, err := s.SlotInDiffTree(slot)
+	if err != nil {
+		return errors.Wrap(err, "could not determine if slot is in diff tree")
 	}
-
-	// Find the level to save the state.
-	lvl := computeLevel(offset, slot)
 	if lvl == -1 {
 		return nil
+	}
+
+	// While an archive walk is filling the tree, only the walk may write: above its frontier there is no anchor.
+	if frontier, pending := s.archivePending(); pending && uint64(slot) > uint64(frontier)+deepestDiffSpan() {
+		return errors.Wrapf(ErrAboveArchiveFrontier, "slot %d is above the archive frontier %d", slot, frontier)
 	}
 
 	// Save full state if level is 0.
@@ -50,7 +67,7 @@ func (s *Store) saveStateByDiff(ctx context.Context, st state.ReadOnlyBeaconStat
 	}
 
 	// Get anchor state to compute the diff from.
-	anchorState, err := s.getAnchorState(offset, lvl, slot)
+	anchorState, err := s.getAnchorState(ctx, offset, lvl, slot)
 	if err != nil {
 		return err
 	}
@@ -58,8 +75,17 @@ func (s *Store) saveStateByDiff(ctx context.Context, st state.ReadOnlyBeaconStat
 	return s.saveHdiff(lvl, anchorState, st)
 }
 
+// StateBySlotFromDiffTree returns the state at the given slot from the tree; slot must be a saving point.
+func (s *Store) StateBySlotFromDiffTree(ctx context.Context, slot primitives.Slot) (state.BeaconState, error) {
+	return s.stateByDiff(ctx, slot)
+}
+
 // stateByDiff retrieves the full state for a given slot.
 func (s *Store) stateByDiff(ctx context.Context, slot primitives.Slot) (state.BeaconState, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	offset := s.getOffset()
 	if uint64(slot) < offset {
 		return nil, ErrSlotBeforeOffset
@@ -79,6 +105,10 @@ func (s *Store) stateByDiff(ctx context.Context, slot primitives.Slot) (state.Be
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	return snapshot, nil
@@ -125,6 +155,9 @@ func (s *Store) saveHdiff(lvl int, anchor, st state.ReadOnlyBeaconState) error {
 			return err
 		}
 	}
+	if err := s.stateDiffCache.setLevelHasData(lvl); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -133,14 +166,9 @@ func (s *Store) saveHdiff(lvl int, anchor, st state.ReadOnlyBeaconState) error {
 func (s *Store) saveFullSnapshot(st state.ReadOnlyBeaconState) error {
 	slot := uint64(st.Slot())
 	key := makeKeyForStateDiffTree(0, slot)
-	stateBytes, err := st.MarshalSSZ()
+	compressed, err := encodeStateWithKey(st)
 	if err != nil {
-		return err
-	}
-	// add version key to value
-	enc, err := addKey(st.Version(), stateBytes)
-	if err != nil {
-		return err
+		return fmt.Errorf("encode state with key: %w", err)
 	}
 
 	err = s.db.Update(func(tx *bolt.Tx) error {
@@ -149,7 +177,7 @@ func (s *Store) saveFullSnapshot(st state.ReadOnlyBeaconState) error {
 			return bolt.ErrBucketNotFound
 		}
 
-		if err := bucket.Put(key, enc); err != nil {
+		if err := bucket.Put(key, compressed); err != nil {
 			return err
 		}
 
@@ -160,8 +188,12 @@ func (s *Store) saveFullSnapshot(st state.ReadOnlyBeaconState) error {
 	}
 	// Save the full state to the cache, and invalidate other levels.
 	s.stateDiffCache.clearAnchors()
-	err = s.stateDiffCache.setAnchor(0, st)
-	if err != nil {
+	if len(flags.Get().StateDiffExponents) > 1 {
+		if err = s.stateDiffCache.setAnchor(0, st); err != nil {
+			return err
+		}
+	}
+	if err := s.stateDiffCache.setLevelHasData(0); err != nil {
 		return err
 	}
 
@@ -180,20 +212,33 @@ func (s *Store) getDiff(lvl int, slot uint64) (hdiff.HdiffBytes, error) {
 			return bolt.ErrBucketNotFound
 		}
 		buf := append(key, stateSuffix...)
-		stateDiff = bucket.Get(buf)
-		if stateDiff == nil {
-			return errors.New("state diff not found")
+		rawStateDiff := bucket.Get(buf)
+		// Missing history permits replay, but present corrupt records must still fail.
+		if rawStateDiff == nil {
+			return errors.Wrapf(ErrNotFoundState, "state diff not found at level %d slot %d", lvl, slot)
 		}
+		if len(rawStateDiff) == 0 {
+			return errors.Wrapf(ErrStateDiffCorrupted, "empty state diff at level %d slot %d", lvl, slot)
+		}
+		stateDiff = slices.Clone(rawStateDiff)
 		buf = append(key, validatorSuffix...)
-		validatorDiff = bucket.Get(buf)
-		if validatorDiff == nil {
-			return errors.New("validator diff not found")
+		rawValidatorDiff := bucket.Get(buf)
+		if rawValidatorDiff == nil {
+			return errors.Wrapf(ErrNotFoundState, "validator diff not found at level %d slot %d", lvl, slot)
 		}
+		if len(rawValidatorDiff) == 0 {
+			return errors.Wrapf(ErrStateDiffCorrupted, "empty validator diff at level %d slot %d", lvl, slot)
+		}
+		validatorDiff = slices.Clone(rawValidatorDiff)
 		buf = append(key, balancesSuffix...)
-		balancesDiff = bucket.Get(buf)
-		if balancesDiff == nil {
-			return errors.New("balances diff not found")
+		rawBalancesDiff := bucket.Get(buf)
+		if rawBalancesDiff == nil {
+			return errors.Wrapf(ErrNotFoundState, "balances diff not found at level %d slot %d", lvl, slot)
 		}
+		if len(rawBalancesDiff) == 0 {
+			return errors.Wrapf(ErrStateDiffCorrupted, "empty balances diff at level %d slot %d", lvl, slot)
+		}
+		balancesDiff = slices.Clone(rawBalancesDiff)
 		return nil
 	})
 
@@ -209,21 +254,32 @@ func (s *Store) getDiff(lvl int, slot uint64) (hdiff.HdiffBytes, error) {
 }
 
 func (s *Store) getFullSnapshot(slot uint64) (state.BeaconState, error) {
+	if s.stateDiffCache != nil {
+		if anchor := s.stateDiffCache.getAnchor(0, withExactSlot(primitives.Slot(slot))); anchor != nil {
+			return anchor, nil
+		}
+	}
+
 	key := makeKeyForStateDiffTree(0, slot)
-	var enc []byte
+	var compressed []byte
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateDiffBucket)
 		if bucket == nil {
 			return bolt.ErrBucketNotFound
 		}
-		enc = bucket.Get(key)
-		if enc == nil {
-			return errors.New("state not found")
+		rawEnc := bucket.Get(key)
+		if rawEnc == nil {
+			return errors.Wrapf(errSnapshotNotFound, "level 0 slot %d", slot)
 		}
+		compressed = slices.Clone(rawEnc)
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
+	enc, err := snappy.Decode(nil, compressed)
 	if err != nil {
 		return nil, err
 	}

@@ -1,11 +1,21 @@
-- name: AGGREGATE_DUE_BPS
-  sources: []
+- name: AGGREGATE_DUE_BPS#phase0
+  sources:
+    - file: config/params/config.go
+      search: AggregateDueBPS\s+primitives.BP
+      regex: true
   spec: |
-    <spec config_var="AGGREGATE_DUE_BPS" fork="phase0" hash="7eaa811a">
-    AGGREGATE_DUE_BPS: uint64 = 6667
+    <spec config_var="AGGREGATE_DUE_BPS" fork="phase0" hash="84cdd00d">
+    AGGREGATE_DUE_BPS: Uint64 = 6667
     </spec>
 
-- name: ALTAIR_FORK_EPOCH
+- name: AGGREGATE_DUE_BPS_GLOAS#gloas
+  sources: []
+  spec: |
+    <spec config_var="AGGREGATE_DUE_BPS_GLOAS" fork="gloas" hash="fd72ee55">
+    AGGREGATE_DUE_BPS_GLOAS: Uint64 = 5000
+    </spec>
+
+- name: ALTAIR_FORK_EPOCH#altair
   sources:
     - file: config/params/config.go
       search: AltairForkEpoch\s+primitives.Epoch
@@ -15,64 +25,64 @@
     ALTAIR_FORK_EPOCH: Epoch = 74240
     </spec>
 
-- name: ALTAIR_FORK_VERSION
+- name: ALTAIR_FORK_VERSION#altair
   sources:
     - file: config/params/config.go
       search: AltairForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="ALTAIR_FORK_VERSION" fork="altair" hash="d9a64536">
-    ALTAIR_FORK_VERSION: Version = '0x01000000'
+    <spec config_var="ALTAIR_FORK_VERSION" fork="altair" hash="d7d533da">
+    ALTAIR_FORK_VERSION: Version = "0x01000000"
     </spec>
 
-- name: ATTESTATION_DUE_BPS
+- name: ATTESTATION_DUE_BPS#phase0
+  sources:
+    - file: config/params/config.go
+      search: ^\tAttestationDueBPS\s
+      regex: true
+  spec: |
+    <spec config_var="ATTESTATION_DUE_BPS" fork="phase0" hash="8d6a7c50">
+    ATTESTATION_DUE_BPS: Uint64 = 3333
+    </spec>
+
+- name: ATTESTATION_DUE_BPS_GLOAS#gloas
   sources: []
   spec: |
-    <spec config_var="ATTESTATION_DUE_BPS" fork="phase0" hash="929dd1c9">
-    ATTESTATION_DUE_BPS: uint64 = 3333
+    <spec config_var="ATTESTATION_DUE_BPS_GLOAS" fork="gloas" hash="c1414076">
+    ATTESTATION_DUE_BPS_GLOAS: Uint64 = 2500
     </spec>
 
-- name: ATTESTATION_PROPAGATION_SLOT_RANGE
+- name: ATTESTATION_PROPAGATION_SLOT_RANGE#phase0
   sources:
     - file: config/params/config.go
       search: AttestationPropagationSlotRange\s+primitives.Slot
       regex: true
   spec: |
-    <spec config_var="ATTESTATION_PROPAGATION_SLOT_RANGE" fork="phase0" hash="40bcdb02">
-    ATTESTATION_PROPAGATION_SLOT_RANGE = 32
+    <spec config_var="ATTESTATION_PROPAGATION_SLOT_RANGE" fork="phase0" hash="3b24805b">
+    ATTESTATION_PROPAGATION_SLOT_RANGE: Slot = 32
     </spec>
 
-- name: ATTESTATION_SUBNET_COUNT
+- name: ATTESTATION_SUBNET_COUNT#phase0
   sources:
     - file: config/params/config.go
       search: AttestationSubnetCount\s+uint64
       regex: true
   spec: |
-    <spec config_var="ATTESTATION_SUBNET_COUNT" fork="phase0" hash="1c8c0a1b">
-    ATTESTATION_SUBNET_COUNT = 64
+    <spec config_var="ATTESTATION_SUBNET_COUNT" fork="phase0" hash="0bf2c282">
+    ATTESTATION_SUBNET_COUNT: Uint64 = 64
     </spec>
 
-- name: ATTESTATION_SUBNET_EXTRA_BITS
+- name: ATTESTATION_SUBNET_EXTRA_BITS#phase0
   sources:
     - file: config/params/config.go
       search: AttestationSubnetExtraBits\s+uint64
       regex: true
   spec: |
-    <spec config_var="ATTESTATION_SUBNET_EXTRA_BITS" fork="phase0" hash="e233b5ba">
-    ATTESTATION_SUBNET_EXTRA_BITS = 0
+    <spec config_var="ATTESTATION_SUBNET_EXTRA_BITS" fork="phase0" hash="c6453717">
+    ATTESTATION_SUBNET_EXTRA_BITS: Uint64 = 0
     </spec>
 
-- name: ATTESTATION_SUBNET_PREFIX_BITS
-  sources:
-    - file: config/params/config.go
-      search: AttestationSubnetPrefixBits\s+uint64
-      regex: true
-  spec: |
-    <spec config_var="ATTESTATION_SUBNET_PREFIX_BITS" fork="phase0" hash="d6f5ea62">
-    ATTESTATION_SUBNET_PREFIX_BITS: int = 6
-    </spec>
-
-- name: BALANCE_PER_ADDITIONAL_CUSTODY_GROUP
+- name: BALANCE_PER_ADDITIONAL_CUSTODY_GROUP#fulu
   sources:
     - file: config/params/config.go
       search: BalancePerAdditionalCustodyGroup\s+uint64
@@ -82,7 +92,7 @@
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: Gwei = 32000000000
     </spec>
 
-- name: BELLATRIX_FORK_EPOCH
+- name: BELLATRIX_FORK_EPOCH#bellatrix
   sources:
     - file: config/params/config.go
       search: BellatrixForkEpoch\s+primitives.Epoch
@@ -92,17 +102,17 @@
     BELLATRIX_FORK_EPOCH: Epoch = 144896
     </spec>
 
-- name: BELLATRIX_FORK_VERSION
+- name: BELLATRIX_FORK_VERSION#bellatrix
   sources:
     - file: config/params/config.go
       search: BellatrixForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="BELLATRIX_FORK_VERSION" fork="bellatrix" hash="e87eb2b4">
-    BELLATRIX_FORK_VERSION: Version = '0x02000000'
+    <spec config_var="BELLATRIX_FORK_VERSION" fork="bellatrix" hash="7ea61e41">
+    BELLATRIX_FORK_VERSION: Version = "0x02000000"
     </spec>
 
-- name: BLOB_SCHEDULE
+- name: BLOB_SCHEDULE#fulu
   sources:
     - file: config/params/config.go
       search: BlobSchedule\s+\[]BlobScheduleEntry
@@ -121,27 +131,27 @@
     )
     </spec>
 
-- name: BLOB_SIDECAR_SUBNET_COUNT
+- name: BLOB_SIDECAR_SUBNET_COUNT#deneb
   sources:
     - file: config/params/config.go
       search: BlobsidecarSubnetCount\s+uint64
       regex: true
   spec: |
-    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT" fork="deneb" hash="03cc9976">
-    BLOB_SIDECAR_SUBNET_COUNT = 6
+    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT" fork="deneb" hash="b0065991">
+    BLOB_SIDECAR_SUBNET_COUNT: Uint64 = 6
     </spec>
 
-- name: BLOB_SIDECAR_SUBNET_COUNT_ELECTRA
+- name: BLOB_SIDECAR_SUBNET_COUNT_ELECTRA#electra
   sources:
     - file: config/params/config.go
       search: BlobsidecarSubnetCountElectra\s+uint64
       regex: true
   spec: |
-    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT_ELECTRA" fork="electra" hash="37ca2860">
-    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA = 9
+    <spec config_var="BLOB_SIDECAR_SUBNET_COUNT_ELECTRA" fork="electra" hash="28e0f7b4">
+    BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: Uint64 = 9
     </spec>
 
-- name: CAPELLA_FORK_EPOCH
+- name: CAPELLA_FORK_EPOCH#capella
   sources:
     - file: config/params/config.go
       search: CapellaForkEpoch\s+primitives.Epoch
@@ -151,54 +161,85 @@
     CAPELLA_FORK_EPOCH: Epoch = 194048
     </spec>
 
-- name: CAPELLA_FORK_VERSION
+- name: CAPELLA_FORK_VERSION#capella
   sources:
     - file: config/params/config.go
       search: CapellaForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="CAPELLA_FORK_VERSION" fork="capella" hash="5f94766c">
-    CAPELLA_FORK_VERSION: Version = '0x03000000'
+    <spec config_var="CAPELLA_FORK_VERSION" fork="capella" hash="cff616a3">
+    CAPELLA_FORK_VERSION: Version = "0x03000000"
     </spec>
 
-- name: CHURN_LIMIT_QUOTIENT
+- name: CHURN_LIMIT_QUOTIENT#phase0
   sources:
     - file: config/params/config.go
-      search: ChurnLimitQuotient\s+uint64
+      search: \bChurnLimitQuotient\s+uint64
       regex: true
   spec: |
-    <spec config_var="CHURN_LIMIT_QUOTIENT" fork="phase0" hash="a43a1d33">
-    CHURN_LIMIT_QUOTIENT: uint64 = 65536
+    <spec config_var="CHURN_LIMIT_QUOTIENT" fork="phase0" hash="72355a28">
+    CHURN_LIMIT_QUOTIENT: Uint64 = 65536
     </spec>
 
-- name: CONTRIBUTION_DUE_BPS
+- name: CHURN_LIMIT_QUOTIENT_GLOAS#gloas
   sources: []
   spec: |
-    <spec config_var="CONTRIBUTION_DUE_BPS" fork="altair" hash="a3808203">
-    CONTRIBUTION_DUE_BPS: uint64 = 6667
+    <spec config_var="CHURN_LIMIT_QUOTIENT_GLOAS" fork="gloas" hash="8251a638">
+    CHURN_LIMIT_QUOTIENT_GLOAS: Uint64 = 32768
     </spec>
 
-- name: CUSTODY_REQUIREMENT
+- name: CONFIRMATION_BYZANTINE_THRESHOLD#phase0
+  sources: []
+  spec: |
+    <spec config_var="CONFIRMATION_BYZANTINE_THRESHOLD" fork="phase0" hash="340aaaea">
+    CONFIRMATION_BYZANTINE_THRESHOLD: Uint64 = 25
+    </spec>
+
+- name: CONSOLIDATION_CHURN_LIMIT_QUOTIENT#gloas
+  sources: []
+  spec: |
+    <spec config_var="CONSOLIDATION_CHURN_LIMIT_QUOTIENT" fork="gloas" hash="4e807e2c">
+    CONSOLIDATION_CHURN_LIMIT_QUOTIENT: Uint64 = 65536
+    </spec>
+
+- name: CONTRIBUTION_DUE_BPS#altair
+  sources:
+    - file: config/params/config.go
+      search: ContributionDueBPS\s+primitives.BP
+      regex: true
+  spec: |
+    <spec config_var="CONTRIBUTION_DUE_BPS" fork="altair" hash="cfa5c39f">
+    CONTRIBUTION_DUE_BPS: Uint64 = 6667
+    </spec>
+
+- name: CONTRIBUTION_DUE_BPS_GLOAS#gloas
+  sources: []
+  spec: |
+    <spec config_var="CONTRIBUTION_DUE_BPS_GLOAS" fork="gloas" hash="d21d5478">
+    CONTRIBUTION_DUE_BPS_GLOAS: Uint64 = 5000
+    </spec>
+
+- name: CUSTODY_REQUIREMENT#fulu
   sources:
     - file: config/params/config.go
       search: CustodyRequirement\s+uint64.*yaml:"CUSTODY_REQUIREMENT"
       regex: true
   spec: |
-    <spec config_var="CUSTODY_REQUIREMENT" fork="fulu" hash="b7340203">
-    CUSTODY_REQUIREMENT = 4
+    <spec config_var="CUSTODY_REQUIREMENT" fork="fulu" hash="380eb77b">
+    CUSTODY_REQUIREMENT: Uint64 = 4
     </spec>
 
-- name: DATA_COLUMN_SIDECAR_SUBNET_COUNT
+- name: DATA_COLUMN_SIDECAR_SUBNET_COUNT#fulu
   sources:
     - file: config/params/config.go
       search: DataColumnSidecarSubnetCount\s+uint64
       regex: true
   spec: |
-    <spec config_var="DATA_COLUMN_SIDECAR_SUBNET_COUNT" fork="fulu" hash="626172a6">
-    DATA_COLUMN_SIDECAR_SUBNET_COUNT = 128
+    <spec config_var="DATA_COLUMN_SIDECAR_SUBNET_COUNT" fork="fulu" hash="1344504d">
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: Uint64 = 128
     </spec>
 
-- name: DENEB_FORK_EPOCH
+- name: DENEB_FORK_EPOCH#deneb
   sources:
     - file: config/params/config.go
       search: DenebForkEpoch\s+primitives.Epoch
@@ -208,17 +249,47 @@
     DENEB_FORK_EPOCH: Epoch = 269568
     </spec>
 
-- name: DENEB_FORK_VERSION
+- name: DENEB_FORK_VERSION#deneb
   sources:
     - file: config/params/config.go
       search: DenebForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="DENEB_FORK_VERSION" fork="deneb" hash="da95e3b9">
-    DENEB_FORK_VERSION: Version = '0x04000000'
+    <spec config_var="DENEB_FORK_VERSION" fork="deneb" hash="ae4620d0">
+    DENEB_FORK_VERSION: Version = "0x04000000"
     </spec>
 
-- name: EJECTION_BALANCE
+- name: DEPOSIT_CHAIN_ID#phase0
+  sources:
+    - file: config/params/config.go
+      search: DepositChainID\s+uint64
+      regex: true
+  spec: |
+    <spec config_var="DEPOSIT_CHAIN_ID" fork="phase0" hash="59033cad">
+    DEPOSIT_CHAIN_ID: Uint64 = 1
+    </spec>
+
+- name: DEPOSIT_CONTRACT_ADDRESS#phase0
+  sources:
+    - file: config/params/config.go
+      search: DepositContractAddress\s+string
+      regex: true
+  spec: |
+    <spec config_var="DEPOSIT_CONTRACT_ADDRESS" fork="phase0" hash="ffeedf16">
+    DEPOSIT_CONTRACT_ADDRESS: ExecutionAddress = "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+    </spec>
+
+- name: DEPOSIT_NETWORK_ID#phase0
+  sources:
+    - file: config/params/config.go
+      search: DepositNetworkID\s+uint64
+      regex: true
+  spec: |
+    <spec config_var="DEPOSIT_NETWORK_ID" fork="phase0" hash="02da2a1a">
+    DEPOSIT_NETWORK_ID: Uint64 = 1
+    </spec>
+
+- name: EJECTION_BALANCE#phase0
   sources:
     - file: config/params/config.go
       search: EjectionBalance\s+uint64
@@ -228,7 +299,7 @@
     EJECTION_BALANCE: Gwei = 16000000000
     </spec>
 
-- name: ELECTRA_FORK_EPOCH
+- name: ELECTRA_FORK_EPOCH#electra
   sources:
     - file: config/params/config.go
       search: ElectraForkEpoch\s+primitives.Epoch
@@ -238,37 +309,37 @@
     ELECTRA_FORK_EPOCH: Epoch = 364032
     </spec>
 
-- name: ELECTRA_FORK_VERSION
+- name: ELECTRA_FORK_VERSION#electra
   sources:
     - file: config/params/config.go
       search: ElectraForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="ELECTRA_FORK_VERSION" fork="electra" hash="918d6c63">
-    ELECTRA_FORK_VERSION: Version = '0x05000000'
+    <spec config_var="ELECTRA_FORK_VERSION" fork="electra" hash="96389bae">
+    ELECTRA_FORK_VERSION: Version = "0x05000000"
     </spec>
 
-- name: EPOCHS_PER_SUBNET_SUBSCRIPTION
+- name: EPOCHS_PER_SUBNET_SUBSCRIPTION#phase0
   sources:
     - file: config/params/config.go
       search: EpochsPerSubnetSubscription\s+uint64
       regex: true
   spec: |
-    <spec config_var="EPOCHS_PER_SUBNET_SUBSCRIPTION" fork="phase0" hash="1b832329">
-    EPOCHS_PER_SUBNET_SUBSCRIPTION = 256
+    <spec config_var="EPOCHS_PER_SUBNET_SUBSCRIPTION" fork="phase0" hash="6ab5401b">
+    EPOCHS_PER_SUBNET_SUBSCRIPTION: Epoch = 256
     </spec>
 
-- name: ETH1_FOLLOW_DISTANCE
+- name: ETH1_FOLLOW_DISTANCE#phase0
   sources:
     - file: config/params/config.go
       search: Eth1FollowDistance\s+uint64
       regex: true
   spec: |
-    <spec config_var="ETH1_FOLLOW_DISTANCE" fork="phase0" hash="2f5ba1a0">
-    ETH1_FOLLOW_DISTANCE: uint64 = 2048
+    <spec config_var="ETH1_FOLLOW_DISTANCE" fork="phase0" hash="e4685f37">
+    ETH1_FOLLOW_DISTANCE: Uint64 = 2048
     </spec>
 
-- name: FULU_FORK_EPOCH
+- name: FULU_FORK_EPOCH#fulu
   sources:
     - file: config/params/config.go
       search: FuluForkEpoch\s+primitives.Epoch
@@ -278,107 +349,157 @@
     FULU_FORK_EPOCH: Epoch = 411392
     </spec>
 
-- name: FULU_FORK_VERSION
+- name: FULU_FORK_VERSION#fulu
   sources:
     - file: config/params/config.go
       search: FuluForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="FULU_FORK_VERSION" fork="fulu" hash="1e7fa12a">
-    FULU_FORK_VERSION: Version = '0x06000000'
+    <spec config_var="FULU_FORK_VERSION" fork="fulu" hash="e3da00c6">
+    FULU_FORK_VERSION: Version = "0x06000000"
     </spec>
 
-- name: GENESIS_DELAY
+- name: GAS_LIMIT_SCHEDULE#gloas
+  sources: []
+  spec: |
+    <spec config_var="GAS_LIMIT_SCHEDULE" fork="gloas" hash="28e945d9">
+    GAS_LIMIT_SCHEDULE: tuple[frozendict[str, Any], ...] = (
+    )
+    </spec>
+
+- name: GENESIS_DELAY#phase0
   sources:
     - file: config/params/config.go
       search: GenesisDelay\s+uint64
       regex: true
   spec: |
-    <spec config_var="GENESIS_DELAY" fork="phase0" hash="c50c75f1">
-    GENESIS_DELAY: uint64 = 604800
+    <spec config_var="GENESIS_DELAY" fork="phase0" hash="15d020f0">
+    GENESIS_DELAY: Uint64 = 604800
     </spec>
 
-- name: GENESIS_FORK_VERSION
+- name: GENESIS_FORK_VERSION#phase0
   sources:
     - file: config/params/config.go
       search: GenesisForkVersion\s+\[]byte
       regex: true
   spec: |
-    <spec config_var="GENESIS_FORK_VERSION" fork="phase0" hash="32bbe06e">
-    GENESIS_FORK_VERSION: Version = '0x00000000'
+    <spec config_var="GENESIS_FORK_VERSION" fork="phase0" hash="baad3832">
+    GENESIS_FORK_VERSION: Version = "0x00000000"
     </spec>
 
-- name: INACTIVITY_SCORE_BIAS
+- name: GLOAS_FORK_EPOCH#gloas
+  sources: []
+  spec: |
+    <spec config_var="GLOAS_FORK_EPOCH" fork="gloas" hash="c25152cf">
+    GLOAS_FORK_EPOCH: Epoch = 18446744073709551615
+    </spec>
+
+- name: GLOAS_FORK_VERSION#gloas
+  sources: []
+  spec: |
+    <spec config_var="GLOAS_FORK_VERSION" fork="gloas" hash="a167a763">
+    GLOAS_FORK_VERSION: Version = "0x07000000"
+    </spec>
+
+- name: HEZE_FORK_EPOCH#heze
+  sources: []
+  spec: |
+    <spec config_var="HEZE_FORK_EPOCH" fork="heze" hash="f4539c03">
+    HEZE_FORK_EPOCH: Epoch = 18446744073709551615
+    </spec>
+
+- name: HEZE_FORK_VERSION#heze
+  sources: []
+  spec: |
+    <spec config_var="HEZE_FORK_VERSION" fork="heze" hash="7b06f071">
+    HEZE_FORK_VERSION: Version = "0x08000000"
+    </spec>
+
+- name: INACTIVITY_SCORE_BIAS#altair
   sources:
     - file: config/params/config.go
       search: InactivityScoreBias\s+uint64
       regex: true
   spec: |
-    <spec config_var="INACTIVITY_SCORE_BIAS" fork="altair" hash="c84c24a9">
-    INACTIVITY_SCORE_BIAS: uint64 = 4
+    <spec config_var="INACTIVITY_SCORE_BIAS" fork="altair" hash="27a17e68">
+    INACTIVITY_SCORE_BIAS: Uint64 = 4
     </spec>
 
-- name: INACTIVITY_SCORE_RECOVERY_RATE
+- name: INACTIVITY_SCORE_RECOVERY_RATE#altair
   sources:
     - file: config/params/config.go
       search: InactivityScoreRecoveryRate\s+uint64
       regex: true
   spec: |
-    <spec config_var="INACTIVITY_SCORE_RECOVERY_RATE" fork="altair" hash="d7876320">
-    INACTIVITY_SCORE_RECOVERY_RATE: uint64 = 16
+    <spec config_var="INACTIVITY_SCORE_RECOVERY_RATE" fork="altair" hash="e1b07db3">
+    INACTIVITY_SCORE_RECOVERY_RATE: Uint64 = 16
     </spec>
 
-- name: MAXIMUM_GOSSIP_CLOCK_DISPARITY
+- name: INCLUSION_LIST_DUE_BPS#heze
+  sources: []
+  spec: |
+    <spec config_var="INCLUSION_LIST_DUE_BPS" fork="heze" hash="2b6a4401">
+    INCLUSION_LIST_DUE_BPS: Uint64 = 6667
+    </spec>
+
+- name: MAXIMUM_GOSSIP_CLOCK_DISPARITY#phase0
   sources:
     - file: config/params/config.go
       search: MaximumGossipClockDisparity\s+uint64
       regex: true
   spec: |
-    <spec config_var="MAXIMUM_GOSSIP_CLOCK_DISPARITY" fork="phase0" hash="12990b53">
-    MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500
+    <spec config_var="MAXIMUM_GOSSIP_CLOCK_DISPARITY" fork="phase0" hash="4455f907">
+    MAXIMUM_GOSSIP_CLOCK_DISPARITY: Uint64 = 500
     </spec>
 
-- name: MAX_BLOBS_PER_BLOCK
+- name: MAX_BLOBS_PER_BLOCK#deneb
   sources:
     - file: config/params/config.go
       search: DeprecatedMaxBlobsPerBlock\s+int
       regex: true
   spec: |
-    <spec config_var="MAX_BLOBS_PER_BLOCK" fork="deneb" hash="3e0b5383">
-    MAX_BLOBS_PER_BLOCK: uint64 = 6
+    <spec config_var="MAX_BLOBS_PER_BLOCK" fork="deneb" hash="da6a82cc">
+    MAX_BLOBS_PER_BLOCK: Uint64 = 6
     </spec>
 
-- name: MAX_BLOBS_PER_BLOCK_ELECTRA
+- name: MAX_BLOBS_PER_BLOCK_ELECTRA#electra
   sources:
     - file: config/params/config.go
       search: DeprecatedMaxBlobsPerBlockElectra\s+int
       regex: true
   spec: |
-    <spec config_var="MAX_BLOBS_PER_BLOCK_ELECTRA" fork="electra" hash="0d8ea1c9">
-    MAX_BLOBS_PER_BLOCK_ELECTRA: uint64 = 9
+    <spec config_var="MAX_BLOBS_PER_BLOCK_ELECTRA" fork="electra" hash="a03f0ed9">
+    MAX_BLOBS_PER_BLOCK_ELECTRA: Uint64 = 9
     </spec>
 
-- name: MAX_PAYLOAD_SIZE
+- name: MAX_PAYLOAD_SIZE#phase0
   sources:
     - file: config/params/config.go
       search: MaxPayloadSize\s+uint64
       regex: true
   spec: |
-    <spec config_var="MAX_PAYLOAD_SIZE" fork="phase0" hash="7f1566fb">
-    MAX_PAYLOAD_SIZE = 10485760
+    <spec config_var="MAX_PAYLOAD_SIZE" fork="phase0" hash="51a340f4">
+    MAX_PAYLOAD_SIZE: Uint64 = 10485760
     </spec>
 
-- name: MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT
+- name: MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT#deneb
   sources:
     - file: config/params/config.go
       search: MaxPerEpochActivationChurnLimit\s+uint64
       regex: true
   spec: |
-    <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" fork="deneb" hash="c4d9b0bb">
-    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: uint64 = 8
+    <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" fork="deneb" hash="3d7eeec7">
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT: Uint64 = 8
     </spec>
 
-- name: MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT
+- name: MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS#gloas
+  sources: []
+  spec: |
+    <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" fork="gloas" hash="5a9fd595">
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: Gwei = 256000000000
+    </spec>
+
+- name: MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT#electra
   sources:
     - file: config/params/config.go
       search: MaxPerEpochActivationExitChurnLimit\s+uint64
@@ -388,137 +509,123 @@
     MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT: Gwei = 256000000000
     </spec>
 
-- name: MAX_REQUEST_BLOB_SIDECARS
-  sources:
-    - file: config/params/config.go
-      search: MaxRequestBlobSidecars\s+uint64
-      regex: true
-  spec: |
-    <spec config_var="MAX_REQUEST_BLOB_SIDECARS" fork="deneb" hash="9b8ad30b">
-    MAX_REQUEST_BLOB_SIDECARS = 768
-    </spec>
-
-- name: MAX_REQUEST_BLOB_SIDECARS_ELECTRA
-  sources:
-    - file: config/params/config.go
-      search: MaxRequestBlobSidecarsElectra\s+uint64
-      regex: true
-  spec: |
-    <spec config_var="MAX_REQUEST_BLOB_SIDECARS_ELECTRA" fork="electra" hash="decc80ab">
-    MAX_REQUEST_BLOB_SIDECARS_ELECTRA = 1152
-    </spec>
-
-- name: MAX_REQUEST_BLOCKS
+- name: MAX_REQUEST_BLOCKS#phase0
   sources:
     - file: config/params/config.go
       search: MaxRequestBlocks\s+uint64
       regex: true
   spec: |
-    <spec config_var="MAX_REQUEST_BLOCKS" fork="phase0" hash="a9ae6c77">
-    MAX_REQUEST_BLOCKS = 1024
+    <spec config_var="MAX_REQUEST_BLOCKS" fork="phase0" hash="300478e3">
+    MAX_REQUEST_BLOCKS: Uint64 = 1024
     </spec>
 
-- name: MAX_REQUEST_BLOCKS_DENEB
+- name: MAX_REQUEST_BLOCKS_DENEB#deneb
   sources:
     - file: config/params/config.go
       search: MaxRequestBlocksDeneb\s+uint64
       regex: true
   spec: |
-    <spec config_var="MAX_REQUEST_BLOCKS_DENEB" fork="deneb" hash="8318964a">
-    MAX_REQUEST_BLOCKS_DENEB = 128
+    <spec config_var="MAX_REQUEST_BLOCKS_DENEB" fork="deneb" hash="0a5779c5">
+    MAX_REQUEST_BLOCKS_DENEB: Uint64 = 128
     </spec>
 
-- name: MAX_REQUEST_DATA_COLUMN_SIDECARS
+- name: MAX_REQUEST_INCLUSION_LIST#heze
+  sources: []
+  spec: |
+    <spec config_var="MAX_REQUEST_INCLUSION_LIST" fork="heze" hash="b64ddfd1">
+    MAX_REQUEST_INCLUSION_LIST: Uint64 = 16
+    </spec>
+
+- name: MAX_REQUEST_PAYLOADS#gloas
   sources:
     - file: config/params/config.go
-      search: MaxRequestDataColumnSidecars\s+uint64
+      search: MaxRequestPayloads\s+uint64
       regex: true
   spec: |
-    <spec config_var="MAX_REQUEST_DATA_COLUMN_SIDECARS" fork="fulu" hash="bbe5c650">
-    MAX_REQUEST_DATA_COLUMN_SIDECARS = 16384
+    <spec config_var="MAX_REQUEST_PAYLOADS" fork="gloas" hash="cb92d98e">
+    MAX_REQUEST_PAYLOADS: Uint64 = 128
     </spec>
 
-- name: MESSAGE_DOMAIN_INVALID_SNAPPY
+- name: MESSAGE_DOMAIN_INVALID_SNAPPY#phase0
   sources:
     - file: config/params/config.go
       search: MessageDomainInvalidSnappy\s+\[4\]byte
       regex: true
   spec: |
-    <spec config_var="MESSAGE_DOMAIN_INVALID_SNAPPY" fork="phase0" hash="6b6fc19a">
-    MESSAGE_DOMAIN_INVALID_SNAPPY: DomainType = '0x00000000'
+    <spec config_var="MESSAGE_DOMAIN_INVALID_SNAPPY" fork="phase0" hash="22665bca">
+    MESSAGE_DOMAIN_INVALID_SNAPPY: DomainType = "0x00000000"
     </spec>
 
-- name: MESSAGE_DOMAIN_VALID_SNAPPY
+- name: MESSAGE_DOMAIN_VALID_SNAPPY#phase0
   sources:
     - file: config/params/config.go
       search: MessageDomainValidSnappy\s+\[4\]byte
       regex: true
   spec: |
-    <spec config_var="MESSAGE_DOMAIN_VALID_SNAPPY" fork="phase0" hash="a6de155f">
-    MESSAGE_DOMAIN_VALID_SNAPPY: DomainType = '0x01000000'
+    <spec config_var="MESSAGE_DOMAIN_VALID_SNAPPY" fork="phase0" hash="cc96e0e3">
+    MESSAGE_DOMAIN_VALID_SNAPPY: DomainType = "0x01000000"
     </spec>
 
-- name: MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+- name: MIN_BUILDER_WITHDRAWABILITY_DELAY#gloas
+  sources:
+    - file: config/params/mainnet_config.go
+      search: MinBuilderWithdrawabilityDelay
+  spec: |
+    <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="1ad08a7c">
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: Epoch = 64
+    </spec>
+
+- name: MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS#deneb
   sources:
     - file: config/params/config.go
       search: MinEpochsForBlobsSidecarsRequest\s+primitives.Epoch
       regex: true
   spec: |
-    <spec config_var="MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS" fork="deneb" hash="3df9114c">
-    MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS = 4096
+    <spec config_var="MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS" fork="deneb" hash="1832eb33">
+    MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: Epoch = 4096
     </spec>
 
-- name: MIN_EPOCHS_FOR_BLOCK_REQUESTS
-  sources:
-    - file: config/params/config.go
-      search: MinEpochsForBlockRequests\s+uint64
-      regex: true
-  spec: |
-    <spec config_var="MIN_EPOCHS_FOR_BLOCK_REQUESTS" fork="phase0" hash="8ab131c4">
-    MIN_EPOCHS_FOR_BLOCK_REQUESTS = 33024
-    </spec>
-
-- name: MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
+- name: MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS#fulu
   sources:
     - file: config/params/config.go
       search: MinEpochsForDataColumnSidecarsRequest\s+primitives.Epoch
       regex: true
   spec: |
-    <spec config_var="MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" fork="fulu" hash="910e49bb">
-    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS = 4096
+    <spec config_var="MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" fork="fulu" hash="1ca47aad">
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: Epoch = 4096
     </spec>
 
-- name: MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
+- name: MIN_GENESIS_ACTIVE_VALIDATOR_COUNT#phase0
   sources:
     - file: config/params/config.go
       search: MinGenesisActiveValidatorCount\s+uint64
       regex: true
   spec: |
-    <spec config_var="MIN_GENESIS_ACTIVE_VALIDATOR_COUNT" fork="phase0" hash="7715513b">
-    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: uint64 = 16384
+    <spec config_var="MIN_GENESIS_ACTIVE_VALIDATOR_COUNT" fork="phase0" hash="d86e0ccc">
+    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: Uint64 = 16384
     </spec>
 
-- name: MIN_GENESIS_TIME
+- name: MIN_GENESIS_TIME#phase0
   sources:
     - file: config/params/config.go
       search: MinGenesisTime\s+uint64
       regex: true
   spec: |
-    <spec config_var="MIN_GENESIS_TIME" fork="phase0" hash="75c06876">
-    MIN_GENESIS_TIME: uint64 = 1606824000
+    <spec config_var="MIN_GENESIS_TIME" fork="phase0" hash="3abe635d">
+    MIN_GENESIS_TIME: Uint64 = 1606824000
     </spec>
 
-- name: MIN_PER_EPOCH_CHURN_LIMIT
+- name: MIN_PER_EPOCH_CHURN_LIMIT#phase0
   sources:
     - file: config/params/config.go
       search: MinPerEpochChurnLimit\s+uint64
       regex: true
   spec: |
-    <spec config_var="MIN_PER_EPOCH_CHURN_LIMIT" fork="phase0" hash="ff24b223">
-    MIN_PER_EPOCH_CHURN_LIMIT: uint64 = 4
+    <spec config_var="MIN_PER_EPOCH_CHURN_LIMIT" fork="phase0" hash="33e3586b">
+    MIN_PER_EPOCH_CHURN_LIMIT: Uint64 = 4
     </spec>
 
-- name: MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+- name: MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA#electra
   sources:
     - file: config/params/config.go
       search: MinPerEpochChurnLimitElectra\s+uint64
@@ -528,54 +635,84 @@
     MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: Gwei = 128000000000
     </spec>
 
-- name: MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+- name: MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
+  sources: []
+  spec: |
+    <spec config_var="MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" fork="heze" hash="4bab088f">
+    MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: Slot = 1
+    </spec>
+
+- name: MIN_VALIDATOR_WITHDRAWABILITY_DELAY#phase0
   sources:
     - file: config/params/config.go
       search: MinValidatorWithdrawabilityDelay\s+primitives.Epoch
       regex: true
   spec: |
-    <spec config_var="MIN_VALIDATOR_WITHDRAWABILITY_DELAY" fork="phase0" hash="5c4eeded">
-    MIN_VALIDATOR_WITHDRAWABILITY_DELAY: uint64 = 256
+    <spec config_var="MIN_VALIDATOR_WITHDRAWABILITY_DELAY" fork="phase0" hash="5c286670">
+    MIN_VALIDATOR_WITHDRAWABILITY_DELAY: Epoch = 256
     </spec>
 
-- name: NUMBER_OF_CUSTODY_GROUPS
+- name: NUMBER_OF_CUSTODY_GROUPS#fulu
   sources:
     - file: config/params/config.go
       search: NumberOfCustodyGroups\s+uint64
       regex: true
   spec: |
-    <spec config_var="NUMBER_OF_CUSTODY_GROUPS" fork="fulu" hash="05e3016e">
-    NUMBER_OF_CUSTODY_GROUPS = 128
+    <spec config_var="NUMBER_OF_CUSTODY_GROUPS" fork="fulu" hash="3b8dd1d5">
+    NUMBER_OF_CUSTODY_GROUPS: Uint64 = 128
     </spec>
 
-- name: PROPOSER_REORG_CUTOFF_BPS
-  sources: []
+- name: PAYLOAD_ATTESTATION_DUE_BPS#gloas
+  sources:
+    - file: config/params/config.go
+      search: PayloadAttestationDueBPS\s+primitives.BP
+      regex: true
   spec: |
-    <spec config_var="PROPOSER_REORG_CUTOFF_BPS" fork="phase0" hash="a487cc43">
-    PROPOSER_REORG_CUTOFF_BPS: uint64 = 1667
+    <spec config_var="PAYLOAD_ATTESTATION_DUE_BPS" fork="gloas" hash="d5ffbe84">
+    PAYLOAD_ATTESTATION_DUE_BPS: Uint64 = 7500
     </spec>
 
-- name: PROPOSER_SCORE_BOOST
+- name: PAYLOAD_DUE_BPS#gloas
+  sources:
+    - file: config/params/config.go
+      search: PayloadDueBPS\s+primitives.BP
+      regex: true
+  spec: |
+    <spec config_var="PAYLOAD_DUE_BPS" fork="gloas" hash="8f8ebf70">
+    PAYLOAD_DUE_BPS: Uint64 = 5000
+    </spec>
+
+- name: PROPOSER_REORG_CUTOFF_BPS#phase0
+  sources:
+    - file: config/params/config.go
+      search: ProposerReorgCutoffBPS\s+primitives.BP
+      regex: true
+  spec: |
+    <spec config_var="PROPOSER_REORG_CUTOFF_BPS" fork="phase0" hash="c554bd23">
+    PROPOSER_REORG_CUTOFF_BPS: Uint64 = 1667
+    </spec>
+
+- name: PROPOSER_SCORE_BOOST#phase0
   sources:
     - file: config/params/config.go
       search: ProposerScoreBoost\s+uint64
       regex: true
   spec: |
-    <spec config_var="PROPOSER_SCORE_BOOST" fork="phase0" hash="fbc878c6">
-    PROPOSER_SCORE_BOOST: uint64 = 40
+    <spec config_var="PROPOSER_SCORE_BOOST" fork="phase0" hash="5ac38798">
+    PROPOSER_SCORE_BOOST: Uint64 = 40
     </spec>
 
-- name: REORG_HEAD_WEIGHT_THRESHOLD
+- name: REORG_HEAD_WEIGHT_THRESHOLD#phase0
   sources:
     - file: config/params/config.go
       search: ReorgHeadWeightThreshold\s+uint64
       regex: true
   spec: |
-    <spec config_var="REORG_HEAD_WEIGHT_THRESHOLD" fork="phase0" hash="d4ecaa84">
-    REORG_HEAD_WEIGHT_THRESHOLD: uint64 = 20
+    <spec config_var="REORG_HEAD_WEIGHT_THRESHOLD" fork="phase0" hash="402a5acb">
+    REORG_HEAD_WEIGHT_THRESHOLD: Uint64 = 20
     </spec>
 
-- name: REORG_MAX_EPOCHS_SINCE_FINALIZATION
+- name: REORG_MAX_EPOCHS_SINCE_FINALIZATION#phase0
   sources:
     - file: config/params/config.go
       search: ReorgMaxEpochsSinceFinalization\s+primitives.Epoch
@@ -585,116 +722,119 @@
     REORG_MAX_EPOCHS_SINCE_FINALIZATION: Epoch = 2
     </spec>
 
-- name: REORG_PARENT_WEIGHT_THRESHOLD
+- name: REORG_PARENT_WEIGHT_THRESHOLD#phase0
   sources:
     - file: config/params/config.go
       search: ReorgParentWeightThreshold\s+uint64
       regex: true
   spec: |
-    <spec config_var="REORG_PARENT_WEIGHT_THRESHOLD" fork="phase0" hash="cb81e3da">
-    REORG_PARENT_WEIGHT_THRESHOLD: uint64 = 160
+    <spec config_var="REORG_PARENT_WEIGHT_THRESHOLD" fork="phase0" hash="3f4de3d8">
+    REORG_PARENT_WEIGHT_THRESHOLD: Uint64 = 160
     </spec>
 
-- name: SAMPLES_PER_SLOT
+- name: SAMPLES_PER_SLOT#fulu
   sources:
     - file: config/params/config.go
       search: SamplesPerSlot\s+uint64
       regex: true
   spec: |
-    <spec config_var="SAMPLES_PER_SLOT" fork="fulu" hash="158798b8">
-    SAMPLES_PER_SLOT = 8
+    <spec config_var="SAMPLES_PER_SLOT" fork="fulu" hash="ecb8eaf2">
+    SAMPLES_PER_SLOT: Uint64 = 8
     </spec>
 
-- name: SECONDS_PER_ETH1_BLOCK
+- name: SECONDS_PER_ETH1_BLOCK#phase0
   sources:
     - file: config/params/config.go
       search: SecondsPerETH1Block\s+uint64
       regex: true
   spec: |
-    <spec config_var="SECONDS_PER_ETH1_BLOCK" fork="phase0" hash="90c9f3d1">
-    SECONDS_PER_ETH1_BLOCK: uint64 = 14
+    <spec config_var="SECONDS_PER_ETH1_BLOCK" fork="phase0" hash="0c643d31">
+    SECONDS_PER_ETH1_BLOCK: Uint64 = 14
     </spec>
 
-- name: SECONDS_PER_SLOT
-  sources:
-    - file: config/params/config.go
-      search: SecondsPerSlot\s+uint64
-      regex: true
-  spec: |
-    <spec config_var="SECONDS_PER_SLOT" fork="phase0" hash="a9118f10">
-    SECONDS_PER_SLOT: uint64 = 12
-    </spec>
-
-- name: SHARD_COMMITTEE_PERIOD
+- name: SHARD_COMMITTEE_PERIOD#phase0
   sources:
     - file: config/params/config.go
       search: ShardCommitteePeriod\s+primitives.Epoch
       regex: true
   spec: |
-    <spec config_var="SHARD_COMMITTEE_PERIOD" fork="phase0" hash="5d0e85a4">
-    SHARD_COMMITTEE_PERIOD: uint64 = 256
+    <spec config_var="SHARD_COMMITTEE_PERIOD" fork="phase0" hash="87d0ca70">
+    SHARD_COMMITTEE_PERIOD: Epoch = 256
     </spec>
 
-- name: SLOT_DURATION_MS
-  sources: []
+- name: SLOT_DURATION_MS#phase0
+  sources:
+    - file: config/params/config.go
+      search: SlotDurationMilliseconds\s+uint64
+      regex: true
   spec: |
-    <spec config_var="SLOT_DURATION_MS" fork="phase0" hash="b6d4ba6d">
-    SLOT_DURATION_MS: uint64 = 12000
+    <spec config_var="SLOT_DURATION_MS" fork="phase0" hash="6c1935e7">
+    SLOT_DURATION_MS: Uint64 = 12000
     </spec>
 
-- name: SUBNETS_PER_NODE
+- name: SUBNETS_PER_NODE#phase0
   sources:
     - file: config/params/config.go
       search: SubnetsPerNode\s+uint64
       regex: true
   spec: |
-    <spec config_var="SUBNETS_PER_NODE" fork="phase0" hash="4799f8f3">
-    SUBNETS_PER_NODE = 2
+    <spec config_var="SUBNETS_PER_NODE" fork="phase0" hash="d8a1cb61">
+    SUBNETS_PER_NODE: Uint64 = 2
     </spec>
 
-- name: SYNC_MESSAGE_DUE_BPS
+- name: SYNC_MESSAGE_DUE_BPS#altair
+  sources:
+    - file: config/params/config.go
+      search: SyncMessageDueBPS\s+primitives.BP
+      regex: true
+  spec: |
+    <spec config_var="SYNC_MESSAGE_DUE_BPS" fork="altair" hash="21b16e07">
+    SYNC_MESSAGE_DUE_BPS: Uint64 = 3333
+    </spec>
+
+- name: SYNC_MESSAGE_DUE_BPS_GLOAS#gloas
   sources: []
   spec: |
-    <spec config_var="SYNC_MESSAGE_DUE_BPS" fork="altair" hash="791b29d8">
-    SYNC_MESSAGE_DUE_BPS: uint64 = 3333
+    <spec config_var="SYNC_MESSAGE_DUE_BPS_GLOAS" fork="gloas" hash="b70fe65b">
+    SYNC_MESSAGE_DUE_BPS_GLOAS: Uint64 = 2500
     </spec>
 
-- name: TERMINAL_BLOCK_HASH
+- name: TERMINAL_BLOCK_HASH#bellatrix
   sources:
     - file: config/params/config.go
       search: TerminalBlockHash\s+common.Hash
       regex: true
   spec: |
-    <spec config_var="TERMINAL_BLOCK_HASH" fork="bellatrix" hash="964c3bfe">
-    TERMINAL_BLOCK_HASH: Hash32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
+    <spec config_var="TERMINAL_BLOCK_HASH" fork="bellatrix" hash="ad01ba94">
+    TERMINAL_BLOCK_HASH: Hash32 = "0x0000000000000000000000000000000000000000000000000000000000000000"
     </spec>
 
-- name: TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+- name: TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH#bellatrix
   sources:
     - file: config/params/config.go
       search: TerminalBlockHashActivationEpoch\s+primitives.Epoch
       regex: true
   spec: |
-    <spec config_var="TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" fork="bellatrix" hash="81928369">
-    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH = 18446744073709551615
+    <spec config_var="TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" fork="bellatrix" hash="331e75a1">
+    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: Epoch = 18446744073709551615
     </spec>
 
-- name: TERMINAL_TOTAL_DIFFICULTY
+- name: TERMINAL_TOTAL_DIFFICULTY#bellatrix
   sources:
     - file: config/params/config.go
       search: TerminalTotalDifficulty\s+string
       regex: true
   spec: |
-    <spec config_var="TERMINAL_TOTAL_DIFFICULTY" fork="bellatrix" hash="e0f3a816">
-    TERMINAL_TOTAL_DIFFICULTY = 58750000000000000000000
+    <spec config_var="TERMINAL_TOTAL_DIFFICULTY" fork="bellatrix" hash="7fb79a4e">
+    TERMINAL_TOTAL_DIFFICULTY: Uint256 = 58750000000000000000000
     </spec>
 
-- name: VALIDATOR_CUSTODY_REQUIREMENT
+- name: VALIDATOR_CUSTODY_REQUIREMENT#fulu
   sources:
     - file: config/params/config.go
       search: ValidatorCustodyRequirement\s+uint64
       regex: true
   spec: |
-    <spec config_var="VALIDATOR_CUSTODY_REQUIREMENT" fork="fulu" hash="4dfc4457">
-    VALIDATOR_CUSTODY_REQUIREMENT = 8
+    <spec config_var="VALIDATOR_CUSTODY_REQUIREMENT" fork="fulu" hash="87f04d3e">
+    VALIDATOR_CUSTODY_REQUIREMENT: Uint64 = 8
     </spec>

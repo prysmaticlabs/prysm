@@ -35,8 +35,11 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProof(
 	if err := json.Unmarshal(aggregateAttestationResponse.Data, &attData); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal aggregate attestation data")
 	}
+	if attData == nil {
+		return nil, errors.New("aggregate attestation is nil")
+	}
 
-	aggregatedAttestation, err := convertAttestationToProto(attData)
+	aggregatedAttestation, err := attData.ToConsensus()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert aggregate attestation json to proto")
 	}
@@ -70,8 +73,11 @@ func (c *beaconApiValidatorClient) submitAggregateSelectionProofElectra(
 	if err := json.Unmarshal(aggregateAttestationResponse.Data, &attData); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal aggregate attestation electra data")
 	}
+	if attData == nil {
+		return nil, errors.New("aggregate attestation is nil")
+	}
 
-	aggregatedAttestation, err := convertAttestationElectraToProto(attData)
+	aggregatedAttestation, err := attData.ToConsensus()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert aggregate attestation json to proto")
 	}
@@ -129,7 +135,7 @@ func (c *beaconApiValidatorClient) aggregateAttestation(
 	endpoint := apiutil.BuildURL("/eth/v2/validator/aggregate_attestation", params)
 
 	var aggregateAttestationResponse structs.AggregateAttestationResponse
-	err := c.jsonRestHandler.Get(ctx, endpoint, &aggregateAttestationResponse)
+	err := c.handler.Get(ctx, endpoint, &aggregateAttestationResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +156,7 @@ func (c *beaconApiValidatorClient) aggregateAttestationElectra(
 	endpoint := apiutil.BuildURL("/eth/v2/validator/aggregate_attestation", params)
 
 	var aggregateAttestationResponse structs.AggregateAttestationResponse
-	if err := c.jsonRestHandler.Get(ctx, endpoint, &aggregateAttestationResponse); err != nil {
+	if err := c.handler.Get(ctx, endpoint, &aggregateAttestationResponse); err != nil {
 		return nil, err
 	}
 

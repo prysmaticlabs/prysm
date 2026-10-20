@@ -27,6 +27,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/container/slice"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
@@ -954,8 +955,9 @@ func TestBlocksFetcher_requestBlocksDownscoreOnInvalidData(t *testing.T) {
 	assert.Equal(t, -1, scoreBeforeRequest)
 
 	// Use fetchBlocksFromPeer which includes the downscoring logic
-	_, _, err = fetcher.fetchBlocksFromPeer(ctx, 100, 64, []peer.ID{p2.PeerID()})
-	assert.ErrorContains(t, errNoPeersAvailable.Error(), err)
+	r := &fetchRequestResponse{start: 100, count: 64}
+	fetcher.fetchBlocksFromPeer(ctx, r, []peer.ID{p2.PeerID()})
+	assert.ErrorContains(t, errNoPeersAvailable.Error(), r.err)
 
 	// Verify the peer was downscored
 	scoreAfterRequest, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.PeerID())
@@ -1360,15 +1362,16 @@ func TestBlockFetcher_HasSufficientBandwidth(t *testing.T) {
 
 func TestFetchSidecars(t *testing.T) {
 	ctx := t.Context()
-	t.Run("No blocks", func(t *testing.T) {
+	t.Run("empty batch returns without fetching sidecars", func(t *testing.T) {
 		fetcher := new(blocksFetcher)
 
-		pid, err := fetcher.fetchSidecars(ctx, "", nil, []blocks.BlockWithROSidecars{})
-		assert.NoError(t, err)
-		assert.Equal(t, peer.ID(""), pid)
+		r := &fetchRequestResponse{bwb: []blocks.BlockWithROSidecars{}}
+		fetcher.fetchSidecars(ctx, r, nil)
+		assert.NoError(t, r.err)
+		assert.Equal(t, peer.ID(""), r.blobsFrom)
 	})
 
-	t.Run("Nominal", func(t *testing.T) {
+	t.Run("route columns for blocks within retention", func(t *testing.T) {
 		const numberOfColumns = uint64(fieldparams.NumberOfColumns)
 		cfg := params.BeaconConfig()
 		samplesPerSlot := cfg.SamplesPerSlot
@@ -1447,33 +1450,41 @@ func TestFetchSidecars(t *testing.T) {
 		err = dataColumnStorage.Save(verifiedRoDataColumnSidecarsFulu2)
 		require.NoError(t, err)
 
-		// Create a blocks fetcher.
-		fetcher := &blocksFetcher{
-			clock: clock,
-			p2p:   p2ptest.NewTestP2P(t),
-			dcs:   dataColumnStorage,
+		for _, test := range []struct {
+			name        string
+			headSlot    primitives.Slot
+			wantColumns uint64
+			wantCarried uint64
+		}{
+			{name: "block after head keeps columns attached", wantColumns: samplesPerSlot},
+			{name: "block at head carries columns separately", headSlot: roFuluBlock2.Block().Slot(), wantCarried: samplesPerSlot},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				fetcher := &blocksFetcher{
+					clock: clock,
+					chain: &mock.ChainService{MockHeadSlot: &test.headSlot},
+					p2p:   p2ptest.NewTestP2P(t),
+					dcs:   dataColumnStorage,
+				}
+				blocksWithSidecars := []blocks.BlockWithROSidecars{
+					{Block: roDebebBlock},
+					{Block: roFuluBlock1},
+					{Block: roFuluBlock2},
+				}
+				r := &fetchRequestResponse{bwb: blocksWithSidecars}
+				fetcher.fetchSidecars(t.Context(), r, nil)
+				require.NoError(t, r.err)
+				require.Equal(t, peer.ID(""), r.blobsFrom)
+
+				require.Equal(t, 0, len(blocksWithSidecars[0].Blobs))
+				require.Equal(t, 0, len(blocksWithSidecars[0].Columns))
+				require.Equal(t, 0, len(blocksWithSidecars[1].Blobs))
+				require.Equal(t, 0, len(blocksWithSidecars[1].Columns))
+				require.Equal(t, 0, len(blocksWithSidecars[2].Blobs))
+				require.Equal(t, test.wantColumns, uint64(len(blocksWithSidecars[2].Columns)))
+				require.Equal(t, test.wantCarried, uint64(len(r.columnsToSave)))
+			})
 		}
-
-		// Fetch sidecars.
-		blocksWithSidecars := []blocks.BlockWithROSidecars{
-			{Block: roDebebBlock},
-			{Block: roFuluBlock1},
-			{Block: roFuluBlock2},
-		}
-		pid, err := fetcher.fetchSidecars(ctx, "", nil, blocksWithSidecars)
-		require.NoError(t, err)
-		require.Equal(t, peer.ID(""), pid)
-
-		// Verify that block with sidecars were modified correctly.
-		require.Equal(t, 0, len(blocksWithSidecars[0].Blobs))
-		require.Equal(t, 0, len(blocksWithSidecars[0].Columns))
-		require.Equal(t, 0, len(blocksWithSidecars[1].Blobs))
-		require.Equal(t, 0, len(blocksWithSidecars[1].Columns))
-		require.Equal(t, 0, len(blocksWithSidecars[2].Blobs))
-
-		// We don't check the content of the columns here. The extensive test is done
-		// in TestFetchDataColumnsSidecars.
-		require.Equal(t, samplesPerSlot, uint64(len(blocksWithSidecars[2].Columns)))
 	})
 }
 
@@ -1565,7 +1576,7 @@ func TestFirstFuluIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			blocks := tt.setupBlocks(t)
-			index, err := findFirstFuluIndex(blocks)
+			index, err := findFirstForkIndex(blocks, version.Fulu)
 
 			if tt.expectError {
 				require.NotNil(t, err)

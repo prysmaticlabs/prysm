@@ -12,6 +12,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +53,7 @@ var (
 //	    process_participation_flag_updates(state)
 //	    process_sync_committee_updates(state)
 func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
-	_, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
+	ctx, span := trace.StartSpan(ctx, "electra.ProcessEpoch")
 	defer span.End()
 
 	if state == nil || state.IsNil() {
@@ -81,7 +82,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 	if err := ProcessRegistryUpdates(ctx, state); err != nil {
 		return errors.Wrap(err, "could not process registry updates")
 	}
-	if err := ProcessSlashings(state); err != nil {
+	if err := ProcessSlashings(ctx, state); err != nil {
 		return err
 	}
 	state, err = ProcessEth1DataReset(state)
@@ -131,7 +132,20 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 //	      assert len(body.deposits) == min(MAX_DEPOSITS, eth1_deposit_index_limit - state.eth1_deposit_index)
 //	  else:
 //	      assert len(body.deposits) == 0
+//
+// From Fulu onward the former deposit mechanism is gone entirely, so the Electra limit is
+// replaced by a flat assertion.
+//
+//	# [Modified in Fulu]
+//	assert len(body.deposits) == 0
 func VerifyBlockDepositLength(body interfaces.ReadOnlyBeaconBlockBody, state state.BeaconState) error {
+	if state.Version() >= version.Fulu {
+		if len(body.Deposits()) != 0 {
+			return fmt.Errorf("eth1 bridge deposits are not allowed from Fulu, wanted: 0, got: %d", len(body.Deposits()))
+		}
+		return nil
+	}
+
 	eth1Data := state.Eth1Data()
 	requestsStartIndex, err := state.DepositRequestsStartIndex()
 	if err != nil {

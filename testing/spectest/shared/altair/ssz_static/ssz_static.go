@@ -5,11 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	common "github.com/OffchainLabs/prysm/v7/testing/spectest/shared/common/ssz_static"
-	fssz "github.com/prysmaticlabs/fastssz"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.
@@ -21,7 +22,7 @@ func customHtr(t *testing.T, htrs []common.HTR, object any) []common.HTR {
 	switch object.(type) {
 	case *ethpb.BeaconStateAltair:
 		htrs = append(htrs, func(s any) ([32]byte, error) {
-			beaconState, err := state_native.InitializeFromProtoAltair(s.(*ethpb.BeaconStateAltair))
+			beaconState, err := state_native.InitializeFromProtoUnsafeAltair(s.(*ethpb.BeaconStateAltair))
 			require.NoError(t, err)
 			return beaconState.HashTreeRoot(context.Background())
 		})
@@ -116,10 +117,10 @@ func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 		return nil, errors.New("type not found")
 	}
 	var err error
-	if o, ok := obj.(fssz.Unmarshaler); ok {
+	if o, ok := obj.(ssz.Unmarshaler); ok {
 		err = o.UnmarshalSSZ(serializedBytes)
 	} else {
-		err = errors.New("could not unmarshal object, not a fastssz compatible object")
+		err = errors.New("could not unmarshal object, does not implement Unmarshaler interface")
 	}
 	return obj, err
 }

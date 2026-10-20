@@ -3,6 +3,7 @@ package debug
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"math"
@@ -18,6 +19,7 @@ import (
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
@@ -232,6 +234,64 @@ func TestGetBeaconStateV2(t *testing.T) {
 		assert.Equal(t, "123", st.Slot)
 		assert.Equal(t, int(params.BeaconConfig().MinSeedLookahead+1)*int(params.BeaconConfig().SlotsPerEpoch), len(st.ProposerLookahead))
 	})
+	t.Run("Gloas", func(t *testing.T) {
+		fakeState, err := util.NewBeaconStateGloas()
+		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
+		chainService := &blockchainmock.ChainService{}
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/beacon/states/{state_id}", nil)
+		request.SetPathValue("state_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBeaconStateV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetBeaconStateV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, version.String(version.Gloas), resp.Version)
+		st := &structs.BeaconStateGloas{}
+		require.NoError(t, json.Unmarshal(resp.Data, st))
+		assert.Equal(t, "123", st.Slot)
+		assert.Equal(t, int(params.BeaconConfig().MinSeedLookahead+1)*int(params.BeaconConfig().SlotsPerEpoch), len(st.ProposerLookahead))
+	})
+	t.Run("Heze", func(t *testing.T) {
+		fakeState, err := util.NewBeaconStateHeze()
+		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
+		chainService := &blockchainmock.ChainService{}
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/beacon/states/{state_id}", nil)
+		request.SetPathValue("state_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBeaconStateV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetBeaconStateV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, version.String(version.Heze), resp.Version)
+		st := &structs.BeaconStateHeze{}
+		require.NoError(t, json.Unmarshal(resp.Data, st))
+		assert.Equal(t, "123", st.Slot)
+		assert.Equal(t, int(params.BeaconConfig().MinSeedLookahead+1)*int(params.BeaconConfig().SlotsPerEpoch), len(st.ProposerLookahead))
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlock()
@@ -276,7 +336,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		fakeState, err := util.NewBeaconStateBellatrix()
 		require.NoError(t, err)
-		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), fakeState)
 		require.NoError(t, err)
 		chainService := &blockchainmock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -427,6 +487,78 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		require.NoError(t, err)
 		assert.DeepEqual(t, sszExpected, writer.Body.Bytes())
 	})
+	t.Run("Electra", func(t *testing.T) {
+		fakeState, err := util.NewBeaconStateElectra()
+		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
+
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/beacon/states/{state_id}", nil)
+		request.SetPathValue("state_id", "head")
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBeaconStateV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, version.String(version.Electra), writer.Header().Get(api.VersionHeader))
+		sszExpected, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+		assert.DeepEqual(t, sszExpected, writer.Body.Bytes())
+	})
+	t.Run("Fulu", func(t *testing.T) {
+		fakeState, err := util.NewBeaconStateFulu()
+		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
+
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/beacon/states/{state_id}", nil)
+		request.SetPathValue("state_id", "head")
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBeaconStateV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, version.String(version.Fulu), writer.Header().Get(api.VersionHeader))
+		sszExpected, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+		assert.DeepEqual(t, sszExpected, writer.Body.Bytes())
+	})
+	t.Run("Gloas", func(t *testing.T) {
+		fakeState, err := util.NewBeaconStateGloas()
+		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
+
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/beacon/states/{state_id}", nil)
+		request.SetPathValue("state_id", "head")
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBeaconStateV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, version.String(version.Gloas), writer.Header().Get(api.VersionHeader))
+		sszExpected, err := fakeState.MarshalSSZ()
+		require.NoError(t, err)
+		assert.DeepEqual(t, sszExpected, writer.Body.Bytes())
+	})
 }
 
 func TestGetForkChoiceHeadsV2(t *testing.T) {
@@ -524,6 +656,24 @@ func TestGetForkChoice(t *testing.T) {
 	require.Equal(t, "2", resp.FinalizedCheckpoint.Epoch)
 }
 
+func TestGetForkChoiceV2(t *testing.T) {
+	store := doublylinkedtree.New()
+	fRoot := [32]byte{'a'}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 2, Root: fRoot}
+	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
+	s := &Server{ForkchoiceFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/fork_choice", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetForkChoiceV2(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp := &structs.GetForkChoiceDumpV2Response{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.Equal(t, "2", resp.FinalizedCheckpoint.Epoch)
+}
+
 func TestDataColumnSidecars(t *testing.T) {
 	t.Run("Fulu fork not configured", func(t *testing.T) {
 		// Save the original config
@@ -546,6 +696,7 @@ func TestDataColumnSidecars(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -581,6 +732,7 @@ func TestDataColumnSidecars(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -617,6 +769,7 @@ func TestDataColumnSidecars(t *testing.T) {
 
 		// Test with invalid index (out of range)
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head?indices=9999", nil)
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -653,6 +806,7 @@ func TestDataColumnSidecars(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -696,6 +850,7 @@ func TestDataColumnSidecars(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.SetPathValue("block_id", "head")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -704,7 +859,181 @@ func TestDataColumnSidecars(t *testing.T) {
 
 		resp := &structs.GetDebugDataColumnSidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.Equal(t, 0, len(resp.Data))
+		var data []*structs.DataColumnSidecar
+		require.NoError(t, json.Unmarshal(resp.Data, &data))
+		require.Equal(t, 0, len(data))
+	})
+
+	t.Run("Gloas data columns", func(t *testing.T) {
+		originalConfig := params.BeaconConfig()
+		defer func() { params.OverrideBeaconConfig(originalConfig) }()
+
+		config := params.BeaconConfig().Copy()
+		config.FuluForkEpoch = 0
+		config.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		signedTestBlock := util.NewBeaconBlockGloas()
+		signedTestBlock.Block.Slot = 7
+		roBlock, err := blocks.NewSignedBeaconBlock(signedTestBlock)
+		require.NoError(t, err)
+
+		chainService := &blockchainmock.ChainService{}
+		currentSlot := primitives.Slot(7)
+		chainService.Slot = &currentSlot
+		chainService.OptimisticRoots = make(map[[32]byte]bool)
+		chainService.FinalizedRoots = make(map[[32]byte]bool)
+
+		beaconRoot := bytesutil.PadTo([]byte{0xab, 0xcd}, 32)
+		cell := bytesutil.PadTo([]byte{0x11, 0x22}, 2048)
+		proof := bytesutil.PadTo([]byte{0x33}, 48)
+		gloasSidecar := &ethpb.DataColumnSidecarGloas{
+			Index:           3,
+			Column:          [][]byte{cell},
+			KzgProofs:       [][]byte{proof},
+			Slot:            7,
+			BeaconBlockRoot: beaconRoot,
+		}
+		roDc, err := blocks.NewRODataColumnGloas(gloasSidecar)
+		require.NoError(t, err)
+		verified := blocks.NewVerifiedRODataColumn(roDc)
+
+		mockBlocker := &testutil.MockBlocker{
+			DataColumnsFunc: func(ctx context.Context, id string, indices []int) ([]blocks.VerifiedRODataColumn, *core.RpcError) {
+				return []blocks.VerifiedRODataColumn{verified}, nil
+			},
+			BlockToReturn: roBlock,
+		}
+
+		s := &Server{
+			GenesisTimeFetcher:    chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			Blocker:               mockBlocker,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.DataColumnSidecars(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+
+		resp := &structs.GetDebugDataColumnSidecarsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, version.String(version.Gloas), resp.Version)
+
+		var data []*structs.DataColumnSidecarGloas
+		require.NoError(t, json.Unmarshal(resp.Data, &data))
+		require.Equal(t, 1, len(data))
+		require.Equal(t, "3", data[0].Index)
+		require.Equal(t, "7", data[0].Slot)
+		require.Equal(t, hexutil.Encode(beaconRoot), data[0].BeaconBlockRoot)
+		require.Equal(t, 1, len(data[0].Column))
+		require.Equal(t, hexutil.Encode(cell), data[0].Column[0])
+		require.Equal(t, 1, len(data[0].KzgProofs))
+		require.Equal(t, hexutil.Encode(proof), data[0].KzgProofs[0])
+	})
+
+	t.Run("SSZ response uses list framing", func(t *testing.T) {
+		originalConfig := params.BeaconConfig()
+		defer func() { params.OverrideBeaconConfig(originalConfig) }()
+
+		config := params.BeaconConfig().Copy()
+		config.FuluForkEpoch = 0
+		config.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		signedTestBlock := util.NewBeaconBlockGloas()
+		signedTestBlock.Block.Slot = 7
+		roBlock, err := blocks.NewSignedBeaconBlock(signedTestBlock)
+		require.NoError(t, err)
+
+		chainService := &blockchainmock.ChainService{}
+		currentSlot := primitives.Slot(7)
+		chainService.Slot = &currentSlot
+		chainService.OptimisticRoots = make(map[[32]byte]bool)
+		chainService.FinalizedRoots = make(map[[32]byte]bool)
+
+		sidecars := []blocks.VerifiedRODataColumn{testGloasDataColumn(t, 0), testGloasDataColumn(t, 1)}
+		mockBlocker := &testutil.MockBlocker{
+			DataColumnsFunc: func(ctx context.Context, id string, indices []int) ([]blocks.VerifiedRODataColumn, *core.RpcError) {
+				return sidecars, nil
+			},
+			BlockToReturn: roBlock,
+		}
+
+		s := &Server{
+			GenesisTimeFetcher:    chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			Blocker:               mockBlocker,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.DataColumnSidecars(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		require.Equal(t, version.String(version.Gloas), writer.Header().Get(api.VersionHeader))
+
+		first, err := sidecars[0].MarshalSSZ()
+		require.NoError(t, err)
+		second, err := sidecars[1].MarshalSSZ()
+		require.NoError(t, err)
+		body := writer.Body.Bytes()
+		require.Equal(t, 8+len(first)+len(second), len(body))
+		assert.Equal(t, uint32(8), binary.LittleEndian.Uint32(body[0:4]))
+		assert.Equal(t, uint32(8+len(first)), binary.LittleEndian.Uint32(body[4:8]))
+		require.DeepEqual(t, first, body[8:8+len(first)])
+		require.DeepEqual(t, second, body[8+len(first):])
+	})
+
+	t.Run("SSZ response with no sidecars is empty", func(t *testing.T) {
+		originalConfig := params.BeaconConfig()
+		defer func() { params.OverrideBeaconConfig(originalConfig) }()
+
+		config := params.BeaconConfig().Copy()
+		config.FuluForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		signedTestBlock := util.NewBeaconBlock()
+		roBlock, err := blocks.NewSignedBeaconBlock(signedTestBlock)
+		require.NoError(t, err)
+
+		chainService := &blockchainmock.ChainService{}
+		currentSlot := primitives.Slot(0)
+		chainService.Slot = &currentSlot
+		chainService.OptimisticRoots = make(map[[32]byte]bool)
+		chainService.FinalizedRoots = make(map[[32]byte]bool)
+
+		mockBlocker := &testutil.MockBlocker{
+			DataColumnsFunc: func(ctx context.Context, id string, indices []int) ([]blocks.VerifiedRODataColumn, *core.RpcError) {
+				return []blocks.VerifiedRODataColumn{}, nil
+			},
+			BlockToReturn: roBlock,
+		}
+
+		s := &Server{
+			GenesisTimeFetcher:    chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			Blocker:               mockBlocker,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/beacon/data_column_sidecars/head", nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.SetPathValue("block_id", "head")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.DataColumnSidecars(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		require.Equal(t, 0, writer.Body.Len())
 	})
 }
 
@@ -784,6 +1113,19 @@ func TestParseDataColumnIndices(t *testing.T) {
 	}
 }
 
+// testGloasDataColumn builds a minimal Gloas data column sidecar for SSZ framing assertions.
+func testGloasDataColumn(t *testing.T, index uint64) blocks.VerifiedRODataColumn {
+	roDc, err := blocks.NewRODataColumnGloas(&ethpb.DataColumnSidecarGloas{
+		Index:           index,
+		Column:          [][]byte{bytesutil.PadTo([]byte{byte(index)}, 2048)},
+		KzgProofs:       [][]byte{bytesutil.PadTo([]byte{0x33}, 48)},
+		Slot:            7,
+		BeaconBlockRoot: bytesutil.PadTo([]byte{0xab, 0xcd}, 32),
+	})
+	require.NoError(t, err)
+	return blocks.NewVerifiedRODataColumn(roDc)
+}
+
 func TestBuildDataColumnSidecarsSSZResponse(t *testing.T) {
 	t.Run("empty data columns", func(t *testing.T) {
 		result, err := buildDataColumnSidecarsSSZResponse([]blocks.VerifiedRODataColumn{})
@@ -791,8 +1133,19 @@ func TestBuildDataColumnSidecarsSSZResponse(t *testing.T) {
 		require.DeepEqual(t, []byte{}, result)
 	})
 
-	t.Run("get SSZ size", func(t *testing.T) {
-		size := (&ethpb.DataColumnSidecar{}).SizeSSZ()
-		assert.Equal(t, true, size > 0)
+	t.Run("list framing", func(t *testing.T) {
+		sidecars := []blocks.VerifiedRODataColumn{testGloasDataColumn(t, 0), testGloasDataColumn(t, 1)}
+		first, err := sidecars[0].MarshalSSZ()
+		require.NoError(t, err)
+		second, err := sidecars[1].MarshalSSZ()
+		require.NoError(t, err)
+
+		result, err := buildDataColumnSidecarsSSZResponse(sidecars)
+		require.NoError(t, err)
+		require.Equal(t, 8+len(first)+len(second), len(result))
+		assert.Equal(t, uint32(8), binary.LittleEndian.Uint32(result[0:4]))
+		assert.Equal(t, uint32(8+len(first)), binary.LittleEndian.Uint32(result[4:8]))
+		require.DeepEqual(t, first, result[8:8+len(first)])
+		require.DeepEqual(t, second, result[8+len(first):])
 	})
 }

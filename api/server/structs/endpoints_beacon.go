@@ -124,6 +124,23 @@ type ValidatorIdentity struct {
 	ActivationEpoch string `json:"activation_epoch"`
 }
 
+type GetStateBuildersRequest struct {
+	Ids      []string `json:"ids,omitempty"`
+	Statuses []string `json:"statuses,omitempty"`
+}
+
+type GetStateBuildersResponse struct {
+	ExecutionOptimistic bool               `json:"execution_optimistic"`
+	Finalized           bool               `json:"finalized"`
+	Data                []*BuilderResponse `json:"data"`
+}
+
+type BuilderResponse struct {
+	Index   string   `json:"index"`
+	Status  string   `json:"status"`
+	Builder *Builder `json:"builder"`
+}
+
 type GetBlockResponse struct {
 	Data *SignedBlock `json:"data"`
 }
@@ -186,6 +203,11 @@ type SyncCommitteeValidators struct {
 
 type BLSToExecutionChangesPoolResponse struct {
 	Data []*SignedBLSToExecutionChange `json:"data"`
+}
+
+type GetPoolPayloadAttestationsResponse struct {
+	Version string                `json:"version"`
+	Data    []*PayloadAttestation `json:"data"`
 }
 
 type GetAttesterSlashingsResponse struct {
@@ -279,10 +301,47 @@ type GetProposerLookaheadResponse struct {
 	Data                []string `json:"data"` // validator indexes
 }
 
+type GetStatePTCResponse struct {
+	ExecutionOptimistic bool      `json:"execution_optimistic"`
+	Finalized           bool      `json:"finalized"`
+	Data                *StatePTC `json:"data"`
+}
+
+type StatePTC struct {
+	Slot       string   `json:"slot"`
+	Validators []string `json:"validators"` // validator indexes in committee order, duplicates preserved
+}
+
+type GetBuilderPendingWithdrawalsResponse struct {
+	Version             string                      `json:"version"`
+	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
+	Data                []*BuilderPendingWithdrawal `json:"data"`
+}
+
+type GetBuilderPendingPaymentsResponse struct {
+	Version             string                   `json:"version"`
+	ExecutionOptimistic bool                     `json:"execution_optimistic"`
+	Finalized           bool                     `json:"finalized"`
+	Data                []*BuilderPendingPayment `json:"data"`
+}
+
+type GetProposerPreferencesResponse struct {
+	Version string                       `json:"version"`
+	Data    []*SignedProposerPreferences `json:"data"`
+}
+
 type GetBlobsResponse struct {
 	ExecutionOptimistic bool     `json:"execution_optimistic"`
 	Finalized           bool     `json:"finalized"`
 	Data                []string `json:"data"` //blobs
+}
+
+type GetExecutionPayloadEnvelopeResponse struct {
+	Version             string                          `json:"version"`
+	ExecutionOptimistic bool                            `json:"execution_optimistic"`
+	Finalized           bool                            `json:"finalized"`
+	Data                *SignedExecutionPayloadEnvelope `json:"data"`
 }
 
 type SSZQueryRequest struct {

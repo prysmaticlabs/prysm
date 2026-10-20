@@ -11,6 +11,8 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
+var withdrawalCredentialsSink [fieldparams.RootLength]byte
+
 func TestReadOnlyValidator_ReturnsErrorOnNil(t *testing.T) {
 	if _, err := statenative.NewValidator(nil); err != statenative.ErrNilWrappedValidator {
 		t.Errorf("Wrong error returned. Got %v, wanted %v", err, statenative.ErrNilWrappedValidator)
@@ -60,10 +62,29 @@ func TestReadOnlyValidator_PublicKey(t *testing.T) {
 }
 
 func TestReadOnlyValidator_WithdrawalCredentials(t *testing.T) {
-	creds := []byte{0xFA, 0xCC}
-	v, err := statenative.NewValidator(&ethpb.Validator{WithdrawalCredentials: creds})
+	creds := [32]byte{0xFA, 0xCC}
+	v, err := statenative.NewValidator(&ethpb.Validator{WithdrawalCredentials: creds[:]})
 	require.NoError(t, err)
-	assert.DeepEqual(t, creds, v.GetWithdrawalCredentials())
+	credentialsValidator, ok := v.(interface {
+		WithdrawalCredentials() [fieldparams.RootLength]byte
+	})
+	require.Equal(t, true, ok)
+	assert.Equal(t, creds, credentialsValidator.WithdrawalCredentials())
+	assert.DeepEqual(t, creds[:], v.GetWithdrawalCredentials())
+}
+
+func TestReadOnlyValidator_WithdrawalCredentials_NoAlloc(t *testing.T) {
+	v, err := statenative.NewValidator(&ethpb.Validator{WithdrawalCredentials: make([]byte, fieldparams.RootLength)})
+	require.NoError(t, err)
+	credentialsValidator, ok := v.(interface {
+		WithdrawalCredentials() [fieldparams.RootLength]byte
+	})
+	require.Equal(t, true, ok)
+
+	allocs := testing.AllocsPerRun(100, func() {
+		withdrawalCredentialsSink = credentialsValidator.WithdrawalCredentials()
+	})
+	assert.Equal(t, float64(0), allocs)
 }
 
 func TestReadOnlyValidator_Slashed(t *testing.T) {

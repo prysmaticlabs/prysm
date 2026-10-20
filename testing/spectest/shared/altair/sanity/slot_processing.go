@@ -12,9 +12,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func init() {
@@ -38,7 +35,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			base := &ethpb.BeaconStateAltair{}
 			require.NoError(t, base.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := state_native.InitializeFromProtoAltair(base)
+			beaconState, err := state_native.InitializeFromProtoUnsafeAltair(base)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
@@ -58,10 +55,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 
 			pbState, err := state_native.ProtobufBeaconStateAltair(postState.ToProto())
 			require.NoError(t, err)
-			if !proto.Equal(pbState, postBeaconState) {
-				t.Log(cmp.Diff(postBeaconState, pbState, protocmp.Transform()))
-				t.Fatal("Post state does not match expected. Diff between states")
-			}
+			require.DeepSSZEqual(t, postBeaconState, pbState, "Post state does not match expected. Diff between states")
 		})
 	}
 }

@@ -71,7 +71,7 @@ func main() {
 	flag.Parse()
 
 	if *logFileName != "" {
-		if err := logs.ConfigurePersistentLogging(*logFileName, "text"); err != nil {
+		if err := logs.ConfigurePersistentLogging(*logFileName, "text", logrus.DebugLevel, map[string]logrus.Level{}); err != nil {
 			log.WithError(err).Error("Failed to configuring logging to disk.")
 		}
 	}
@@ -124,8 +124,7 @@ func main() {
 	}
 
 	// Update metrics once per slot.
-	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot)
-	async.RunEvery(context.Background(), slotDuration*time.Second, func() {
+	async.RunEvery(context.Background(), params.BeaconConfig().SlotDuration(), func() {
 		updateMetrics(listener)
 	})
 

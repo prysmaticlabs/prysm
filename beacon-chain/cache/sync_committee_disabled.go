@@ -11,6 +11,9 @@ import (
 type FakeSyncCommitteeCache struct {
 }
 
+// SyncCommitteeCache names the sync committee cache type under both build tags.
+type SyncCommitteeCache = FakeSyncCommitteeCache
+
 // NewSyncCommittee initializes and returns a new SyncCommitteeCache.
 func NewSyncCommittee() *FakeSyncCommitteeCache {
 	return &FakeSyncCommitteeCache{}
@@ -32,7 +35,7 @@ func (s *FakeSyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx p
 }
 
 // UpdatePositionsInCommittee -- fake.
-func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.BeaconState) error {
+func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.ReadOnlyBeaconState) error {
 	return nil
 }
 

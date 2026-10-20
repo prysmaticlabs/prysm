@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -164,6 +165,111 @@ func TestGetBlock(t *testing.T) {
 			if !reflect.DeepEqual(pbBlock, tt.want) {
 				t.Error("Expected blocks to equal")
 			}
+		})
+	}
+}
+
+func TestBlockRoot(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	ctx := t.Context()
+
+	genBlk, blkContainers := testutil.FillDBWithBlocks(ctx, t, beaconDB)
+	canonicalRoots := make(map[[32]byte]bool)
+
+	for _, bContr := range blkContainers {
+		canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+	}
+	headBlock := blkContainers[len(blkContainers)-1]
+
+	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpb.BeaconBlockContainer_Phase0Block).Phase0Block)
+	require.NoError(t, err)
+
+	fetcher := &BeaconDbBlocker{
+		BeaconDB: beaconDB,
+		ChainInfoFetcher: &mockChain.ChainService{
+			DB:                         beaconDB,
+			Block:                      wsb,
+			Root:                       headBlock.BlockRoot,
+			FinalizedCheckPoint:        &ethpb.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CurrentJustifiedCheckPoint: &ethpb.Checkpoint{Root: blkContainers[32].BlockRoot},
+			CanonicalRoots:             canonicalRoots,
+		},
+	}
+
+	genesisRoot, err := genBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		blockID []byte
+		want    [32]byte
+		wantErr bool
+	}{
+		{
+			name:    "slot",
+			blockID: []byte("30"),
+			want:    bytesutil.ToBytes32(blkContainers[30].BlockRoot),
+		},
+		{
+			name:    "bad formatting",
+			blockID: []byte("3bad0"),
+			wantErr: true,
+		},
+		{
+			name:    "head",
+			blockID: []byte("head"),
+			want:    bytesutil.ToBytes32(headBlock.BlockRoot),
+		},
+		{
+			name:    "finalized",
+			blockID: []byte("finalized"),
+			want:    bytesutil.ToBytes32(blkContainers[64].BlockRoot),
+		},
+		{
+			name:    "justified",
+			blockID: []byte("justified"),
+			want:    bytesutil.ToBytes32(blkContainers[32].BlockRoot),
+		},
+		{
+			name:    "genesis",
+			blockID: []byte("genesis"),
+			want:    genesisRoot,
+		},
+		{
+			name:    "genesis root",
+			blockID: genesisRoot[:],
+			want:    genesisRoot,
+		},
+		{
+			name:    "root",
+			blockID: blkContainers[20].BlockRoot,
+			want:    bytesutil.ToBytes32(blkContainers[20].BlockRoot),
+		},
+		{
+			name:    "hex root",
+			blockID: []byte(hexutil.Encode(blkContainers[20].BlockRoot)),
+			want:    bytesutil.ToBytes32(blkContainers[20].BlockRoot),
+		},
+		{
+			name:    "non-existent root",
+			blockID: bytesutil.PadTo([]byte("hi there"), 32),
+			wantErr: true,
+		},
+		{
+			name:    "no block at slot",
+			blockID: []byte("105"),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := fetcher.BlockRoot(ctx, tt.blockID)
+			if tt.wantErr {
+				assert.NotEqual(t, err, nil, "no error has been returned")
+				return
+			}
+			require.NoError(t, err)
+			assert.DeepEqual(t, tt.want, result)
 		})
 	}
 }
@@ -772,7 +878,7 @@ func TestBlobs_CommitmentOrdering(t *testing.T) {
 		require.NotNil(t, rpcErr)
 		require.Equal(t, core.ErrorReason(core.NotFound), rpcErr.Reason)
 		require.StringContains(t, "versioned hash(es) not found in block", rpcErr.Err.Error())
-		require.StringContains(t, "requested 1 hashes, found 0", rpcErr.Err.Error())
+		require.StringContains(t, "requested 1 unique hashes, found 0", rpcErr.Err.Error())
 		require.StringContains(t, "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", rpcErr.Err.Error())
 	})
 
@@ -792,10 +898,75 @@ func TestBlobs_CommitmentOrdering(t *testing.T) {
 		require.NotNil(t, rpcErr)
 		require.Equal(t, core.ErrorReason(core.NotFound), rpcErr.Reason)
 		require.StringContains(t, "versioned hash(es) not found in block", rpcErr.Err.Error())
-		require.StringContains(t, "requested 3 hashes, found 1", rpcErr.Err.Error())
+		require.StringContains(t, "requested 3 unique hashes, found 1", rpcErr.Err.Error())
 		// Check that both missing hashes are reported
 		require.StringContains(t, "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", rpcErr.Err.Error())
 		require.StringContains(t, "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", rpcErr.Err.Error())
+	})
+}
+
+// TestResolveBlobsContext_DuplicateCommitments covers versioned-hash filtering
+// against a block that carries the same KZG commitment at multiple indices
+// (legal per consensus rules), as well as repeated hashes in the request.
+// Hash-to-index conversion happens before any blob storage access, so these
+// tests exercise resolveBlobsContext directly with only a block DB.
+func TestResolveBlobsContext_DuplicateCommitments(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.DenebForkEpoch = 1
+	cfg.FuluForkEpoch = primitives.Epoch(math.MaxUint64)
+	params.OverrideBeaconConfig(cfg)
+
+	db := testDB.SetupDB(t)
+	ctx := t.Context()
+
+	// Deneb block with the same commitment at indices 0 and 1.
+	commitment := bytesutil.PadTo([]byte("duplicate-commitment"), 48)
+	blk := util.NewBeaconBlockDeneb()
+	blk.Block.Slot = util.SlotAtEpoch(t, cfg.DenebForkEpoch)
+	blk.Block.Body.BlobKzgCommitments = [][]byte{commitment, commitment}
+	util.SaveBlock(t, ctx, db, blk)
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	blockID := hexutil.Encode(root[:])
+
+	blocker := &BeaconDbBlocker{BeaconDB: db}
+
+	dupHash := primitives.ConvertKzgCommitmentToVersionedHash(commitment)
+	missingHash := make([]byte, 32)
+	for i := range missingHash {
+		missingHash[i] = 0xFF
+	}
+
+	t.Run("hash matching duplicate commitments resolves all indices", func(t *testing.T) {
+		bctx, rpcErr := blocker.resolveBlobsContext(ctx, blockID, options.WithVersionedHashes([][]byte{dupHash[:]}))
+		require.IsNil(t, rpcErr)
+		require.DeepEqual(t, []int{0, 1}, bctx.indices)
+	})
+
+	t.Run("repeated request hashes resolve without error", func(t *testing.T) {
+		requestedHashes := [][]byte{dupHash[:], dupHash[:], dupHash[:]}
+		bctx, rpcErr := blocker.resolveBlobsContext(ctx, blockID, options.WithVersionedHashes(requestedHashes))
+		require.IsNil(t, rpcErr)
+		require.DeepEqual(t, []int{0, 1}, bctx.indices)
+	})
+
+	t.Run("duplicate matches do not mask a missing hash", func(t *testing.T) {
+		requestedHashes := [][]byte{dupHash[:], missingHash}
+		_, rpcErr := blocker.resolveBlobsContext(ctx, blockID, options.WithVersionedHashes(requestedHashes))
+		require.NotNil(t, rpcErr)
+		require.Equal(t, core.ErrorReason(core.NotFound), rpcErr.Reason)
+		require.StringContains(t, "requested 2 unique hashes, found 1", rpcErr.Err.Error())
+		require.StringContains(t, hexutil.Encode(missingHash), rpcErr.Err.Error())
+	})
+
+	t.Run("repeated missing hash is reported once", func(t *testing.T) {
+		requestedHashes := [][]byte{missingHash, missingHash}
+		_, rpcErr := blocker.resolveBlobsContext(ctx, blockID, options.WithVersionedHashes(requestedHashes))
+		require.NotNil(t, rpcErr)
+		require.Equal(t, core.ErrorReason(core.NotFound), rpcErr.Reason)
+		require.StringContains(t, "requested 1 unique hashes, found 0", rpcErr.Err.Error())
+		require.Equal(t, 1, strings.Count(rpcErr.Err.Error(), hexutil.Encode(missingHash)))
 	})
 }
 
@@ -920,12 +1091,12 @@ func TestGetDataColumns(t *testing.T) {
 		// Create a map of expected indices for easier verification
 		expectedIndices := make(map[uint64]bool)
 		for _, expected := range verifiedRoDataColumnSidecars {
-			expectedIndices[expected.RODataColumn.DataColumnSidecar.Index] = true
+			expectedIndices[expected.RODataColumn.Index()] = true
 		}
 
 		// Verify we got data columns with the expected indices
 		for _, actual := range retrievedDataColumns {
-			require.Equal(t, true, expectedIndices[actual.RODataColumn.DataColumnSidecar.Index])
+			require.Equal(t, true, expectedIndices[actual.RODataColumn.Index()])
 		}
 	})
 
@@ -1015,7 +1186,7 @@ func TestGetDataColumns(t *testing.T) {
 		require.Equal(t, 3, len(retrievedDataColumns))
 
 		for i, dataColumn := range retrievedDataColumns {
-			require.Equal(t, uint64(indices[i]), dataColumn.RODataColumn.DataColumnSidecar.Index)
+			require.Equal(t, uint64(indices[i]), dataColumn.RODataColumn.Index())
 		}
 	})
 

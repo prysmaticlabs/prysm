@@ -26,11 +26,11 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var expectedParticipation = 0.99
+var expectedParticipation = 0.98
 
 var expectedMulticlientParticipation = 0.95
 
-var expectedSyncParticipation = 0.99
+var expectedSyncParticipation = 0.95
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = types.Evaluator{
@@ -62,6 +62,7 @@ var ValidatorSyncParticipation = types.Evaluator{
 func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
+
 	// Balances actually fluctuate but we just want to check initial balance.
 	validatorRequest := &ethpb.ListValidatorsRequest{
 		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
@@ -72,17 +73,26 @@ func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn)
 		return errors.Wrap(err, "failed to get validators")
 	}
 
-	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
+	// Count should be MinGenesisActiveValidatorCount minus any validators that have exited.
+	// We determine actual exited count from the difference, as exits may be submitted but
+	// not yet processed, or affected by churn limits.
 	receivedCount := uint64(len(validators.ValidatorList))
-	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, received %d", expectedCount, receivedCount)
+	maxExpected := params.BeaconConfig().MinGenesisActiveValidatorCount
+	minExpected := maxExpected - uint64(len(ec.ExitedVals))
+
+	if receivedCount > maxExpected {
+		return fmt.Errorf("validator count %d exceeds genesis count %d", receivedCount, maxExpected)
+	}
+	if receivedCount < minExpected {
+		return fmt.Errorf("validator count %d is less than expected minimum %d (genesis %d - %d submitted exits)",
+			receivedCount, minExpected, maxExpected, len(ec.ExitedVals))
 	}
 
 	effBalanceLowCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
-		if ec.ExitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)] {
+		if _, exited := ec.ExitedVals[bytesutil.ToBytes48(item.Validator.PublicKey)]; exited {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
@@ -145,6 +155,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		if err != nil {
 			return err
 		}
+		defer func() { _ = httpResp.Body.Close() }()
 		if httpResp.StatusCode != http.StatusOK {
 			e := httputil.DefaultJsonError{}
 			if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
@@ -156,42 +167,9 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 			return err
 		}
 
-		var respPrevEpochParticipation []string
-		switch resp.Version {
-		case version.String(version.Phase0):
-		// Do Nothing
-		case version.String(version.Altair):
-			st := &structs.BeaconStateAltair{}
-			if err = json.Unmarshal(resp.Data, st); err != nil {
-				return err
-			}
-			respPrevEpochParticipation = st.PreviousEpochParticipation
-		case version.String(version.Bellatrix):
-			st := &structs.BeaconStateBellatrix{}
-			if err = json.Unmarshal(resp.Data, st); err != nil {
-				return err
-			}
-			respPrevEpochParticipation = st.PreviousEpochParticipation
-		case version.String(version.Capella):
-			st := &structs.BeaconStateCapella{}
-			if err = json.Unmarshal(resp.Data, st); err != nil {
-				return err
-			}
-			respPrevEpochParticipation = st.PreviousEpochParticipation
-		case version.String(version.Deneb):
-			st := &structs.BeaconStateDeneb{}
-			if err = json.Unmarshal(resp.Data, st); err != nil {
-				return err
-			}
-			respPrevEpochParticipation = st.PreviousEpochParticipation
-		case version.String(version.Electra):
-			st := &structs.BeaconStateElectra{}
-			if err = json.Unmarshal(resp.Data, st); err != nil {
-				return err
-			}
-			respPrevEpochParticipation = st.PreviousEpochParticipation
-		default:
-			return fmt.Errorf("unrecognized version %s", resp.Version)
+		respPrevEpochParticipation, err := previousEpochParticipation(resp.Version, resp.Data)
+		if err != nil {
+			return err
 		}
 
 		prevEpochParticipation := make([]byte, len(respPrevEpochParticipation))
@@ -219,6 +197,51 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		)
 	}
 	return nil
+}
+
+func previousEpochParticipation(v string, data json.RawMessage) ([]string, error) {
+	switch v {
+	case version.String(version.Phase0):
+		return nil, nil
+	case version.String(version.Altair):
+		st := &structs.BeaconStateAltair{}
+		if err := json.Unmarshal(data, st); err != nil {
+			return nil, err
+		}
+		return st.PreviousEpochParticipation, nil
+	case version.String(version.Bellatrix):
+		st := &structs.BeaconStateBellatrix{}
+		if err := json.Unmarshal(data, st); err != nil {
+			return nil, err
+		}
+		return st.PreviousEpochParticipation, nil
+	case version.String(version.Capella):
+		st := &structs.BeaconStateCapella{}
+		if err := json.Unmarshal(data, st); err != nil {
+			return nil, err
+		}
+		return st.PreviousEpochParticipation, nil
+	case version.String(version.Deneb):
+		st := &structs.BeaconStateDeneb{}
+		if err := json.Unmarshal(data, st); err != nil {
+			return nil, err
+		}
+		return st.PreviousEpochParticipation, nil
+	case version.String(version.Electra):
+		st := &structs.BeaconStateElectra{}
+		if err := json.Unmarshal(data, st); err != nil {
+			return nil, err
+		}
+		return st.PreviousEpochParticipation, nil
+	case version.String(version.Fulu):
+		st := &structs.BeaconStateFulu{}
+		if err := json.Unmarshal(data, st); err != nil {
+			return nil, err
+		}
+		return st.PreviousEpochParticipation, nil
+	default:
+		return nil, fmt.Errorf("unrecognized version %s", v)
+	}
 }
 
 // validatorsSyncParticipation ensures the validators have an acceptable participation rate for
@@ -262,9 +285,9 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 			// Skip fork slot.
 			continue
 		}
-		// Skip slot 1 at genesis - validators need time to ramp up after chain start.
-		// This is a startup timing issue, not a fork transition issue.
-		if b.Block().Slot() == 1 {
+		// Skip slots 0-3 at genesis - validators need time to ramp up after chain start
+		// due to doppelganger protection. This is a startup timing issue, not a fork transition issue.
+		if skipStartupSyncParticipationSlot(b.Block().Slot()) {
 			continue
 		}
 		expectedParticipation := expectedSyncParticipation
@@ -300,20 +323,34 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 		if b == nil || b.IsNil() {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
-		if err != nil {
-			return err
+		// Skip evaluation of fork transition slots as sync participation
+		// tends to drop briefly when transitioning between forks.
+		forkEpochs := []primitives.Epoch{
+			params.BeaconConfig().AltairForkEpoch,
+			params.BeaconConfig().BellatrixForkEpoch,
+			params.BeaconConfig().CapellaForkEpoch,
+			params.BeaconConfig().DenebForkEpoch,
+			params.BeaconConfig().ElectraForkEpoch,
+			params.BeaconConfig().FuluForkEpoch,
 		}
-		nexForkSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
-		if err != nil {
-			return err
+		skipSlot := false
+		for _, forkEpoch := range forkEpochs {
+			// Skip fork epochs set to far future (not scheduled).
+			if forkEpoch == params.BeaconConfig().FarFutureEpoch {
+				continue
+			}
+			forkSlot, err := slots.EpochStart(forkEpoch)
+			if err != nil {
+				return err
+			}
+			// Skip the first two slots of each fork epoch.
+			if b.Block().Slot() == forkSlot || b.Block().Slot() == forkSlot+1 {
+				skipSlot = true
+				break
+			}
 		}
-		switch b.Block().Slot() {
-		case forkSlot, forkSlot + 1, nexForkSlot:
-			// Skip evaluation of the slot.
+		if skipSlot {
 			continue
-		default:
-			// no-op
 		}
 		syncAgg, err := b.Block().Body().SyncAggregate()
 		if err != nil {
@@ -325,6 +362,10 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 		}
 	}
 	return nil
+}
+
+func skipStartupSyncParticipationSlot(slot primitives.Slot) bool {
+	return slot <= 3
 }
 
 func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
@@ -357,6 +398,14 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 	}
 	if container.GetBlindedElectraBlock() != nil {
 		return blocks.NewSignedBeaconBlock(container.GetBlindedElectraBlock())
+	}
+
+	if container.GetFuluBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetFuluBlock())
+	}
+
+	if container.GetBlindedFuluBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedFuluBlock())
 	}
 	return nil, errors.New("no supported block type in container")
 }

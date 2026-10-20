@@ -20,7 +20,7 @@ import (
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
 	intervals := features.Get().AggregateIntervals
-	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	slotDuration := params.BeaconConfig().SlotDuration()
 	// Adjust intervals for networks with a lower slot duration (Hive, e2e, etc)
 	for {
 		if intervals[len(intervals)-1] >= slotDuration {
@@ -49,6 +49,7 @@ func (s *Service) prepareForkChoiceAtts() {
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
+			ticker.Done()
 			return
 		}
 	}

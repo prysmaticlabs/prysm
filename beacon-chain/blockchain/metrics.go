@@ -170,6 +170,10 @@ var (
 		Name: "txs_per_slot_count",
 		Help: "Count the number of txs per slot",
 	})
+	consolidationRequestCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "consolidation_request_count",
+		Help: "Count the number of consolidation requests",
+	})
 	onBlockProcessingTime = promauto.NewSummary(prometheus.SummaryOpts{
 		Name: "on_block_processing_milliseconds",
 		Help: "Total time in milliseconds to complete a call to postBlockProcess()",
@@ -221,6 +225,70 @@ var (
 			Buckets: []float64{1, 2, 4, 8, 16, 32},
 		},
 	)
+	commitmentCount = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "commitment_count_max_21",
+			Help:    "The number of blob KZG commitments per block.",
+			Buckets: []float64{1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21},
+		},
+	)
+	maxBlobsPerBlock = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "max_blobs_per_block",
+			Help: "The maximum number of blobs allowed in a block.",
+		},
+	)
+	beaconExecutionPayloadEnvelopeValidTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_execution_payload_envelope_valid_total",
+		Help: "Count the number of execution payload envelopes that were processed successfully.",
+	})
+	beaconExecutionPayloadEnvelopeInvalidTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_execution_payload_envelope_invalid_total",
+		Help: "Count the number of execution payload envelopes that failed processing.",
+	})
+	beaconExecutionPayloadEnvelopeProcessingDurationSeconds = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "beacon_execution_payload_envelope_processing_duration_seconds",
+			Help:    "Captures end-to-end processing time for execution payload envelopes.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+	beaconLatePayloadTaskTriggeredTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_late_payload_task_triggered_total",
+		Help: "Count the number of times late payload tasks fired.",
+	})
+	builderPayloadFailuresTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "builder_payload_failures_total",
+		Help: "Count of builders blacklisted for failing to reveal a payload.",
+	})
+	builderBlacklistedCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_blacklisted_count",
+		Help: "Number of builders currently blacklisted by the circuit breaker.",
+	})
+	builderSelfBuildOnly = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_self_build_only",
+		Help: "1 when the builder circuit breaker forces self-building, 0 otherwise.",
+	})
+	builderRelaysBannedCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_relays_banned_count",
+		Help: "Number of direct connection endpoints currently banned by the circuit breaker.",
+	})
+	builderCollateralBlacklistedCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "builder_collateral_blacklisted_count",
+		Help: "Number of builders blacklisted only because an endpoint serving them is banned.",
+	})
+	goroutineCountGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "beacon_goroutine_count",
+		Help: "Goroutine count sampled once per slot.",
+	}, []string{"kind"})
+	payloadGasLimit = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_payload_gas_limit",
+		Help: "Gas limit of the last received execution payload.",
+	})
+	payloadGasUsed = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_payload_gas_used",
+		Help: "Gas used by the last received execution payload.",
+	})
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -328,7 +396,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	processedDepositsCount.Set(float64(postState.Eth1DepositIndex() + 1))
 
 	var b *precompute.Balance
-	var v []*precompute.Validator
+	var v []precompute.Validator
 	var err error
 
 	if headState.Version() == version.Phase0 {

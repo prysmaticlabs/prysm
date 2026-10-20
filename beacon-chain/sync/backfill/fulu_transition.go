@@ -13,9 +13,10 @@ var errMissingAvailabilityChecker = errors.Wrap(errUnrecoverable, "batch is miss
 var errUnsafeRange = errors.Wrap(errUnrecoverable, "invalid slice indices")
 
 type checkMultiplexer struct {
-	blobCheck    das.AvailabilityChecker
-	colCheck     das.AvailabilityChecker
-	currentNeeds das.CurrentNeeds
+	blobCheck         das.AvailabilityChecker
+	colCheck          das.AvailabilityChecker
+	currentNeeds      das.CurrentNeeds
+	emptyPayloadRoots map[[32]byte]bool
 }
 
 // Persist implements das.AvailabilityStore.
@@ -30,6 +31,7 @@ func newCheckMultiplexer(needs das.CurrentNeeds, b batch) *checkMultiplexer {
 	}
 	if b.columns != nil && b.columns.store != nil {
 		s.colCheck = b.columns.store
+		s.emptyPayloadRoots = b.columns.emptyPayloadRoots()
 	}
 
 	return s
@@ -86,6 +88,11 @@ func (m *checkMultiplexer) divideByChecker(blks []blocks.ROBlock) (daGroups, err
 			continue
 		}
 		if m.currentNeeds.Col.At(slot) {
+			// A Gloas block with an empty payload has no columns to check.
+			if m.emptyPayloadRoots[blk.Root()] {
+				continue
+			}
+
 			needs.cols = append(needs.cols, blk)
 			continue
 		}
@@ -96,35 +103,4 @@ func (m *checkMultiplexer) divideByChecker(blks []blocks.ROBlock) (daGroups, err
 	}
 
 	return needs, nil
-}
-
-// safeRange is a helper type that enforces safe slicing.
-type safeRange struct {
-	start uint
-	end   uint
-}
-
-// isZero returns true if the range is zero-length.
-func (r safeRange) isZero() bool {
-	return r.start == r.end
-}
-
-// subSlice returns the subslice of s defined by sub
-// if it can be safely sliced, or an error if the range is invalid
-// with respect to the slice.
-func subSlice[T any](s []T, sub safeRange) ([]T, error) {
-	slen := uint(len(s))
-	if slen == 0 || sub.isZero() {
-		return nil, nil
-	}
-
-	// Check that minimum bound is safe.
-	if sub.end < sub.start {
-		return nil, errUnsafeRange
-	}
-	// Check that upper bound is safe.
-	if sub.start >= slen || sub.end > slen {
-		return nil, errUnsafeRange
-	}
-	return s[sub.start:sub.end], nil
 }

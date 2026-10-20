@@ -7,13 +7,56 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/io/file"
 	prefixed "github.com/OffchainLabs/prysm/v7/runtime/logging/logrus-prefixed-formatter"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+var (
+	userVerbosity = logrus.InfoLevel
+	vmodule       = make(map[string]logrus.Level)
+)
+
+const (
+	ephemeralLogFileVerbosity                = logrus.DebugLevel
+	LogTargetField                           = "log_target"
+	LogTargetEphemeral        HookIdentifier = "ephemeral"
+	LogTargetUser             HookIdentifier = "user"
+)
+
+// SetLoggingLevelAndData sets the base logging level for logrus.
+func SetLoggingLevelAndData(baseVerbosity logrus.Level, vmoduleMap map[string]logrus.Level, maxVmoduleLevel logrus.Level, disableEphemeral bool) {
+	userVerbosity = baseVerbosity
+	vmodule = vmoduleMap
+
+	globalLevel := max(baseVerbosity, maxVmoduleLevel)
+	if !disableEphemeral {
+		globalLevel = max(globalLevel, ephemeralLogFileVerbosity)
+	}
+	logrus.SetLevel(globalLevel)
+}
+
+// PackageVerbosity returns the verbosity of a given package.
+func PackageVerbosity(packagePath string) logrus.Level {
+	bestLen := 0
+	bestLevel := userVerbosity
+	for k, v := range vmodule {
+		if k == packagePath || strings.HasPrefix(packagePath, k+"/") {
+			if len(k) > bestLen {
+				bestLen = len(k)
+				bestLevel = v
+			}
+		}
+	}
+	return bestLevel
+}
 
 func addLogWriter(w io.Writer) {
 	mw := io.MultiWriter(logrus.StandardLogger().Out, w)
@@ -21,8 +64,8 @@ func addLogWriter(w io.Writer) {
 }
 
 // ConfigurePersistentLogging adds a log-to-file writer. File content is identical to stdout.
-func ConfigurePersistentLogging(logFileName string, format string) error {
-	logrus.WithField("logFileName", logFileName).Info("Logs will be made persistent")
+func ConfigurePersistentLogging(logFileName string, format string, lvl logrus.Level, vmodule map[string]logrus.Level) error {
+	logrus.WithField("logFileName", logFileName).Debug("Logs will be made persistent")
 	if err := file.MkdirAll(filepath.Dir(logFileName)); err != nil {
 		return err
 	}
@@ -34,8 +77,43 @@ func ConfigurePersistentLogging(logFileName string, format string) error {
 	if format != "text" {
 		addLogWriter(f)
 
-		logrus.Info("File logging initialized")
+		logrus.Debug("File logging initialized")
 		return nil
+	}
+
+	maxVmoduleLevel := logrus.PanicLevel
+	for _, level := range vmodule {
+		if level > maxVmoduleLevel {
+			maxVmoduleLevel = level
+		}
+	}
+
+	// Create formatter and writer hook
+	formatter := new(prefixed.TextFormatter)
+	formatter.TimestampFormat = "2006-01-02 15:04:05.00"
+	formatter.FullTimestamp = true
+	// If persistent log files are written - we disable the log messages coloring because
+	// the colors are ANSI codes and seen as gibberish in the log files.
+	formatter.DisableColors = true
+	formatter.BaseVerbosity = lvl
+	formatter.VModule = vmodule
+
+	logrus.AddHook(&WriterHook{
+		Formatter:     formatter,
+		Writer:        f,
+		AllowedLevels: logrus.AllLevels[:max(lvl, maxVmoduleLevel)+1],
+		Identifier:    LogTargetUser,
+	})
+
+	logrus.Debug("File logging initialized")
+	return nil
+}
+
+// ConfigureEphemeralLogFile adds a log file that keeps 24 hours of logs with >debug verbosity.
+func ConfigureEphemeralLogFile(datadirPath string, app string) error {
+	logFilePath := filepath.Join(datadirPath, "logs", app+".log")
+	if err := file.MkdirAll(filepath.Dir(logFilePath)); err != nil {
+		return errors.Wrap(err, "failed to create directory")
 	}
 
 	// Create formatter and writer hook
@@ -46,12 +124,22 @@ func ConfigurePersistentLogging(logFileName string, format string) error {
 	// the colors are ANSI codes and seen as gibberish in the log files.
 	formatter.DisableColors = true
 
+	// configure the lumberjack log writer to rotate logs every ~24 hours
+	debugWriter := &lumberjack.Logger{
+		Filename:   logFilePath,
+		MaxSize:    250, // MB, to avoid unbounded growth
+		MaxBackups: 1,   // one backup in case of size-based rotations
+		MaxAge:     1,   // days; files older than this are removed
+	}
+
 	logrus.AddHook(&WriterHook{
-		Formatter: formatter,
-		Writer:    f,
+		Formatter:     formatter,
+		Writer:        debugWriter,
+		AllowedLevels: logrus.AllLevels[:ephemeralLogFileVerbosity+1],
+		Identifier:    LogTargetEphemeral,
 	})
 
-	logrus.Info("File logging initialized")
+	logrus.WithField("path", logFilePath).Debug("Ephemeral log file initialized")
 	return nil
 }
 
@@ -76,4 +164,11 @@ func MaskCredentialsLogging(currUrl string) string {
 		MaskedUrl = strings.Replace(MaskedUrl, u.RawFragment, "***", 1)
 	}
 	return MaskedUrl
+}
+
+func BuilderIndexLabel(idx primitives.BuilderIndex) string {
+	if idx == params.BeaconConfig().BuilderIndexSelfBuild {
+		return "self-build"
+	}
+	return strconv.FormatUint(uint64(idx), 10)
 }

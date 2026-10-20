@@ -12,7 +12,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
-	"google.golang.org/protobuf/proto"
 )
 
 // RunUpgradeToCapella is a helper function that runs capella's fork spec tests.
@@ -37,7 +36,7 @@ func RunUpgradeToCapella(t *testing.T, config string) {
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := state_native.InitializeFromProtoBellatrix(preStateBase)
+			preState, err := state_native.InitializeFromProtoUnsafeBellatrix(preStateBase)
 			require.NoError(t, err)
 			postState, err := capella.UpgradeToCapella(preState)
 			require.NoError(t, err)
@@ -53,9 +52,7 @@ func RunUpgradeToCapella(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			if !proto.Equal(postStateFromFile, postStateFromFunction) {
-				t.Fatal("Post state does not match expected")
-			}
+			require.DeepSSZEqual(t, postStateFromFile, postStateFromFunction, "Post state does not match expected")
 		})
 	}
 }

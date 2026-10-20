@@ -19,13 +19,14 @@ import (
 
 var appHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
-USAGE:
-   {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
    {{if .App.Version}}
+VERSION:
+   {{.App.Version}}
+   {{end}}{{if len .App.Authors}}
 AUTHOR:
    {{range .App.Authors}}{{ . }}{{end}}
    {{end}}{{if .App.Commands}}
-GLOBAL OPTIONS:
+COMMANDS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{end}}{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
@@ -34,15 +35,29 @@ GLOBAL OPTIONS:
 {{end}}{{end}}{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
-VERSION:
-   {{.App.Version}}
-   {{end}}{{if len .App.Authors}}
    {{end}}
 `
 
 type flagGroup struct {
 	Name  string
 	Flags []cli.Flag
+}
+
+// deprecatedFlags still work, but are expected to be removed in a future release.
+var deprecatedFlags = []cli.Flag{
+	features.DevModeFlag,
+	features.HoleskyTestnet,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
+}
+
+// deprecatedAliases still work, but are expected to be removed in a future release.
+var deprecatedAliases = []string{
+	"subscribe-all-data-subnets",
+	"enable-experimental-backfill",
+	"extend-blob-retention-epoch",
+	"max-goroutines",
 }
 
 var appHelpFlagGroups = []flagGroup{
@@ -65,7 +80,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.CertFlag,
 			flags.ChainID,
 			flags.DisableDebugRPCEndpoints,
-			flags.HTTPModules,
 			flags.HTTPServerCorsDomain,
 			flags.HTTPServerHost,
 			flags.HTTPServerPort,
@@ -74,6 +88,10 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCHost,
 			flags.RPCPort,
 			flags.BatchVerifierLimit,
+			flags.StateDiffExponents,
+			flags.ArchiveOriginState,
+			flags.PostponeShutdownForProposals,
+			flags.DisableGraffitiClientAppend,
 		},
 	},
 	{
@@ -102,6 +120,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.BlobBatchLimitBurstFactor,
 			flags.DataColumnBatchLimit,
 			flags.DataColumnBatchLimitBurstFactor,
+			flags.DisablePartialDataColumns,
 			flags.BlockBatchLimit,
 			flags.BlockBatchLimitBurstFactor,
 			flags.MaxConcurrentDials,
@@ -142,8 +161,17 @@ var appHelpFlagGroups = []flagGroup{
 			flags.MevRelayEndpoint,
 			flags.MinBuilderBid,
 			flags.MinBuilderDiff,
+			flags.BuilderHeaderTimeout,
+			flags.BuilderBidTimeout,
 			flags.SuggestedFeeRecipient,
-			flags.EnableBuilderSSZ,
+			flags.DisableBuilderSSZ,
+			flags.BuilderAllowedFailures,
+			flags.BuilderCriticalFailures,
+			flags.BuilderBlacklistPeriod,
+			flags.BuilderCriticalBlacklistPeriod,
+			flags.BuilderRelayBlacklistPeriod,
+			flags.BuilderFailureBackOffPeriod,
+			flags.BuilderCriticalFailedBuilders,
 		},
 	},
 	{ // Flags relevant to syncing the beacon chain.
@@ -168,8 +196,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ExecutionEngineHeaders,
 			flags.ExecutionJWTSecretFlag,
 			flags.JwtId,
-			flags.InteropMockEth1DataVotesFlag,
-			flags.DisableGetBlobsV2,
 		},
 	},
 	{ // Flags relevant to configuring beacon chain monitoring.
@@ -197,27 +223,22 @@ var appHelpFlagGroups = []flagGroup{
 		// Flags in the "log" section control how Prysm handles logging.
 		Name: "log",
 		Flags: []cli.Flag{
+			cmd.DisableLogColor,
 			cmd.LogFormat,
 			cmd.LogFileName,
 			cmd.VerbosityFlag,
+			flags.DisableEphemeralLogFile,
+			cmd.LogVModuleFlag,
 		},
 	},
 	{ // Feature flags.
 		Name:  "features",
-		Flags: features.ActiveFlags(features.BeaconChainFlags),
-	},
-	{ // Flags required to configure the merge.
-		Name: "merge",
-		Flags: []cli.Flag{
-			flags.TerminalTotalDifficultyOverride,
-			flags.TerminalBlockHashOverride,
-			flags.TerminalBlockHashActivationEpochOverride,
-		},
+		Flags: features.WithoutFlags(features.ActiveFlags(features.BeaconChainFlags), deprecatedFlags),
 	},
 	{ // The deprecated section represents beacon flags that still have use, but should not be used
 		// as they are expected to be deleted in a feature release.
 		Name:  "deprecated",
-		Flags: []cli.Flag{},
+		Flags: deprecatedFlags,
 	},
 	{ // Flags used in debugging Prysm. These are flags not usually run by end users.
 		Name: "debug",
@@ -236,6 +257,9 @@ var appHelpFlagGroups = []flagGroup{
 
 func init() {
 	cli.AppHelpTemplate = appHelpTemplate
+	moveAliasesToDeprecatedGroup()
+	cmd.EnableHelpColors()
+	coloredAppHelpTemplate := cli.AppHelpTemplate
 
 	type helpData struct {
 		App        any
@@ -244,13 +268,31 @@ func init() {
 
 	originalHelpPrinter := cli.HelpPrinter
 	cli.HelpPrinter = func(w io.Writer, tmpl string, data any) {
-		if tmpl == appHelpTemplate {
+		if tmpl == coloredAppHelpTemplate {
 			for _, group := range appHelpFlagGroups {
 				sort.Sort(cli.FlagsByName(group.Flags))
 			}
 			originalHelpPrinter(w, tmpl, helpData{data, appHelpFlagGroups})
 		} else {
 			originalHelpPrinter(w, tmpl, data)
+		}
+	}
+}
+
+// moveAliasesToDeprecatedGroup displays each flag without its deprecated aliases,
+// and displays these aliases in the deprecated group instead.
+func moveAliasesToDeprecatedGroup() {
+	var aliases []cli.Flag
+	for i := range appHelpFlagGroups {
+		var groupAliases []cli.Flag
+		appHelpFlagGroups[i].Flags, groupAliases = features.SplitAliases(appHelpFlagGroups[i].Flags, deprecatedAliases)
+		aliases = append(aliases, groupAliases...)
+	}
+
+	for i := range appHelpFlagGroups {
+		if appHelpFlagGroups[i].Name == "deprecated" {
+			appHelpFlagGroups[i].Flags = append(appHelpFlagGroups[i].Flags, aliases...)
+			return
 		}
 	}
 }

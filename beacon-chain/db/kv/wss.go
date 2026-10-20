@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/encoding/ssz/detect"
 	"github.com/OffchainLabs/prysm/v7/proto/dbval"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -50,6 +53,10 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
 
+	if err := verifyOriginBlockRoot(ctx, state, blockRoot); err != nil {
+		return err
+	}
+
 	pr := blk.ParentRoot()
 	bf := &dbval.BackfillStatus{
 		LowSlot:       uint64(slot),
@@ -68,9 +75,21 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "save block")
 	}
 
-	// save state
-	if err = s.SaveState(ctx, state, blockRoot); err != nil {
-		return errors.Wrap(err, "save state")
+	if features.Get().EnableArchive && features.Get().EnableStateDiff {
+		// The checkpoint slot is generally not a tree boundary, so keep the origin state addressable by root.
+		if err := s.SaveHotStateSnapshot(ctx, state, blockRoot); err != nil {
+			return errors.Wrap(err, "save checkpoint origin state snapshot")
+		}
+	} else if features.Get().EnableStateDiff {
+		// initializeStateDiff will save the state, so we don't need to call SaveState here
+		if err := s.initializeStateDiff(state.Slot(), state); err != nil {
+			return errors.Wrap(err, "failed to initialize state diff")
+		}
+	} else {
+		// save state
+		if err = s.SaveState(ctx, state, blockRoot); err != nil {
+			return errors.Wrap(err, "save state")
+		}
 	}
 
 	if err = s.SaveStateSummary(ctx, &ethpb.StateSummary{
@@ -91,25 +110,55 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "save origin checkpoint block root")
 	}
 
-	// rebuild the checkpoint from the block
-	// use it to mark the block as justified and finalized
-	slotEpoch, err := wblk.Block().Slot().SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
+	// The origin block is the checkpoint root of the first epoch boundary at or after the state slot.
+	slotEpoch, err := state.Slot().SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return err
 	}
+	originEpoch := primitives.Epoch(slotEpoch)
 
-	chkpt := &ethpb.Checkpoint{
-		Epoch: primitives.Epoch(slotEpoch),
-		Root:  blockRoot[:],
+	if state.Slot()%params.BeaconConfig().SlotsPerEpoch != 0 {
+		originEpoch++
+		log.WithFields(logrus.Fields{
+			"slot":  state.Slot(),
+			"epoch": originEpoch,
+		}).Warn("Origin state is not at an epoch boundary.")
 	}
 
-	if err = s.SaveJustifiedCheckpoint(ctx, chkpt); err != nil {
+	// The justified epoch stays truthful so imported blocks match forkchoice's voting source.
+	justifiedEpoch := originEpoch
+	if jc := state.CurrentJustifiedCheckpoint(); jc != nil && jc.Epoch < originEpoch {
+		justifiedEpoch = jc.Epoch
+	}
+
+	if err = s.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: justifiedEpoch, Root: blockRoot[:]}); err != nil {
 		return errors.Wrap(err, "save justified checkpoint")
 	}
 
-	if err = s.SaveFinalizedCheckpoint(ctx, chkpt); err != nil {
+	if err = s.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Epoch: originEpoch, Root: blockRoot[:]}); err != nil {
 		return errors.Wrap(err, "save finalized checkpoint")
 	}
+	return nil
+}
 
+func verifyOriginBlockRoot(ctx context.Context, st state.BeaconState, blockRoot [32]byte) error {
+	header := st.LatestBlockHeader()
+	if header == nil {
+		return errors.New("origin state has no latest block header")
+	}
+	if bytesutil.ToBytes32(header.StateRoot) == params.BeaconConfig().ZeroHash {
+		stateRoot, err := st.HashTreeRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not compute HashTreeRoot of origin state")
+		}
+		header.StateRoot = stateRoot[:]
+	}
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not compute HashTreeRoot of origin state latest block header")
+	}
+	if headerRoot != blockRoot {
+		return errors.Wrapf(errOriginBlockMismatch, "state latest block header root = %#x, block root = %#x", headerRoot, blockRoot)
+	}
 	return nil
 }

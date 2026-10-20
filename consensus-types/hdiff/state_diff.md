@@ -109,7 +109,9 @@ Starting up from a clean database and from genesis will set o = 0 and start sync
 
 ### Backfill
 
-The following is added as an configurable option, pass the flag `--backfill-origin-state ssz`, in this case the node will download the state `ssz` and set as offset this state's slot. Will download the checkpoint state and start syncing forward as usual but will not call `MigrateToCold` until the backfill service is finished. In the background the node will download all blocks all the way up to the state ssz, then start forward syncing those blocks regenerating the finalized states and when they are of the form o + k λ_h. Once the forward syncing has caught up with the finalized checkpoint, we can start calling `MigrateToCold` again. This backfill mechanism is much faster than the current foward syncing to regenerate the states: we do not need to do any checks on the EL since the blocks are already finalized and trusted, the hashes are already confirmed. 
+This is implemented as `--enable-archive`, optionally combined with `--archive-origin-state <path.ssz>`; see [Archive mode](#archive-mode) below for the details of what was built. `--enable-archive` implies `--enable-state-diff` and `--enable-backfill`.
+
+The node uses the archive origin state's slot as the offset *o*, then syncs forward from the checkpoint as usual but does not call `MigrateToCold` until historical regeneration is finished. In the background it backfills all blocks down to the origin, then replays them forward, saving a state at every slot of the form o + k λ_h. Once that walk has caught up with the finalized checkpoint, `MigrateToCold` resumes. This is much faster than forward syncing to regenerate the states: no EL checks are needed since the blocks are already finalized and trusted, and the hashes are already confirmed. 
 
 ### Database Prunning
 
@@ -210,7 +212,18 @@ type stateDiff struct {
 	pendingPartialWithdrawalsDiff  []*ethpb.PendingPartialWithdrawal 
 	pendingConsolidationsDiffs     []*ethpb.PendingConsolidation     
 	
-	proposerLookahead []uint64 
+	proposerLookahead []uint64
+
+	latestExecutionPayloadBid      *ethpb.ExecutionPayloadBid
+	builderDiffs                   []builderDiff
+	nextWithdrawalBuilderIndex     uint64
+	executionPayloadAvailability   []byte
+	builderPendingPayments         []*ethpb.BuilderPendingPayment
+	builderPendingWithdrawalsIndex uint64
+	builderPendingWithdrawalsDiff  []*ethpb.BuilderPendingWithdrawal
+	latestBlockHash                [fieldparams.RootLength]byte
+	payloadExpectedWithdrawals     []*enginev1.Withdrawal
+	ptcWindow                      []*ethpb.PTCs
 }
 ```
 
@@ -378,7 +391,33 @@ This field is treated exactly like the pending deposits.
 
 ##### Proposer Lookahead
 
-The proposer lookahead is stored as the SSZ serialized version of the field. It always overrides the source's field. 
+The proposer lookahead is stored as the SSZ serialized version of the field. It always overrides the source's field.
+
+#### Gloas fields
+
+Gloas replaces `executionPayloadHeader` with two state fields — `latestBlockHash` (at proto position 10001) and `latestExecutionPayloadBid` (at proto position 14006) — and introduces several new state fields related to the builder registry, execution payload availability, and the cached PTC window. The Gloas-specific diff logic lives in `state_diff_gloas.go`. When `targetVersion >= version.Gloas`, the `executionPayloadHeader` path is skipped entirely and the following fields are serialized/deserialized instead:
+
+**Latest Execution Payload Bid.** Always non-nil for valid Gloas states. Serialized as 8 bytes for the SSZ size followed by the SSZ bytes (variable size due to `BlobKzgCommitments`). The bid carries 12 sub-fields including `ExecutionRequestsRoot`. Always overrides. The diff computation errors if the target bid is nil.
+
+**Builder Diffs.** The builder registry is diffed sparsely. Only builders whose fields changed between source and target are stored. The first 8 bytes encode the count of changed builders. Each entry is a `uint32` index followed by the fixed-size (93 bytes) SSZ-encoded `Builder`. When applying, the current builder slice is read from the source, changed indices are patched, and the result is written back with `SetBuilders`. This handles both mutations (balance changes, exits) and replacements (exited builder slot reused by a new deposit) since the full builder struct is stored for each changed index.
+
+**Next Withdrawal Builder Index.** Stored as an 8 byte `uint64`, always overrides.
+
+**Execution Payload Availability.** A fixed-size bitvector of `SlotsPerHistoricalRoot / 8` bytes (1024 bytes), stored without a length prefix. This uses a full override strategy rather than an append diff: availability updates flip bits in place on a wrapping slot-indexed ring buffer, so the mutation pattern is overwrite-with-wraparound rather than list growth. Given the small fixed size, storing the full vector is simpler than introducing changed-byte or append metadata. Always overrides.
+
+**Builder Pending Payments.** A fixed-size vector of `2 * SlotsPerEpoch` entries (64 entries × 44 bytes each), stored without a length prefix. Each entry is SSZ-encoded. Always overrides.
+
+**Builder Pending Withdrawals.** Treated exactly like pending deposits/partial withdrawals: prefix-drop + append using KMP. The first 8 bytes store the drop index, the next 8 bytes store the length of the appended diff, followed by the SSZ-encoded entries (36 bytes each).
+
+**Latest Block Hash.** Stored as 32 raw bytes, always overrides.
+
+**Payload Expected Withdrawals.** The first 8 bytes store the length. The remaining bytes contain SSZ-encoded `Withdrawal` entries (44 bytes each). Always overrides.
+
+**PTC Window.** The cached payload-timeliness-committee window, a vector of `(2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH` `PTCs` slots (each a fixed-size SSZ vector of `PTC_SIZE` validator indices). The first 8 bytes store the slot count; the remaining bytes contain the SSZ-encoded `PTCs` entries back-to-back. Always overrides. The window rotates once per epoch (`RotatePTCWindow`), so on most slot transitions the source and target windows match and the encoded bytes compress well under snappy.
+
+##### Cross-fork diffs involving Gloas
+
+When the source state is pre-Gloas and the target is Gloas, `updateToVersion` calls `gloas.UpgradeToGloas` which performs the full fork upgrade including `OnboardBuildersFromPendingDeposits`. The diff helpers guard source-side Gloas getter calls with `source.Version() >= version.Gloas`, treating a pre-Gloas source as having empty builders and empty builder pending withdrawals.
 
 #### Applying a diff
 
@@ -397,3 +436,54 @@ The exported function
 func Diff(source, target state.ReadOnlyBeaconState) (HdiffBytes, error)
 ```
 Takes two states and returns the corresponding diff bytes. This function calls the function `diffInternal` which in turn calls `diffToState`, `diffToVals` and `diffToBalances` that each return the corresponding component of an internal `hdiff` structure. Then we call `serialize()` on the correponding `hdiff` structure. The function `serialize` constructs the `data` byte slice as described above in the [Deserialization](#deserialization) section and finally it calls `snappy.Encode()` on each of the three slices. 
+
+## Archive mode
+
+`--enable-archive` makes a checkpoint-synced node hold every historical state from an origin state up to the
+head. `--archive-origin-state <path.ssz>` names that origin; without it the origin is the genesis state the
+`genesis` package already loads. The origin slot must be an epoch boundary and a multiple of 32, which is what
+the tree requires of its offset.
+
+### Why the offset moves
+
+`getBaseAndDiffChain` reconstructs slot *s* from the level 0 snapshot at *s - (s-o) mod 2^λ_0*, and slots below
+*o* have no representation at all. A checkpoint-synced node normally sets *o* to the checkpoint slot, so it can
+never represent anything older. Archive mode instead anchors the tree at the archive origin, which means:
+
+- In archive mode `initializeStateDiff` never sets the offset, so `SaveGenesisData` and `SaveOrigin` cannot
+  anchor the tree; only `InitializeArchiveOrigin` can. Anchoring is irreversible — the offset cannot be moved
+  once written — so the node splits it in two (both in `beacon-chain/node/archive.go`): `initArchiveOrigin`
+  runs before `startDB` and only loads and validates the origin state, so a bad flag fails before checkpoint
+  sync downloads anything; `finalizeArchiveOrigin` runs after `startDB`, checks the origin against the now
+  known sync origin, and only then commits the anchor. A rejected origin therefore leaves a database that
+  still accepts a corrected one.
+- The checkpoint origin state's slot is generally not a boundary of the re-anchored tree, so `SaveOrigin`
+  persists it as a hot state snapshot instead. `State`/`HasState` consult that bucket first, which is what lets
+  stategen and backfill find it.
+- The live chain's level 0 anchor lies in the not yet regenerated past, so `MigrateToCold` genuinely cannot
+  write until the walk reaches it. Suppression is a correctness requirement, not a simplification.
+
+### The walk
+
+`beacon-chain/archive` waits for backfill to finish, then replays forward from the origin state, carrying the
+working state in memory and persisting one state per tree boundary. It never reads the tree back, which is what
+keeps it tractable. Progress lives in the `ArchiveStatus` record next to the offset metadata, so a restart
+resumes at the last written boundary. Every boundary is written, including those whose slot had no block: a
+hole in a level makes every deeper read inside that span unresolvable.
+
+The state root of the first replayed block is checked against what the block commits to. That is the only
+verification of the operator-supplied origin state, which is otherwise trust input exactly like
+`--checkpoint-state`; a wrong origin means deleting the database.
+
+When the walk has written every boundary at or below the finalized checkpoint, it hands migration back to the
+normal finalization-driven path. While it runs, a full state is snapshotted by root every
+`archiveResumeSnapshotInterval` slots so a restart does not replay from the sync origin.
+
+### Sizing
+
+Disk and CPU are dominated by the last exponent. At the default of 5 a mainnet archive stores roughly 410k
+per-epoch diffs, and each diff allocates a `len(balances)`-sized `[]int64`. Operators who do not need per-epoch
+resolution should raise it, for example `--state-diff-exponents=21,18,16,13,11,9,8`.
+
+Archive mode cannot be combined with `--beacon-db-pruning`: the pruner deletes the history the archive is built
+from.

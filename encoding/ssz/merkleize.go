@@ -2,12 +2,15 @@ package ssz
 
 import (
 	"encoding/binary"
+	"runtime"
+	"sync"
 
 	"github.com/OffchainLabs/prysm/v7/container/trie"
 	"github.com/OffchainLabs/prysm/v7/crypto/hash/htr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/gohashtree"
 )
+
+const minSliceSizeToParallelize = 512
 
 var errInvalidNilSlice = errors.New("invalid empty slice")
 
@@ -158,16 +161,58 @@ type Hashable interface {
 	HashTreeRoot() ([32]byte, error)
 }
 
+// ElementRoots computes the root of every element, concurrently for large slices.
+func ElementRoots[T Hashable](elements []T) ([][32]byte, error) {
+	roots := make([][32]byte, len(elements))
+	if len(elements) < minSliceSizeToParallelize {
+		for i := range elements {
+			r, err := elements[i].HashTreeRoot()
+			if err != nil {
+				return nil, err
+			}
+			roots[i] = r
+		}
+		return roots, nil
+	}
+
+	n := min(runtime.GOMAXPROCS(0), len(elements))
+	groupSize := (len(elements) + n - 1) / n
+	errs := make([]error, n)
+	var wg sync.WaitGroup
+	for j := range n {
+		start := j * groupSize
+		if start >= len(elements) {
+			break
+		}
+		end := min(start+groupSize, len(elements))
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := start; i < end; i++ {
+				r, err := elements[i].HashTreeRoot()
+				if err != nil {
+					errs[j] = err
+					return
+				}
+				roots[i] = r
+			}
+		}()
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return roots, nil
+}
+
 // MerkleizeVectorSSZ hashes each element in the list and then returns the HTR
 // of the corresponding list of roots
 func MerkleizeVectorSSZ[T Hashable](elements []T, length uint64) ([32]byte, error) {
-	roots := make([][32]byte, len(elements))
-	var err error
-	for i, el := range elements {
-		roots[i], err = el.HashTreeRoot()
-		if err != nil {
-			return [32]byte{}, err
-		}
+	roots, err := ElementRoots(elements)
+	if err != nil {
+		return [32]byte{}, err
 	}
 	return MerkleizeVector(roots, length), nil
 }
@@ -182,10 +227,10 @@ func MerkleizeListSSZ[T Hashable](elements []T, limit uint64) ([32]byte, error) 
 	chunks := make([][32]byte, 2)
 	chunks[0] = body
 	binary.LittleEndian.PutUint64(chunks[1][:], uint64(len(elements)))
-	if err := gohashtree.Hash(chunks, chunks); err != nil {
+	if err = htr.Hash(chunks, chunks); err != nil {
 		return [32]byte{}, err
 	}
-	return chunks[0], err
+	return chunks[0], nil
 }
 
 // MerkleizeByteSliceSSZ hashes a byteslice by chunkifying it and returning the

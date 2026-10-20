@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
 	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
@@ -16,6 +17,9 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/blstoexec"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/voluntaryexits"
 	p2pTesting "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
@@ -75,8 +79,12 @@ func startChainService(t testing.TB,
 		blockchain.WithStateGen(sg),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
+		blockchain.WithSlashingPool(slashings.NewPool()),
+		blockchain.WithExitPool(voluntaryexits.NewPool()),
+		blockchain.WithBLSToExecPool(blstoexec.NewPool()),
 		blockchain.WithDepositCache(depositCache),
-		blockchain.WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
+		blockchain.WithProposerPreferencesCache(cache.NewProposerPreferencesCache()),
+		blockchain.WithSubscribedValidatorsCache(cache.NewSubscribedValidatorsCache()),
 		blockchain.WithPayloadIDCache(cache.NewPayloadIDCache()),
 		blockchain.WithClockSynchronizer(clockSync),
 		blockchain.WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
@@ -109,7 +117,7 @@ func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, pay
 	return nil, m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, []common.Hash, *common.Hash, *pb.ExecutionRequests) ([]byte, error) {
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, []common.Hash, *common.Hash, pb.ExecutionRequester) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
@@ -140,4 +148,12 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _
 
 func (m *engineMock) GetTerminalBlockHash(context.Context, uint64) ([]byte, bool, error) {
 	return nil, false, nil
+}
+
+func (m *engineMock) GetClientVersionV1(context.Context) ([]*structs.ClientVersionV1, error) {
+	return nil, nil
+}
+
+func (*engineMock) PartialColumnsSupported() bool {
+	return false
 }

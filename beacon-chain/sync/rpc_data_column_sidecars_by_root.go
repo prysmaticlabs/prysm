@@ -7,12 +7,12 @@ import (
 	"slices"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
 	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/container/slice"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
@@ -93,7 +93,7 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg any
 		requestedRootsByColumnSet := make(map[string][]string, 1)
 		for root, columns := range requestedColumnsByRoot {
 			slices.Sort(columns)
-			prettyColumns := helpers.PrettySlice(columns)
+			prettyColumns := slice.PrettySlice(columns)
 			requestedRootsByColumnSet[prettyColumns] = append(requestedRootsByColumnSet[prettyColumns], fmt.Sprintf("%#x", root))
 		}
 
@@ -147,12 +147,12 @@ func (s *Service) dataColumnSidecarByRootRPCHandler(ctx context.Context, msg any
 
 		for _, verifiedRODataColumn := range verifiedRODataColumns {
 			// Filter out data column sidecars that are too old.
-			if verifiedRODataColumn.SignedBlockHeader.Header.Slot < minReqSlot {
+			if verifiedRODataColumn.Slot() < minReqSlot {
 				continue
 			}
 
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
-			if chunkErr := WriteDataColumnSidecarChunk(stream, s.cfg.clock, s.cfg.p2p.Encoding(), verifiedRODataColumn.DataColumnSidecar); chunkErr != nil {
+			if chunkErr := WriteDataColumnSidecarChunk(stream, s.cfg.clock, s.cfg.p2p.Encoding(), verifiedRODataColumn.RODataColumn); chunkErr != nil {
 				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 				tracing.AnnotateError(span, chunkErr)
 				return chunkErr

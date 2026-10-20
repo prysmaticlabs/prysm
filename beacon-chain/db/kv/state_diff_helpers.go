@@ -5,31 +5,174 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	statenative "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/hdiff"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/math"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/golang/snappy"
+	pkgerrors "github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"go.etcd.io/bbolt"
 )
 
-var (
-	offsetKey           = []byte("offset")
-	ErrSlotBeforeOffset = errors.New("slot is before root offset")
+const (
+	// stateDiffTreeKeyLength is the length of a state-diff tree key, before any suffix.
+	stateDiffTreeKeyLength = 16
+
+	// stateDiffTreeKeySlotEnd is the end of the meaningful part of a state-diff tree key: a level
+	// byte followed by a little-endian slot. The bytes up to stateDiffTreeKeyLength are padding,
+	// and are always zero.
+	stateDiffTreeKeySlotEnd = 9
 )
 
+var (
+	offsetKey                   = []byte("offset")
+	exponentsKey                = []byte("exponents")
+	ErrSlotBeforeOffset         = errors.New("slot is before state-diff root offset")
+	errExponentsMetadataMissing = errors.New("state diff exponents metadata not found")
+	// ErrAboveArchiveFrontier rejects a tree write that the archive walk has not laid the anchors for yet.
+	ErrAboveArchiveFrontier = errors.New("state-diff write above the archive regeneration frontier")
+
+	// stateKeyByVersion is the key prefix stored in front of a state's SSZ bytes, per fork.
+	stateKeyByVersion = map[int][]byte{
+		version.Phase0:    phase0Key,
+		version.Altair:    altairKey,
+		version.Bellatrix: bellatrixKey,
+		version.Capella:   capellaKey,
+		version.Deneb:     denebKey,
+		version.Electra:   ElectraKey,
+		version.Fulu:      fuluKey,
+		version.Gloas:     gloasKey,
+		version.Heze:      hezeKey,
+	}
+)
+
+func encodeStateDiffExponents(exponents []int) ([]byte, error) {
+	if len(exponents) == 0 {
+		return nil, errors.New("state diff exponents cannot be empty")
+	}
+	if len(exponents) > 255 {
+		return nil, fmt.Errorf("state diff exponents length %d exceeds max 255", len(exponents))
+	}
+	encoded := make([]byte, len(exponents)+1)
+	encoded[0] = byte(len(exponents))
+	for i, exp := range exponents {
+		if exp < flags.MinStateDiffExponent || exp > flags.MaxStateDiffExponent {
+			return nil, fmt.Errorf("state diff exponent out of range for encoding: got %d, expected between %d and %d", exp, flags.MinStateDiffExponent, flags.MaxStateDiffExponent)
+		}
+		encoded[i+1] = byte(exp)
+	}
+	return encoded, nil
+}
+
+func decodeStateDiffExponents(encoded []byte) ([]int, error) {
+	if len(encoded) == 0 {
+		return nil, errors.New("state diff exponents missing length prefix")
+	}
+	count := int(encoded[0])
+	if count == 0 {
+		return nil, errors.New("state diff exponents length cannot be zero")
+	}
+	if count > 15 {
+		return nil, fmt.Errorf("state diff exponents length %d exceeds max 15", count)
+	}
+	if len(encoded) != count+1 {
+		return nil, fmt.Errorf("state diff exponents length mismatch: expected %d got %d", count, len(encoded)-1)
+	}
+	exponents := make([]int, count)
+	prev := flags.MaxStateDiffExponent + 1
+	for i := range count {
+		exp := int(encoded[i+1])
+		if exp < flags.MinStateDiffExponent || exp > flags.MaxStateDiffExponent {
+			return nil, fmt.Errorf("state diff exponent out of range when decoding: got %d, expected between %d and %d", exp, flags.MinStateDiffExponent, flags.MaxStateDiffExponent)
+		}
+		if exp >= prev {
+			return nil, fmt.Errorf("state diff exponents must be in strictly decreasing order, and each exponent must be <= %d", flags.MaxStateDiffExponent)
+		}
+		exponents[i] = exp
+		prev = exp
+	}
+	if exponents[count-1] < 5 {
+		return nil, errors.New("the last state diff exponent must be at least 5")
+	}
+	return exponents, nil
+}
+
+func formatStateDiffExponents(exponents []int) string {
+	if len(exponents) == 0 {
+		return ""
+	}
+	parts := make([]string, len(exponents))
+	for i, exp := range exponents {
+		parts[i] = fmt.Sprintf("%d", exp)
+	}
+	return strings.Join(parts, ",")
+}
+
+func (s *Store) loadStateDiffExponents() ([]int, error) {
+	var encoded []byte
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		value := bucket.Get(exponentsKey)
+		if value == nil {
+			return errExponentsMetadataMissing
+		}
+		encoded = make([]byte, len(value))
+		copy(encoded, value)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return decodeStateDiffExponents(encoded)
+}
+
 func makeKeyForStateDiffTree(level int, slot uint64) []byte {
-	buf := make([]byte, 16)
+	buf := make([]byte, stateDiffTreeKeyLength)
 	buf[0] = byte(level)
-	binary.LittleEndian.PutUint64(buf[1:], slot)
+	binary.LittleEndian.PutUint64(buf[1:stateDiffTreeKeySlotEnd], slot)
 	return buf
 }
 
-func (s *Store) getAnchorState(offset uint64, lvl int, slot primitives.Slot) (anchor state.ReadOnlyBeaconState, err error) {
+// isStateDiffTreeKey reports whether the given key holds a tree entry, as opposed to one of the
+// metadata keys stored in the same bucket.
+func isStateDiffTreeKey(key []byte) bool {
+	if len(key) < stateDiffTreeKeyLength {
+		return false
+	}
+
+	if int(key[0]) >= len(flags.Get().StateDiffExponents) {
+		return false
+	}
+
+	for _, padding := range key[stateDiffTreeKeySlotEnd:stateDiffTreeKeyLength] {
+		if padding != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+// stateDiffTreeKeySlot returns the slot a state-diff tree key is stored at.
+// It must only be called on a key that isStateDiffTreeKey accepts.
+func stateDiffTreeKeySlot(key []byte) uint64 {
+	return binary.LittleEndian.Uint64(key[1:stateDiffTreeKeySlotEnd])
+}
+
+func (s *Store) getAnchorState(ctx context.Context, offset uint64, lvl int, slot primitives.Slot) (anchor state.ReadOnlyBeaconState, err error) {
 	if lvl <= 0 || lvl > len(flags.Get().StateDiffExponents) {
 		return nil, errors.New("invalid value for level")
 	}
@@ -38,10 +181,8 @@ func (s *Store) getAnchorState(offset uint64, lvl int, slot primitives.Slot) (an
 		return nil, ErrSlotBeforeOffset
 	}
 	relSlot := uint64(slot) - offset
+	// The exponents are validated at node startup, so they always fit in a uint64 shift.
 	prevExp := flags.Get().StateDiffExponents[lvl-1]
-	if prevExp < 2 || prevExp >= 64 {
-		return nil, fmt.Errorf("state diff exponent %d out of range for uint64", prevExp)
-	}
 	span := math.PowerOf2(uint64(prevExp))
 	anchorSlot := primitives.Slot(uint64(slot) - relSlot%span)
 
@@ -52,16 +193,23 @@ func (s *Store) getAnchorState(offset uint64, lvl int, slot primitives.Slot) (an
 	}
 
 	// Check if we have the anchor in cache.
-	anchor = s.stateDiffCache.getAnchor(anchorLvl)
+	startTime := time.Now()
+	anchor = s.stateDiffCache.getAnchor(anchorLvl, withExactSlot(anchorSlot))
 	if anchor != nil {
+		stateDiffGetAnchorStateCacheHitReadTime.Observe(float64(time.Since(startTime)) / float64(time.Millisecond))
+		stateDiffGetAnchorStateCacheHit.Inc()
 		return anchor, nil
 	}
+	stateDiffGetAnchorStateCacheMissTime.Observe(float64(time.Since(startTime)) / float64(time.Millisecond))
+	stateDiffGetAnchorStateCacheMiss.Inc()
 
 	// If not, load it from the database.
-	anchor, err = s.stateByDiff(context.Background(), anchorSlot)
+	startTime = time.Now()
+	anchor, err = s.stateByDiff(ctx, anchorSlot)
 	if err != nil {
 		return nil, err
 	}
+	stateDiffGetAnchorStateDBReadTime.Observe(float64(time.Since(startTime)) / float64(time.Millisecond))
 
 	// Save it in the cache.
 	err = s.stateDiffCache.setAnchor(anchorLvl, anchor)
@@ -71,13 +219,24 @@ func (s *Store) getAnchorState(offset uint64, lvl int, slot primitives.Slot) (an
 	return anchor, nil
 }
 
+// deepestDiffSpan is the slot distance between adjacent boundaries of the deepest level, which is also the
+// spacing of the full set of boundary slots since every shallower span is a multiple of it.
+func deepestDiffSpan() uint64 {
+	exponents := flags.Get().StateDiffExponents
+	if len(exponents) == 0 {
+		return 0
+	}
+	return math.PowerOf2(uint64(exponents[len(exponents)-1]))
+}
+
 // computeLevel computes the level in the diff tree. Returns -1 in case slot should not be in tree.
 func computeLevel(offset uint64, slot primitives.Slot) int {
+	if uint64(slot) < offset {
+		return -1
+	}
 	rel := uint64(slot) - offset
+	// The exponents are validated at node startup, so they always fit in a uint64 shift.
 	for i, exp := range flags.Get().StateDiffExponents {
-		if exp < 2 || exp >= 64 {
-			return -1
-		}
 		span := math.PowerOf2(uint64(exp))
 		if rel%span == 0 {
 			return i
@@ -119,80 +278,217 @@ func (s *Store) getOffset() uint64 {
 	return s.stateDiffCache.getOffset()
 }
 
-func keyForSnapshot(v int) ([]byte, error) {
-	switch v {
-	case version.Fulu:
-		return fuluKey, nil
-	case version.Electra:
-		return ElectraKey, nil
-	case version.Deneb:
-		return denebKey, nil
-	case version.Capella:
-		return capellaKey, nil
-	case version.Bellatrix:
-		return bellatrixKey, nil
-	case version.Altair:
-		return altairKey, nil
-	case version.Phase0:
-		return phase0Key, nil
-	default:
-		return nil, errors.New("unsupported fork")
+func (s *Store) loadOffset() (uint64, error) {
+	var offset uint64
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		offsetBytes := bucket.Get(offsetKey)
+		if offsetBytes == nil {
+			return errors.New("state diff offset not found")
+		}
+		if len(offsetBytes) != 8 {
+			return fmt.Errorf("state diff offset has invalid length %d", len(offsetBytes))
+		}
+		offset = binary.LittleEndian.Uint64(offsetBytes)
+		return nil
+	})
+	if err != nil {
+		return 0, err
 	}
+	return offset, nil
 }
 
-func addKey(v int, bytes []byte) ([]byte, error) {
-	key, err := keyForSnapshot(v)
+// hasStateDiffOffset checks if the state-diff offset has been set in the database.
+// This is used to detect if an existing database has state-diff enabled.
+func (s *Store) hasStateDiffOffset() (bool, error) {
+	var hasOffset bool
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return nil
+		}
+		hasOffset = bucket.Get(offsetKey) != nil
+		return nil
+	})
+	return hasOffset, err
+}
+
+// stateDiffAnchoredAfterGenesis returns true if the state-diff tree is anchored on a slot after
+// genesis (which only happens on a database synced from a checkpoint).
+func (s *Store) stateDiffAnchoredAfterGenesis() (bool, error) {
+	hasOffset, err := s.hasStateDiffOffset()
 	if err != nil {
-		return nil, err
+		return false, fmt.Errorf("has state diff offset: %w", err)
 	}
-	enc := make([]byte, len(key)+len(bytes))
-	copy(enc, key)
-	copy(enc[len(key):], bytes)
-	return enc, nil
+
+	if !hasOffset {
+		return false, nil
+	}
+
+	offset, err := s.loadOffset()
+	if err != nil {
+		return false, fmt.Errorf("load offset: %w", err)
+	}
+
+	return offset != 0, nil
+}
+
+// initializeStateDiff sets up the state-diff schema for a new database.
+// This should be called during checkpoint sync or genesis sync.
+func (s *Store) initializeStateDiff(slot primitives.Slot, initialState state.ReadOnlyBeaconState) error {
+	// Return early if the feature is not set
+	if !features.Get().EnableStateDiff {
+		return nil
+	}
+
+	// In archive mode the archive origin owns the offset; only InitializeArchiveOrigin may set it.
+	if features.Get().EnableArchive {
+		log.WithFields(logrus.Fields{
+			"requestedSlot":  slot,
+			"archiveEnabled": true,
+		}).Debug("Leaving the state-diff offset to the archive origin")
+		return nil
+	}
+
+	return s.anchorStateDiff(slot, initialState)
+}
+
+// anchorStateDiff writes the state-diff metadata, builds the cache and stores the initial full snapshot.
+func (s *Store) anchorStateDiff(slot primitives.Slot, initialState state.ReadOnlyBeaconState) error {
+	if slot%32 != 0 {
+		return errors.New("cannot initialize state diff with a non epoch boundary offset")
+	}
+
+	// Only reinitialize if the offset is different
+	if s.stateDiffCache != nil {
+		if s.stateDiffCache.getOffset() == uint64(slot) {
+			log.WithField("offset", slot).Debug("Ignoring state diff cache reinitialization")
+			return nil
+		}
+	}
+
+	exponentsBytes, err := encodeStateDiffExponents(flags.Get().StateDiffExponents)
+	if err != nil {
+		return pkgerrors.Wrap(err, "failed to encode state diff exponents")
+	}
+
+	// Write metadata directly to the database (without using cache which doesn't exist yet).
+	err = s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+
+		offsetBytes := make([]byte, 8)
+		binary.LittleEndian.PutUint64(offsetBytes, uint64(slot))
+		if err := bucket.Put(offsetKey, offsetBytes); err != nil {
+			return err
+		}
+		return bucket.Put(exponentsKey, exponentsBytes)
+	})
+	if err != nil {
+		return pkgerrors.Wrap(err, "failed to set state diff metadata in db")
+	}
+
+	// Create the state diff cache (this will read the offset from the database).
+	sdCache, err := newStateDiffCache(s)
+	if err != nil {
+		return pkgerrors.Wrap(err, "failed to create state diff cache")
+	}
+	s.stateDiffCache = sdCache
+
+	// Save the initial state as a full snapshot.
+	if err := s.saveFullSnapshot(initialState); err != nil {
+		return pkgerrors.Wrap(err, "failed to save initial snapshot")
+	}
+
+	log.WithField("offset", slot).Debug("Initialized state-diff cache")
+	return nil
+}
+
+// encodeProtoWithKey returns snappy(versionKey || ssz(pb)), marshaling straight into the prefixed buffer.
+func encodeProtoWithKey(v int, pb ssz.Marshaler) ([]byte, error) {
+	key, ok := stateKeyByVersion[v]
+	if !ok {
+		return nil, fmt.Errorf("unsupported fork %s", version.String(v))
+	}
+
+	// Allocate a buffer with enough capacity as the size can be derived.
+	buf := make([]byte, len(key), len(key)+pb.SizeSSZ())
+	copy(buf, key)
+	buf, err := pb.MarshalSSZTo(buf)
+	if err != nil {
+		return nil, fmt.Errorf("marshal SSZ to buffer: %w", err)
+	}
+	return snappy.Encode(nil, buf), nil
+}
+
+// encodeStateWithKey is encodeProtoWithKey for a native state.
+func encodeStateWithKey(st state.ReadOnlyBeaconState) ([]byte, error) {
+	pb, ok := st.ToProto().(ssz.Marshaler)
+	if !ok {
+		return nil, errors.New("state does not marshal to ssz")
+	}
+	return encodeProtoWithKey(st.Version(), pb)
 }
 
 func decodeStateSnapshot(enc []byte) (state.BeaconState, error) {
 	switch {
+	case hasHezeKey(enc):
+		var hezeState ethpb.BeaconStateHeze
+		if err := hezeState.UnmarshalSSZ(enc[len(hezeKey):]); err != nil {
+			return nil, fmt.Errorf("unmarshal Heze state: %w", err)
+		}
+		return statenative.InitializeFromProtoUnsafeHeze(&hezeState)
+	case hasGloasKey(enc):
+		var gloasState ethpb.BeaconStateGloas
+		if err := gloasState.UnmarshalSSZ(enc[len(gloasKey):]); err != nil {
+			return nil, fmt.Errorf("unmarshal Gloas state: %w", err)
+		}
+		return statenative.InitializeFromProtoUnsafeGloas(&gloasState)
 	case hasFuluKey(enc):
 		var fuluState ethpb.BeaconStateFulu
 		if err := fuluState.UnmarshalSSZ(enc[len(fuluKey):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Fulu state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafeFulu(&fuluState)
 	case HasElectraKey(enc):
 		var electraState ethpb.BeaconStateElectra
 		if err := electraState.UnmarshalSSZ(enc[len(ElectraKey):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Electra state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafeElectra(&electraState)
 	case hasDenebKey(enc):
 		var denebState ethpb.BeaconStateDeneb
 		if err := denebState.UnmarshalSSZ(enc[len(denebKey):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Deneb state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafeDeneb(&denebState)
 	case hasCapellaKey(enc):
 		var capellaState ethpb.BeaconStateCapella
 		if err := capellaState.UnmarshalSSZ(enc[len(capellaKey):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Capella state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafeCapella(&capellaState)
 	case hasBellatrixKey(enc):
 		var bellatrixState ethpb.BeaconStateBellatrix
 		if err := bellatrixState.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Bellatrix state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafeBellatrix(&bellatrixState)
 	case hasAltairKey(enc):
 		var altairState ethpb.BeaconStateAltair
 		if err := altairState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Altair state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafeAltair(&altairState)
 	case hasPhase0Key(enc):
 		var phase0State ethpb.BeaconState
 		if err := phase0State.UnmarshalSSZ(enc[len(phase0Key):]); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal Phase0 state: %w", err)
 		}
 		return statenative.InitializeFromProtoUnsafePhase0(&phase0State)
 	default:
@@ -221,20 +517,35 @@ func (s *Store) getBaseAndDiffChain(offset uint64, slot primitives.Slot) (state.
 	}
 
 	var diffChainItems []diffItem
-	lastSeenAnchorSlot := baseAnchorSlot
+	lastSeenDiffRelSlot := baseAnchorSlot - offset
 	for i, exp := range exponents[1 : lvl+1] {
 		span := math.PowerOf2(uint64(exp))
 		diffSlot := rel / span * span
-		if diffSlot == lastSeenAnchorSlot {
+		if diffSlot == lastSeenDiffRelSlot {
 			continue
 		}
-		diffChainItems = append(diffChainItems, diffItem{level: i + 1, slot: diffSlot + offset})
-		lastSeenAnchorSlot = diffSlot
+		level := i + 1
+		// Every distinct ancestor is required, even if its cache level is empty.
+		diffChainItems = append(diffChainItems, diffItem{level: level, slot: diffSlot + offset})
+		lastSeenDiffRelSlot = diffSlot
 	}
 
-	baseSnapshot, err := s.getFullSnapshot(baseAnchorSlot)
-	if err != nil {
-		return nil, nil, err
+	var baseSnapshot state.BeaconState
+	// try to see if our cache has anything useful.
+	if s.stateDiffCache != nil {
+		for i := len(diffChainItems) - 1; i >= 0; i-- {
+			item := diffChainItems[i]
+			// Ignore stray cached anchors without making required ancestor diffs optional.
+			if !s.stateDiffCache.levelHasData(item.level) {
+				continue
+			}
+			cachedAnchor := s.stateDiffCache.getAnchor(item.level, withExactSlot(primitives.Slot(item.slot)))
+			if cachedAnchor != nil {
+				baseSnapshot = cachedAnchor
+				diffChainItems = diffChainItems[i+1:]
+				break
+			}
+		}
 	}
 
 	diffChain := make([]hdiff.HdiffBytes, 0, len(diffChainItems))
@@ -244,6 +555,14 @@ func (s *Store) getBaseAndDiffChain(offset uint64, slot primitives.Slot) (state.
 			return nil, nil, err
 		}
 		diffChain = append(diffChain, diff)
+	}
+
+	if baseSnapshot == nil {
+		var err error
+		baseSnapshot, err = s.getFullSnapshot(baseAnchorSlot)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return baseSnapshot, diffChain, nil
