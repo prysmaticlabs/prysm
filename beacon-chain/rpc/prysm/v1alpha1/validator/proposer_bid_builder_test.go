@@ -859,6 +859,8 @@ func TestSetExecutionPayloadBid_PrefersBuilderBid(t *testing.T) {
 
 	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
 	require.NoError(t, err)
-	require.Equal(t, primitives.BuilderIndex(7), signedBid.Message.BuilderIndex)
-	require.Equal(t, primitives.Gwei(1000), signedBid.Message.Value)
+	bid, err := signedBid.Bid()
+	require.NoError(t, err)
+	require.Equal(t, primitives.BuilderIndex(7), bid.BuilderIndex())
+	require.Equal(t, primitives.Gwei(1000), bid.Value())
 }

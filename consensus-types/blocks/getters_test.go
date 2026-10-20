@@ -89,7 +89,7 @@ func Test_SignedBeaconBlock_Copy(t *testing.T) {
 
 	t.Run("gloas deep copy", func(t *testing.T) {
 		payload := []*eth.PayloadAttestation{{Signature: []byte{0x01}}}
-		payloadBid := &eth.SignedExecutionPayloadBid{Signature: []byte{0x02}}
+		payloadBid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
 		sb := &SignedBeaconBlock{
 			version: version.Gloas,
 			block: &BeaconBlock{
@@ -119,10 +119,10 @@ func Test_SignedBeaconBlock_Copy(t *testing.T) {
 
 		bid, err := cp.Block().Body().SignedExecutionPayloadBid()
 		require.NoError(t, err)
-		require.DeepEqual(t, payloadBid, bid)
-		origBidSig := bid.Signature[0]
+		require.DeepEqual(t, payloadBid, cp.block.body.signedExecutionPayloadBid)
+		origBidSig := bid.Signature()[0]
 		payloadBid.Signature[0] ^= 0xFF
-		require.Equal(t, origBidSig, bid.Signature[0])
+		require.Equal(t, origBidSig, bid.Signature()[0])
 	})
 }
 
@@ -441,15 +441,21 @@ func Test_BeaconBlockBody_SignedExecutionPayloadBid(t *testing.T) {
 	})
 
 	t.Run("gloas returns bid", func(t *testing.T) {
-		bid := &eth.SignedExecutionPayloadBid{Signature: []byte{0xFF}}
+		bid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+		ro, err := WrappedROSignedExecutionPayloadBid(bid)
+		require.NoError(t, err)
 		sb := &SignedBeaconBlock{
 			version: version.Gloas,
 			block:   &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}},
 		}
-		require.NoError(t, sb.SetSignedExecutionPayloadBid(bid))
+		require.NoError(t, sb.SetSignedExecutionPayloadBid(ro))
 		got, err := sb.Block().Body().SignedExecutionPayloadBid()
 		require.NoError(t, err)
-		require.DeepEqual(t, bid, got)
+		wantRoot, err := bid.HashTreeRoot()
+		require.NoError(t, err)
+		gotRoot, err := got.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, wantRoot, gotRoot)
 	})
 }
 

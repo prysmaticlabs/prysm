@@ -1358,10 +1358,10 @@ func (b *BeaconBlockBody) PayloadAttestations() ([]*eth.PayloadAttestation, erro
 	return nil, consensus_types.ErrNotSupported("PayloadAttestations", b.version)
 }
 
-// SignedExecutionPayloadBid returns the signed execution payload header in the block.
-func (b *BeaconBlockBody) SignedExecutionPayloadBid() (*eth.SignedExecutionPayloadBid, error) {
+// SignedExecutionPayloadBid returns the signed execution payload bid in the block.
+func (b *BeaconBlockBody) SignedExecutionPayloadBid() (interfaces.ROSignedExecutionPayloadBid, error) {
 	if b.version >= version.Gloas {
-		return b.signedExecutionPayloadBid, nil
+		return WrappedROSignedExecutionPayloadBid(b.signedExecutionPayloadBid)
 	}
 	return nil, consensus_types.ErrNotSupported("SignedExecutionPayloadBid", b.version)
 }
@@ -1372,11 +1372,7 @@ func (b *BeaconBlockBody) ExecutionPayloadBid() (interfaces.ROExecutionPayloadBi
 	if err != nil {
 		return nil, err
 	}
-	ro, err := WrappedROSignedExecutionPayloadBid(signedBid)
-	if err != nil {
-		return nil, err
-	}
-	return ro.Bid()
+	return signedBid.Bid()
 }
 
 // ParentExecutionRequests returns the parent's deferred execution requests.

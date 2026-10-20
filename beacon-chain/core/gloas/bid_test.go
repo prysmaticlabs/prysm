@@ -52,11 +52,11 @@ func (s stubBlockBody) ExecutionRequests() (*enginev1.ExecutionRequests, error) 
 func (s stubBlockBody) PayloadAttestations() ([]*ethpb.PayloadAttestation, error) {
 	return nil, nil
 }
-func (s stubBlockBody) SignedExecutionPayloadBid() (*ethpb.SignedExecutionPayloadBid, error) {
-	return s.signedBid, nil
+func (s stubBlockBody) SignedExecutionPayloadBid() (interfaces.ROSignedExecutionPayloadBid, error) {
+	return blocks.WrappedROSignedExecutionPayloadBid(s.signedBid)
 }
 func (s stubBlockBody) ExecutionPayloadBid() (interfaces.ROExecutionPayloadBid, error) {
-	signedBid, err := blocks.WrappedROSignedExecutionPayloadBid(s.signedBid)
+	signedBid, err := s.SignedExecutionPayloadBid()
 	if err != nil {
 		return nil, err
 	}

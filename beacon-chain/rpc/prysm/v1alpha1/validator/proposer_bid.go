@@ -70,7 +70,11 @@ func (vs *Server) setExecutionPayloadBid(
 	if !selfBuildOnly {
 		p2pBid := vs.cachedP2PBid(sBlk, local)
 		if bestBid, src, effective := bestBid(head, local, p2pBid, builderWin, builderConfig); bestBid != nil {
-			if err := sBlk.SetSignedExecutionPayloadBid(bestBid); err != nil {
+			ro, err := consensusblocks.WrappedROSignedExecutionPayloadBid(bestBid)
+			if err != nil {
+				return bidSourceSelfBuild, errors.Wrap(err, "could not wrap remote execution payload bid")
+			}
+			if err := sBlk.SetSignedExecutionPayloadBid(ro); err != nil {
 				return bidSourceSelfBuild, errors.Wrap(err, "could not set remote execution payload bid")
 			}
 			log.WithFields(logrus.Fields{
@@ -94,7 +98,11 @@ func (vs *Server) setExecutionPayloadBid(
 		Message:   bid,
 		Signature: common.InfiniteSignature[:],
 	}
-	if err := sBlk.SetSignedExecutionPayloadBid(signedBid); err != nil {
+	ro, err := consensusblocks.WrappedROSignedExecutionPayloadBid(signedBid)
+	if err != nil {
+		return bidSourceSelfBuild, errors.Wrap(err, "could not wrap signed execution payload bid")
+	}
+	if err := sBlk.SetSignedExecutionPayloadBid(ro); err != nil {
 		return bidSourceSelfBuild, errors.Wrap(err, "could not set signed execution payload bid")
 	}
 
@@ -541,7 +549,11 @@ func (vs *Server) setRemoteBidFallback(
 	if bid == nil {
 		return bidSourceSelfBuild, errors.New("no builder or cached P2P bid available")
 	}
-	if err := sBlk.SetSignedExecutionPayloadBid(bid); err != nil {
+	ro, err := consensusblocks.WrappedROSignedExecutionPayloadBid(bid)
+	if err != nil {
+		return bidSourceSelfBuild, errors.Wrap(err, "could not wrap fallback execution payload bid")
+	}
+	if err := sBlk.SetSignedExecutionPayloadBid(ro); err != nil {
 		return bidSourceSelfBuild, errors.Wrap(err, "could not set fallback execution payload bid")
 	}
 	log.WithFields(logrus.Fields{

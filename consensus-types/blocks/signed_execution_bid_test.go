@@ -129,5 +129,11 @@ func TestWrappedROSignedExecutionPayloadBid(t *testing.T) {
 		gotRoot, err := wrapped.SigningRoot(domain)
 		require.NoError(t, err)
 		require.Equal(t, wantRoot, gotRoot)
+
+		wantHTR, err := signed.HashTreeRoot()
+		require.NoError(t, err)
+		gotHTR, err := wrapped.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, wantHTR, gotHTR)
 	})
 }
