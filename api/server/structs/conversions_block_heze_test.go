@@ -27,3 +27,26 @@ func TestSignedBeaconBlockHezeRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, blk, generic.GetHeze())
 }
+
+func TestBeaconBlockBodyHeze_ToConsensus_NilFields(t *testing.T) {
+	tests := []struct {
+		name  string
+		field string
+		clear func(b *BeaconBlockBodyHeze)
+	}{
+		{name: "nil Eth1Data", field: "Eth1Data", clear: func(b *BeaconBlockBodyHeze) { b.Eth1Data = nil }},
+		{name: "nil SyncAggregate", field: "SyncAggregate", clear: func(b *BeaconBlockBodyHeze) { b.SyncAggregate = nil }},
+		{name: "nil SignedExecutionPayloadBid", field: "SignedExecutionPayloadBid", clear: func(b *BeaconBlockBodyHeze) { b.SignedExecutionPayloadBid = nil }},
+		{name: "nil Deposits element", field: "Deposits.[0]", clear: func(b *BeaconBlockBodyHeze) { b.Deposits = []*Deposit{nil} }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			blk, err := SignedBeaconBlockHezeFromConsensus(util.NewBeaconBlockHeze())
+			require.NoError(t, err)
+			body := blk.Message.Body
+			tt.clear(body)
+			_, err = body.ToConsensus()
+			require.ErrorContains(t, "could not decode "+tt.field+": "+errNilValue.Error(), err)
+		})
+	}
+}
