@@ -39,6 +39,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			cfg.FuluForkEpoch = 0
 			cfg.GloasForkEpoch = 0
 			cfg.HezeForkEpoch = 0
+			utils.WithoutEIP8198(cfg)
 			params.OverrideBeaconConfig(cfg)
 
 			helpers.ClearCache()

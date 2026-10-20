@@ -25,3 +25,10 @@ func SetConfig(t testing.TB, config string) error {
 		return fmt.Errorf("did not receive a valid config, instead received this %s", config)
 	}
 }
+
+// WithoutEIP8198 keeps the slot duration unchanged at Heze. The spec tests do not include EIP-8198 yet
+// (https://github.com/ethereum/consensus-specs/pull/5743), so they expect unscaled rewards and churn.
+// TODO: Remove once the spec tests include EIP-8198.
+func WithoutEIP8198(cfg *params.BeaconChainConfig) {
+	cfg.SlotDurationMillisHeze = cfg.SlotDurationMillis()
+}

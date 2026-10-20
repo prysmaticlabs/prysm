@@ -44,6 +44,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 			cfg.FuluForkEpoch = 0
 			cfg.GloasForkEpoch = 0
 			cfg.HezeForkEpoch = 0
+			utils.WithoutEIP8198(cfg)
 			params.OverrideBeaconConfig(cfg)
 
 			helpers.ClearCache()
