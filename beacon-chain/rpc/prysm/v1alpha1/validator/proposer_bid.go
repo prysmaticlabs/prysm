@@ -96,11 +96,27 @@ func (vs *Server) setExecutionPayloadBid(
 		return bidSourceSelfBuild, errors.Wrap(err, "could not create execution payload bid")
 	}
 
-	// Per spec, self-build bids must use G2 point-at-infinity as the signature.
-	var ro interfaces.ROSignedExecutionPayloadBid
-	if sBlk.Version() >= version.Heze {
+	ro, err := wrapSelfBuildBid(sBlk.Version(), bid)
+	if err != nil {
+		return bidSourceSelfBuild, errors.Wrap(err, "could not wrap signed execution payload bid")
+	}
+	if err := sBlk.SetSignedExecutionPayloadBid(ro); err != nil {
+		return bidSourceSelfBuild, errors.Wrap(err, "could not set signed execution payload bid")
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":      sBlk.Block().Slot(),
+		"source":    bidSourceSelfBuild,
+		"valueGwei": uint64(primitives.WeiToGwei(local.Bid)),
+	}).Info("Chose payload bid")
+	return bidSourceSelfBuild, nil
+}
+
+// wrapSelfBuildBid signs the self-build bid with the G2 point-at-infinity.
+func wrapSelfBuildBid(v int, bid *ethpb.ExecutionPayloadBid) (interfaces.ROSignedExecutionPayloadBid, error) {
+	if v >= version.Heze {
 		// For now, use empty inclusion list bits until the proposer inclusion list handling lands.
-		ro, err = consensusblocks.WrappedROSignedExecutionPayloadBidHeze(&ethpb.SignedExecutionPayloadBidHeze{
+		return consensusblocks.WrappedROSignedExecutionPayloadBidHeze(&ethpb.SignedExecutionPayloadBidHeze{
 			Message: &ethpb.ExecutionPayloadBidHeze{
 				ParentBlockHash:       bid.ParentBlockHash,
 				ParentBlockRoot:       bid.ParentBlockRoot,
@@ -118,25 +134,11 @@ func (vs *Server) setExecutionPayloadBid(
 			},
 			Signature: common.InfiniteSignature[:],
 		})
-	} else {
-		ro, err = consensusblocks.WrappedROSignedExecutionPayloadBid(&ethpb.SignedExecutionPayloadBid{
-			Message:   bid,
-			Signature: common.InfiniteSignature[:],
-		})
 	}
-	if err != nil {
-		return bidSourceSelfBuild, errors.Wrap(err, "could not wrap signed execution payload bid")
-	}
-	if err := sBlk.SetSignedExecutionPayloadBid(ro); err != nil {
-		return bidSourceSelfBuild, errors.Wrap(err, "could not set signed execution payload bid")
-	}
-
-	log.WithFields(logrus.Fields{
-		"slot":      sBlk.Block().Slot(),
-		"source":    bidSourceSelfBuild,
-		"valueGwei": uint64(primitives.WeiToGwei(local.Bid)),
-	}).Info("Chose payload bid")
-	return bidSourceSelfBuild, nil
+	return consensusblocks.WrappedROSignedExecutionPayloadBid(&ethpb.SignedExecutionPayloadBid{
+		Message:   bid,
+		Signature: common.InfiniteSignature[:],
+	})
 }
 
 // winningBuilderBid pairs the best builder-API bid with the entry whose limits it was selected under.

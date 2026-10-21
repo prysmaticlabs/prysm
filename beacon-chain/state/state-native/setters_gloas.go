@@ -202,29 +202,29 @@ func (b *BeaconState) QueueBuilderPaymentForSlot(parentSlot primitives.Slot) err
 		return b.queueBuilderPaymentAtIndex(parentSlot % slotsPerEpoch)
 	}
 
-	var (
-		feeRecipient []byte
-		value        primitives.Gwei
-		builderIndex primitives.BuilderIndex
-	)
-
-	if b.version >= version.Heze {
-		bid := b.latestExecutionPayloadBidHeze
-		feeRecipient, value, builderIndex = bid.GetFeeRecipient(), bid.GetValue(), bid.GetBuilderIndex()
-	} else {
-		bid := b.latestExecutionPayloadBid
-		feeRecipient, value, builderIndex = bid.GetFeeRecipient(), bid.GetValue(), bid.GetBuilderIndex()
-	}
-
-	if value == 0 {
+	w := b.latestBidWithdrawal()
+	if w.Amount == 0 {
 		return nil
 	}
-	b.appendBuilderPendingWithdrawalsLockFree([]*ethpb.BuilderPendingWithdrawal{{
-		FeeRecipient: bytesutil.SafeCopyBytes(feeRecipient),
-		Amount:       value,
-		BuilderIndex: builderIndex,
-	}})
+	b.appendBuilderPendingWithdrawalsLockFree([]*ethpb.BuilderPendingWithdrawal{w})
 	return nil
+}
+
+func (b *BeaconState) latestBidWithdrawal() *ethpb.BuilderPendingWithdrawal {
+	if b.version >= version.Heze {
+		bid := b.latestExecutionPayloadBidHeze
+		return &ethpb.BuilderPendingWithdrawal{
+			FeeRecipient: bytesutil.SafeCopyBytes(bid.GetFeeRecipient()),
+			Amount:       bid.GetValue(),
+			BuilderIndex: bid.GetBuilderIndex(),
+		}
+	}
+	bid := b.latestExecutionPayloadBid
+	return &ethpb.BuilderPendingWithdrawal{
+		FeeRecipient: bytesutil.SafeCopyBytes(bid.GetFeeRecipient()),
+		Amount:       bid.GetValue(),
+		BuilderIndex: bid.GetBuilderIndex(),
+	}
 }
 
 // queueBuilderPaymentAtIndex requires the caller to hold the state lock.

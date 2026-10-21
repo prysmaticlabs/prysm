@@ -122,21 +122,22 @@ func diffLatestExecutionPayloadBid(diff *stateDiff, target state.ReadOnlyBeaconS
 			ExecutionRequestsRoot: executionRequestsRoot[:],
 			InclusionListBits:     bid.InclusionListBits(),
 		}
-	} else {
-		diff.latestExecutionPayloadBid = &ethpb.ExecutionPayloadBid{
-			ParentBlockHash:       parentBlockHash[:],
-			ParentBlockRoot:       parentBlockRoot[:],
-			BlockHash:             blockHash[:],
-			PrevRandao:            prevRandao[:],
-			GasLimit:              bid.GasLimit(),
-			BuilderIndex:          bid.BuilderIndex(),
-			Slot:                  bid.Slot(),
-			Value:                 bid.Value(),
-			ExecutionPayment:      bid.ExecutionPayment(),
-			BlobKzgCommitments:    bid.BlobKzgCommitments(),
-			FeeRecipient:          feeRecipient[:],
-			ExecutionRequestsRoot: executionRequestsRoot[:],
-		}
+		return nil
+	}
+
+	diff.latestExecutionPayloadBid = &ethpb.ExecutionPayloadBid{
+		ParentBlockHash:       parentBlockHash[:],
+		ParentBlockRoot:       parentBlockRoot[:],
+		BlockHash:             blockHash[:],
+		PrevRandao:            prevRandao[:],
+		GasLimit:              bid.GasLimit(),
+		BuilderIndex:          bid.BuilderIndex(),
+		Slot:                  bid.Slot(),
+		Value:                 bid.Value(),
+		ExecutionPayment:      bid.ExecutionPayment(),
+		BlobKzgCommitments:    bid.BlobKzgCommitments(),
+		FeeRecipient:          feeRecipient[:],
+		ExecutionRequestsRoot: executionRequestsRoot[:],
 	}
 	return nil
 }
@@ -203,6 +204,14 @@ func (s *stateDiff) executionPayloadBidSSZ() ssz.Marshaler {
 		return s.latestExecutionPayloadBidHeze
 	}
 	return s.latestExecutionPayloadBid
+}
+
+// wrappedExecutionPayloadBid returns the fork-specific latest execution payload bid of the diff, wrapped.
+func (s *stateDiff) wrappedExecutionPayloadBid() (interfaces.ROExecutionPayloadBid, error) {
+	if s.targetVersion >= version.Heze {
+		return blocks.WrappedROExecutionPayloadBidHeze(s.latestExecutionPayloadBidHeze)
+	}
+	return blocks.WrappedROExecutionPayloadBid(s.latestExecutionPayloadBid)
 }
 
 func serializedGloasFieldsSize(s *stateDiff) int {
@@ -461,16 +470,7 @@ func (ret *stateDiff) readGloasFields(data *[]byte) error {
 // applyGloasFields applies the Gloas-specific fields from the diff to the source state.
 func applyGloasFields(source state.BeaconState, diff *stateDiff) error {
 	// latestExecutionPayloadBid (override, always non-nil).
-	var (
-		bid interfaces.ROExecutionPayloadBid
-		err error
-	)
-
-	if diff.targetVersion >= version.Heze {
-		bid, err = blocks.WrappedROExecutionPayloadBidHeze(diff.latestExecutionPayloadBidHeze)
-	} else {
-		bid, err = blocks.WrappedROExecutionPayloadBid(diff.latestExecutionPayloadBid)
-	}
+	bid, err := diff.wrappedExecutionPayloadBid()
 	if err != nil {
 		return errors.Wrap(err, "failed to wrap execution payload bid")
 	}
