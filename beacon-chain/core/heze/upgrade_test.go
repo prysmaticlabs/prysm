@@ -25,27 +25,27 @@ func TestUpgradeToHeze(t *testing.T) {
 			return nil
 		})
 		require.NoError(t, err)
-		preProto, err := state_native.ContainerFrom[*ethpb.BeaconStateGloas](pre.ToProto())
+		container, err := state_native.ContainerFrom[*ethpb.BeaconStateGloas](pre.ToContainer())
 		require.NoError(t, err)
 
 		post, err := heze.UpgradeToHeze(pre)
 		require.NoError(t, err)
 		require.Equal(t, version.Heze, post.Version())
 
-		got, err := state_native.ContainerFrom[*ethpb.BeaconStateHeze](post.ToProto())
+		got, err := state_native.ContainerFrom[*ethpb.BeaconStateHeze](post.ToContainer())
 		require.NoError(t, err)
 		require.DeepEqual(t, &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GloasForkVersion,
 			CurrentVersion:  params.BeaconConfig().HezeForkVersion,
 			Epoch:           time.CurrentEpoch(pre),
 		}, got.Fork)
-		require.Equal(t, preProto.Slot, got.Slot)
-		require.Equal(t, preProto.Eth1DepositIndex, got.Eth1DepositIndex)
-		require.DeepEqual(t, preProto.Eth1Data, got.Eth1Data)
-		require.DeepEqual(t, preProto.LatestBlockHash, got.LatestBlockHash)
-		require.DeepEqual(t, preProto.PtcWindow, got.PtcWindow)
+		require.Equal(t, container.Slot, got.Slot)
+		require.Equal(t, container.Eth1DepositIndex, got.Eth1DepositIndex)
+		require.DeepEqual(t, container.Eth1Data, got.Eth1Data)
+		require.DeepEqual(t, container.LatestBlockHash, got.LatestBlockHash)
+		require.DeepEqual(t, container.PtcWindow, got.PtcWindow)
 
-		require.DeepEqual(t, preProto.LatestExecutionPayloadBid, got.LatestExecutionPayloadBid)
+		require.DeepEqual(t, container.LatestExecutionPayloadBid, got.LatestExecutionPayloadBid)
 
 		// The upgraded state must hash like the generated SSZ of the same Heze state.
 		wantRoot, err := got.HashTreeRoot()
