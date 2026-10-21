@@ -62,12 +62,19 @@ func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	}
 
 	// Look for an existing database under the specified directory or its subdirectories.
-	found, matchPath, err := findDatabase(dataDir, isDatabaseMinimal)
+	found, dbDir, err := findDatabase(dataDir, isDatabaseMinimal)
 	if err != nil {
 		return errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
 
-	dataDir = databaseDir(dataDir, matchPath, found, isDatabaseMinimal)
+	// If no database exists yet (typically on a new machine), create it in dataDir, where the validator client will look for it.
+	msg := "No validator database found, creating a new one"
+	if found {
+		dataDir = dbDir
+		msg = "Found validator database"
+	}
+
+	log.WithField("path", dataDir).Info(msg)
 
 	// Open the validator database.
 	valDB, err := openDatabase(cliCtx.Context, dataDir, isDatabaseMinimal)
@@ -83,20 +90,20 @@ func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	}()
 
 	// Import the data from the standard slashing protection JSON file into our database.
-	log.Infof("Starting import of slashing protection file %s", protectionFilePath)
+	log.WithField("file", protectionFilePath).Info("Starting import of slashing protection file")
 	buf := bytes.NewBuffer(enc)
 
 	if err := valDB.ImportStandardProtectionJSON(cliCtx.Context, buf); err != nil {
 		return errors.Wrapf(err, "could not import slashing protection JSON file %s", protectionFilePath)
 	}
 
-	log.Infof("Slashing protection JSON successfully imported into %s", dataDir)
+	log.WithField("path", dataDir).Info("Slashing protection JSON successfully imported")
 
 	return nil
 }
 
 // findDatabase looks for an existing validator database under dataDir or its subdirectories.
-// It returns whether one was found and its path. A missing dataDir means no database.
+// It returns whether one was found and the directory containing it. A missing dataDir means no database.
 func findDatabase(dataDir string, isDatabaseMinimal bool) (bool, string, error) {
 	dataDirExists, err := file.Exists(dataDir, file.Directory)
 	if err != nil {
@@ -111,29 +118,12 @@ func findDatabase(dataDir string, isDatabaseMinimal bool) (bool, string, error) 
 		return file.RecursiveDirFind(filesystem.DatabaseDirName, dataDir)
 	}
 
-	return file.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
-}
-
-// databaseDir returns the directory to open the validator database from: the one of the found
-// database, or dataDir if none was found, so the new database is created where the validator client will look for it.
-func databaseDir(dataDir, matchPath string, found, isDatabaseMinimal bool) string {
-	if !found {
-		// No database yet, typically on a new machine.
-		databasePath := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		if isDatabaseMinimal {
-			databasePath = filepath.Join(dataDir, filesystem.DatabaseDirName)
-		}
-
-		log.Infof("No validator database found under %s, creating a new one at %s", dataDir, databasePath)
-		return dataDir
+	found, matchPath, err := file.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
+	if err != nil || !found {
+		return found, "", err
 	}
 
-	if !isDatabaseMinimal {
-		matchPath = filepath.Dir(matchPath) // strip the file name
-	}
-
-	log.Infof("Found validator database at path %s", matchPath)
-	return matchPath
+	return true, filepath.Dir(matchPath), nil // strip the file name
 }
 
 // openDatabase opens the validator database from dataDir, creating it if it doesn't exist yet.
