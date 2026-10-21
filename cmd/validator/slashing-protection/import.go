@@ -2,18 +2,13 @@ package historycmd
 
 import (
 	"bytes"
-	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/OffchainLabs/prysm/v7/cmd"
 	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/io/file"
 	"github.com/OffchainLabs/prysm/v7/validator/accounts/userprompt"
-	"github.com/OffchainLabs/prysm/v7/validator/db/filesystem"
-	"github.com/OffchainLabs/prysm/v7/validator/db/iface"
-	"github.com/OffchainLabs/prysm/v7/validator/db/kv"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -31,7 +26,7 @@ func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	var err error
 
 	// Check if a minimal database is requested
-	isDatabaseMinimal := cliCtx.Bool(features.EnableMinimalSlashingProtection.Name)
+	db := newDatabase(cliCtx.Bool(features.EnableMinimalSlashingProtection.Name))
 
 	// Get the data directory from the CLI context.
 	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
@@ -62,7 +57,7 @@ func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	}
 
 	// Look for an existing database under the specified directory or its subdirectories.
-	found, dbDir, err := findDatabase(dataDir, isDatabaseMinimal)
+	found, dbDir, err := db.find(dataDir)
 	if err != nil {
 		return errors.Wrapf(err, "error finding validator database at path %s", dataDir)
 	}
@@ -77,7 +72,7 @@ func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	log.WithField("path", dataDir).Info(msg)
 
 	// Open the validator database.
-	valDB, err := openDatabase(cliCtx.Context, dataDir, isDatabaseMinimal)
+	valDB, err := db.open(cliCtx.Context, dataDir)
 	if err != nil {
 		return errors.Wrapf(err, "could not access validator database at path: %s", dataDir)
 	}
@@ -100,39 +95,4 @@ func importSlashingProtectionJSON(cliCtx *cli.Context) error {
 	log.WithField("path", dataDir).Info("Slashing protection JSON successfully imported")
 
 	return nil
-}
-
-// findDatabase looks for an existing validator database under dataDir or its subdirectories.
-// It returns whether one was found and the directory containing it. A missing dataDir means no database.
-func findDatabase(dataDir string, isDatabaseMinimal bool) (bool, string, error) {
-	dataDirExists, err := file.Exists(dataDir, file.Directory)
-	if err != nil {
-		return false, "", fmt.Errorf("file exists: %w", err)
-	}
-
-	if !dataDirExists {
-		return false, "", nil
-	}
-
-	findFunc, name := file.RecursiveFileFind, kv.ProtectionDbFileName
-	if isDatabaseMinimal {
-		findFunc, name = file.RecursiveDirFind, filesystem.DatabaseDirName
-	}
-
-	found, matchPath, err := findFunc(name, dataDir)
-	if err != nil || !found {
-		return found, "", err
-	}
-
-	// Strip the database file or directory name: both stores expect its parent directory.
-	return true, filepath.Dir(matchPath), nil
-}
-
-// openDatabase opens the validator database from dataDir, creating it if it doesn't exist yet.
-func openDatabase(ctx context.Context, dataDir string, isDatabaseMinimal bool) (iface.ValidatorDB, error) {
-	if isDatabaseMinimal {
-		return filesystem.NewStore(dataDir, nil)
-	}
-
-	return kv.NewKVStore(ctx, dataDir, nil)
 }
