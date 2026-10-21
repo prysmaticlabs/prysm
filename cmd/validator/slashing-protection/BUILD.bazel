@@ -31,7 +31,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["import_export_test.go"],
+    srcs = [
+        "database_test.go",
+        "import_export_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//cmd:go_default_library",
