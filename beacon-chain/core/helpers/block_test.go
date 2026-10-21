@@ -148,12 +148,13 @@ func TestParentTargetGasLimit(t *testing.T) {
 	t.Run("Gloas state with bid returns bid's gas limit", func(t *testing.T) {
 		s, err := state_native.InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
 			LatestExecutionPayloadBid: &ethpb.ExecutionPayloadBid{
-				ParentBlockHash: make([]byte, 32),
-				ParentBlockRoot: make([]byte, 32),
-				BlockHash:       make([]byte, 32),
-				PrevRandao:      make([]byte, 32),
-				FeeRecipient:    make([]byte, 20),
-				GasLimit:        42_000_000,
+				ParentBlockHash:       make([]byte, 32),
+				ParentBlockRoot:       make([]byte, 32),
+				BlockHash:             make([]byte, 32),
+				PrevRandao:            make([]byte, 32),
+				FeeRecipient:          make([]byte, 20),
+				GasLimit:              42_000_000,
+				ExecutionRequestsRoot: make([]byte, 32),
 			},
 		})
 		require.NoError(t, err)
