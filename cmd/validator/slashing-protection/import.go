@@ -114,16 +114,18 @@ func findDatabase(dataDir string, isDatabaseMinimal bool) (bool, string, error) 
 		return false, "", nil
 	}
 
+	findFunc, name := file.RecursiveFileFind, kv.ProtectionDbFileName
 	if isDatabaseMinimal {
-		return file.RecursiveDirFind(filesystem.DatabaseDirName, dataDir)
+		findFunc, name = file.RecursiveDirFind, filesystem.DatabaseDirName
 	}
 
-	found, matchPath, err := file.RecursiveFileFind(kv.ProtectionDbFileName, dataDir)
+	found, matchPath, err := findFunc(name, dataDir)
 	if err != nil || !found {
 		return found, "", err
 	}
 
-	return true, filepath.Dir(matchPath), nil // strip the file name
+	// Strip the database file or directory name: both stores expect its parent directory.
+	return true, filepath.Dir(matchPath), nil
 }
 
 // openDatabase opens the validator database from dataDir, creating it if it doesn't exist yet.

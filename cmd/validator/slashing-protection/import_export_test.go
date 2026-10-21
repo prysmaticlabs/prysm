@@ -295,6 +295,53 @@ func TestImportSlashingProtectionCli_NoExistingDatabase(t *testing.T) {
 	})
 }
 
+// TestImportSlashingProtectionCli_ExistingMinimalDatabase imports a EIP-3076 interchange format JSON file
+// into a datadir already holding a minimal database. The import must go into this database, not into a nested one.
+func TestImportSlashingProtectionCli_ExistingMinimalDatabase(t *testing.T) {
+	ctx := t.Context()
+
+	pubKeys, err := mocks.CreateRandomPubKeys(1)
+	require.NoError(t, err)
+
+	dataDir := t.TempDir()
+	validatorDB := dbTest.SetupDB(t, dataDir, pubKeys, true)
+
+	importedJSON := &format.EIPSlashingProtectionFormat{}
+	importedJSON.Metadata.InterchangeFormatVersion = format.InterchangeFormatVersion
+	importedJSON.Metadata.GenesisValidatorsRoot = fmt.Sprintf("%#x", bytesutil.PadTo([]byte{1}, 32))
+	importedJSON.Data = []*format.ProtectionData{
+		{
+			Pubkey:             fmt.Sprintf("%#x", pubKeys[0]),
+			SignedAttestations: []*format.SignedAttestation{{SourceEpoch: "2", TargetEpoch: "4"}},
+		},
+	}
+
+	encoded, err := json.Marshal(importedJSON)
+	require.NoError(t, err)
+	protectionFilePath := filepath.Join(t.TempDir(), "slashing_history_import.json")
+	require.NoError(t, file.WriteFile(protectionFilePath, encoded))
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.DataDirFlag.Name, dataDir, "")
+	set.String(flags.SlashingProtectionJSONFileFlag.Name, protectionFilePath, "")
+	set.Bool(features.EnableMinimalSlashingProtection.Name, true, "")
+	require.NoError(t, set.Set(cmd.DataDirFlag.Name, dataDir))
+	require.NoError(t, set.Set(flags.SlashingProtectionJSONFileFlag.Name, protectionFilePath))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	require.NoError(t, importSlashingProtectionJSON(cliCtx))
+
+	nestedExists, err := file.Exists(filepath.Join(dataDir, filesystem.DatabaseDirName, filesystem.DatabaseDirName), file.Directory)
+	require.NoError(t, err)
+	require.Equal(t, false, nestedExists)
+
+	lowestSignedTargetEpoch, exists, err := validatorDB.LowestSignedTargetEpoch(ctx, pubKeys[0])
+	require.NoError(t, err)
+	require.Equal(t, true, exists)
+	require.Equal(t, primitives.Epoch(4), lowestSignedTargetEpoch)
+}
+
 // TestImportSlashingProtectionCli_MissingFile ensures a wrong JSON file path fails
 // without creating an empty validator database.
 func TestImportSlashingProtectionCli_MissingFile(t *testing.T) {
