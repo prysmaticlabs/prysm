@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/scorers"
@@ -18,91 +19,60 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-func TestBlocksFetcher_selectFailOverPeer(t *testing.T) {
-	type args struct {
-		excludedPID peer.ID
-		peers       []peer.ID
-	}
-	fetcher := newBlocksFetcher(t.Context(), &blocksFetcherConfig{})
-	tests := []struct {
-		name    string
-		args    args
-		want    peer.ID
-		wantErr error
+func TestBlocksFetcher_WaitForMinimumPeersCancellation(t *testing.T) {
+	mc, p2p, _ := initializeTestServices(t, nil, nil)
+	resetFlags := *flags.Get()
+	withPeers := resetFlags
+	withPeers.MinimumSyncPeers = 1
+	flags.Init(&withPeers)
+	t.Cleanup(func() { flags.Init(&resetFlags) })
+
+	for _, tt := range []struct {
+		name     string
+		mode     syncMode
+		deadline bool
 	}{
-		{
-			name: "No peers provided",
-			args: args{
-				excludedPID: "a",
-				peers:       []peer.ID{},
-			},
-			want:    "",
-			wantErr: errNoPeersAvailable,
-		},
-		{
-			name: "Single peer which needs to be excluded",
-			args: args{
-				excludedPID: "a",
-				peers: []peer.ID{
-					"a",
-				},
-			},
-			want:    "",
-			wantErr: errNoPeersAvailable,
-		},
-		{
-			name: "Single peer available",
-			args: args{
-				excludedPID: "a",
-				peers: []peer.ID{
-					"cde",
-				},
-			},
-			want:    "cde",
-			wantErr: nil,
-		},
-		{
-			name: "Two peers available, excluded first",
-			args: args{
-				excludedPID: "a",
-				peers: []peer.ID{
-					"a", "cde",
-				},
-			},
-			want:    "cde",
-			wantErr: nil,
-		},
-		{
-			name: "Two peers available, excluded second",
-			args: args{
-				excludedPID: "a",
-				peers: []peer.ID{
-					"cde", "a",
-				},
-			},
-			want:    "cde",
-			wantErr: nil,
-		},
-		{
-			name: "Multiple peers available",
-			args: args{
-				excludedPID: "a",
-				peers: []peer.ID{
-					"a", "cde", "cde", "cde",
-				},
-			},
-			want:    "cde",
-			wantErr: nil,
-		},
-	}
-	for _, tt := range tests {
+		{name: "finalized/canceled", mode: modeStopOnFinalizedEpoch},
+		{name: "finalized/deadline", mode: modeStopOnFinalizedEpoch, deadline: true},
+		{name: "nonconstrained/canceled", mode: modeNonConstrained},
+		{name: "nonconstrained/deadline", mode: modeNonConstrained, deadline: true},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetcher.selectFailOverPeer(tt.args.excludedPID, tt.args.peers)
-			if tt.wantErr != nil {
-				assert.ErrorContains(t, tt.wantErr.Error(), err)
-			} else {
-				assert.Equal(t, tt.want, got)
-			}
+			synctest.Test(t, func(t *testing.T) {
+				fetcher := &blocksFetcher{ctx: t.Context(), chain: mc, p2p: p2p, mode: tt.mode}
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				wantErr := context.Canceled
+				if tt.deadline {
+					var deadlineCancel context.CancelFunc
+					ctx, deadlineCancel = context.WithTimeout(ctx, time.Second)
+					defer deadlineCancel()
+					wantErr = context.DeadlineExceeded
+				}
+				done := make(chan error, 1)
+				go func() {
+					_, err := fetcher.waitForMinimumPeers(ctx)
+					done <- err
+				}()
+				synctest.Wait()
+				select {
+				case err := <-done:
+					t.Fatalf("peer wait returned before cancellation: %v", err)
+				default:
+				}
+				if tt.deadline {
+					time.Sleep(time.Second)
+				} else {
+					cancel()
+				}
+				synctest.Wait()
+				select {
+				case err := <-done:
+					require.ErrorIs(t, err, wantErr)
+				default:
+					t.Fatal("peer wait did not return on cancellation")
+				}
+			})
 		})
 	}
 }

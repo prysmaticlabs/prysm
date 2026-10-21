@@ -12,7 +12,6 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
@@ -38,9 +37,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 	pbstate, err := state_native.ProtobufBeaconStatePhase0(st.ToProtoUnsafe())
 	require.NoError(t, err)
-	if !proto.Equal(pbState1, pbstate) {
-		t.Error("incorrectly cached state")
-	}
+	require.DeepSSZEqual(t, pbState1, pbstate, "incorrectly cached state")
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
 	st2, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
@@ -71,4 +68,77 @@ func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	}
 
 	assert.Equal(t, cache.MaxCheckpointStateSize(), len(c.Cache().Keys()))
+}
+
+func TestCheckpointStateCache_EvictFinalized_FinalizedEntry(t *testing.T) {
+	c := cache.NewCheckpointStateCache()
+
+	cp := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 32})
+	require.NoError(t, err)
+	require.NoError(t, c.AddCheckpointState(cp, st))
+
+	evicted := c.EvictUpTo(1)
+	assert.Equal(t, 1, evicted, "expected finalized entry to be evicted")
+
+	s, err := c.StateByCheckpoint(cp)
+	require.NoError(t, err)
+	assert.Equal(t, state.BeaconState(nil), s, "expected cache to be empty after eviction")
+}
+
+func TestCheckpointStateCache_EvictFinalized_NotFinalizedEntry(t *testing.T) {
+	c := cache.NewCheckpointStateCache()
+
+	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte{'A'}, 32)}
+	st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 160})
+	require.NoError(t, err)
+	require.NoError(t, c.AddCheckpointState(cp, st))
+
+	evicted := c.EvictUpTo(3)
+	assert.Equal(t, 0, evicted, "expected non-finalized entry NOT to be evicted")
+
+	s, err := c.StateByCheckpoint(cp)
+	require.NoError(t, err)
+	assert.NotNil(t, s, "expected entry to still be in cache")
+}
+
+func TestCheckpointStateCache_EvictFinalized_Mixed(t *testing.T) {
+	c := cache.NewCheckpointStateCache()
+
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, 32)}
+	st1, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 32})
+	require.NoError(t, err)
+
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, 32)}
+	st2, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 64})
+	require.NoError(t, err)
+
+	cp5 := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte{'C'}, 32)}
+	st5, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 160})
+	require.NoError(t, err)
+
+	require.NoError(t, c.AddCheckpointState(cp1, st1))
+	require.NoError(t, c.AddCheckpointState(cp2, st2))
+	require.NoError(t, c.AddCheckpointState(cp5, st5))
+
+	evicted := c.EvictUpTo(3)
+	assert.Equal(t, 2, evicted, "expected epochs 1 and 2 to be evicted")
+
+	s, err := c.StateByCheckpoint(cp1)
+	require.NoError(t, err)
+	assert.Equal(t, state.BeaconState(nil), s, "expected cp1 to be evicted")
+
+	s, err = c.StateByCheckpoint(cp2)
+	require.NoError(t, err)
+	assert.Equal(t, state.BeaconState(nil), s, "expected cp2 to be evicted")
+
+	s, err = c.StateByCheckpoint(cp5)
+	require.NoError(t, err)
+	assert.NotNil(t, s, "expected cp5 to still be in cache")
+}
+
+func TestCheckpointStateCache_EvictFinalized_EmptyCache(t *testing.T) {
+	c := cache.NewCheckpointStateCache()
+	evicted := c.EvictUpTo(0)
+	assert.Equal(t, 0, evicted, "expected no eviction from empty cache")
 }

@@ -2,37 +2,37 @@ package grpc_api
 
 import (
 	"context"
-	"encoding/json"
-	"strconv"
 
 	"github.com/OffchainLabs/prysm/v7/api/client"
 	eventClient "github.com/OffchainLabs/prysm/v7/api/client/event"
-	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/api/fallback"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/validator/client/cache"
 	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	validatorHelpers "github.com/OffchainLabs/prysm/v7/validator/helpers"
 	"github.com/golang/protobuf/ptypes/empty"
+	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type grpcValidatorClient struct {
-	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
-	isEventStreamRunning      bool
+	*grpcClientManager[ethpb.BeaconNodeValidatorClient]
+	nodeClient       *grpcNodeClient
+	eventStreamGuard eventClient.StreamGuard
+	stateless        bool
+	envelopeCache    *cache.ExecutionPayloadEnvelopeCache
 }
 
 func (c *grpcValidatorClient) Duties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.ValidatorDutiesContainer, error) {
 	if features.Get().DisableDutiesV2 {
 		return c.getDuties(ctx, in)
 	}
-	dutiesResponse, err := c.beaconNodeValidatorClient.GetDutiesV2(ctx, in)
+	dutiesResponse, err := c.getClient().GetDutiesV2(ctx, in)
 	if err != nil {
 		if status.Code(err) == codes.Unimplemented {
 			log.Warn("GetDutiesV2 returned status code unavailable, falling back to GetDuties")
@@ -48,7 +48,7 @@ func (c *grpcValidatorClient) Duties(ctx context.Context, in *ethpb.DutiesReques
 
 // getDuties is calling the v1 of get duties
 func (c *grpcValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.ValidatorDutiesContainer, error) {
-	dutiesResponse, err := c.beaconNodeValidatorClient.GetDuties(ctx, in)
+	dutiesResponse, err := c.getClient().GetDuties(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(
 			client.ErrConnectionIssue,
@@ -144,112 +144,184 @@ func toValidatorDutyV2(duty *ethpb.DutiesV2Response_Duty) (*ethpb.ValidatorDuty,
 		Status:                  duty.Status,
 		ValidatorIndex:          duty.ValidatorIndex,
 		IsSyncCommittee:         duty.IsSyncCommittee,
+		PtcSlots:                duty.PtcSlots,
 	}, nil
 }
 
+func (c *grpcValidatorClient) AttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.AttesterDutiesResponse, error) {
+	resp, err := c.getClient().GetAttesterDuties(ctx, &ethpb.AttesterDutiesRequest{
+		Epoch:            epoch,
+		ValidatorIndices: validatorIndices,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "GetAttesterDuties")
+	}
+	return resp, nil
+}
+
+func (c *grpcValidatorClient) ProposerDuties(ctx context.Context, epoch primitives.Epoch) (*ethpb.ProposerDutiesResponse, error) {
+	resp, err := c.getClient().GetProposerDutiesV2(ctx, &ethpb.ProposerDutiesRequest{
+		Epoch: epoch,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "GetProposerDutiesV2")
+	}
+	return resp, nil
+}
+
+func (c *grpcValidatorClient) SyncCommitteeDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.SyncCommitteeDutiesResponse, error) {
+	resp, err := c.getClient().GetSyncCommitteeDuties(ctx, &ethpb.SyncCommitteeDutiesRequest{
+		Epoch:            epoch,
+		ValidatorIndices: validatorIndices,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "GetSyncCommitteeDuties")
+	}
+	return resp, nil
+}
+
+func (c *grpcValidatorClient) PTCDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*ethpb.PTCDutiesResponse, error) {
+	resp, err := c.getClient().GetPTCDuties(ctx, &ethpb.PTCDutiesRequest{
+		Epoch:            epoch,
+		ValidatorIndices: validatorIndices,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "GetPTCDuties")
+	}
+	return resp, nil
+}
+
 func (c *grpcValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
-	return c.beaconNodeValidatorClient.CheckDoppelGanger(ctx, in)
+	return c.getClient().CheckDoppelGanger(ctx, in)
 }
 
 func (c *grpcValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
-	return c.beaconNodeValidatorClient.DomainData(ctx, in)
+	return c.getClient().DomainData(ctx, in)
 }
 
 func (c *grpcValidatorClient) AttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	return c.beaconNodeValidatorClient.GetAttestationData(ctx, in)
+	return c.getClient().GetAttestationData(ctx, in)
 }
 
 func (c *grpcValidatorClient) BeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	return c.beaconNodeValidatorClient.GetBeaconBlock(ctx, in)
-}
-
-func (c *grpcValidatorClient) FeeRecipientByPubKey(ctx context.Context, in *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
-	return c.beaconNodeValidatorClient.GetFeeRecipientByPubKey(ctx, in)
+	if c.stateless {
+		in.EagerPayloadStateRoot = true
+	}
+	resp, err := c.getClient().GetBeaconBlock(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	// Stateless self-build: cache the bundled envelope + blobs for the publisher and hand the
+	// proposer the block alone, matching the non-stateless response shape.
+	switch b := resp.GetBlock().(type) {
+	case *ethpb.GenericBeaconBlock_GloasContents:
+		gc := b.GloasContents
+		if c.stateless && gc.GetExecutionPayloadEnvelope() != nil {
+			c.envelopeCache.Add(in.Slot, gc.ExecutionPayloadEnvelope, gc.Blobs, gc.KzgProofs)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Gloas{Gloas: gc.Block}}, nil
+	case *ethpb.GenericBeaconBlock_HezeContents:
+		hc := b.HezeContents
+		if c.stateless && hc.GetExecutionPayloadEnvelope() != nil {
+			c.envelopeCache.Add(in.Slot, hc.ExecutionPayloadEnvelope, hc.Blobs, hc.KzgProofs)
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Heze{Heze: hc.Block}}, nil
+	default:
+		return resp, nil
+	}
 }
 
 func (c *grpcValidatorClient) SyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
-	return c.beaconNodeValidatorClient.GetSyncCommitteeContribution(ctx, in)
+	return c.getClient().GetSyncCommitteeContribution(ctx, in)
 }
 
 func (c *grpcValidatorClient) SyncMessageBlockRoot(ctx context.Context, in *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
-	return c.beaconNodeValidatorClient.GetSyncMessageBlockRoot(ctx, in)
+	return c.getClient().GetSyncMessageBlockRoot(ctx, in)
 }
 
 func (c *grpcValidatorClient) SyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	return c.beaconNodeValidatorClient.GetSyncSubcommitteeIndex(ctx, in)
+	return c.getClient().GetSyncSubcommitteeIndex(ctx, in)
 }
 
 func (c *grpcValidatorClient) MultipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	return c.beaconNodeValidatorClient.MultipleValidatorStatus(ctx, in)
+	return c.getClient().MultipleValidatorStatus(ctx, in)
 }
 
 func (c *grpcValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
-	return c.beaconNodeValidatorClient.PrepareBeaconProposer(ctx, in)
+	return c.getClient().PrepareBeaconProposer(ctx, in)
 }
 
 func (c *grpcValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	return c.beaconNodeValidatorClient.ProposeAttestation(ctx, in)
+	return c.getClient().ProposeAttestation(ctx, in)
 }
 
 func (c *grpcValidatorClient) ProposeAttestationElectra(ctx context.Context, in *ethpb.SingleAttestation) (*ethpb.AttestResponse, error) {
-	return c.beaconNodeValidatorClient.ProposeAttestationElectra(ctx, in)
+	return c.getClient().ProposeAttestationElectra(ctx, in)
 }
 
 func (c *grpcValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	return c.beaconNodeValidatorClient.ProposeBeaconBlock(ctx, in)
+	return c.getClient().ProposeBeaconBlock(ctx, in)
 }
 
 func (c *grpcValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
-	return c.beaconNodeValidatorClient.ProposeExit(ctx, in)
-}
-
-func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
-	return c.beaconNodeValidatorClient.StreamBlocksAltair(ctx, in)
+	return c.getClient().ProposeExit(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest, _ primitives.ValidatorIndex, _ uint64) (*ethpb.AggregateSelectionResponse, error) {
-	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProof(ctx, in)
+	return c.getClient().SubmitAggregateSelectionProof(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitAggregateSelectionProofElectra(ctx context.Context, in *ethpb.AggregateSelectionRequest, _ primitives.ValidatorIndex, _ uint64) (*ethpb.AggregateSelectionElectraResponse, error) {
-	return c.beaconNodeValidatorClient.SubmitAggregateSelectionProofElectra(ctx, in)
+	return c.getClient().SubmitAggregateSelectionProofElectra(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
-	return c.beaconNodeValidatorClient.SubmitSignedAggregateSelectionProof(ctx, in)
+	return c.getClient().SubmitSignedAggregateSelectionProof(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitSignedAggregateSelectionProofElectra(ctx context.Context, in *ethpb.SignedAggregateSubmitElectraRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
-	return c.beaconNodeValidatorClient.SubmitSignedAggregateSelectionProofElectra(ctx, in)
+	return c.getClient().SubmitSignedAggregateSelectionProofElectra(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
-	return c.beaconNodeValidatorClient.SubmitSignedContributionAndProof(ctx, in)
+	return c.getClient().SubmitSignedContributionAndProof(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitSyncMessage(ctx context.Context, in *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
-	return c.beaconNodeValidatorClient.SubmitSyncMessage(ctx, in)
+	return c.getClient().SubmitSyncMessage(ctx, in)
 }
 
 func (c *grpcValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
-	return c.beaconNodeValidatorClient.SubmitValidatorRegistrations(ctx, in)
+	return c.getClient().SubmitValidatorRegistrations(ctx, in)
 }
 
-func (c *grpcValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, _ []*ethpb.ValidatorDuty) (*empty.Empty, error) {
-	return c.beaconNodeValidatorClient.SubscribeCommitteeSubnets(ctx, in)
+func (c *grpcValidatorClient) SubmitSignedProposerPreferences(ctx context.Context, in *ethpb.SubmitSignedProposerPreferencesRequest) (*empty.Empty, error) {
+	return c.getClient().SubmitSignedProposerPreferences(ctx, in)
+}
+
+func (c *grpcValidatorClient) SubmitBuilderPreferences(ctx context.Context, in *ethpb.SubmitBuilderPreferencesRequest) (*empty.Empty, error) {
+	return c.getClient().SubmitBuilderPreferences(ctx, in)
+}
+
+func (c *grpcValidatorClient) SubmitSignedExecutionPayloadBid(ctx context.Context, in *ethpb.SignedExecutionPayloadBid) (*empty.Empty, error) {
+	return c.getClient().SubmitSignedExecutionPayloadBid(ctx, in)
+}
+
+func (c *grpcValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest) (*empty.Empty, error) {
+	return c.getClient().SubscribeCommitteeSubnets(ctx, in)
 }
 
 func (c *grpcValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	return c.beaconNodeValidatorClient.ValidatorIndex(ctx, in)
+	return c.getClient().ValidatorIndex(ctx, in)
 }
 
 func (c *grpcValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
-	return c.beaconNodeValidatorClient.ValidatorStatus(ctx, in)
+	return c.getClient().ValidatorStatus(ctx, in)
 }
 
 // Deprecated: Do not use.
 func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.Empty) (*ethpb.ChainStartResponse, error) {
-	stream, err := c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
+	stream, err := c.getClient().WaitForChainStart(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(
 			client.ErrConnectionIssue,
@@ -261,13 +333,13 @@ func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.E
 }
 
 func (c *grpcValidatorClient) AssignValidatorToSubnet(ctx context.Context, in *ethpb.AssignValidatorToSubnetRequest) (*empty.Empty, error) {
-	return c.beaconNodeValidatorClient.AssignValidatorToSubnet(ctx, in)
+	return c.getClient().AssignValidatorToSubnet(ctx, in)
 }
 func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 	ctx context.Context,
 	in *ethpb.AggregatedSigAndAggregationBitsRequest,
 ) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
-	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
+	return c.getClient().AggregatedSigAndAggregationBits(ctx, in)
 }
 
 func (*grpcValidatorClient) AggregatedSelections(context.Context, []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
@@ -278,108 +350,111 @@ func (*grpcValidatorClient) AggregatedSyncSelections(context.Context, []iface.Sy
 	return nil, iface.ErrNotSupported
 }
 
-func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
-	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc), false}
+// NewGrpcValidatorClient creates a new gRPC validator client that supports
+// dynamic connection switching via the NodeConnection's GrpcConnectionProvider.
+func NewGrpcValidatorClient(conn *validatorHelpers.NodeConnection, opts ...iface.Option) iface.ValidatorClient {
+	var cfg iface.ClientConfig
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	c := &grpcValidatorClient{
+		grpcClientManager: newGrpcClientManager(conn, ethpb.NewBeaconNodeValidatorClient),
+		nodeClient: &grpcNodeClient{
+			grpcClientManager: newGrpcClientManager(conn, ethpb.NewNodeClient),
+		},
+		stateless: cfg.Stateless,
+	}
+	if cfg.Stateless {
+		c.envelopeCache = cache.NewExecutionPayloadEnvelopeCache()
+	}
+	return c
 }
 
-func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
-	ctx, span := trace.StartSpan(ctx, "validator.gRPCClient.StartEventStream")
-	defer span.End()
-	if len(topics) == 0 {
-		eventsChannel <- &eventClient.Event{
-			EventType: eventClient.EventError,
-			Data:      []byte(errors.New("no topics were added").Error()),
-		}
-		return
-	}
-	// TODO(13563): ONLY WORKS WITH HEAD TOPIC.
-	containsHead := false
-	for i := range topics {
-		if topics[i] == eventClient.EventHead {
-			containsHead = true
-		}
-	}
-	if !containsHead {
-		eventsChannel <- &eventClient.Event{
-			EventType: eventClient.EventConnectionError,
-			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, "gRPC only supports the head topic, and head topic was not passed").Error()),
-		}
-	}
-	if containsHead && len(topics) > 1 {
-		log.Warn("gRPC only supports the head topic, other topics will be ignored")
-	}
+func (c *grpcValidatorClient) Host() string {
+	return c.grpcClientManager.conn.GetGrpcConnectionProvider().CurrentHost()
+}
 
-	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
+func (c *grpcValidatorClient) EnsureReady(ctx context.Context) bool {
+	provider := c.grpcClientManager.conn.GetGrpcConnectionProvider()
+	return fallback.EnsureReady(ctx, provider, c.nodeClient)
+}
+
+// ConnectionGeneration returns a monotonic counter that advances on each
+// fallback host switch of this client's gRPC connection provider.
+func (c *grpcValidatorClient) ConnectionGeneration() uint64 {
+	provider := c.grpcClientManager.conn.GetGrpcConnectionProvider()
+	if provider == nil {
+		return 0
+	}
+	return provider.ConnectionCounter()
+}
+
+// Gloas fork methods mirror the REST split: stateless self-build publishes the contents arm
+// (envelope + blobs); stateful publishes the bare signed_envelope arm (BN attaches cached blob data).
+func (c *grpcValidatorClient) GetExecutionPayloadEnvelope(ctx context.Context, slot primitives.Slot, beaconBlockRoot [32]byte) (*ethpb.ExecutionPayloadEnvelope, error) {
+	// Stateless: the full envelope + blobs were cached during block production.
+	if envelope, _, _ := c.envelopeCache.Peek(slot); envelope != nil {
+		if bytesutil.ToBytes32(envelope.BeaconBlockRoot) != beaconBlockRoot {
+			return nil, errors.New("cached execution payload envelope beacon_block_root does not match requested block")
+		}
+		return envelope, nil
+	}
+	// Stateful: the BN returns the full envelope and attaches blobs/proofs on publish.
+	req := &ethpb.ExecutionPayloadEnvelopeRequest{
+		Slot: slot,
+	}
+	resp, err := c.getClient().GetExecutionPayloadEnvelopeV2(ctx, req)
 	if err != nil {
-		eventsChannel <- &eventClient.Event{
-			EventType: eventClient.EventConnectionError,
-			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
-		}
-		return
+		return nil, errors.Wrap(
+			client.ErrConnectionIssue,
+			errors.Wrap(err, "GetExecutionPayloadEnvelopeV2").Error(),
+		)
 	}
-	c.isEventStreamRunning = true
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Context canceled, stopping event stream")
-			c.isEventStreamRunning = false
-			return
-		default:
-			if ctx.Err() != nil {
-				c.isEventStreamRunning = false
-				if errors.Is(ctx.Err(), context.Canceled) {
-					eventsChannel <- &eventClient.Event{
-						EventType: eventClient.EventConnectionError,
-						Data:      []byte(errors.Wrap(client.ErrConnectionIssue, ctx.Err().Error()).Error()),
-					}
-					return
-				}
-				eventsChannel <- &eventClient.Event{
-					EventType: eventClient.EventError,
-					Data:      []byte(ctx.Err().Error()),
-				}
-				return
-			}
-			res, err := stream.Recv()
-			if err != nil {
-				c.isEventStreamRunning = false
-				eventsChannel <- &eventClient.Event{
-					EventType: eventClient.EventConnectionError,
-					Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
-				}
-				return
-			}
-			if res == nil {
-				continue
-			}
-			b, err := json.Marshal(structs.HeadEvent{
-				Slot:                      strconv.FormatUint(uint64(res.Slot), 10),
-				PreviousDutyDependentRoot: hexutil.Encode(res.PreviousDutyDependentRoot),
-				CurrentDutyDependentRoot:  hexutil.Encode(res.CurrentDutyDependentRoot),
-			})
-			if err != nil {
-				eventsChannel <- &eventClient.Event{
-					EventType: eventClient.EventError,
-					Data:      []byte(errors.Wrap(err, "failed to marshal Head Event").Error()),
-				}
-			}
-			eventsChannel <- &eventClient.Event{
-				EventType: eventClient.EventHead,
-				Data:      b,
-			}
+	if resp.Envelope == nil {
+		return nil, errors.New("beacon node returned nil execution payload envelope")
+	}
+	// Mirror the REST handler's root check (the gRPC request carries only the slot): the returned
+	// envelope must be for the block we are proposing before the VC signs and publishes it.
+	if bytesutil.ToBytes32(resp.Envelope.BeaconBlockRoot) != beaconBlockRoot {
+		return nil, errors.New("execution payload envelope beacon_block_root does not match requested block")
+	}
+	return resp.Envelope, nil
+}
+
+// PublishExecutionPayloadEnvelope publishes the contents arm when blobs/proofs were cached during
+// block production, and the bare signed_envelope arm otherwise (BN attaches cached blob data).
+func (c *grpcValidatorClient) PublishExecutionPayloadEnvelope(ctx context.Context, in *ethpb.SignedExecutionPayloadEnvelope) (*empty.Empty, error) {
+	var cachedEnv *ethpb.ExecutionPayloadEnvelope
+	var blobs, kzgProofs [][]byte
+	if in.GetMessage().GetPayload() != nil {
+		cachedEnv, blobs, kzgProofs = c.envelopeCache.Take(primitives.Slot(in.Message.Payload.SlotNumber))
+	}
+	generic := &ethpb.GenericSignedExecutionPayloadEnvelope{}
+	if cachedEnv == nil {
+		generic.Envelope = &ethpb.GenericSignedExecutionPayloadEnvelope_SignedEnvelope{SignedEnvelope: in}
+	} else {
+		generic.Envelope = &ethpb.GenericSignedExecutionPayloadEnvelope_Contents{
+			Contents: &ethpb.SignedExecutionPayloadEnvelopeContents{
+				SignedExecutionPayloadEnvelope: in,
+				KzgProofs:                      kzgProofs,
+				Blobs:                          blobs,
+			},
 		}
 	}
+	return c.getClient().PublishExecutionPayloadEnvelopeV2(ctx, generic)
 }
 
-func (c *grpcValidatorClient) EventStreamIsRunning() bool {
-	return c.isEventStreamRunning
+func (c *grpcValidatorClient) PayloadAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.PayloadAttestationData, error) {
+	req := &ethpb.PayloadAttestationDataRequest{
+		Slot: slot,
+	}
+	resp, err := c.getClient().PayloadAttestationData(ctx, req, grpcretry.WithMax(0))
+	if err != nil {
+		return nil, errors.Wrap(err, "PayloadAttestationData")
+	}
+	return resp, nil
 }
 
-func (*grpcValidatorClient) Host() string {
-	log.Warn(iface.ErrNotSupported)
-	return ""
-}
-
-func (*grpcValidatorClient) SetHost(_ string) {
-	log.Warn(iface.ErrNotSupported)
+func (c *grpcValidatorClient) SubmitPayloadAttestation(ctx context.Context, in *ethpb.PayloadAttestationMessage) (*empty.Empty, error) {
+	return c.getClient().SubmitPayloadAttestation(ctx, in)
 }

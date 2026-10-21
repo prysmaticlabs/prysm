@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "proto/eth/ext/options.proto";
+
+option go_package = "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1;eth";
+
+// =============================================================================
+// Gloas Builder-API (ePBS) types
+// =============================================================================
+// Types for the staked Builder-API used by a proposer to request bids from,
+// authenticate to, and submit preferences to an external builder.
+// Reference: https://github.com/ethereum/builder-specs/blob/master/specs/gloas/validator.md
+
+// BuilderRequestAuth authenticates a proposer's bid request to a specific builder.
+message BuilderRequestAuth {
+  bytes data = 1 [ (ethereum.eth.ext.ssz_max) = "4096" ];
+  uint64 slot = 2 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+}
+
+message SignedBuilderRequestAuth {
+  BuilderRequestAuth message = 1;
+  bytes signature = 2 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}
+
+// BuilderPreferences communicates a proposer's per-builder preferences.
+message BuilderPreferences {
+  uint64 max_execution_payment = 1 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+}
+
+message BuilderPreferencesRequest {
+  BuilderPreferences preferences = 1;
+  SignedBuilderRequestAuth auth = 2;
+}
+
+// BuilderPreferencesEntry is one per-builder preference submission, per beacon-APIs #630.
+message BuilderPreferencesEntry {
+  bytes proposer_pubkey = 1 [ (ethereum.eth.ext.ssz_size) = "48" ];
+  // url is the HTTP dial target, the auth data inside auth is opaque and may not be a URL.
+  bytes url = 2 [ (ethereum.eth.ext.ssz_max) = "2048" ];
+  SignedBuilderRequestAuth auth = 3;
+  uint64 max_execution_payment = 4 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+}
+
+// SubmitBuilderPreferencesRequest batches entries across the validator client's proposers.
+message SubmitBuilderPreferencesRequest {
+  repeated BuilderPreferencesEntry entries = 1;
+}
+
+message BuilderEntry {
+  bytes url = 1 [ (ethereum.eth.ext.ssz_max) = "2048" ];
+  SignedBuilderRequestAuth auth = 2;
+  repeated bytes builder_pubkeys = 3 [
+    (ethereum.eth.ext.ssz_size) = "?,48",
+    (ethereum.eth.ext.ssz_max) = "64"
+  ];
+  uint64 max_execution_payment = 4 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  uint64 min_bid = 5 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  uint64 builder_boost_factor = 6;
+}
+
+message BuilderConfig {
+  uint64 min_bid = 1 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  uint64 builder_boost_factor = 2;
+  repeated BuilderEntry builders = 3 [ (ethereum.eth.ext.ssz_max) = "64" ];
+}

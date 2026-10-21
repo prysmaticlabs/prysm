@@ -11,6 +11,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -21,16 +22,20 @@ var errInvalidBatchState = errors.New("invalid batch state")
 type peerDownscorer func(peer.ID, string, error)
 
 type workerCfg struct {
-	clock        *startup.Clock
-	verifier     *verifier
-	ctxMap       sync.ContextByteVersions
-	newVB        verification.NewBlobVerifier
-	newVC        verification.NewDataColumnsVerifier
-	blobStore    *filesystem.BlobStorage
-	colStore     *filesystem.DataColumnStorage
-	downscore    peerDownscorer
-	currentNeeds func() das.CurrentNeeds
+	clock           *startup.Clock
+	verifier        *verifier
+	ctxMap          sync.ContextByteVersions
+	newVB           verification.NewBlobVerifier
+	newVC           verification.NewDataColumnsVerifier
+	blobStore       *filesystem.BlobStorage
+	colStore        *filesystem.DataColumnStorage
+	downscore       peerDownscorer
+	currentNeeds    func() das.CurrentNeeds
+	backfilledChild childLookup // returns the child of the given block root, when it is already backfilled.
 }
+
+// childLookup returns the child of the block with the given root, or nil when it is unknown.
+type childLookup func(ctx context.Context, root [32]byte) (interfaces.ReadOnlyBeaconBlock, error)
 
 func initWorkerCfg(ctx context.Context, cfg *workerCfg, vw InitializerWaiter, store *Store) error {
 	vi, err := vw.WaitForInitializer(ctx)
@@ -151,17 +156,21 @@ func (w *p2pWorker) handleBlocks(ctx context.Context, b batch) batch {
 	}
 	blockDownloadBytesApprox.Add(float64(bdl))
 	log.WithFields(b.logFields()).WithField("bytesDownloaded", bdl).Trace("Blocks downloaded")
-	b.blocks = verified
 
 	bscfg := &blobSyncConfig{currentNeeds: w.cfg.currentNeeds, nbv: w.cfg.newVB, store: w.cfg.blobStore}
 	bs, err := newBlobSync(current, verified, bscfg)
 	if err != nil {
 		return b.withRetryableError(err)
 	}
-	cs, err := newColumnSync(ctx, b, verified, current, w.p2p, w.cfg)
+	cs, err := newColumnSync(ctx, b.begin, b.end, verified, current, w.p2p, w.cfg)
 	if err != nil {
 		return b.withRetryableError(err)
 	}
+
+	// Update the batch with the verified blocks, blob sync, and column sync
+	// before transitioning to the next state. Note that if we experience any failures
+	// in newBlobSync or newColumnSync, we'll start the whole batch from scratch for simplicity.
+	b.blocks = verified
 	b.blobs = bs
 	b.columns = cs
 	return b.transitionToNext()

@@ -64,7 +64,7 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.ReadOnlySignedB
 }
 
 // processProposedBlock logs when the beacon node observes a beacon block from a tracked validator.
-func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk interfaces.ReadOnlyBeaconBlock) {
+func (s *Service) processProposedBlock(state state.ReadOnlyBeaconState, root [32]byte, blk interfaces.ReadOnlyBeaconBlock) {
 	s.Lock()
 	defer s.Unlock()
 	if s.trackedIndex(blk.ProposerIndex()) {
@@ -148,11 +148,11 @@ func (s *Service) logAggregatedPerformance() {
 
 	for idx, p := range s.aggregatedPerformance {
 		if p.totalAttestedCount == 0 || p.totalRequestedCount == 0 || p.startBalance == 0 {
-			break
+			continue
 		}
 		l, ok := s.latestPerformance[idx]
 		if !ok {
-			break
+			continue
 		}
 		percentAtt := float64(p.totalAttestedCount) / float64(p.totalRequestedCount)
 		percentBal := float64(l.balance-p.startBalance) / float64(p.startBalance)

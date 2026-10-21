@@ -34,6 +34,7 @@ type ReadOnlyDatabase interface {
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	HighestRootsBelowSlot(ctx context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error)
+	LowestRootsAtOrAboveSlot(ctx context.Context, slot primitives.Slot) (primitives.Slot, [][32]byte, error)
 	EarliestSlot(ctx context.Context) (primitives.Slot, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
@@ -43,6 +44,8 @@ type ReadOnlyDatabase interface {
 	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	HighestSlotStatesBelow(ctx context.Context, slot primitives.Slot) ([]state.ReadOnlyBeaconState, error)
+	SlotInDiffTree(primitives.Slot) (uint64, int, error)
+	StateBySlotFromDiffTree(ctx context.Context, slot primitives.Slot) (state.BeaconState, error)
 	// Checkpoint operations.
 	JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
 	FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error)
@@ -55,9 +58,6 @@ type ReadOnlyDatabase interface {
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// ExecutionChainData operations.
 	ExecutionChainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
-	// Fee recipients operations.
-	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
-	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 	// Light client operations
 	LightClientUpdates(ctx context.Context, startPeriod, endPeriod uint64) (map[uint64]interfaces.LightClientUpdate, error)
 	LightClientUpdate(ctx context.Context, period uint64) (interfaces.LightClientUpdate, error)
@@ -65,6 +65,11 @@ type ReadOnlyDatabase interface {
 	// Origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
+
+	// Execution payload envelope operations (Gloas+).
+	ExecutionPayloadEnvelope(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBlindedExecutionPayloadEnvelope, error)
+	ExecutionPayloadEnvelopeByBlockHash(ctx context.Context, blockHash [32]byte) (*ethpb.SignedBlindedExecutionPayloadEnvelope, error)
+	HasExecutionPayloadEnvelope(ctx context.Context, blockRoot [32]byte) bool
 
 	// P2P Metadata operations.
 	MetadataSeqNum(ctx context.Context) (uint64, error)
@@ -89,6 +94,7 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock) error
 	SaveROBlocks(ctx context.Context, blks []blocks.ROBlock, cache bool) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	SlotByBlockRoot(context.Context, [32]byte) (primitives.Slot, error)
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error
@@ -106,15 +112,18 @@ type NoHeadAccessDatabase interface {
 	SaveExecutionChainData(ctx context.Context, data *ethpb.ETH1ChainData) error
 	// Run any required database migrations.
 	RunMigrations(ctx context.Context) error
-	// Fee recipients operations.
-	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, addrs []common.Address) error
-	SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error
 	// light client operations
 	SaveLightClientUpdate(ctx context.Context, period uint64, update interfaces.LightClientUpdate) error
 	SaveLightClientBootstrap(ctx context.Context, blockRoot []byte, bootstrap interfaces.LightClientBootstrap) error
 
+	// Execution payload envelope operations (Gloas+).
+	SaveExecutionPayloadEnvelope(ctx context.Context, envelope *ethpb.SignedExecutionPayloadEnvelope) error
+	DeleteExecutionPayloadEnvelope(ctx context.Context, blockRoot [32]byte) error
+
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error
 	DeleteHistoricalDataBeforeSlot(ctx context.Context, slot primitives.Slot, batchSize int) (int, error)
+	DeleteStateDiffBeforeSlot(ctx context.Context, slot primitives.Slot, maxEntries int) (int, error)
+	LastStateDiffBoundary(slot primitives.Slot) (primitives.Slot, error)
 
 	// Genesis operations.
 	LoadGenesis(ctx context.Context, stateBytes []byte) error
@@ -129,7 +138,7 @@ type NoHeadAccessDatabase interface {
 
 	// Custody operations.
 	UpdateCustodyInfo(ctx context.Context, earliestAvailableSlot primitives.Slot, custodyGroupCount uint64) (primitives.Slot, uint64, error)
-	UpdateEarliestAvailableSlot(ctx context.Context, earliestAvailableSlot primitives.Slot) error
+	UpdateEarliestAvailableSlot(ctx context.Context, earliestAvailableSlot, currentSlot primitives.Slot) error
 	UpdateSubscribedToAllDataSubnets(ctx context.Context, subscribed bool) (bool, error)
 
 	// P2P Metadata operations.

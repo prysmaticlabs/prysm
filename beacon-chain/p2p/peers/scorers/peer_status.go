@@ -88,9 +88,9 @@ func (s *PeerStatusScorer) isBadPeerNoLock(pid peer.ID) error {
 		p2ptypes.ErrInvalidRequest,
 	}
 
-	for _, err := range terminalErrs {
-		if errors.Is(peerData.ChainStateValidationError, err) {
-			return err
+	for _, terminalErr := range terminalErrs {
+		if errors.Is(peerData.ChainStateValidationError, terminalErr) {
+			return terminalErr
 		}
 	}
 
@@ -117,9 +117,14 @@ func (s *PeerStatusScorer) SetPeerStatus(pid peer.ID, chainState *pb.StatusV2, v
 	defer s.store.Unlock()
 
 	peerData := s.store.PeerDataGetOrCreate(pid)
+	peerData.ChainStateValidationError = validationError
+
+	if validationError != nil {
+		return
+	}
+
 	peerData.ChainState = chainState
 	peerData.ChainStateLastUpdated = time.Now()
-	peerData.ChainStateValidationError = validationError
 
 	// Update maximum known head slot (scores will be calculated with respect to that maximum value).
 	if chainState != nil && chainState.HeadSlot > s.highestPeerHeadSlot {

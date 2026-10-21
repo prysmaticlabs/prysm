@@ -12,9 +12,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // RunUpgradeToFulu is a helper function that runs Fulu's fork spec tests.
@@ -36,7 +33,7 @@ func RunUpgradeToFulu(t *testing.T, config string) {
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := state_native.InitializeFromProtoElectra(preStateBase)
+			preState, err := state_native.InitializeFromProtoUnsafeElectra(preStateBase)
 			require.NoError(t, err)
 			postState, err := fulu.UpgradeToFulu(t.Context(), preState)
 			require.NoError(t, err)
@@ -52,10 +49,7 @@ func RunUpgradeToFulu(t *testing.T, config string) {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			if !proto.Equal(postStateFromFile, postStateFromFunction) {
-				t.Log(cmp.Diff(postStateFromFile, postStateFromFunction, protocmp.Transform()))
-				t.Fatal("Post state does not match expected")
-			}
+			require.DeepSSZEqual(t, postStateFromFile, postStateFromFunction, "Post state does not match expected")
 		})
 	}
 }

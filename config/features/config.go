@@ -22,17 +22,15 @@ package features
 import (
 	"fmt"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/OffchainLabs/prysm/v7/cmd"
+	validatorflags "github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "flags")
 
 const enabledFeatureFlag = "Enabled feature flag"
 const disabledFeatureFlag = "Disabled feature flag"
@@ -40,7 +38,6 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Feature related flags.
-	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	EnableLightClient                   bool // EnableLightClient enables light client APIs.
 	EnableQUIC                          bool // EnableQUIC specifies whether to enable QUIC transport for libp2p.
@@ -49,9 +46,14 @@ type Flags struct {
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableBeaconRESTApi                 bool // EnableBeaconRESTApi enables experimental usage of the beacon REST API by the validator when querying a beacon node
 	EnableExperimentalAttestationPool   bool // EnableExperimentalAttestationPool enables an experimental attestation pool design.
+	EnableFastConfirmation              bool // EnableFastConfirmation enables the fast confirmation rule (FCR) for rapid block confirmation.
 	DisableDutiesV2                     bool // DisableDutiesV2 sets validator client to use the get Duties endpoint
 	EnableWeb                           bool // EnableWeb enables the webui on the validator client
 	EnableStateDiff                     bool // EnableStateDiff enables the experimental state diff feature for the beacon node.
+	EnableArchive                       bool // EnableArchive backfills blocks to the archive origin and regenerates all historical states into the state-diff tree.
+	ReorgLatePayloads                   bool // ReorgLatePayloads enables reorging late payloads in the beacon node.
+	SubmitBlacklistedBuilderBids        bool // SubmitBlacklistedBuilderBids skips the circuit breaker check when submitting a signed execution payload bid.
+	DisableBuilderRelayCircuitBreaker   bool // DisableBuilderRelayCircuitBreaker stops the circuit breaker from tracking and banning direct connection endpoints.
 
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
@@ -65,6 +67,7 @@ type Flags struct {
 
 	EnableSlashingProtectionPruning bool // Enable slashing protection pruning for the validator client.
 	EnableMinimalSlashingProtection bool // Enable minimal slashing protection database for the validator client.
+	DisableDutyAwareShutdown        bool // Disable postponing the validator client shutdown until a restart would not miss any rewarded duty.
 
 	SaveFullExecutionPayloads bool // Save full beacon blocks with execution payloads in the database.
 	EnableStartOptimistic     bool // EnableStartOptimistic treats every block as optimistic at startup.
@@ -72,8 +75,11 @@ type Flags struct {
 	DisableResourceManager     bool // Disables running the node with libp2p's resource manager.
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 	IgnoreUnviableAttestations bool // Ignore attestations whose target state is not viable (avoids lagging-node DoS).
+	TrackEquivocations         bool // Record proposer equivocations seen on gossip into forkchoice.
 
+	EnableHashtree               bool // Enables usage of the hashtree library for hashing
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
+	EnableProposerPreprocessing  bool // EnableProposerPreprocessing enables proposer pre-processing of blocks before proposing.
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 	// BlobSaveFsync requires blob saving to block on fsync to ensure blobs are durably persisted before passing DA.
@@ -96,35 +102,27 @@ type Flags struct {
 	BlacklistedRoots map[[32]byte]struct{} // BlacklistedRoots is a list of roots that are blacklisted from processing.
 }
 
-var featureConfig *Flags
-var featureConfigLock sync.RWMutex
+// Read on hot paths, so kept lock-free: an RWMutex read lock does not scale.
+var featureConfig atomic.Pointer[Flags]
 
 // Get retrieves feature config.
 func Get() *Flags {
-	featureConfigLock.RLock()
-	defer featureConfigLock.RUnlock()
-
-	if featureConfig == nil {
-		return &Flags{}
+	if c := featureConfig.Load(); c != nil {
+		return c
 	}
-	return featureConfig
+	return &Flags{}
 }
 
 // Init sets the global config equal to the config that is passed in.
 func Init(c *Flags) {
-	featureConfigLock.Lock()
-	defer featureConfigLock.Unlock()
-
-	featureConfig = c
+	featureConfig.Store(c)
 }
 
 // InitWithReset sets the global config and returns function that is used to reset configuration.
 func InitWithReset(c *Flags) func() {
 	var prevConfig Flags
-	if featureConfig != nil {
-		prevConfig = *featureConfig
-	} else {
-		prevConfig = Flags{}
+	if p := featureConfig.Load(); p != nil {
+		prevConfig = *p
 	}
 	resetFunc := func() {
 		Init(&prevConfig)
@@ -183,16 +181,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	warnDeprecationUpcoming(ctx)
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.Bool(devModeFlag.Name) {
+	if ctx.Bool(DevModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
 	if err := configureTestnet(ctx); err != nil {
 		return err
-	}
-
-	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
-		logEnabled(writeSSZStateTransitionsFlag)
-		cfg.WriteSSZStateTransitions = true
 	}
 
 	if ctx.Bool(saveInvalidBlockTempFlag.Name) {
@@ -239,10 +232,18 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableFullSSZDataLogging)
 		cfg.EnableFullSSZDataLogging = true
 	}
+	if ctx.IsSet(enableHashtree.Name) {
+		logEnabled(enableHashtree)
+		cfg.EnableHashtree = true
+	}
 	cfg.EnableVerboseSigVerification = true
 	if ctx.IsSet(disableVerboseSigVerification.Name) {
 		logEnabled(disableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = false
+	}
+	cfg.EnableProposerPreprocessing = ctx.Bool(enableProposerPreprocessing.Name)
+	if cfg.EnableProposerPreprocessing {
+		logEnabled(enableProposerPreprocessing)
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
@@ -273,6 +274,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableExperimentalAttestationPool)
 		cfg.EnableExperimentalAttestationPool = true
 	}
+	if ctx.IsSet(enableFastConfirmation.Name) {
+		logEnabled(enableFastConfirmation)
+		cfg.EnableFastConfirmation = true
+	}
 	if ctx.IsSet(forceHeadFlag.Name) {
 		logEnabled(forceHeadFlag)
 		cfg.ForceHead = ctx.String(forceHeadFlag.Name)
@@ -287,8 +292,19 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(ignoreUnviableAttestations)
 		cfg.IgnoreUnviableAttestations = true
 	}
-
-	if ctx.IsSet(EnableStateDiff.Name) {
+	cfg.TrackEquivocations = true
+	if ctx.IsSet(disableTrackEquivocations.Name) && ctx.Bool(disableTrackEquivocations.Name) {
+		logDisabled(disableTrackEquivocations)
+		cfg.TrackEquivocations = false
+	}
+	if ctx.Bool(EnableArchive.Name) {
+		logEnabled(EnableArchive)
+		cfg.EnableArchive = true
+	}
+	if ctx.IsSet(EnableStateDiff.Name) || cfg.EnableArchive {
+		if cfg.EnableArchive && !ctx.IsSet(EnableStateDiff.Name) {
+			log.Infof("--%s implies --%s", EnableArchive.Name, EnableStateDiff.Name)
+		}
 		logEnabled(EnableStateDiff)
 		cfg.EnableStateDiff = true
 
@@ -296,6 +312,18 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 			log.Warn("--enable-state-diff is enabled, ignoring --enable-historical-space-representation flag.")
 			cfg.EnableHistoricalSpaceRepresentation = false
 		}
+	}
+	if ctx.Bool(reorgLatePayloads.Name) {
+		logEnabled(reorgLatePayloads)
+		cfg.ReorgLatePayloads = true
+	}
+	if ctx.Bool(submitBlacklistedBuilderBids.Name) {
+		logEnabled(submitBlacklistedBuilderBids)
+		cfg.SubmitBlacklistedBuilderBids = true
+	}
+	if ctx.Bool(disableBuilderRelayCircuitBreaker.Name) {
+		logEnabled(disableBuilderRelayCircuitBreaker)
+		cfg.DisableBuilderRelayCircuitBreaker = true
 	}
 
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
@@ -333,6 +361,10 @@ func ConfigureValidator(ctx *cli.Context) error {
 		logEnabled(disableAttestTimely)
 		cfg.AttestTimely = false
 	}
+	if ctx.Bool(disableDutyAwareShutdown.Name) {
+		logEnabled(disableDutyAwareShutdown)
+		cfg.DisableDutyAwareShutdown = true
+	}
 	if ctx.Bool(enableSlashingProtectionPruning.Name) {
 		logEnabled(enableSlashingProtectionPruning)
 		cfg.EnableSlashingProtectionPruning = true
@@ -342,10 +374,9 @@ func ConfigureValidator(ctx *cli.Context) error {
 		cfg.EnableMinimalSlashingProtection = true
 	}
 	if ctx.Bool(enableDoppelGangerProtection.Name) {
-		logEnabled(enableDoppelGangerProtection)
 		cfg.EnableDoppelGanger = true
 	}
-	if ctx.Bool(EnableBeaconRESTApi.Name) {
+	if ctx.Bool(EnableBeaconRESTApi.Name) || ctx.IsSet(validatorflags.BeaconRESTApiProviderFlag.Name) {
 		logEnabled(EnableBeaconRESTApi)
 		cfg.EnableBeaconRESTApi = true
 	}

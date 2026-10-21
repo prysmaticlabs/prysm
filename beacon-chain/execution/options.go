@@ -2,7 +2,6 @@ package execution
 
 import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
-	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
@@ -22,6 +21,13 @@ func WithHttpEndpoint(endpointString string) Option {
 	}
 }
 
+func WithPartialColumnsSupported() Option {
+	return func(s *Service) error {
+		s.partialColumnsSupported = true
+		return nil
+	}
+}
+
 // WithHttpEndpointAndJWTSecret for authenticating the execution node JSON-RPC endpoint.
 func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 	return func(s *Service) error {
@@ -34,6 +40,16 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 		hEndpoint.Auth.Value = string(secret)
 
 		s.cfg.currHttpEndpoint = hEndpoint
+		return nil
+	}
+}
+
+// WithRPCClientDialer supplies a dialer used to create the execution node RPC
+// client (e.g. one from go-ethereum's rpc.DialInProc), taking precedence over
+// any configured endpoint, JWT secret, and headers.
+func WithRPCClientDialer(dialer RPCClientDialer) Option {
+	return func(s *Service) error {
+		s.cfg.rpcClientDialer = dialer
 		return nil
 	}
 }
@@ -66,14 +82,6 @@ func WithDatabase(database db.HeadAccessDatabase) Option {
 func WithDepositCache(cache cache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.depositCache = cache
-		return nil
-	}
-}
-
-// WithStateNotifier for subscribing to state changes.
-func WithStateNotifier(notifier statefeed.Notifier) Option {
-	return func(s *Service) error {
-		s.cfg.stateNotifier = notifier
 		return nil
 	}
 }
@@ -121,6 +129,14 @@ func WithJwtId(jwtId string) Option {
 func WithVerifierWaiter(v *verification.InitializerWaiter) Option {
 	return func(s *Service) error {
 		s.verifierWaiter = v
+		return nil
+	}
+}
+
+// WithGraffitiInfo sets the GraffitiInfo for client version tracking.
+func WithGraffitiInfo(g *GraffitiInfo) Option {
+	return func(s *Service) error {
+		s.graffitiInfo = g
 		return nil
 	}
 }

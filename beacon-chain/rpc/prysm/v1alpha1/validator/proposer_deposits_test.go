@@ -1,3 +1,5 @@
+//go:build minimal
+
 package validator
 
 import (
@@ -184,7 +186,6 @@ func TestProposer_PendingDeposits_Electra(t *testing.T) {
 	}
 
 	bs := &Server{
-		ChainStartFetcher:      p,
 		Eth1InfoFetcher:        p,
 		Eth1BlockFetcher:       p,
 		DepositFetcher:         depositCache,

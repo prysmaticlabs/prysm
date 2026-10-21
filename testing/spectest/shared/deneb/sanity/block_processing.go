@@ -12,6 +12,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -19,9 +20,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
-	"google.golang.org/protobuf/proto"
 )
 
 func init() {
@@ -44,7 +43,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconStateDeneb{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
-			beaconState, err := state_native.InitializeFromProtoDeneb(beaconStateBase)
+			beaconState, err := state_native.InitializeFromProtoUnsafeDeneb(beaconStateBase)
 			require.NoError(t, err)
 
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
@@ -97,9 +96,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 				require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 				pbState, err := state_native.ProtobufBeaconStateDeneb(beaconState.ToProtoUnsafe())
 				require.NoError(t, err)
-				if !proto.Equal(pbState, postBeaconState) {
-					t.Fatal("Post state does not match expected")
-				}
+				require.DeepSSZEqual(t, pbState, postBeaconState, "Post state does not match expected")
 			} else {
 				// Note: This doesn't test anything worthwhile. It essentially tests
 				// that *any* error has occurred, not any specific error.

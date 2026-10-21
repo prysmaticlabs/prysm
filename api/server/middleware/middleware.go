@@ -9,7 +9,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/apiutil"
 	"github.com/rs/cors"
-	log "github.com/sirupsen/logrus"
 )
 
 type Middleware func(http.Handler) http.Handler
@@ -49,6 +48,12 @@ func ContentTypeHandler(acceptedMediaTypes []string) Middleware {
 			}
 			contentType := r.Header.Get("Content-Type")
 			if contentType == "" {
+				// A request without a body does not need a Content-Type header, so that
+				// endpoints with an optional request body accept e.g. `curl -X POST <url>`.
+				if r.ContentLength == 0 {
+					next.ServeHTTP(w, r)
+					return
+				}
 				http.Error(w, "Content-Type header is missing", http.StatusUnsupportedMediaType)
 				return
 			}
@@ -93,7 +98,11 @@ func AcceptEncodingHeaderHandler() Middleware {
 				return
 			}
 
-			gz := gzip.NewWriter(w)
+			gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
 			gzipRW := &gzipResponseWriter{gz: gz, ResponseWriter: w}
 			defer func() {
 				if !gzipRW.zip {

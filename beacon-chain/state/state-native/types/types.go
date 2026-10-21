@@ -116,6 +116,10 @@ func (f FieldIndex) String() string {
 		return "pendingConsolidations"
 	case ProposerLookahead:
 		return "proposerLookahead"
+	case Builders:
+		return "builders"
+	case NextWithdrawalBuilderIndex:
+		return "nextWithdrawalBuilderIndex"
 	case ExecutionPayloadAvailability:
 		return "executionPayloadAvailability"
 	case BuilderPendingPayments:
@@ -124,8 +128,10 @@ func (f FieldIndex) String() string {
 		return "builderPendingWithdrawals"
 	case LatestBlockHash:
 		return "latestBlockHash"
-	case LatestWithdrawalsRoot:
-		return "latestWithdrawalsRoot"
+	case PayloadExpectedWithdrawals:
+		return "payloadExpectedWithdrawals"
+	case PTCWindow:
+		return "ptcWindow"
 	default:
 		return fmt.Sprintf("unknown field index number: %d", f)
 	}
@@ -183,7 +189,7 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb, LatestExecutionPayloadBid:
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb, LatestBlockHash:
 		return 24
 	case NextWithdrawalIndex:
 		return 25
@@ -211,16 +217,22 @@ func (f FieldIndex) RealPosition() int {
 		return 36
 	case ProposerLookahead:
 		return 37
-	case ExecutionPayloadAvailability:
+	case Builders:
 		return 38
-	case BuilderPendingPayments:
+	case NextWithdrawalBuilderIndex:
 		return 39
-	case BuilderPendingWithdrawals:
+	case ExecutionPayloadAvailability:
 		return 40
-	case LatestBlockHash:
+	case BuilderPendingPayments:
 		return 41
-	case LatestWithdrawalsRoot:
+	case BuilderPendingWithdrawals:
 		return 42
+	case LatestExecutionPayloadBid:
+		return 43
+	case PayloadExpectedWithdrawals:
+		return 44
+	case PTCWindow:
+		return 45
 	default:
 		return -1
 	}
@@ -287,11 +299,14 @@ const (
 	PendingPartialWithdrawals     // Electra: EIP-7251
 	PendingConsolidations         // Electra: EIP-7251
 	ProposerLookahead             // Fulu: EIP-7917
+	Builders                      // Gloas: EIP-7732
+	NextWithdrawalBuilderIndex    // Gloas: EIP-7732
 	ExecutionPayloadAvailability  // Gloas: EIP-7732
 	BuilderPendingPayments        // Gloas: EIP-7732
 	BuilderPendingWithdrawals     // Gloas: EIP-7732
 	LatestBlockHash               // Gloas: EIP-7732
-	LatestWithdrawalsRoot         // Gloas: EIP-7732
+	PayloadExpectedWithdrawals    // Gloas: EIP-7732
+	PTCWindow                     // Gloas: EIP-7732
 )
 
 // Enumerator keeps track of the number of states created since the node's start.

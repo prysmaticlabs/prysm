@@ -3,14 +3,15 @@ package ssz_static
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	common "github.com/OffchainLabs/prysm/v7/testing/spectest/shared/common/ssz_static"
-	fssz "github.com/prysmaticlabs/fastssz"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.
@@ -25,7 +26,7 @@ func customHtr(t *testing.T, htrs []common.HTR, object any) []common.HTR {
 	}
 
 	htrs = append(htrs, func(s any) ([32]byte, error) {
-		beaconState, err := state_native.InitializeFromProtoFulu(s.(*ethpb.BeaconStateFulu))
+		beaconState, err := state_native.InitializeFromProtoUnsafeFulu(s.(*ethpb.BeaconStateFulu))
 		require.NoError(t, err)
 		return beaconState.HashTreeRoot(context.Background())
 	})
@@ -66,9 +67,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
-	case "Eth1Block":
-		t.Skip("Unused type")
-		return nil, nil
 	case "Fork":
 		obj = &ethpb.Fork{}
 	case "ForkData":
@@ -153,16 +151,18 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (a
 		obj = &ethpb.DataColumnSidecar{}
 	case "DataColumnsByRootIdentifier":
 		obj = &ethpb.DataColumnsByRootIdentifier{}
-	case "MatrixEntry":
+	case "MatrixEntry", "Eth1Block", "PartialDataColumnHeader", "PartialDataColumnPartsMetadata", "PartialDataColumnSidecar", "PartialDataColumnGroupID":
 		t.Skip("Unused type")
+	case "NewPayloadRequest":
+		t.Skip("Not a consensus type")
 	default:
 		return nil, errors.New("type not found")
 	}
 	var err error
-	if o, ok := obj.(fssz.Unmarshaler); ok {
+	if o, ok := obj.(ssz.Unmarshaler); ok {
 		err = o.UnmarshalSSZ(serializedBytes)
 	} else {
-		err = errors.New("could not unmarshal object, not a fastssz compatible object")
+		err = fmt.Errorf("selected type %T for folder %s does not implement ssz.Unmarshaler", obj, folderName)
 	}
 	return obj, err
 }

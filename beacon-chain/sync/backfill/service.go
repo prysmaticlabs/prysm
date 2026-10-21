@@ -2,6 +2,7 @@ package backfill
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/das"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
@@ -15,6 +16,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/proto/dbval"
 	"github.com/OffchainLabs/prysm/v7/runtime"
+	"github.com/OffchainLabs/prysm/v7/runtime/logging"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -45,7 +47,10 @@ type Service struct {
 	workerCfg       *workerCfg
 	fuluStart       primitives.Slot
 	denebStart      primitives.Slot
+	progressLogger  *logging.IntervalLogger
 }
+
+const progressLogInterval = 60
 
 var _ runtime.Service = (*Service)(nil)
 
@@ -151,10 +156,6 @@ func NewService(ctx context.Context, su *Store, bStore *filesystem.BlobStorage, 
 func (s *Service) updateComplete() bool {
 	b, err := s.pool.complete()
 	if err != nil {
-		if errors.Is(err, errEndSequence) {
-			log.WithField("backfillSlot", b.begin).Info("Backfill is complete")
-			return true
-		}
 		log.WithError(err).Error("Service received unhandled error from worker pool")
 		return true
 	}
@@ -193,6 +194,27 @@ func (s *Service) importBatches(ctx context.Context) {
 	}
 }
 
+// logProgress emits a periodic INFO summary of backfill progress.
+func (s *Service) logProgress() {
+	status := s.store.status()
+	target := s.syncNeeds.Currently().Block.Begin
+	lowest := primitives.Slot(status.LowSlot)
+	origin := primitives.Slot(status.OriginSlot)
+
+	fields := logrus.Fields{
+		"lowestBackfilledSlot": lowest,
+		"targetSlot":           target,
+		"batchesRemaining":     s.batchSeq.numTodo(),
+	}
+
+	if origin > target && lowest <= origin && lowest >= target {
+		percent := float64(origin-lowest) / float64(origin-target) * 100
+		fields["completion"] = fmt.Sprintf("%.2f%%", percent)
+	}
+
+	s.progressLogger.WithFields(fields).Info("Backfill in progress")
+}
+
 func (s *Service) defaultBatchImporter(ctx context.Context, current primitives.Slot, b batch, su *Store) (*dbval.BackfillStatus, error) {
 	status := su.status()
 	if err := b.ensureParent(bytesutil.ToBytes32(status.LowParentRoot)); err != nil {
@@ -201,6 +223,13 @@ func (s *Service) defaultBatchImporter(ctx context.Context, current primitives.S
 	// Import blocks to db and update db state to reflect the newly imported blocks.
 	// Other parts of the beacon node may use the same StatusUpdater instance
 	// via the coverage.AvailableBlocker interface to safely determine if a given slot has been backfilled.
+
+	// The batch above is now imported, so the child of the last block is known.
+	if b.columns != nil {
+		if err := b.columns.decideLastPayload(ctx, b.blocks, su.backfilledChild); err != nil {
+			return status, fmt.Errorf("decide last payload: %w", err)
+		}
+	}
 
 	checker := newCheckMultiplexer(s.syncNeeds.Currently(), b)
 	return su.fillBack(ctx, current, b.blocks, checker)
@@ -264,11 +293,12 @@ func (s *Service) Start() {
 
 	status := s.store.status()
 	needs := s.syncNeeds.Currently()
+	lowSlot := primitives.Slot(status.LowSlot)
 	// Exit early if there aren't going to be any batches to backfill.
-	if !needs.Block.At(primitives.Slot(status.LowSlot)) {
+	if !needs.Block.At(lowSlot) || lowSlot <= needs.Block.Begin {
 		log.WithField("minimumSlot", needs.Block.Begin).
 			WithField("backfillLowestSlot", status.LowSlot).
-			Info("Exiting backfill service; minimum block retention slot > lowest backfilled block")
+			Info("Exiting backfill service; minimum block retention slot >= lowest backfilled block")
 		s.markComplete()
 		return
 	}
@@ -283,11 +313,12 @@ func (s *Service) Start() {
 
 	if s.workerCfg == nil {
 		s.workerCfg = &workerCfg{
-			clock:        s.clock,
-			blobStore:    s.blobStore,
-			colStore:     s.dcStore,
-			downscore:    s.downscorePeer,
-			currentNeeds: s.syncNeeds.Currently,
+			clock:           s.clock,
+			blobStore:       s.blobStore,
+			colStore:        s.dcStore,
+			downscore:       s.downscorePeer,
+			currentNeeds:    s.syncNeeds.Currently,
+			backfilledChild: s.store.backfilledChild,
 		}
 
 		if err = initWorkerCfg(ctx, s.workerCfg, s.verifierWaiter, s.store); err != nil {
@@ -307,10 +338,26 @@ func (s *Service) Start() {
 		return
 	}
 
+	log.WithFields(logrus.Fields{
+		"lowestBackfilledSlot": status.LowSlot,
+		"targetSlot":           needs.Block.Begin,
+	}).Info("Starting backfill")
+
+	s.progressLogger = logging.NewIntervalLogger(log, progressLogInterval)
+
 	for {
 		if ctx.Err() != nil {
 			return
 		}
+
+		if s.batchSeq.allEnded() {
+			log.WithField("lowestBackfilledSlot", s.store.status().LowSlot).
+				WithField("targetSlot", s.syncNeeds.Currently().Block.Begin).
+				Info("Backfill is complete")
+			s.markComplete()
+			return
+		}
+
 		if s.updateComplete() {
 			s.markComplete()
 			return
@@ -318,6 +365,7 @@ func (s *Service) Start() {
 		s.importBatches(ctx)
 		batchesWaiting.Set(float64(s.batchSeq.countWithState(batchImportable)))
 		s.scheduleTodos()
+		s.logProgress()
 	}
 }
 
@@ -338,21 +386,6 @@ func (*Service) Stop() error {
 
 func (*Service) Status() error {
 	return nil
-}
-
-// syncEpochOffset subtracts a number of epochs as slots from the current slot, with underflow checks.
-// It returns slot 1 if the result would be 0 or underflow. It doesn't return slot 0 because the
-// genesis block needs to be specially synced (it doesn't have a valid signature).
-func syncEpochOffset(current primitives.Slot, subtract primitives.Epoch) primitives.Slot {
-	minEpoch := min(subtract, slots.MaxSafeEpoch())
-	// compute slot offset - offset is a number of slots to go back from current (not an absolute slot).
-	offset := slots.UnsafeEpochStart(minEpoch)
-	// Undeflow protection: slot 0 is the genesis block, therefore the signature in it is invalid.
-	// To prevent us from rejecting a batch, we restrict the minimum backfill batch till only slot 1
-	if offset >= current {
-		return 1
-	}
-	return current - offset
 }
 
 func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {

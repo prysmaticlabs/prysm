@@ -1,10 +1,14 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"reflect"
 	"strconv"
+	"strings"
 
+	"github.com/OffchainLabs/prysm/v7/api/rest"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -17,13 +21,13 @@ import (
 
 type beaconApiChainClient struct {
 	fallbackClient          iface.ChainClient
-	jsonRestHandler         RestHandler
+	handler                 rest.Handler
 	stateValidatorsProvider StateValidatorsProvider
 }
 
 func (c beaconApiChainClient) headBlockHeaders(ctx context.Context) (*structs.GetBlockHeaderResponse, error) {
 	blockHeader := structs.GetBlockHeaderResponse{}
-	err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
+	err := c.handler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +47,7 @@ func (c beaconApiChainClient) ChainHead(ctx context.Context, _ *empty.Empty) (*e
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
 	finalityCheckpoints := structs.GetFinalityCheckpointsResponse{}
-	if err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints); err != nil {
+	if err := c.handler.Get(ctx, endpoint, &finalityCheckpoints); err != nil {
 		return nil, err
 	}
 
@@ -300,37 +304,53 @@ func (c beaconApiChainClient) Validators(ctx context.Context, in *ethpb.ListVali
 	}, nil
 }
 
-func (c beaconApiChainClient) ValidatorQueue(ctx context.Context, in *empty.Empty) (*ethpb.ValidatorQueue, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ValidatorQueue(ctx, in)
-	}
-
-	// TODO: Implement me
-	return nil, errors.New("beaconApiChainClient.ValidatorQueue is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiChainClientWithFallback.")
-}
-
 func (c beaconApiChainClient) ValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ValidatorPerformance(ctx, in)
+	// Note: ValidatorPerformance is only supported on Prysm nodes,
+	// So we should check whether the node is Prysm by node version.
+	var versionResponse structs.GetVersionResponse
+	if err := c.handler.Get(ctx, "/eth/v1/node/version", &versionResponse); err != nil {
+		return nil, errors.Wrap(err, "failed to get node version")
 	}
 
-	// TODO: Implement me
-	return nil, errors.New("beaconApiChainClient.ValidatorPerformance is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiChainClientWithFallback.")
-}
-
-func (c beaconApiChainClient) ValidatorParticipation(ctx context.Context, in *ethpb.GetValidatorParticipationRequest) (*ethpb.ValidatorParticipationResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.ValidatorParticipation(ctx, in)
+	if versionResponse.Data == nil || versionResponse.Data.Version == "" {
+		return nil, errors.New("empty version response")
 	}
 
-	// TODO: Implement me
-	return nil, errors.New("beaconApiChainClient.ValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiChainClientWithFallback.")
+	if !strings.Contains(strings.ToLower(versionResponse.Data.Version), "prysm") {
+		return nil, iface.ErrNotSupported
+	}
+
+	// Now confirmed that the node is Prysm, call Prysm-specific performace endpoint.
+	request, err := json.Marshal(structs.GetValidatorPerformanceRequest{
+		PublicKeys: in.PublicKeys,
+		Indices:    in.Indices,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal request")
+	}
+	resp := &structs.GetValidatorPerformanceResponse{}
+	if err = c.handler.Post(ctx, "/prysm/validators/performance", nil, bytes.NewBuffer(request), resp); err != nil {
+		return nil, err
+	}
+
+	return &ethpb.ValidatorPerformanceResponse{
+		CurrentEffectiveBalances:      resp.CurrentEffectiveBalances,
+		CorrectlyVotedSource:          resp.CorrectlyVotedSource,
+		CorrectlyVotedTarget:          resp.CorrectlyVotedTarget,
+		CorrectlyVotedHead:            resp.CorrectlyVotedHead,
+		BalancesBeforeEpochTransition: resp.BalancesBeforeEpochTransition,
+		BalancesAfterEpochTransition:  resp.BalancesAfterEpochTransition,
+		MissingValidators:             resp.MissingValidators,
+		PublicKeys:                    resp.PublicKeys,
+		InactivityScores:              resp.InactivityScores,
+	}, nil
 }
 
-func NewBeaconApiChainClientWithFallback(jsonRestHandler RestHandler, fallbackClient iface.ChainClient) iface.ChainClient {
+func NewBeaconApiChainClientWithFallback(provider rest.RestConnectionProvider, fallbackClient iface.ChainClient) iface.ChainClient {
+	handler := provider.Handler()
 	return &beaconApiChainClient{
-		jsonRestHandler:         jsonRestHandler,
+		handler:                 handler,
 		fallbackClient:          fallbackClient,
-		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
+		stateValidatorsProvider: beaconApiStateValidatorsProvider{handler: handler},
 	}
 }

@@ -68,7 +68,7 @@ func genesisBeaconStateFulu(ctx context.Context, deposits []*ethpb.Deposit, gene
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return buildGenesisBeaconStateFulu(genesisTime, st, st.Eth1Data())
+	return buildGenesisBeaconStateFulu(ctx, genesisTime, st, st.Eth1Data())
 }
 
 // emptyGenesisStateFulu returns an empty genesis state in Fulu format.
@@ -104,12 +104,12 @@ func emptyGenesisStateFulu() (state.BeaconState, error) {
 		ConsolidationBalanceToConsume: primitives.Gwei(0),
 
 		// Fulu specific field
-		ProposerLookahead: []uint64{},
+		ProposerLookahead: []primitives.ValidatorIndex{},
 	}
-	return state_native.InitializeFromProtoFulu(st)
+	return state_native.InitializeFromProtoUnsafeFulu(st)
 }
 
-func buildGenesisBeaconStateFulu(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
+func buildGenesisBeaconStateFulu(ctx context.Context, genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -134,7 +134,8 @@ func buildGenesisBeaconStateFulu(genesisTime uint64, preState state.BeaconState,
 
 	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
-	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Validators())
+	compactValidators := stateutil.CompactValidatorsFromProto(preState.Validators())
+	genesisValidatorsRoot, err := stateutil.ValidatorRegistryRoot(preState.Version(), compactValidators)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
@@ -151,7 +152,7 @@ func buildGenesisBeaconStateFulu(genesisTime uint64, preState state.BeaconState,
 	if err != nil {
 		return nil, err
 	}
-	tab, err := helpers.TotalActiveBalance(preState)
+	tab, err := helpers.TotalActiveBalance(ctx, preState)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +288,7 @@ func buildGenesisBeaconStateFulu(genesisTime uint64, preState state.BeaconState,
 	}
 
 	// Calculate proposer lookahead for genesis
-	preFuluSt, err := state_native.InitializeFromProtoFulu(st)
+	preFuluSt, err := state_native.InitializeFromProtoUnsafeFulu(st)
 	if err != nil {
 		return nil, err
 	}
@@ -298,5 +299,5 @@ func buildGenesisBeaconStateFulu(genesisTime uint64, preState state.BeaconState,
 
 	// Fulu specific field
 	st.ProposerLookahead = proposerLookahead
-	return state_native.InitializeFromProtoFulu(st)
+	return state_native.InitializeFromProtoUnsafeFulu(st)
 }

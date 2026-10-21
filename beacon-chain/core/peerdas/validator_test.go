@@ -3,10 +3,12 @@ package peerdas_test
 import (
 	"testing"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -176,22 +178,24 @@ func TestDataColumnSidecars(t *testing.T) {
 
 		// Verify each sidecar has the expected structure
 		for i, sidecar := range sidecars {
-			require.Equal(t, uint64(i), sidecar.Index)
-			require.Equal(t, 2, len(sidecar.Column))
-			require.Equal(t, 2, len(sidecar.KzgCommitments))
-			require.Equal(t, 2, len(sidecar.KzgProofs))
+			require.Equal(t, uint64(i), sidecar.Index())
+			require.Equal(t, 2, len(sidecar.Column()))
+			comms, err := sidecar.KzgCommitments()
+			require.NoError(t, err)
+			require.Equal(t, 2, len(comms))
+			require.Equal(t, 2, len(sidecar.KzgProofs()))
 
 			// Verify commitments match what we set
-			require.DeepEqual(t, commitment1, sidecar.KzgCommitments[0])
-			require.DeepEqual(t, commitment2, sidecar.KzgCommitments[1])
+			require.DeepEqual(t, commitment1, comms[0])
+			require.DeepEqual(t, commitment2, comms[1])
 
 			// Verify column data comes from the correct cells
-			require.Equal(t, byte(i), sidecar.Column[0][0])
-			require.Equal(t, byte(i+128), sidecar.Column[1][0])
+			require.Equal(t, byte(i), sidecar.Column()[0][0])
+			require.Equal(t, byte(i+128), sidecar.Column()[1][0])
 
 			// Verify proofs come from the correct proofs
-			require.Equal(t, byte(i), sidecar.KzgProofs[0][0])
-			require.Equal(t, byte(i+128), sidecar.KzgProofs[1][0])
+			require.Equal(t, byte(i), sidecar.KzgProofs()[0][0])
+			require.Equal(t, byte(i+128), sidecar.KzgProofs()[1][0])
 		}
 	})
 }
@@ -241,7 +245,9 @@ func TestReconstructionSource(t *testing.T) {
 		src := peerdas.PopulateFromBlock(rob)
 		require.Equal(t, rob.Block().Slot(), src.Slot())
 		require.Equal(t, rob.Root(), src.Root())
-		require.Equal(t, rob.Block().ProposerIndex(), src.ProposerIndex())
+		srcPI, err := src.ProposerIndex()
+		require.NoError(t, err)
+		require.Equal(t, rob.Block().ProposerIndex(), srcPI)
 
 		commitments, err := src.Commitments()
 		require.NoError(t, err)
@@ -257,7 +263,11 @@ func TestReconstructionSource(t *testing.T) {
 		src := peerdas.PopulateFromSidecar(referenceSidecar)
 		require.Equal(t, referenceSidecar.Slot(), src.Slot())
 		require.Equal(t, referenceSidecar.BlockRoot(), src.Root())
-		require.Equal(t, referenceSidecar.ProposerIndex(), src.ProposerIndex())
+		refPI, err := referenceSidecar.ProposerIndex()
+		require.NoError(t, err)
+		srcPI, err := src.ProposerIndex()
+		require.NoError(t, err)
+		require.Equal(t, refPI, srcPI)
 
 		commitments, err := src.Commitments()
 		require.NoError(t, err)
@@ -267,4 +277,300 @@ func TestReconstructionSource(t *testing.T) {
 
 		require.Equal(t, peerdas.SidecarType, src.Type())
 	})
+
+	t.Run("from bid", func(t *testing.T) {
+		bidCommitment1 := make([]byte, 48)
+		bidCommitment2 := make([]byte, 48)
+		bidCommitment1[0] = 0xAA
+		bidCommitment2[0] = 0xBB
+
+		gloasBlockPb := util.NewBeaconBlockGloas()
+		gloasBlockPb.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = [][]byte{bidCommitment1, bidCommitment2}
+		gloasBlockPb.Block.Slot = 42
+		gloasBlockPb.Block.ProposerIndex = 7
+
+		signedGloasBlock, err := blocks.NewSignedBeaconBlock(gloasBlockPb)
+		require.NoError(t, err)
+
+		gloasRob, err := blocks.NewROBlock(signedGloasBlock)
+		require.NoError(t, err)
+
+		src := peerdas.PopulateFromBid(gloasRob)
+		require.Equal(t, primitives.Slot(42), src.Slot())
+		require.Equal(t, gloasRob.Root(), src.Root())
+		bidPI, err := src.ProposerIndex()
+		require.NoError(t, err)
+		require.Equal(t, primitives.ValidatorIndex(7), bidPI)
+		commitments, err := src.Commitments()
+		require.NoError(t, err)
+		require.Equal(t, 2, len(commitments))
+	})
+	t.Run("from partial header", func(t *testing.T) {
+		referenceSidecar := sidecars[0]
+		header, err := referenceSidecar.SignedBlockHeader()
+		require.NoError(t, err)
+		commitments, err := referenceSidecar.KzgCommitments()
+		require.NoError(t, err)
+		proof, err := referenceSidecar.KzgCommitmentsInclusionProof()
+		require.NoError(t, err)
+		partialHeader := &ethpb.PartialDataColumnHeader{
+			SignedBlockHeader:            header,
+			KzgCommitments:               commitments,
+			KzgCommitmentsInclusionProof: proof,
+		}
+
+		src, err := peerdas.PopulateFromPartialHeader(partialHeader)
+		require.NoError(t, err)
+		require.Equal(t, header.Header.Slot, src.Slot())
+
+		// Compute expected root
+		expectedRoot, err := header.Header.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, expectedRoot, src.Root())
+
+		proposer, err := src.ProposerIndex()
+		require.NoError(t, err)
+		require.Equal(t, header.Header.ProposerIndex, proposer)
+
+		commitments, err = src.Commitments()
+		require.NoError(t, err)
+		require.Equal(t, 2, len(commitments))
+		require.DeepEqual(t, commitment1, commitments[0])
+		require.DeepEqual(t, commitment2, commitments[1])
+
+		require.Equal(t, peerdas.PartialDataColumnHeaderType, src.Type())
+	})
+}
+
+func TestPopulateFromBid_DataColumnSidecars(t *testing.T) {
+	const numberOfColumns = fieldparams.NumberOfColumns
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	bidCommitment1 := make([]byte, 48)
+	bidCommitment2 := make([]byte, 48)
+	bidCommitment1[0] = 0xAA
+	bidCommitment2[0] = 0xBB
+
+	gloasBlockPb := util.NewBeaconBlockGloas()
+	gloasBlockPb.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = [][]byte{bidCommitment1, bidCommitment2}
+
+	signedGloasBlock, err := blocks.NewSignedBeaconBlock(gloasBlockPb)
+	require.NoError(t, err)
+
+	gloasRob, err := blocks.NewROBlock(signedGloasBlock)
+	require.NoError(t, err)
+
+	cellsPerBlob := [][]kzg.Cell{
+		make([]kzg.Cell, numberOfColumns),
+		make([]kzg.Cell, numberOfColumns),
+	}
+	proofsPerBlob := [][]kzg.Proof{
+		make([]kzg.Proof, numberOfColumns),
+		make([]kzg.Proof, numberOfColumns),
+	}
+
+	for i := range numberOfColumns {
+		cellsPerBlob[0][i][0] = byte(i)
+		proofsPerBlob[0][i][0] = byte(i)
+		cellsPerBlob[1][i][0] = byte(i + 128)
+		proofsPerBlob[1][i][0] = byte(i + 128)
+	}
+
+	sidecars, err := peerdas.DataColumnSidecars(cellsPerBlob, proofsPerBlob, peerdas.PopulateFromBid(gloasRob))
+	require.NoError(t, err)
+	require.Equal(t, int(numberOfColumns), len(sidecars))
+
+	for i, sidecar := range sidecars {
+		require.Equal(t, true, sidecar.IsGloas())
+		require.Equal(t, uint64(i), sidecar.Index())
+		require.Equal(t, 2, len(sidecar.Column()))
+		require.Equal(t, 2, len(sidecar.KzgProofs()))
+	}
+}
+
+func TestPartialColumns_NoCommitmentsReturnsNil(t *testing.T) {
+	// A block with no blob commitments would yield only inert, cell-less partial
+	// columns, so PartialColumns must return nothing rather than build 128 of them.
+	blockPb := util.NewBeaconBlockFulu()
+	blockPb.Block.Body.BlobKzgCommitments = nil
+
+	signedBlock, err := blocks.NewSignedBeaconBlock(blockPb)
+	require.NoError(t, err)
+	rob, err := blocks.NewROBlock(signedBlock)
+	require.NoError(t, err)
+
+	cols, err := peerdas.PartialColumns(bitfield.NewBitlist(0), nil, nil, peerdas.PopulateFromBlock(rob))
+	require.NoError(t, err)
+	require.Equal(t, 0, len(cols))
+}
+
+func TestPartialColumns_Gloas(t *testing.T) {
+	const numberOfColumns = fieldparams.NumberOfColumns
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	buildCellsAndProofs := func(numBlobs int) ([][]kzg.Cell, [][]kzg.Proof) {
+		cellsPerBlob := make([][]kzg.Cell, numBlobs)
+		proofsPerBlob := make([][]kzg.Proof, numBlobs)
+		for b := range numBlobs {
+			cellsPerBlob[b] = make([]kzg.Cell, numberOfColumns)
+			proofsPerBlob[b] = make([]kzg.Proof, numberOfColumns)
+			for i := range numberOfColumns {
+				cellsPerBlob[b][i][0] = byte(i + b*128)
+				proofsPerBlob[b][i][0] = byte(i + b*128)
+			}
+		}
+		return cellsPerBlob, proofsPerBlob
+	}
+
+	tests := []struct {
+		name           string
+		numBlobs       int
+		numCommitments int
+		includedBits   []uint64
+		wantErr        string
+	}{
+		{
+			name:           "all blobs included builds complete columns",
+			numBlobs:       2,
+			numCommitments: 2,
+			includedBits:   []uint64{0, 1},
+		},
+		{
+			name:           "fewer cells than included commitments trips guard",
+			numBlobs:       1,
+			numCommitments: 2,
+			includedBits:   []uint64{0, 1},
+			wantErr:        "insufficient cells or proofs for column",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			commitments := make([][]byte, tt.numCommitments)
+			for i := range commitments {
+				c := make([]byte, 48)
+				c[0] = byte(0xAA + i)
+				commitments[i] = c
+			}
+
+			gloasBlockPb := util.NewBeaconBlockGloas()
+			gloasBlockPb.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = commitments
+			signedGloasBlock, err := blocks.NewSignedBeaconBlock(gloasBlockPb)
+			require.NoError(t, err)
+			gloasRob, err := blocks.NewROBlock(signedGloasBlock)
+			require.NoError(t, err)
+
+			cellsPerBlob, proofsPerBlob := buildCellsAndProofs(tt.numBlobs)
+
+			included := bitfield.NewBitlist(uint64(tt.numCommitments))
+			for _, bit := range tt.includedBits {
+				included.SetBitAt(bit, true)
+			}
+
+			cols, err := peerdas.PartialColumns(included, cellsPerBlob, proofsPerBlob, peerdas.PopulateFromBid(gloasRob))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, int(numberOfColumns), len(cols))
+			for i := range cols {
+				require.Equal(t, true, cols[i].IsGloas())
+				require.Equal(t, uint64(i), cols[i].Index())
+				require.Equal(t, uint64(tt.numCommitments), cols[i].KzgCommitmentCount())
+				require.Equal(t, true, cols[i].IsComplete())
+			}
+		})
+	}
+}
+
+func TestBidReconstructionSource_Commitments(t *testing.T) {
+	commitment := func(marker byte) []byte {
+		c := make([]byte, 48)
+		c[0] = marker
+		return c
+	}
+
+	newGloasROBlock := func(t *testing.T, mutate func(*ethpb.SignedBeaconBlockGloas), skipHTR bool) blocks.ROBlock {
+		t.Helper()
+		gloasBlockPb := util.NewBeaconBlockGloas()
+		mutate(gloasBlockPb)
+		signed, err := blocks.NewSignedBeaconBlock(gloasBlockPb)
+		require.NoError(t, err)
+		if skipHTR {
+			rob, err := blocks.NewROBlockWithRoot(signed, [32]byte{})
+			require.NoError(t, err)
+			return rob
+		}
+		rob, err := blocks.NewROBlock(signed)
+		require.NoError(t, err)
+		return rob
+	}
+
+	tests := []struct {
+		name    string
+		block   func(t *testing.T) blocks.ROBlock
+		want    [][]byte
+		wantErr string
+	}{
+		{
+			name: "returns bid commitments",
+			block: func(t *testing.T) blocks.ROBlock {
+				return newGloasROBlock(t, func(b *ethpb.SignedBeaconBlockGloas) {
+					b.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = [][]byte{commitment(0xAA), commitment(0xBB)}
+				}, false)
+			},
+			want: [][]byte{commitment(0xAA), commitment(0xBB)},
+		},
+		{
+			name: "nil signed bid",
+			block: func(t *testing.T) blocks.ROBlock {
+				return newGloasROBlock(t, func(b *ethpb.SignedBeaconBlockGloas) {
+					b.Block.Body.SignedExecutionPayloadBid = nil
+				}, true)
+			},
+			wantErr: "attempted to wrap nil object",
+		},
+		{
+			name: "nil bid message",
+			block: func(t *testing.T) blocks.ROBlock {
+				return newGloasROBlock(t, func(b *ethpb.SignedBeaconBlockGloas) {
+					b.Block.Body.SignedExecutionPayloadBid.Message = nil
+				}, true)
+			},
+			wantErr: "attempted to wrap nil object",
+		},
+		{
+			name: "non-gloas block is unsupported",
+			block: func(t *testing.T) blocks.ROBlock {
+				signed, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockFulu())
+				require.NoError(t, err)
+				rob, err := blocks.NewROBlock(signed)
+				require.NoError(t, err)
+				return rob
+			},
+			wantErr: "execution payload bid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src := peerdas.PopulateFromBid(tt.block(t))
+			got, err := src.Commitments()
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
+			require.DeepEqual(t, tt.want, got)
+		})
+	}
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
 	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/lookup"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
@@ -85,13 +86,13 @@ func TestGetValidatorCountInvalidRequest(t *testing.T) {
 			}
 
 			testRouter := http.NewServeMux()
-			testRouter.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", server.GetValidatorCount)
+			testRouter.HandleFunc("/prysm/v1/beacon/states/{state_id}/validator_count", server.GetValidatorCount)
 			s := httptest.NewServer(testRouter)
 			defer s.Close()
 
 			queryParams := neturl.Values{}
 			queryParams.Add("status", test.status)
-			resp, err := http.Get(s.URL + fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count?%s",
+			resp, err := http.Get(s.URL + fmt.Sprintf("/prysm/v1/beacon/states/%s/validator_count?%s",
 				test.stateID, queryParams.Encode()))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -451,10 +452,10 @@ func TestGetValidatorCount(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			chainService := &chainMock.ChainService{Optimistic: false, FinalizedRoots: make(map[[32]byte]bool)}
-			blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+			require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*primitives.Slot(test.currentEpoch)))
+			blockRoot, err := helpers.BlockRootFromState(t.Context(), st)
 			require.NoError(t, err)
 			chainService.FinalizedRoots[blockRoot] = true
-			require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*primitives.Slot(test.currentEpoch)))
 
 			server := &Server{
 				OptimisticModeFetcher: chainService,
@@ -465,7 +466,7 @@ func TestGetValidatorCount(t *testing.T) {
 			}
 
 			testRouter := http.NewServeMux()
-			testRouter.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", server.GetValidatorCount)
+			testRouter.HandleFunc("/prysm/v1/beacon/states/{state_id}/validator_count", server.GetValidatorCount)
 			s := httptest.NewServer(testRouter)
 			defer s.Close()
 
@@ -473,7 +474,7 @@ func TestGetValidatorCount(t *testing.T) {
 			for _, status := range test.statuses {
 				queryParams.Add("status", status)
 			}
-			resp, err := http.Get(s.URL + fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count?%s",
+			resp, err := http.Get(s.URL + fmt.Sprintf("/prysm/v1/beacon/states/%s/validator_count?%s",
 				test.stateID, queryParams.Encode()))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.StatusCode)

@@ -28,6 +28,12 @@ var (
 			Help: "The number of peers subscribed to topics that a host node is also subscribed to.",
 		}, []string{"topic"},
 	)
+	originOrphanedSuspected = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "sync_origin_orphaned_suspected",
+			Help: "Set to 1 when peers have finalized a chain that does not contain our checkpoint sync origin.",
+		},
+	)
 	messageReceivedCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "p2p_message_received_total",
@@ -139,6 +145,13 @@ var (
 			Help: "Time to verify gossiped attestations",
 		},
 	)
+	syncPayloadAttestationArrivalDelaySeconds = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "sync_payload_attestation_arrival_delay_seconds",
+			Help:    "Time from slot start to payload attestation gossip arrival.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
 	blockVerificationGossipSummary = promauto.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "gossip_block_verification_milliseconds",
@@ -189,6 +202,12 @@ var (
 			Help: "The number of blob sidecars that were dropped due to missing parent block",
 		},
 	)
+	missingParentDataColumnSidecarCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gossip_missing_parent_data_column_sidecar_total",
+			Help: "The number of data column sidecars that were ignored because their parent block is unknown",
+		},
+	)
 
 	blobRecoveredFromELTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
@@ -216,6 +235,32 @@ var (
 			Name: "data_columns_recovered_from_el_total",
 			Help: "Count the number of times data columns have been recovered from the execution layer.",
 		},
+	)
+	syncExecutionPayloadEnvelopeArrivalDelaySeconds = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "sync_execution_payload_envelope_arrival_delay_seconds",
+			Help:    "Time from slot start to execution payload envelope gossip arrival.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+	syncPayloadEnvelopeByRangeServedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "sync_payload_envelope_by_range_served_total",
+			Help: "Count the number of execution payload envelopes by range RPC requests served.",
+		},
+	)
+	syncPayloadEnvelopeByRootServedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "sync_payload_envelope_by_root_served_total",
+			Help: "Count the number of execution payload envelopes by root RPC requests served.",
+		},
+	)
+	gloasExecutionPayloadEnvelopesRPCRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gloas_execution_payload_envelopes_rpc_requests_total",
+			Help: "Count execution payload envelope RPC requests by method and outcome.",
+		},
+		[]string{"rpc", "result"},
 	)
 
 	// Data column sidecar validation, beacon metrics specs
@@ -250,12 +295,24 @@ var (
 		},
 	)
 
-	dataColumnSidecarsObtainedViaELCount = promauto.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "data_column_obtained_via_el_count",
-			Help: "Count the number of data column sidecars obtained via the execution layer.",
-		},
-	)
+	ignoredPreJustifiedBlockCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_ignored_pre_justified_block_total",
+		Help: "Count of blocks ignored because their canonical parent is before the justified checkpoint.",
+	})
+
+	ignoredPreJustifiedDataColumnCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_ignored_pre_justified_data_column_total",
+		Help: "Count of data column sidecars ignored because their canonical parent is before the justified checkpoint.",
+	})
+	usefulFullColumnsReceivedTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "beacon_useful_full_columns_received_total",
+		Help: "Number of useful full columns (any cell being useful) received",
+	}, []string{"column_index"})
+
+	partialMessageColumnCompletionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "beacon_partial_message_column_completions_total",
+		Help: "How often the partial message first completed the column",
+	}, []string{"column_index"})
 )
 
 func (s *Service) updateMetrics() {
@@ -265,10 +322,7 @@ func (s *Service) updateMetrics() {
 		return
 	}
 	// We update the dynamic subnet topics.
-	digest, err := s.currentForkDigest()
-	if err != nil {
-		log.WithError(err).Debugf("Could not compute fork digest")
-	}
+	digest := s.currentForkDigest()
 	indices := aggregatorSubnetIndices(s.cfg.clock.CurrentSlot())
 	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	attTopic := p2p.GossipTypeMapping[reflect.TypeFor[*pb.Attestation]()]
@@ -295,12 +349,18 @@ func (s *Service) updateMetrics() {
 		s.collectMetricForSubnet(p2p.BlobSubnetTopicFormat, digest, uint64(i))
 	}
 
+	dataColumnTopic := p2p.DataColumnSubnetTopicFormat + s.cfg.p2p.Encoding().ProtocolSuffix()
+	for i := range params.BeaconConfig().DataColumnSidecarSubnetCount {
+		s.collectMetricForSubnet(dataColumnTopic, digest, i)
+	}
+
 	// We update all other gossip topics.
 	for _, topic := range p2p.AllTopics() {
 		// We already updated attestation subnet topics.
 		if strings.Contains(topic, p2p.GossipAttestationMessage) ||
 			strings.Contains(topic, p2p.GossipSyncCommitteeMessage) ||
-			strings.Contains(topic, p2p.GossipBlobSidecarMessage) {
+			strings.Contains(topic, p2p.GossipBlobSidecarMessage) ||
+			strings.Contains(topic, p2p.GossipDataColumnSidecarMessage) {
 			continue
 		}
 		topic += s.cfg.p2p.Encoding().ProtocolSuffix()

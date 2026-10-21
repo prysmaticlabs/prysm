@@ -3,13 +3,16 @@ package sync
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
 	opfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -19,36 +22,147 @@ import (
 func (s *Service) dataColumnSubscriber(ctx context.Context, msg proto.Message) error {
 	var wg errgroup.Group
 
-	sidecar, ok := msg.(blocks.VerifiedRODataColumn)
-	if !ok {
-		return fmt.Errorf("message was not type blocks.VerifiedRODataColumn, type=%T", msg)
+	var sidecar blocks.VerifiedRODataColumn
+	switch dc := msg.(type) {
+	case *ethpb.DataColumnSidecar:
+		ro, err := blocks.NewRODataColumn(dc)
+		if err != nil {
+			return err
+		}
+		sidecar = blocks.NewVerifiedRODataColumn(ro)
+	case *ethpb.DataColumnSidecarGloas:
+		ro, err := blocks.NewRODataColumnGloas(dc)
+		if err != nil {
+			return err
+		}
+		sidecar = blocks.NewVerifiedRODataColumn(ro)
+	default:
+		return fmt.Errorf("unexpected data column type: %T", msg)
+	}
+
+	if sidecar.IsGloas() {
+		usefulFullColumnsReceivedTotal.WithLabelValues(strconv.FormatUint(sidecar.Index(), 10)).Inc()
+		s.republishGloasColumnAsPartial(ctx, sidecar)
+	} else {
+		// Track useful full columns received via gossip (not previously seen).
+		proposerIndex, err := sidecar.ProposerIndex()
+		if err != nil {
+			return errors.Wrap(err, "proposer index")
+		}
+		if !s.hasSeenDataColumnIndex(sidecar.Slot(), proposerIndex, sidecar.Index()) {
+			usefulFullColumnsReceivedTotal.WithLabelValues(strconv.FormatUint(sidecar.Index(), 10)).Inc()
+			s.publishColumnAsPartial(ctx, sidecar)
+		}
 	}
 
 	if err := s.receiveDataColumnSidecar(ctx, sidecar); err != nil {
-		return errors.Wrap(err, "receive data column sidecar")
+		return wrapDataColumnError(sidecar, "receive data column sidecar", err)
 	}
 
+	// CL reconstruction (from >=50% seen columns) runs for both Fulu and Gloas.
 	wg.Go(func() error {
 		if err := s.processDataColumnSidecarsFromReconstruction(ctx, sidecar); err != nil {
-			return errors.Wrap(err, "process data column sidecars from reconstruction")
+			return wrapDataColumnError(sidecar, "process data column sidecars from reconstruction", err)
 		}
 
 		return nil
 	})
 
-	wg.Go(func() error {
-		if err := s.processDataColumnSidecarsFromExecution(ctx, peerdas.PopulateFromSidecar(sidecar)); err != nil {
-			return errors.Wrap(err, "process data column sidecars from execution")
-		}
+	if !sidecar.IsGloas() {
+		wg.Go(func() error {
+			if err := s.processDataColumnSidecarsFromExecution(ctx, peerdas.PopulateFromSidecar(sidecar)); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
 
-		return nil
-	})
+				return wrapDataColumnError(sidecar, "process data column sidecars from execution", err)
+			}
+
+			return nil
+		})
+	}
 
 	if err := wg.Wait(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *Service) publishColumnAsPartial(ctx context.Context, sidecar blocks.VerifiedRODataColumn) {
+	broadcaster := s.cfg.p2p.PartialColumnBroadcaster()
+	if broadcaster == nil {
+		return
+	}
+
+	digest := s.currentForkDigest()
+
+	if err := broadcaster.Publish(ctx, func(yield func(string, blocks.PartialDataColumn) bool) {
+		subnet := peerdas.ComputeSubnetForDataColumnSidecar(sidecar.Index())
+		topic := fmt.Sprintf(p2p.DataColumnSubnetTopicFormat, digest, subnet) + s.cfg.p2p.Encoding().ProtocolSuffix()
+		partialColumn, err := blocks.NewPartialDataColumnFromVerifiedRODataColumn(sidecar)
+		if err != nil {
+			log.WithError(err).Error("Failed to create partial data column from verified RO data column")
+			return
+		}
+		yield(topic, partialColumn)
+	}); err != nil {
+		log.WithError(err).Error("Failed to publish partial column on getting data column sidecar")
+	}
+}
+
+func (s *Service) republishGloasColumnAsPartial(ctx context.Context, sidecar blocks.VerifiedRODataColumn) {
+	if s.cfg.p2p.PartialColumnBroadcaster() == nil {
+		return
+	}
+
+	commitments, err := s.bidCommitmentsForRoot(ctx, sidecar.BlockRoot())
+	if err != nil {
+		log.WithError(err).Error("Failed to get bid commitments for gloas partial column republish")
+		return
+	}
+	sidecar.SetBidCommitments(commitments)
+
+	s.publishColumnAsPartial(ctx, sidecar)
+}
+
+// bidCommitmentsForRoot returns the bid KZG commitments for the block with the given root,
+// which must be present in the database.
+func (s *Service) bidCommitmentsForRoot(ctx context.Context, root [32]byte) ([][]byte, error) {
+	block, err := s.cfg.beaconDB.Block(ctx, root)
+	if err != nil {
+		return nil, errors.Wrap(err, "get block")
+	}
+	if block == nil || block.IsNil() {
+		return nil, errors.New("nil block")
+	}
+	commitments, err := block.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return nil, errors.Wrap(err, "blob kzg commitments")
+	}
+	return commitments, nil
+}
+
+func (s *Service) verifiedRODataColumnSubscriber(ctx context.Context, sidecar blocks.VerifiedRODataColumn) error {
+	if err := s.receiveDataColumnSidecar(ctx, sidecar); err != nil {
+		return errors.Wrap(err, "receive data column sidecar")
+	}
+
+	var wg errgroup.Group
+	wg.Go(func() error {
+		// Broadcast our complete column for peers that don't use partial messages
+		if err := s.cfg.p2p.BroadcastDataColumnSidecars(ctx, []blocks.VerifiedRODataColumn{sidecar}, nil); err != nil {
+			return errors.Wrap(err, "broadcast data column sidecars")
+		}
+
+		return nil
+	})
+
+	if err := s.processDataColumnSidecarsFromReconstruction(ctx, sidecar); err != nil {
+		return errors.Wrap(err, "process data column sidecars from reconstruction")
+	}
+
+	return wg.Wait()
 }
 
 // receiveDataColumnSidecar receives a single data column sidecar: marks it as seen and saves it to the chain.
@@ -60,11 +174,15 @@ func (s *Service) receiveDataColumnSidecar(ctx context.Context, sidecar blocks.V
 // receiveDataColumnSidecars receives multiple data column sidecars: marks them as seen and saves them to the chain.
 func (s *Service) receiveDataColumnSidecars(ctx context.Context, sidecars []blocks.VerifiedRODataColumn) error {
 	for _, sidecar := range sidecars {
-		slot := sidecar.SignedBlockHeader.Header.Slot
-		proposerIndex := sidecar.SignedBlockHeader.Header.ProposerIndex
-		columnIndex := sidecar.Index
-
-		s.setSeenDataColumnIndex(slot, proposerIndex, columnIndex)
+		if sidecar.IsGloas() {
+			s.setSeenDataColumnRootIndex(sidecar.BlockRoot(), sidecar.Index(), sidecar.Slot())
+		} else {
+			proposerIndex, err := sidecar.ProposerIndex()
+			if err != nil {
+				return err
+			}
+			s.setSeenDataColumnIndex(sidecar.Slot(), proposerIndex, sidecar.Index())
+		}
 	}
 
 	if err := s.cfg.chain.ReceiveDataColumns(sidecars); err != nil {
@@ -109,4 +227,8 @@ func (s *Service) allDataColumnSubnets(_ primitives.Slot) map[uint64]bool {
 	}
 
 	return allSubnets
+}
+
+func wrapDataColumnError(sidecar blocks.VerifiedRODataColumn, message string, err error) error {
+	return fmt.Errorf("%s - slot %d, root %s: %w", message, sidecar.Slot(), fmt.Sprintf("%#x", sidecar.BlockRoot()), err)
 }

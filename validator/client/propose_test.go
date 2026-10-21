@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
-	lruwrpr "github.com/OffchainLabs/prysm/v7/cache/lru"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/config/proposer"
@@ -90,17 +89,21 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey, isSlashingProtection
 			return mockSignature{}, nil
 		},
 	}
-	aggregatedSlotCommitteeIDCache := lruwrpr.New(int(params.BeaconConfig().MaxCommitteesPerSlot))
-
 	validator := &validator{
-		db:                             valDB,
-		km:                             newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
-		validatorClient:                m.validatorClient,
-		graffiti:                       []byte{},
-		submittedAtts:                  make(map[submittedAttKey]*submittedAtt),
-		submittedAggregates:            make(map[submittedAttKey]*submittedAtt),
-		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
+		db:                        valDB,
+		km:                        newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
+		validatorClient:           m.validatorClient,
+		graffiti:                  []byte{},
+		duties:                    &dutyStore{},
+		payloadAvailability:       newPayloadAvailability(),
+		submittedAtts:             make(map[submittedAttKey]*submittedAtt),
+		submittedAggregates:       make(map[submittedAttKey]*submittedAtt),
+		attestedSlotsByKeyByEpoch: make(map[primitives.Epoch]map[[fieldparams.BLSPubkeyLength]byte]primitives.Slot),
+		pubkeyToStatus: map[[fieldparams.BLSPubkeyLength]byte]*validatorStatus{
+			pubKey: {publicKey: validatorKey.PublicKey().Marshal(), index: 0},
+		},
 	}
+	validator.aggSelector = testLocalSelector(t, validator)
 
 	return validator, m, validatorKey, ctrl.Finish
 }
@@ -1203,6 +1206,11 @@ func Test_validator_DeleteGraffiti(t *testing.T) {
 }
 
 func Test_validator_SetGraffiti(t *testing.T) {
+	// Fresh settings are stamped v2 only once the network schedules gloas.
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 100
+	params.OverrideBeaconConfig(cfg)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
 	tests := []struct {
 		name                 string
@@ -1261,7 +1269,8 @@ func Test_validator_SetGraffiti(t *testing.T) {
 						Graffiti: "specific graffiti",
 					},
 				}
-				return &proposer.Settings{ProposeConfig: config}
+				// API-created settings carry no v1 content and start at v2.
+				return &proposer.Settings{Version: proposer.SchemaV2, ProposeConfig: config}
 			}(),
 		},
 	}

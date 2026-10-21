@@ -13,6 +13,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/api"
 	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
 	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
@@ -26,7 +27,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	"github.com/OffchainLabs/prysm/v7/network/httputil"
 	engine "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
 	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
@@ -42,6 +42,8 @@ const (
 	InvalidTopic = "__invalid__"
 	// HeadTopic represents a new chain head event topic.
 	HeadTopic = "head"
+	// HeadV2Topic represents the versioned, Gloas-aware chain head event topic.
+	HeadV2Topic = "head_v2"
 	// BlockTopic represents a new produced block event topic.
 	BlockTopic = "block"
 	// BlockGossipTopic represents a block received from gossip or API that passes validation rules.
@@ -62,6 +64,8 @@ const (
 	BLSToExecutionChangeTopic = "bls_to_execution_change"
 	// PayloadAttributesTopic represents a new payload attributes for execution payload building event topic.
 	PayloadAttributesTopic = "payload_attributes"
+	// FastConfirmationTopic is emitted after every run of the fast confirmation rule.
+	FastConfirmationTopic = "fast_confirmation"
 	// BlobSidecarTopic represents a new blob sidecar event topic
 	BlobSidecarTopic = "blob_sidecar"
 	// ProposerSlashingTopic represents a new proposer slashing event topic
@@ -74,6 +78,23 @@ const (
 	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
 	// DataColumnTopic represents a data column sidecar event topic
 	DataColumnTopic = "data_column_sidecar"
+	// ExecutionPayloadAvailableTopic represents the event topic fired when an execution payload envelope
+	// and its custody data are available (for PTC voting). It does not require EL validity.
+	// TODO: Decouple emitting this event from EL validation.
+	ExecutionPayloadAvailableTopic = "execution_payload_available"
+	// ExecutionPayloadTopic represents the event topic fired after an execution payload envelope is
+	// successfully imported into fork choice (post EL execution).
+	ExecutionPayloadTopic = "execution_payload"
+	// ExecutionPayloadGossipTopic represents an execution payload envelope received from gossip or API
+	// that passes validation rules.
+	ExecutionPayloadGossipTopic = "execution_payload_gossip"
+	// ExecutionPayloadBidTopic represents a new execution payload bid event topic.
+	// This topic is currently not triggered but is recognized to avoid client subscription errors.
+	ExecutionPayloadBidTopic = "execution_payload_bid"
+	// PayloadAttestationMessageTopic represents a new payload attestation message event topic.
+	PayloadAttestationMessageTopic = "payload_attestation_message"
+	// ProposerPreferencesTopic represents a new signed proposer preferences event topic.
+	ProposerPreferencesTopic = "proposer_preferences"
 )
 
 var (
@@ -108,16 +129,24 @@ var opsFeedEventTopics = map[feed.EventType]string{
 	operation.ProposerSlashingReceived:          ProposerSlashingTopic,
 	operation.BlockGossipReceived:               BlockGossipTopic,
 	operation.DataColumnReceived:                DataColumnTopic,
+	operation.PayloadAttestationMessageReceived: PayloadAttestationMessageTopic,
+	operation.ProposerPreferencesReceived:       ProposerPreferencesTopic,
+	operation.ExecutionPayloadGossipReceived:    ExecutionPayloadGossipTopic,
+	operation.ExecutionPayloadBidReceived:       ExecutionPayloadBidTopic,
 }
 
 var stateFeedEventTopics = map[feed.EventType]string{
 	statefeed.NewHead:                     HeadTopic,
+	statefeed.NewHeadV2:                   HeadV2Topic,
 	statefeed.FinalizedCheckpoint:         FinalizedCheckpointTopic,
 	statefeed.LightClientFinalityUpdate:   LightClientFinalityUpdateTopic,
 	statefeed.LightClientOptimisticUpdate: LightClientOptimisticUpdateTopic,
 	statefeed.Reorg:                       ChainReorgTopic,
 	statefeed.BlockProcessed:              BlockTopic,
 	statefeed.PayloadAttributes:           PayloadAttributesTopic,
+	statefeed.ExecutionPayloadAvailable:   ExecutionPayloadAvailableTopic,
+	statefeed.ExecutionPayloadProcessed:   ExecutionPayloadTopic,
+	statefeed.FastConfirmation:            FastConfirmationTopic,
 }
 
 var topicsForStateFeed = topicsForFeed(stateFeedEventTopics)
@@ -184,7 +213,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	timeout := s.EventWriteTimeout
 	if timeout == 0 {
-		timeout = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+		timeout = params.BeaconConfig().SlotDuration()
 	}
 	ka := s.KeepAliveInterval
 	if ka == 0 {
@@ -207,7 +236,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	cleanupStart := time.Now()
 	es.waitForExit()
-	log.WithField("cleanup_wait", time.Since(cleanupStart)).Debug("streamEvents shutdown complete")
+	log.WithField("cleanup_wait", time.Since(cleanupStart)).Debug("StreamEvents shutdown complete")
 }
 
 func newEventStreamer(buffSize int, ka time.Duration) *eventStreamer {
@@ -243,8 +272,12 @@ func (es *eventStreamer) recvEventLoop(ctx context.Context, cancel context.Cance
 		case event := <-eventsChan:
 			lr, err := s.lazyReaderForEvent(ctx, event, req)
 			if err != nil {
-				if !errors.Is(err, errNotRequested) {
-					log.WithField("event_type", fmt.Sprintf("%v", event.Data)).WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
+				// errNotRequested (client didn't subscribe to this topic) and
+				// errPayloadAttributeExpired (the proposal slot has already started, so builders
+				// can no longer use it) are both expected, benign skips rather than failures, so
+				// they should not be logged as errors.
+				if !errors.Is(err, errNotRequested) && !errors.Is(err, errPayloadAttributeExpired) {
+					log.WithField("event_type", fmt.Sprintf("%T", event.Data)).WithError(err).Error("StreamEvents API endpoint received an event it was unable to handle.")
 				}
 				continue
 			}
@@ -450,15 +483,17 @@ func topicForEvent(event *feed.Event) string {
 		return ProposerSlashingTopic
 	case *operation.BlockGossipReceivedData:
 		return BlockGossipTopic
-	case *ethpb.EventHead:
+	case *statefeed.HeadData:
 		return HeadTopic
-	case *ethpb.EventFinalizedCheckpoint:
+	case *statefeed.HeadV2Data:
+		return HeadV2Topic
+	case *statefeed.FinalizedCheckpointData:
 		return FinalizedCheckpointTopic
 	case interfaces.LightClientFinalityUpdate:
 		return LightClientFinalityUpdateTopic
 	case interfaces.LightClientOptimisticUpdate:
 		return LightClientOptimisticUpdateTopic
-	case *ethpb.EventChainReorg:
+	case *statefeed.ChainReorgData:
 		return ChainReorgTopic
 	case *statefeed.BlockProcessedData:
 		return BlockTopic
@@ -466,6 +501,20 @@ func topicForEvent(event *feed.Event) string {
 		return PayloadAttributesTopic
 	case *operation.DataColumnReceivedData:
 		return DataColumnTopic
+	case *operation.PayloadAttestationMessageReceivedData:
+		return PayloadAttestationMessageTopic
+	case *operation.ProposerPreferencesReceivedData:
+		return ProposerPreferencesTopic
+	case *operation.ExecutionPayloadBidReceivedData:
+		return ExecutionPayloadBidTopic
+	case *statefeed.ExecutionPayloadAvailableData:
+		return ExecutionPayloadAvailableTopic
+	case *statefeed.ExecutionPayloadProcessedData:
+		return ExecutionPayloadTopic
+	case *statefeed.FastConfirmationData:
+		return FastConfirmationTopic
+	case *operation.ExecutionPayloadGossipReceivedData:
+		return ExecutionPayloadGossipTopic
 	default:
 		return InvalidTopic
 	}
@@ -482,11 +531,15 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 	switch v := event.Data.(type) {
 	case payloadattribute.EventData:
 		return s.payloadAttributesReader(ctx, v)
-	case *ethpb.EventHead:
+	case *statefeed.HeadData:
 		// The head event is a special case because, if the client requested the payload attributes topic,
 		// we send two event messages in reaction; the head event and the payload attributes.
 		return func() io.Reader {
-			return jsonMarshalReader(eventName, structs.HeadEventFromV1(v))
+			return jsonMarshalReader(eventName, structs.HeadEventFromData(v))
+		}, nil
+	case *statefeed.HeadV2Data:
+		return func() io.Reader {
+			return jsonMarshalReader(eventName, structs.HeadEventFromDataV2(v))
 		}, nil
 	case *operation.BlockGossipReceivedData:
 		blockRoot, err := v.SignedBlock.Block().HashTreeRoot()
@@ -525,6 +578,11 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 				att := structs.AttElectraFromConsensus(att)
 				return jsonMarshalReader(eventName, att)
 			}, nil
+		case *eth.AttestationGloas:
+			return func() io.Reader {
+				att := structs.AttGloasFromConsensus(att)
+				return jsonMarshalReader(eventName, att)
+			}, nil
 		default:
 			return nil, errors.Wrapf(errUnhandledEventData, "Unexpected type %T for the .Attestation field of AggregatedAttReceivedData", v.Attestation)
 		}
@@ -538,6 +596,11 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 		case *eth.AttestationElectra:
 			return func() io.Reader {
 				att := structs.AttElectraFromConsensus(att)
+				return jsonMarshalReader(eventName, att)
+			}, nil
+		case *eth.AttestationGloas:
+			return func() io.Reader {
+				att := structs.AttGloasFromConsensus(att)
 				return jsonMarshalReader(eventName, att)
 			}, nil
 		default:
@@ -593,9 +656,9 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 		return func() io.Reader {
 			return jsonMarshalReader(eventName, structs.ProposerSlashingFromConsensus(v.ProposerSlashing))
 		}, nil
-	case *ethpb.EventFinalizedCheckpoint:
+	case *statefeed.FinalizedCheckpointData:
 		return func() io.Reader {
-			return jsonMarshalReader(eventName, structs.FinalizedCheckpointEventFromV1(v))
+			return jsonMarshalReader(eventName, structs.FinalizedCheckpointEventFromData(v))
 		}, nil
 	case interfaces.LightClientFinalityUpdate:
 		cv, err := structs.LightClientFinalityUpdateFromConsensus(v)
@@ -621,22 +684,89 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 		return func() io.Reader {
 			return jsonMarshalReader(eventName, ev)
 		}, nil
-	case *ethpb.EventChainReorg:
+	case *statefeed.ChainReorgData:
 		return func() io.Reader {
-			return jsonMarshalReader(eventName, structs.EventChainReorgFromV1(v))
+			return jsonMarshalReader(eventName, structs.ChainReorgEventFromData(v))
 		}, nil
 	case *statefeed.BlockProcessedData:
 		blockRoot, err := v.SignedBlock.Block().HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute block root for BlockProcessedData state feed event")
 		}
-		return func() io.Reader {
-			blk := &structs.BlockEvent{
-				Slot:                fmt.Sprintf("%d", v.Slot),
-				Block:               hexutil.Encode(blockRoot[:]),
-				ExecutionOptimistic: v.Optimistic,
+		blk := &structs.BlockEvent{
+			Slot:                fmt.Sprintf("%d", v.Slot),
+			Block:               hexutil.Encode(blockRoot[:]),
+			ExecutionOptimistic: v.Optimistic,
+		}
+		if v.SignedBlock.Version() >= version.Gloas {
+			bid, err := v.SignedBlock.Block().Body().ExecutionPayloadBid()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get execution payload bid for BlockProcessedData state feed event")
 			}
+			blockHash := bid.BlockHash()
+			blk.BuilderIndex = fmt.Sprintf("%d", bid.BuilderIndex())
+			blk.BlockHash = hexutil.Encode(blockHash[:])
+		}
+		return func() io.Reader {
 			return jsonMarshalReader(eventName, blk)
+		}, nil
+	case *operation.PayloadAttestationMessageReceivedData:
+		return func() io.Reader {
+			epoch := slots.ToEpoch(v.Message.Data.Slot)
+			return jsonMarshalReader(eventName, &structs.PayloadAttestationMessageEvent{
+				Version: version.String(params.GetNetworkScheduleEntry(epoch).VersionEnum),
+				Data:    structs.PayloadAttestationMessageFromConsensus(v.Message),
+			})
+		}, nil
+	case *operation.ProposerPreferencesReceivedData:
+		return func() io.Reader {
+			epoch := slots.ToEpoch(v.Data.Message.ProposalSlot)
+			return jsonMarshalReader(eventName, &structs.ProposerPreferencesEvent{
+				Version: version.String(params.GetNetworkScheduleEntry(epoch).VersionEnum),
+				Data:    structs.SignedProposerPreferencesFromConsensus(v.Data),
+			})
+		}, nil
+	case *operation.ExecutionPayloadBidReceivedData:
+		return func() io.Reader {
+			epoch := slots.ToEpoch(v.Bid.Message.Slot)
+			return jsonMarshalReader(eventName, &structs.ExecutionPayloadBidEvent{
+				Version: version.String(params.GetNetworkScheduleEntry(epoch).VersionEnum),
+				Data:    structs.SignedExecutionPayloadBidFromConsensus(v.Bid),
+			})
+		}, nil
+	case *statefeed.ExecutionPayloadAvailableData:
+		return func() io.Reader {
+			return jsonMarshalReader(eventName, &structs.ExecutionPayloadAvailableEvent{
+				Slot:      fmt.Sprintf("%d", v.Slot),
+				BlockRoot: hexutil.Encode(v.BlockRoot[:]),
+			})
+		}, nil
+	case *statefeed.FastConfirmationData:
+		return func() io.Reader {
+			return jsonMarshalReader(eventName, &structs.FastConfirmationEvent{
+				Block:       hexutil.Encode(v.BlockRoot[:]),
+				Slot:        fmt.Sprintf("%d", v.Slot),
+				CurrentSlot: fmt.Sprintf("%d", v.CurrentSlot),
+			})
+		}, nil
+	case *statefeed.ExecutionPayloadProcessedData:
+		return func() io.Reader {
+			return jsonMarshalReader(eventName, &structs.ExecutionPayloadEvent{
+				Slot:                fmt.Sprintf("%d", v.Slot),
+				BuilderIndex:        fmt.Sprintf("%d", v.BuilderIndex),
+				BlockHash:           hexutil.Encode(v.BlockHash[:]),
+				BlockRoot:           hexutil.Encode(v.BlockRoot[:]),
+				ExecutionOptimistic: v.Optimistic,
+			})
+		}, nil
+	case *operation.ExecutionPayloadGossipReceivedData:
+		return func() io.Reader {
+			return jsonMarshalReader(eventName, &structs.ExecutionPayloadGossipEvent{
+				Slot:         fmt.Sprintf("%d", v.Slot),
+				BuilderIndex: fmt.Sprintf("%d", v.BuilderIndex),
+				BlockHash:    hexutil.Encode(v.BlockHash[:]),
+				BlockRoot:    hexutil.Encode(v.BlockRoot[:]),
+			})
 		}, nil
 	default:
 		return nil, errors.Wrapf(errUnhandledEventData, "event data type %T unsupported", v)
@@ -646,27 +776,45 @@ func (s *Server) lazyReaderForEvent(ctx context.Context, event *feed.Event, topi
 var errUnsupportedPayloadAttribute = errors.New("cannot compute payload attributes pre-Bellatrix")
 var errPayloadAttributeExpired = errors.New("skipping payload attribute event for past slot")
 
-func (s *Server) computePayloadAttributes(ctx context.Context, st state.ReadOnlyBeaconState, root [32]byte, proposer primitives.ValidatorIndex, timestamp uint64, randao []byte) (payloadattribute.Attributer, error) {
+func (s *Server) computePayloadAttributes(ctx context.Context, st state.ReadOnlyBeaconState, root [32]byte, proposer primitives.ValidatorIndex, timestamp uint64, randao []byte, slot primitives.Slot) (payloadattribute.Attributer, error) {
 	v := st.Version()
 	if v < version.Bellatrix {
 		return nil, errors.Wrapf(errUnsupportedPayloadAttribute, "%s is not supported", version.String(v))
 	}
 
-	feeRecpt := params.BeaconConfig().DefaultFeeRecipient.Bytes()
-	tValidator, exists := s.TrackedValidatorsCache.Validator(proposer)
-	if exists {
-		feeRecpt = tValidator.FeeRecipient[:]
+	// Try signed pref first (post-Gloas, keyed by slot+dep_root). Fall back to
+	// the per-validator default if dep root is unavailable or the signed pref
+	// isn't cached. On total miss emit the BN's configured defaults so SSE
+	// matches what FCU will actually send to the EL.
+	feeRecpt := primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
+	var pref *cache.ProposerPreference
+	if dependentRoot, err := helpers.ProposerDependentRootOrGenesis(ctx, s.BeaconDB, st, slot); err == nil {
+		if p, ok := s.ProposerPreferencesCache.BestFor(dependentRoot, slot, proposer); ok {
+			pref = &p
+			feeRecpt = p.FeeRecipientOrDefault()
+		}
+	} else if p, ok := s.ProposerPreferencesCache.DefaultFor(proposer); ok {
+		pref = &p
+		feeRecpt = p.FeeRecipientOrDefault()
 	}
 
 	if v == version.Bellatrix {
 		return payloadattribute.New(&engine.PayloadAttributes{
 			Timestamp:             timestamp,
 			PrevRandao:            randao,
-			SuggestedFeeRecipient: feeRecpt,
+			SuggestedFeeRecipient: feeRecpt[:],
 		})
 	}
 
-	w, _, err := st.ExpectedWithdrawals()
+	var (
+		w   []*engine.Withdrawal
+		err error
+	)
+	if v >= version.Gloas {
+		w, err = st.WithdrawalsForPayload()
+	} else {
+		w, _, err = st.ExpectedWithdrawals()
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get withdrawals from head state")
 	}
@@ -674,17 +822,34 @@ func (s *Server) computePayloadAttributes(ctx context.Context, st state.ReadOnly
 		return payloadattribute.New(&engine.PayloadAttributesV2{
 			Timestamp:             timestamp,
 			PrevRandao:            randao,
-			SuggestedFeeRecipient: feeRecpt,
+			SuggestedFeeRecipient: feeRecpt[:],
 			Withdrawals:           w,
 		})
 	}
 
-	return payloadattribute.New(&engine.PayloadAttributesV3{
+	if v < version.Gloas {
+		return payloadattribute.New(&engine.PayloadAttributesV3{
+			Timestamp:             timestamp,
+			PrevRandao:            randao,
+			SuggestedFeeRecipient: feeRecpt[:],
+			Withdrawals:           w,
+			ParentBeaconBlockRoot: root[:],
+		})
+	}
+
+	parentGasLimit := helpers.ParentTargetGasLimit(st)
+	gasLimit := parentGasLimit
+	if pref != nil {
+		gasLimit = pref.GasLimitOr(parentGasLimit)
+	}
+	return payloadattribute.New(&engine.PayloadAttributesV4{
 		Timestamp:             timestamp,
 		PrevRandao:            randao,
-		SuggestedFeeRecipient: feeRecpt,
+		SuggestedFeeRecipient: feeRecpt[:],
 		Withdrawals:           w,
 		ParentBeaconBlockRoot: root[:],
+		SlotNumber:            uint64(slot),
+		TargetGasLimit:        gasLimit,
 	})
 }
 
@@ -699,7 +864,8 @@ var zeroRoot [32]byte
 // needsFill allows tests to provide filled EventData values. An ordinary event data value fired by the blockchain package will have
 // all of the checked fields empty, so the logical short circuit should hit immediately.
 func needsFill(ev payloadattribute.EventData) bool {
-	return len(ev.ParentBlockHash) == 0 ||
+	return ev.ProposerIndex == 0 ||
+		len(ev.ParentBlockHash) == 0 ||
 		ev.Attributer == nil || ev.Attributer.IsEmpty()
 }
 
@@ -714,54 +880,86 @@ func (s *Server) fillEventData(ctx context.Context, ev payloadattribute.EventDat
 		return ev, errors.New("head root is empty")
 	}
 
-	var err error
-	var st state.BeaconState
+	var rost state.ReadOnlyBeaconState
 
 	// If head is in the same block as the proposal slot, we can use the "read only" state cache.
 	pse := slots.ToEpoch(ev.ProposalSlot)
 	if slots.ToEpoch(ev.HeadBlock.Block().Slot()) == pse {
-		st = s.StateGen.StateByRootIfCachedNoCopy(ev.HeadRoot)
+		rost = s.StateGen.StateByRootIfCachedNoCopy(ev.HeadRoot)
 	}
-	// If st is nil, we couldn't get the state from the cache, or it isn't in the same epoch.
-	if st == nil || st.IsNil() {
-		st, err = s.StateGen.StateByRoot(ctx, ev.HeadRoot)
+
+	// If rost is nil, we couldn't get the state from the cache, or it isn't in the same epoch.
+	if rost == nil || rost.IsNil() {
+		st, err := s.StateGen.StateByRoot(ctx, ev.HeadRoot)
 		if err != nil {
 			return ev, errors.Wrap(err, "could not get head state")
 		}
-		// double check that we need to process_slots, just in case we got here via a hot state cache miss.
+
+		// Double check that we need to process_slots, just in case we got here via a hot state cache miss.
 		if slots.ToEpoch(st.Slot()) < pse {
 			start, err := slots.EpochStart(pse)
 			if err != nil {
 				return ev, errors.Wrap(err, "invalid state slot; could not compute epoch start")
 			}
+
 			st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, ev.HeadRoot[:], start)
 			if err != nil {
 				return ev, errors.Wrap(err, "could not run process blocks on head state into the proposal slot epoch")
 			}
 		}
+
+		rost = st
 	}
 
-	ev.ProposerIndex, err = helpers.BeaconProposerIndexAtSlot(ctx, st, ev.ProposalSlot)
+	proposerIndex, err := helpers.BeaconProposerIndexAtSlot(ctx, rost, ev.ProposalSlot)
 	if err != nil {
 		return ev, errors.Wrap(err, "failed to compute proposer index")
 	}
-	randao, err := helpers.RandaoMix(st, pse)
+
+	ev.ProposerIndex = proposerIndex
+
+	// Real fire sites carry the exact hashes sent to the engine's forkchoiceUpdated; only
+	// compute them here as a fallback when they weren't provided.
+	if len(ev.ParentBlockHash) == 0 {
+		if ev.HeadBlock.Version() >= version.Gloas {
+			h, err := rost.LatestBlockHash()
+			if err != nil {
+				return ev, errors.Wrap(err, "could not get latest block hash from head state")
+			}
+			ev.ParentBlockHash = h[:]
+		} else {
+			payload, err := ev.HeadBlock.Block().Body().Execution()
+			if err != nil {
+				return ev, errors.Wrap(err, "could not get execution payload for head block")
+			}
+			ev.ParentBlockHash = payload.BlockHash()
+			ev.ParentBlockNumber = payload.BlockNumber()
+		}
+	}
+	if len(ev.SafeBlockHash) == 0 {
+		h := s.ChainInfoFetcher.SafeBlockHash()
+		ev.SafeBlockHash = h[:]
+	}
+	if len(ev.FinalizedBlockHash) == 0 {
+		h := s.ChainInfoFetcher.FinalizedBlockHash()
+		ev.FinalizedBlockHash = h[:]
+	}
+
+	if ev.Attributer != nil && !ev.Attributer.IsEmpty() {
+		return ev, nil
+	}
+
+	randao, err := helpers.RandaoMix(rost, pse)
 	if err != nil {
 		return ev, errors.Wrap(err, "could not get head state randado")
 	}
 
-	payload, err := ev.HeadBlock.Block().Body().Execution()
-	if err != nil {
-		return ev, errors.Wrap(err, "could not get execution payload for head block")
-	}
-	ev.ParentBlockHash = payload.BlockHash()
-	ev.ParentBlockNumber = payload.BlockNumber()
-
-	t, err := slots.StartTime(st.GenesisTime(), ev.ProposalSlot)
+	t, err := slots.StartTime(rost.GenesisTime(), ev.ProposalSlot)
 	if err != nil {
 		return ev, errors.Wrap(err, "could not get head state slot time")
 	}
-	ev.Attributer, err = s.computePayloadAttributes(ctx, st, ev.HeadRoot, ev.ProposerIndex, uint64(t.Unix()), randao)
+
+	ev.Attributer, err = s.computePayloadAttributes(ctx, rost, ev.HeadRoot, ev.ProposerIndex, uint64(t.Unix()), randao, ev.ProposalSlot)
 	return ev, err
 }
 
@@ -787,20 +985,30 @@ func (s *Server) payloadAttributesReader(ctx context.Context, ev payloadattribut
 			d.err = errors.Wrap(err, "Could not fill event data")
 			return
 		}
-		d.version = version.String(ev.HeadBlock.Version())
+		// The event is keyed to the proposal slot's fork, not the head block's version.
+		pv := params.GetNetworkScheduleEntry(slots.ToEpoch(ev.ProposalSlot)).VersionEnum
+		d.version = version.String(pv)
 		attributesBytes, err := marshalAttributes(ev.Attributer)
 		if err != nil {
 			d.err = errors.Wrap(err, "errors marshaling payload attributes to json")
 			return
 		}
-		d.data, d.err = json.Marshal(structs.PayloadAttributesEventData{
+		attrData := structs.PayloadAttributesEventData{
 			ProposerIndex:     strconv.FormatUint(uint64(ev.ProposerIndex), 10),
 			ProposalSlot:      strconv.FormatUint(uint64(ev.ProposalSlot), 10),
-			ParentBlockNumber: strconv.FormatUint(ev.ParentBlockNumber, 10),
 			ParentBlockRoot:   hexutil.Encode(ev.HeadRoot[:]),
 			ParentBlockHash:   hexutil.Encode(ev.ParentBlockHash),
 			PayloadAttributes: attributesBytes,
-		})
+		}
+		// parent_block_number was removed from the payload_attributes event from gloas onwards,
+		// while safe_block_hash and finalized_block_hash were added.
+		if pv < version.Gloas {
+			attrData.ParentBlockNumber = strconv.FormatUint(ev.ParentBlockNumber, 10)
+		} else {
+			attrData.SafeBlockHash = hexutil.Encode(ev.SafeBlockHash)
+			attrData.FinalizedBlockHash = hexutil.Encode(ev.FinalizedBlockHash)
+		}
+		d.data, d.err = json.Marshal(attrData)
 		if d.err != nil {
 			d.err = errors.Wrap(d.err, "errors marshaling payload attributes event data to json")
 		}
@@ -857,12 +1065,27 @@ func marshalAttributes(attr payloadattribute.Attributer) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get parent beacon block root from payload attributes event")
 	}
-	return json.Marshal(&structs.PayloadAttributesV3{
+	if v < version.Gloas {
+		return json.Marshal(&structs.PayloadAttributesV3{
+			Timestamp:             timestamp,
+			PrevRandao:            prevRandao,
+			SuggestedFeeRecipient: feeRecpt,
+			Withdrawals:           withdrawals,
+			ParentBeaconBlockRoot: hexutil.Encode(parentRoot),
+		})
+	}
+	v4, err := attr.PbV4()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get v4 payload attributes from payload attributes event")
+	}
+	return json.Marshal(&structs.PayloadAttributesV4{
 		Timestamp:             timestamp,
 		PrevRandao:            prevRandao,
 		SuggestedFeeRecipient: feeRecpt,
 		Withdrawals:           withdrawals,
 		ParentBeaconBlockRoot: hexutil.Encode(parentRoot),
+		SlotNumber:            strconv.FormatUint(v4.GetSlotNumber(), 10),
+		TargetGasLimit:        strconv.FormatUint(v4.GetTargetGasLimit(), 10),
 	})
 }
 

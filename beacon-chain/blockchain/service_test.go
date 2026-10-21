@@ -9,29 +9,20 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache/depositsnapshot"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
 	testDB "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
-	mockExecution "github.com/OffchainLabs/prysm/v7/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/voluntaryexits"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
-	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
-	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
 	"github.com/OffchainLabs/prysm/v7/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
-	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v7/container/trie"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/genesis"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
@@ -39,54 +30,17 @@ import (
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := t.Context()
-	var web3Service *execution.Service
-	var err error
-	srv, endpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		srv.Stop()
-	})
 	bState, _ := util.DeterministicGenesisState(t, 10)
 	genesis.StoreStateDuringTest(t, bState)
-	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.ToProtoUnsafe())
-	require.NoError(t, err)
-	mockTrie, err := trie.NewTrie(0)
-	require.NoError(t, err)
-	err = beaconDB.SaveExecutionChainData(ctx, &ethpb.ETH1ChainData{
-		BeaconState: pbState,
-		Trie:        mockTrie.ToProto(),
-		CurrentEth1Data: &ethpb.LatestETH1Data{
-			BlockHash: make([]byte, 32),
-		},
-		ChainstartData: &ethpb.ChainStartData{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot:  make([]byte, 32),
-				DepositCount: 0,
-				BlockHash:    make([]byte, 32),
-			},
-		},
-		DepositContainers: []*ethpb.DepositContainer{},
-	})
-	require.NoError(t, err)
 
 	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
-
-	web3Service, err = execution.NewService(
-		ctx,
-		execution.WithDatabase(beaconDB),
-		execution.WithHttpEndpoint(endpoint),
-		execution.WithDepositContractAddress(common.Address{}),
-		execution.WithDepositCache(depositCache),
-	)
-	require.NoError(t, err, "Unable to set up web3 service")
 
 	attService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
 	require.NoError(t, err)
@@ -99,7 +53,6 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithDepositCache(depositCache),
-		WithChainStartFetcher(web3Service),
 		WithAttestationPool(attestations.NewPool()),
 		WithSlashingPool(slashings.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
@@ -185,50 +138,6 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	// The context should have been canceled.
 	assert.Equal(t, context.Canceled, chainService.ctx.Err(), "Context was not canceled")
 	require.LogsContain(t, hook, "data already exists")
-}
-
-func TestChainService_InitializeBeaconChain(t *testing.T) {
-	helpers.ClearCache()
-	beaconDB := testDB.SetupDB(t)
-	ctx := t.Context()
-
-	bc := setupBeaconChain(t, beaconDB)
-	var err error
-
-	// Set up 10 deposits pre chain start for validators to register
-	count := uint64(10)
-	deposits, _, err := util.DeterministicDepositsAndKeys(count)
-	require.NoError(t, err)
-	dt, _, err := util.DepositTrieFromDeposits(deposits)
-	require.NoError(t, err)
-	hashTreeRoot, err := dt.HashTreeRoot()
-	require.NoError(t, err)
-	genState, err := transition.EmptyGenesisState()
-	require.NoError(t, err)
-	err = genState.SetEth1Data(&ethpb.Eth1Data{
-		DepositRoot:  hashTreeRoot[:],
-		DepositCount: uint64(len(deposits)),
-		BlockHash:    make([]byte, 32),
-	})
-	require.NoError(t, err)
-	genState, err = altair.ProcessPreGenesisDeposits(ctx, genState, deposits)
-	require.NoError(t, err)
-
-	_, err = bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{DepositRoot: hashTreeRoot[:], BlockHash: make([]byte, 32)})
-	require.NoError(t, err)
-
-	_, err = bc.HeadState(ctx)
-	assert.NoError(t, err)
-	headBlk, err := bc.HeadBlock(ctx)
-	require.NoError(t, err)
-	if headBlk == nil {
-		t.Error("Head state can't be nil after initialize beacon chain")
-	}
-	r, err := bc.HeadRoot(ctx)
-	require.NoError(t, err)
-	if bytesutil.ToBytes32(r) == params.BeaconConfig().ZeroHash {
-		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
-	}
 }
 
 func TestChainService_CorrectGenesisRoots(t *testing.T) {
@@ -595,219 +504,4 @@ func TestNotifyIndex(t *testing.T) {
 	default:
 		t.Errorf("Notifier channel did not receive the index")
 	}
-}
-
-func TestUpdateCustodyInfoInDB(t *testing.T) {
-	const (
-		fuluForkEpoch         = 10
-		custodyRequirement    = uint64(4)
-		earliestStoredSlot    = primitives.Slot(12)
-		numberOfCustodyGroups = uint64(64)
-	)
-
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.FuluForkEpoch = fuluForkEpoch
-	cfg.CustodyRequirement = custodyRequirement
-	cfg.NumberOfCustodyGroups = numberOfCustodyGroups
-	params.OverrideBeaconConfig(cfg)
-
-	ctx := t.Context()
-	pbBlock := util.NewBeaconBlock()
-	pbBlock.Block.Slot = 12
-	signedBeaconBlock, err := blocks.NewSignedBeaconBlock(pbBlock)
-	require.NoError(t, err)
-
-	roBlock, err := blocks.NewROBlock(signedBeaconBlock)
-	require.NoError(t, err)
-
-	t.Run("CGC increases before fulu", func(t *testing.T) {
-		service, requirements := minimalTestService(t)
-		err = requirements.db.SaveBlock(ctx, roBlock)
-		require.NoError(t, err)
-
-		// Before Fulu
-		// -----------
-		actualEas, actualCgc, err := service.updateCustodyInfoInDB(15)
-		require.NoError(t, err)
-		require.Equal(t, earliestStoredSlot, actualEas)
-		require.Equal(t, custodyRequirement, actualCgc)
-
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(17)
-		require.NoError(t, err)
-		require.Equal(t, earliestStoredSlot, actualEas)
-		require.Equal(t, custodyRequirement, actualCgc)
-
-		resetFlags := flags.Get()
-		gFlags := new(flags.GlobalFlags)
-		gFlags.Supernode = true
-		flags.Init(gFlags)
-		defer flags.Init(resetFlags)
-
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(19)
-		require.NoError(t, err)
-		require.Equal(t, earliestStoredSlot, actualEas)
-		require.Equal(t, numberOfCustodyGroups, actualCgc)
-
-		// After Fulu
-		// ----------
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(fuluForkEpoch*primitives.Slot(cfg.SlotsPerEpoch) + 1)
-		require.NoError(t, err)
-		require.Equal(t, earliestStoredSlot, actualEas)
-		require.Equal(t, numberOfCustodyGroups, actualCgc)
-	})
-
-	t.Run("CGC increases after fulu", func(t *testing.T) {
-		service, requirements := minimalTestService(t)
-		err = requirements.db.SaveBlock(ctx, roBlock)
-		require.NoError(t, err)
-
-		// Before Fulu
-		// -----------
-		actualEas, actualCgc, err := service.updateCustodyInfoInDB(15)
-		require.NoError(t, err)
-		require.Equal(t, earliestStoredSlot, actualEas)
-		require.Equal(t, custodyRequirement, actualCgc)
-
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(17)
-		require.NoError(t, err)
-		require.Equal(t, earliestStoredSlot, actualEas)
-		require.Equal(t, custodyRequirement, actualCgc)
-
-		// After Fulu
-		// ----------
-		resetFlags := flags.Get()
-		gFlags := new(flags.GlobalFlags)
-		gFlags.Supernode = true
-		flags.Init(gFlags)
-		defer flags.Init(resetFlags)
-
-		slot := fuluForkEpoch*primitives.Slot(cfg.SlotsPerEpoch) + 1
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(slot)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		require.Equal(t, numberOfCustodyGroups, actualCgc)
-
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(slot + 2)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		require.Equal(t, numberOfCustodyGroups, actualCgc)
-	})
-
-	t.Run("Supernode downgrade prevented", func(t *testing.T) {
-		service, requirements := minimalTestService(t)
-		err = requirements.db.SaveBlock(ctx, roBlock)
-		require.NoError(t, err)
-
-		// Enable supernode
-		resetFlags := flags.Get()
-		gFlags := new(flags.GlobalFlags)
-		gFlags.Supernode = true
-		flags.Init(gFlags)
-
-		slot := fuluForkEpoch*primitives.Slot(cfg.SlotsPerEpoch) + 1
-		actualEas, actualCgc, err := service.updateCustodyInfoInDB(slot)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		require.Equal(t, numberOfCustodyGroups, actualCgc)
-
-		// Try to downgrade by removing flag
-		gFlags.Supernode = false
-		flags.Init(gFlags)
-		defer flags.Init(resetFlags)
-
-		// Should still be supernode
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(slot + 2)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		require.Equal(t, numberOfCustodyGroups, actualCgc) // Still 64, not downgraded
-	})
-
-	t.Run("Semi-supernode downgrade prevented", func(t *testing.T) {
-		service, requirements := minimalTestService(t)
-		err = requirements.db.SaveBlock(ctx, roBlock)
-		require.NoError(t, err)
-
-		// Enable semi-supernode
-		resetFlags := flags.Get()
-		gFlags := new(flags.GlobalFlags)
-		gFlags.SemiSupernode = true
-		flags.Init(gFlags)
-
-		slot := fuluForkEpoch*primitives.Slot(cfg.SlotsPerEpoch) + 1
-		actualEas, actualCgc, err := service.updateCustodyInfoInDB(slot)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		semiSupernodeCustody := numberOfCustodyGroups / 2 // 64
-		require.Equal(t, semiSupernodeCustody, actualCgc) // Semi-supernode custodies 64 groups
-
-		// Try to downgrade by removing flag
-		gFlags.SemiSupernode = false
-		flags.Init(gFlags)
-		defer flags.Init(resetFlags)
-
-		// UpdateCustodyInfo should prevent downgrade - custody count should remain at 64
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(slot + 2)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		require.Equal(t, semiSupernodeCustody, actualCgc) // Still 64 due to downgrade prevention by UpdateCustodyInfo
-	})
-
-	t.Run("Semi-supernode to supernode upgrade allowed", func(t *testing.T) {
-		service, requirements := minimalTestService(t)
-		err = requirements.db.SaveBlock(ctx, roBlock)
-		require.NoError(t, err)
-
-		// Start with semi-supernode
-		resetFlags := flags.Get()
-		gFlags := new(flags.GlobalFlags)
-		gFlags.SemiSupernode = true
-		flags.Init(gFlags)
-
-		slot := fuluForkEpoch*primitives.Slot(cfg.SlotsPerEpoch) + 1
-		actualEas, actualCgc, err := service.updateCustodyInfoInDB(slot)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		semiSupernodeCustody := numberOfCustodyGroups / 2 // 64
-		require.Equal(t, semiSupernodeCustody, actualCgc) // Semi-supernode custodies 64 groups
-
-		// Upgrade to full supernode
-		gFlags.SemiSupernode = false
-		gFlags.Supernode = true
-		flags.Init(gFlags)
-		defer flags.Init(resetFlags)
-
-		// Should upgrade to full supernode
-		upgradeSlot := slot + 2
-		actualEas, actualCgc, err = service.updateCustodyInfoInDB(upgradeSlot)
-		require.NoError(t, err)
-		require.Equal(t, upgradeSlot, actualEas)           // Earliest slot updates when upgrading
-		require.Equal(t, numberOfCustodyGroups, actualCgc) // Upgraded to 128
-	})
-
-	t.Run("Semi-supernode with high validator requirements uses higher custody", func(t *testing.T) {
-		service, requirements := minimalTestService(t)
-		err = requirements.db.SaveBlock(ctx, roBlock)
-		require.NoError(t, err)
-
-		// Enable semi-supernode
-		resetFlags := flags.Get()
-		gFlags := new(flags.GlobalFlags)
-		gFlags.SemiSupernode = true
-		flags.Init(gFlags)
-		defer flags.Init(resetFlags)
-
-		// Mock a high custody requirement (simulating many validators)
-		// We need to override the custody requirement calculation
-		// For this test, we'll verify the logic by checking if custodyRequirement > 64
-		// Since custodyRequirement in minimalTestService is 4, we can't test the high case here
-		// This would require a different test setup with actual validators
-		slot := fuluForkEpoch*primitives.Slot(cfg.SlotsPerEpoch) + 1
-		actualEas, actualCgc, err := service.updateCustodyInfoInDB(slot)
-		require.NoError(t, err)
-		require.Equal(t, slot, actualEas)
-		semiSupernodeCustody := numberOfCustodyGroups / 2 // 64
-		// With low validator requirements (4), should use semi-supernode minimum (64)
-		require.Equal(t, semiSupernodeCustody, actualCgc)
-	})
 }

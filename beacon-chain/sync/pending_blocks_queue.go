@@ -20,6 +20,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/encoding/ssz/equality"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
 	prysmTrace "github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
@@ -60,6 +61,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 	// Remove old blocks from our expiration cache.
 	s.deleteExpiredBlocksFromCache()
+	s.prunePendingPayloadEnvelopes()
+	s.prunePendingPayloadAttestations()
 
 	// Validate pending slots before processing.
 	if err := s.validatePendingSlots(); err != nil {
@@ -140,10 +143,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			if !isParentBlockInDB {
 				continue
 			}
+			if !s.cfg.chain.ParentPayloadReady(b.Block()) {
+				go s.requestPayloadEnvelope(parentRoot)
+				continue
+			}
 
 			// Calculate the deadline time by adding three slots duration to the current time
-			secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-			threeSlotDuration := 3 * time.Duration(secondsPerSlot) * time.Second
+			threeSlotDuration := 3 * params.BeaconConfig().SlotDuration()
 			ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, threeSlotDuration)
 			// Process and broadcast the block.
 			if err := s.processAndBroadcastBlock(ctxWithTimeout, b, blkRoot); err != nil {
@@ -153,6 +159,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 			cancelFunction()
 
+			// Process synchronously because it's likely that the next pending block depends on it.
+			// Columns first: the envelope's availability check reads them from storage.
+			s.processPendingGloasColumns(s.ctx, blkRoot, b)
+			s.processPendingPayloadEnvelope(ctx, blkRoot)
+			s.processPendingPayloadAttestation(ctx, blkRoot)
 			blkRoots = append(blkRoots, blkRoot)
 
 			// Remove the processed block from the queue.
@@ -241,7 +252,7 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.ReadOnlySignedB
 	blockSlot := b.Block().Slot()
 
 	if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
-		if !errors.Is(ErrOptimisticParent, err) {
+		if !errors.Is(err, ErrOptimisticParent) {
 			log.WithError(err).WithField("slot", blockSlot).Debug("Could not validate block")
 			return err
 		}
@@ -300,7 +311,9 @@ func (s *Service) receiveAndBroadCastBlock(ctx context.Context, b interfaces.Rea
 		return err
 	}
 
-	if err := s.cfg.p2p.Broadcast(ctx, pb); err != nil {
+	// Use the block's own fork digest: a pending block resolved after a fork transition
+	// must not go out on the current fork's topic, where peers cannot decode it.
+	if err := s.cfg.p2p.BroadcastForEpoch(ctx, pb, slots.ToEpoch(blockSlot)); err != nil {
 		log.WithError(err).Debug("Could not broadcast block")
 		return err
 	}
@@ -387,6 +400,9 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	pid := bestPeers[randomIndex]
 
 	for range numOfTries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		req := p2ptypes.BeaconBlockByRootsReq(roots)
 
 		// Get the current epoch.
@@ -413,10 +429,20 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 			}).Debug("Requesting blocks by root")
 		}
 
+		// Optimistically request parent payload envelopes in parallel with the parent blocks.
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			s.fetchAndQueuePayloadEnvelopesForRoots(ctx, pid, req)
+		})
+
 		// Send the request to the peer.
 		if err := s.sendBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)
 			log.WithError(err).Debug("Could not send recent block request")
+		}
+		wg.Wait()
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 
 		// Filter out roots that are already seen in pending blocks.
@@ -455,6 +481,86 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	}).Debug("Send batch root request: Some roots are still missing after all allowed tries")
 
 	return nil
+}
+
+func (s *Service) fetchAndQueuePayloadEnvelopesForRoots(
+	ctx context.Context,
+	pid core.PeerID,
+	roots p2ptypes.BeaconBlockByRootsReq,
+) {
+	gloasStartSlot, err := slots.EpochStart(params.BeaconConfig().GloasForkEpoch)
+	if err != nil {
+		log.WithError(err).Debug("Could not compute Gloas start slot")
+		return
+	}
+	// Nothing post-Gloas exists yet, so there are no envelopes to request.
+	if s.cfg.clock.CurrentSlot() < gloasStartSlot {
+		return
+	}
+
+	var envelopeRoots p2ptypes.ExecutionPayloadEnvelopesByRootReq
+	for _, root := range roots {
+		if s.cfg.beaconDB.HasExecutionPayloadEnvelope(ctx, root) {
+			continue
+		}
+		envelopeRoots = append(envelopeRoots, root)
+	}
+
+	if len(envelopeRoots) == 0 {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
+	defer cancel()
+	envelopes, err := SendExecutionPayloadEnvelopesByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, pid, s.ctxMap, &envelopeRoots)
+	if err != nil {
+		log.WithError(err).Debug("Could not request execution payload envelopes by root")
+		return
+	}
+
+	for _, env := range envelopes {
+		if env == nil || env.Message == nil {
+			continue
+		}
+		s.queuePendingPayloadEnvelopeFromRootRequest(env)
+	}
+}
+
+// Signature is not verified here, processing revalidates fully and the slot bound plus caps bound memory.
+func (s *Service) queuePendingPayloadEnvelopeFromRootRequest(signedEnvelope *ethpb.SignedExecutionPayloadEnvelope) {
+	if signedEnvelope == nil || signedEnvelope.Message == nil || signedEnvelope.Message.Payload == nil {
+		return
+	}
+	// A future slot would never fall below the finalized epoch, defeating pruning and pinning memory.
+	slot := primitives.Slot(signedEnvelope.Message.Payload.SlotNumber)
+	if slot > s.cfg.clock.CurrentSlot() {
+		log.WithField("envelopeSlot", slot).Debug("Ignoring fetched payload envelope with future slot")
+		return
+	}
+
+	root := bytesutil.ToBytes32(signedEnvelope.Message.BeaconBlockRoot)
+	builderIdx := uint64(signedEnvelope.Message.BuilderIndex)
+
+	s.pendingEnvelopeLock.Lock()
+	defer s.pendingEnvelopeLock.Unlock()
+
+	inner, ok := s.pendingPayloadEnvelopes[root]
+	if !ok && len(s.pendingPayloadEnvelopes) >= maxPendingPayloadRoots {
+		log.Debug("Too many pending payload roots, ignoring fetched payload envelope")
+		return
+	}
+	if len(inner) >= maxPendingBuildersPerRoot {
+		log.Debug("Too many pending builders for root, ignoring fetched payload envelope")
+		return
+	}
+	if _, exists := inner[builderIdx]; exists {
+		return
+	}
+	if !ok {
+		inner = make(map[uint64]*ethpb.SignedExecutionPayloadEnvelope)
+		s.pendingPayloadEnvelopes[root] = inner
+	}
+	inner[builderIdx] = signedEnvelope
 }
 
 // filterOutPendingAndSynced filters out roots that are already seen in pending blocks or being synced.
@@ -608,8 +714,13 @@ func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.Read
 		return nil
 	}
 
-	if err := s.addPendingBlockToCache(b); err != nil {
+	stored, err := s.addPendingBlockToCache(b)
+	if err != nil {
 		return err
+	}
+	// Only mark seen when cached, so the seen root always has a cache entry whose eviction clears it.
+	if !stored {
+		return nil
 	}
 
 	s.seenPendingBlocks[r] = true
@@ -631,21 +742,21 @@ func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOn
 }
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
+func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+		return false, err
 	}
 
 	blks := s.pendingBlocksInCache(b.Block().Slot())
 
 	if len(blks) >= maxBlocksPerSlot {
-		return nil
+		return false, nil
 	}
 
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
-	return nil
+	return true, nil
 }
 
 // This converts input string to slot.

@@ -121,7 +121,7 @@ func (b batch) logFields() logrus.Fields {
 // replaces returns true if `r` is a version of `b` that has been updated by a worker,
 // meaning it should replace `b` in the batch sequencing queue.
 func (b batch) replaces(r batch) bool {
-	if r.state == batchImportComplete {
+	if r.state == batchImportComplete || r.state == batchEndSequence {
 		return false
 	}
 	if b.begin != r.begin {
@@ -148,7 +148,7 @@ func (b batch) ensureParent(expected [32]byte) error {
 func (b batch) blockRequest() *eth.BeaconBlocksByRangeRequest {
 	return &eth.BeaconBlocksByRangeRequest{
 		StartSlot: b.begin,
-		Count:     uint64(b.end - b.begin),
+		Count:     uint64(b.end.FlooredSubSlot(b.begin)),
 		Step:      1,
 	}
 }
@@ -156,7 +156,7 @@ func (b batch) blockRequest() *eth.BeaconBlocksByRangeRequest {
 func (b batch) blobRequest() *eth.BlobSidecarsByRangeRequest {
 	return &eth.BlobSidecarsByRangeRequest{
 		StartSlot: b.begin,
-		Count:     uint64(b.end - b.begin),
+		Count:     uint64(b.end.FlooredSubSlot(b.begin)),
 	}
 }
 
@@ -164,10 +164,10 @@ func (b batch) transitionToNext() batch {
 	if len(b.blocks) == 0 {
 		return b.withState(batchSequenced)
 	}
-	if len(b.columns.columnsNeeded()) > 0 {
+	if len(b.columnsNeeded()) > 0 {
 		return b.withState(batchSyncColumns)
 	}
-	if b.blobs != nil && b.blobs.needed() > 0 {
+	if b.blobsNeeded() > 0 {
 		return b.withState(batchSyncBlobs)
 	}
 	return b.withState(batchImportable)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/features"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
@@ -42,6 +43,16 @@ func (s *State) ForceCheckpoint(ctx context.Context, blockRoot []byte) error {
 		return err
 	}
 
+	// The tree cannot accept a write above the archive walk's frontier, and this runs on every graceful
+	// shutdown. Persist by root instead, which doubles as the resume point for the next boot.
+	if s.ArchivePending() {
+		store, ok := s.beaconDB.(archiveResumeSnapshotStore)
+		if !ok {
+			return nil
+		}
+		return store.SaveArchiveResumeSnapshot(ctx, fs, root32)
+	}
+
 	return s.beaconDB.SaveState(ctx, fs, root32)
 }
 
@@ -57,18 +68,42 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 
 	s.saveHotStateDB.lock.Lock()
 	if s.saveHotStateDB.enabled && st.Slot().Mod(duration) == 0 {
-		if err := s.beaconDB.SaveState(ctx, st, blockRoot); err != nil {
-			s.saveHotStateDB.lock.Unlock()
-			return err
-		}
-		s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
+		if features.Get().EnableStateDiff {
+			saver, ok := s.beaconDB.(hotStateSnapshotSaver)
+			if !ok {
+				s.saveHotStateDB.lock.Unlock()
+				return fmt.Errorf("hot state snapshot saver not supported")
+			}
+			if err := saver.SaveHotStateSnapshot(ctx, st, blockRoot); err != nil {
+				s.saveHotStateDB.lock.Unlock()
+				return err
+			}
 
-		log.WithFields(logrus.Fields{
-			"slot":                   st.Slot(),
-			"totalHotStateSavedInDB": len(s.saveHotStateDB.blockRootsOfSavedStates),
-		}).Info("Saving hot state to DB")
+			log.WithFields(logrus.Fields{
+				"slot": st.Slot(),
+			}).Info("Saving hot state to DB")
+		} else {
+			if err := s.beaconDB.SaveState(ctx, st, blockRoot); err != nil {
+				s.saveHotStateDB.lock.Unlock()
+				return err
+			}
+			s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
+
+			log.WithFields(logrus.Fields{
+				"slot":                   st.Slot(),
+				"totalHotStateSavedInDB": len(s.saveHotStateDB.blockRootsOfSavedStates),
+			}).Info("Saving hot state to DB")
+		}
 	}
 	s.saveHotStateDB.lock.Unlock()
+
+	// Independent of saveHotStateDB: checkSaveHotStateDB flips that mode off on every block while finality
+	// is healthy, so an archive node cannot rely on it for its restart-resume snapshots.
+	if s.ArchivePending() {
+		if err := s.saveArchiveResumeSnapshot(ctx, blockRoot, st); err != nil {
+			return err
+		}
+	}
 
 	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
 	if s.hotStateCache.has(blockRoot) {
@@ -156,17 +191,48 @@ func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 		return nil
 	}
 
-	log.WithFields(logrus.Fields{
-		"enabled":          s.saveHotStateDB.enabled,
-		"deletedHotStates": len(s.saveHotStateDB.blockRootsOfSavedStates),
-	}).Warn("Exiting mode to save hot states in DB")
+	s.saveHotStateDB.enabled = false
+
+	// Clearing the bucket would also drop the checkpoint origin state and the archive resume snapshots,
+	// which backfill and the next boot depend on while regeneration is still running.
+	if s.ArchivePending() {
+		log.Warn("Exiting mode to save hot states in DB; keeping snapshots while archive regeneration runs")
+		s.saveHotStateDB.blockRootsOfSavedStates = nil
+		return nil
+	}
 
 	// Delete previous saved states in DB as we are turning this mode off.
-	s.saveHotStateDB.enabled = false
-	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.blockRootsOfSavedStates); err != nil {
-		return err
+	if features.Get().EnableStateDiff {
+		log.WithFields(logrus.Fields{
+			"enabled": s.saveHotStateDB.enabled,
+		}).Warn("Exiting mode to save hot states in DB")
+
+		clearer, ok := s.beaconDB.(hotStateSnapshotClearer)
+		if !ok {
+			return fmt.Errorf("hot state snapshot clearer not supported")
+		}
+		if err := clearer.ClearHotStateSnapshots(ctx); err != nil {
+			return err
+		}
+	} else {
+		log.WithFields(logrus.Fields{
+			"enabled":          s.saveHotStateDB.enabled,
+			"deletedHotStates": len(s.saveHotStateDB.blockRootsOfSavedStates),
+		}).Warn("Exiting mode to save hot states in DB")
+
+		if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.blockRootsOfSavedStates); err != nil {
+			return err
+		}
 	}
 	s.saveHotStateDB.blockRootsOfSavedStates = nil
 
 	return nil
+}
+
+type hotStateSnapshotSaver interface {
+	SaveHotStateSnapshot(ctx context.Context, st state.ReadOnlyBeaconState, root [32]byte) error
+}
+
+type hotStateSnapshotClearer interface {
+	ClearHotStateSnapshots(ctx context.Context) error
 }

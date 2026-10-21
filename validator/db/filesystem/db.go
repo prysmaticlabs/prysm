@@ -73,9 +73,6 @@ type (
 // Ensure the filesystem store implements the interface.
 var _ = iface.ValidatorDB(&Store{})
 
-// Logging.
-var log = logrus.WithField("prefix", "db")
-
 // NewStore creates a new filesystem store.
 func NewStore(databaseParentPath string, config *Config) (*Store, error) {
 	s := &Store{
@@ -240,23 +237,6 @@ func (s *Store) configuration() (*Configuration, error) {
 	// Unmarshal the config file into Config struct.
 	if err := yaml.Unmarshal(yfile, &config); err != nil {
 		return nil, errors.Wrapf(err, "could not unmarshal %s", cleanedConfigFilePath)
-	}
-
-	// yaml.Unmarshal converts nil array to empty array.
-	// To get the same behavior as the BoltDB implementation, we need to convert empty array to nil.
-	if config.ProposerSettings != nil &&
-		config.ProposerSettings.DefaultConfig != nil &&
-		config.ProposerSettings.DefaultConfig.Builder != nil &&
-		len(config.ProposerSettings.DefaultConfig.Builder.Relays) == 0 {
-		config.ProposerSettings.DefaultConfig.Builder.Relays = nil
-	}
-
-	if config.ProposerSettings != nil && config.ProposerSettings.ProposerConfig != nil {
-		for _, option := range config.ProposerSettings.ProposerConfig {
-			if option.Builder != nil && len(option.Builder.Relays) == 0 {
-				option.Builder.Relays = nil
-			}
-		}
 	}
 
 	return config, nil

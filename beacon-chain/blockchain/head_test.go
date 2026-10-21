@@ -8,6 +8,8 @@ import (
 	"time"
 
 	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
 	testDB "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
 	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/blstoexec"
@@ -15,12 +17,13 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
-	ethpbv1 "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/testing/assert"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
+	dto "github.com/prometheus/client_model/go"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -33,7 +36,7 @@ func TestSaveHead_Same(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.saveHead(t.Context(), r, b, st))
+	require.NoError(t, service.saveHead(t.Context(), r, b, st, false))
 	assert.Equal(t, primitives.Slot(0), service.headSlot(), "Head did not stay the same")
 	assert.Equal(t, r, service.headRoot(), "Head did not stay the same")
 }
@@ -75,7 +78,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(t.Context(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(t.Context(), headState, newRoot))
-	require.NoError(t, service.saveHead(t.Context(), newRoot, wsb, headState))
+	require.NoError(t, service.saveHead(t.Context(), newRoot, wsb, headState, false))
 
 	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -130,7 +133,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(t.Context(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(t.Context(), headState, newRoot))
-	require.NoError(t, service.saveHead(t.Context(), newRoot, wsb, headState))
+	require.NoError(t, service.saveHead(t.Context(), newRoot, wsb, headState, false))
 
 	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -150,9 +153,89 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.LogsContain(t, hook, "depth=1")
 }
 
+func TestSaveHead_SameRootPayloadFlip_NoReorg(t *testing.T) {
+	ctx := t.Context()
+	hook := logTest.NewGlobal()
+	beaconDB := testDB.SetupDB(t)
+	service := setupBeaconChain(t, beaconDB)
+
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+
+	parentBlock := util.SaveBlock(t, ctx, service.cfg.BeaconDB, util.NewBeaconBlock())
+	parentRoot, err := parentBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+	fcState, blkRoot, err := prepareForkchoiceState(ctx, parentBlock.Block().Slot(), parentRoot, parentBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, fcState, blkRoot))
+
+	signedHeadBlock := util.NewBeaconBlock()
+	signedHeadBlock.Block.Slot = 1
+	signedHeadBlock.Block.ParentRoot = parentRoot[:]
+	headBlock := util.SaveBlock(t, ctx, service.cfg.BeaconDB, signedHeadBlock)
+	headRoot, err := headBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+	fcState, blkRoot, err = prepareForkchoiceState(ctx, headBlock.Block().Slot(), headRoot, parentRoot, [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, fcState, blkRoot))
+
+	headState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, headState.SetSlot(1))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: headRoot[:]}))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, headState, headRoot))
+
+	// The head is already this root, with the payload not yet delivered.
+	service.head = &head{root: headRoot, block: headBlock, state: headState, slot: 1, full: false}
+
+	events := make(chan *feed.Event, 10)
+	sub := service.cfg.StateNotifier.StateFeed().Subscribe(events)
+	defer sub.Unsubscribe()
+
+	requireNoReorg := func(t *testing.T) {
+		t.Helper()
+		for {
+			select {
+			case e := <-events:
+				if e.Type == statefeed.Reorg {
+					t.Fatal("spurious reorg event on same-root re-save")
+				}
+				continue
+			default:
+			}
+			break
+		}
+		require.LogsDoNotContain(t, hook, "Chain reorg occurred")
+	}
+
+	counterValue := func(t *testing.T) float64 {
+		t.Helper()
+		var m dto.Metric
+		require.NoError(t, reorgCount.Write(&m))
+		return m.GetCounter().GetValue()
+	}
+	reorgs := counterValue(t)
+
+	t.Run("payload delivered", func(t *testing.T) {
+		require.NoError(t, service.saveHead(ctx, headRoot, headBlock, headState, true))
+		requireNoReorg(t)
+		root, full := service.HeadRootAndFull()
+		require.Equal(t, headRoot, root)
+		require.Equal(t, true, full)
+	})
+
+	t.Run("payload withheld again", func(t *testing.T) {
+		require.NoError(t, service.saveHead(ctx, headRoot, headBlock, headState, false))
+		requireNoReorg(t)
+		_, full := service.HeadRootAndFull()
+		require.Equal(t, false, full)
+	})
+
+	require.Equal(t, reorgs, counterValue(t), "reorg metric incremented on same-root re-save")
+}
+
 func Test_notifyNewHeadEvent(t *testing.T) {
 	t.Run("genesis_state_root", func(t *testing.T) {
-		bState, _ := util.DeterministicGenesisState(t, 10)
 		srv := testServiceWithDB(t)
 		srv.SetGenesisTime(time.Now())
 		notifier := srv.cfg.StateNotifier.(*mock.MockStateNotifier)
@@ -165,22 +248,54 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		st, blk, err = prepareForkchoiceState(t.Context(), 1, newHeadRoot, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
 		require.NoError(t, err)
 		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
-		require.NoError(t, srv.notifyNewHeadEvent(t.Context(), 1, bState, newHeadStateRoot[:], newHeadRoot[:]))
+		require.NoError(t, srv.notifyNewHeadEvent(t.Context(), 1, newHeadStateRoot, newHeadRoot))
+		require.Eventually(t, func() bool {
+			return len(notifier.ReceivedEvents()) == 1
+		}, 5*time.Second, 50*time.Millisecond, "Expected exactly 1 state notification")
 		events := notifier.ReceivedEvents()
-		require.Equal(t, 1, len(events))
 
-		eventHead, ok := events[0].Data.(*ethpbv1.EventHead)
+		eventHead, ok := events[0].Data.(*statefeed.HeadData)
 		require.Equal(t, true, ok)
-		wanted := &ethpbv1.EventHead{
+		wanted := &statefeed.HeadData{
 			Slot:                      1,
-			Block:                     newHeadRoot[:],
-			State:                     newHeadStateRoot[:],
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
 			EpochTransition:           false,
-			PreviousDutyDependentRoot: srv.originBlockRoot[:],
-			CurrentDutyDependentRoot:  srv.originBlockRoot[:],
+			PreviousDutyDependentRoot: srv.originBlockRoot,
+			CurrentDutyDependentRoot:  srv.originBlockRoot,
 		}
-		require.DeepSSZEqual(t, wanted, eventHead)
+		require.DeepEqual(t, wanted, eventHead)
 	})
+
+	t.Run("zero head slot", func(t *testing.T) {
+		srv := testServiceWithDB(t)
+		srv.SetGenesisTime(time.Now())
+		notifier := srv.cfg.StateNotifier.(*mock.MockStateNotifier)
+		srv.originBlockRoot = [32]byte{1}
+		st, blk, err := prepareForkchoiceState(t.Context(), 0, [32]byte{}, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
+		require.NoError(t, err)
+		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
+		newHeadStateRoot := [32]byte{2}
+		newHeadRoot := [32]byte{3}
+		require.NoError(t, srv.notifyNewHeadEvent(t.Context(), 0, newHeadStateRoot, newHeadRoot))
+		require.Eventually(t, func() bool {
+			return len(notifier.ReceivedEvents()) == 1
+		}, 5*time.Second, 50*time.Millisecond, "Expected exactly 1 state notification")
+		events := notifier.ReceivedEvents()
+
+		eventHead, ok := events[0].Data.(*statefeed.HeadData)
+		require.Equal(t, true, ok)
+		wanted := &statefeed.HeadData{
+			Slot:                      0,
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           true,
+			PreviousDutyDependentRoot: srv.originBlockRoot,
+			CurrentDutyDependentRoot:  srv.originBlockRoot,
+		}
+		require.DeepEqual(t, wanted, eventHead)
+	})
+
 	t.Run("non_genesis_values", func(t *testing.T) {
 		bState, _ := util.DeterministicGenesisState(t, 10)
 		genesisRoot := [32]byte{1}
@@ -202,25 +317,26 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		st, blk, err = prepareForkchoiceState(t.Context(), 0, newHeadRoot, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
 		require.NoError(t, err)
 		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
-		err = srv.notifyNewHeadEvent(t.Context(), epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:])
+		err = srv.notifyNewHeadEvent(t.Context(), epoch2Start, newHeadStateRoot, newHeadRoot)
 		require.NoError(t, err)
+		require.Eventually(t, func() bool {
+			return len(notifier.ReceivedEvents()) == 1
+		}, 5*time.Second, 50*time.Millisecond, "Expected exactly 1 state notification")
 		events := notifier.ReceivedEvents()
-		require.Equal(t, 1, len(events))
 
-		eventHead, ok := events[0].Data.(*ethpbv1.EventHead)
+		eventHead, ok := events[0].Data.(*statefeed.HeadData)
 		require.Equal(t, true, ok)
-		wanted := &ethpbv1.EventHead{
+		wanted := &statefeed.HeadData{
 			Slot:                      epoch2Start,
-			Block:                     newHeadRoot[:],
-			State:                     newHeadStateRoot[:],
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
 			EpochTransition:           true,
-			PreviousDutyDependentRoot: make([]byte, 32),
-			CurrentDutyDependentRoot:  srv.originBlockRoot[:],
+			PreviousDutyDependentRoot: srv.originBlockRoot,
+			CurrentDutyDependentRoot:  srv.originBlockRoot,
 		}
-		require.DeepSSZEqual(t, wanted, eventHead)
+		require.DeepEqual(t, wanted, eventHead)
 	})
 	t.Run("epoch transition", func(t *testing.T) {
-		bState, _ := util.DeterministicGenesisState(t, 10)
 		srv := testServiceWithDB(t)
 		srv.SetGenesisTime(time.Now())
 		notifier := srv.cfg.StateNotifier.(*mock.MockStateNotifier)
@@ -234,21 +350,186 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
 		newHeadSlot := params.BeaconConfig().SlotsPerEpoch
-		require.NoError(t, srv.notifyNewHeadEvent(t.Context(), newHeadSlot, bState, newHeadStateRoot[:], newHeadRoot[:]))
+		require.NoError(t, srv.notifyNewHeadEvent(t.Context(), newHeadSlot, newHeadStateRoot, newHeadRoot))
+		require.Eventually(t, func() bool {
+			return len(notifier.ReceivedEvents()) == 1
+		}, 5*time.Second, 50*time.Millisecond, "Expected exactly 1 state notification")
 		events := notifier.ReceivedEvents()
-		require.Equal(t, 1, len(events))
 
-		eventHead, ok := events[0].Data.(*ethpbv1.EventHead)
+		eventHead, ok := events[0].Data.(*statefeed.HeadData)
 		require.Equal(t, true, ok)
-		wanted := &ethpbv1.EventHead{
+		wanted := &statefeed.HeadData{
 			Slot:                      newHeadSlot,
-			Block:                     newHeadRoot[:],
-			State:                     newHeadStateRoot[:],
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
 			EpochTransition:           true,
-			PreviousDutyDependentRoot: params.BeaconConfig().ZeroHash[:],
-			CurrentDutyDependentRoot:  srv.originBlockRoot[:],
+			PreviousDutyDependentRoot: srv.originBlockRoot,
+			CurrentDutyDependentRoot:  srv.originBlockRoot,
 		}
-		require.DeepSSZEqual(t, wanted, eventHead)
+		require.DeepEqual(t, wanted, eventHead)
+	})
+	t.Run("previous dependent root zero hash falls back to origin", func(t *testing.T) {
+		srv := testServiceWithDB(t)
+		srv.SetGenesisTime(time.Now())
+		notifier := srv.cfg.StateNotifier.(*mock.MockStateNotifier)
+		srv.originBlockRoot = [32]byte{0xab}
+		st, blk, err := prepareForkchoiceState(t.Context(), 0, [32]byte{}, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
+		require.NoError(t, err)
+		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
+		newHeadRoot := [32]byte{3}
+		st, blk, err = prepareForkchoiceState(t.Context(), 32, newHeadRoot, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
+		require.NoError(t, err)
+		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
+		newHeadSlot := params.BeaconConfig().SlotsPerEpoch
+		require.NoError(t, srv.notifyNewHeadEvent(t.Context(), newHeadSlot, [32]byte{2}, newHeadRoot))
+		require.Eventually(t, func() bool {
+			return len(notifier.ReceivedEvents()) == 1
+		}, 5*time.Second, 50*time.Millisecond, "Expected exactly 1 state notification")
+		events := notifier.ReceivedEvents()
+
+		eventHead, ok := events[0].Data.(*statefeed.HeadData)
+		require.Equal(t, true, ok)
+		// DependentRoot(0) returns zero hash since the forkchoice tree is sparse.
+		// The fix ensures it falls back to originBlockRoot instead of sending zeros.
+		assert.DeepEqual(t, srv.originBlockRoot, eventHead.PreviousDutyDependentRoot)
+		assert.DeepEqual(t, srv.originBlockRoot, eventHead.CurrentDutyDependentRoot)
+	})
+}
+
+func Test_notifyNewHeadV2Event(t *testing.T) {
+	setupHeadV2Service := func(t *testing.T, headSlot primitives.Slot) (*Service, chan *feed.Event, [32]byte, [32]byte) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		cfg.InitializeForkSchedule()
+		params.OverrideBeaconConfig(cfg)
+
+		srv := testServiceWithDB(t)
+		srv.SetGenesisTime(time.Now())
+		srv.originBlockRoot = [32]byte{1}
+		st, blk, err := prepareForkchoiceState(t.Context(), 0, [32]byte{}, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
+		require.NoError(t, err)
+		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
+		newHeadStateRoot := [32]byte{2}
+		newHeadRoot := [32]byte{3}
+		st, blk, err = prepareForkchoiceState(t.Context(), headSlot, newHeadRoot, [32]byte{}, [32]byte{}, &ethpb.Checkpoint{}, &ethpb.Checkpoint{})
+		require.NoError(t, err)
+		require.NoError(t, srv.cfg.ForkChoiceStore.InsertNode(t.Context(), st, blk))
+		require.NoError(t, srv.cfg.ForkChoiceStore.SetOptimisticToValid(t.Context(), newHeadRoot))
+		events := make(chan *feed.Event, 10)
+		srv.cfg.StateNotifier.StateFeed().Subscribe(events)
+		return srv, events, newHeadStateRoot, newHeadRoot
+	}
+
+	// requireSingleHeadV2 is a helper function for draining the feed
+	// and asserting that exactly one head_v2 event is present, returning its data for further checks.
+	requireSingleHeadV2 := func(t *testing.T, events chan *feed.Event) *statefeed.HeadV2Data {
+		var headV2 *statefeed.HeadV2Data
+		var count int
+		for {
+			select {
+			case e := <-events:
+				if e.Type == statefeed.NewHeadV2 {
+					count++
+					d, ok := e.Data.(*statefeed.HeadV2Data)
+					require.Equal(t, true, ok)
+					headV2 = d
+				}
+				continue
+			default:
+			}
+			break
+		}
+		require.Equal(t, 1, count)
+		require.NotNil(t, headV2)
+		return headV2
+	}
+
+	t.Run("zero head slot", func(t *testing.T) {
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, 0)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 0, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		wantedV2 := &statefeed.HeadV2Data{
+			Slot:                      0,
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           true,
+			CurrentEpochDependentRoot: srv.originBlockRoot,
+			NextEpochDependentRoot:    srv.originBlockRoot,
+			PayloadStatus:             statefeed.PayloadStatusFull,
+			Version:                   version.Gloas,
+		}
+		require.DeepEqual(t, wantedV2, requireSingleHeadV2(t, events))
+	})
+
+	t.Run("dependent roots fall back to genesis block root on underflow", func(t *testing.T) {
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, 1)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		wantedV2 := &statefeed.HeadV2Data{
+			Slot:                      1,
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           false,
+			CurrentEpochDependentRoot: srv.originBlockRoot,
+			NextEpochDependentRoot:    srv.originBlockRoot,
+			PayloadStatus:             statefeed.PayloadStatusFull,
+			Version:                   version.Gloas,
+		}
+		require.DeepEqual(t, wantedV2, requireSingleHeadV2(t, events))
+	})
+
+	t.Run("pre-gloas always reports a full payload status", func(t *testing.T) {
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, 1)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Deneb, true))
+		wantedV2 := &statefeed.HeadV2Data{
+			Slot:                      1,
+			Block:                     newHeadRoot,
+			State:                     newHeadStateRoot,
+			EpochTransition:           false,
+			CurrentEpochDependentRoot: srv.originBlockRoot,
+			NextEpochDependentRoot:    srv.originBlockRoot,
+			PayloadStatus:             statefeed.PayloadStatusFull,
+			Version:                   version.Deneb,
+		}
+		require.DeepEqual(t, wantedV2, requireSingleHeadV2(t, events))
+	})
+
+	t.Run("gloas head with delivered payload reports full", func(t *testing.T) {
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, 1)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		require.Equal(t, "full", requireSingleHeadV2(t, events).PayloadStatus.String())
+	})
+
+	t.Run("optimistic status is scoped to the event root", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.BellatrixForkEpoch = 0
+		cfg.InitializeForkSchedule()
+		params.OverrideBeaconConfig(cfg)
+
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, 1)
+		srv.head = &head{
+			root:       [32]byte{0x99},
+			slot:       1,
+			optimistic: true,
+		}
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		require.Equal(t, false, requireSingleHeadV2(t, events).ExecutionOptimistic)
+	})
+
+	t.Run("epoch transition is reported when the head crosses an epoch boundary", func(t *testing.T) {
+		newHeadSlot := params.BeaconConfig().SlotsPerEpoch
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, newHeadSlot)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), newHeadSlot, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		require.Equal(t, true, requireSingleHeadV2(t, events).EpochTransition)
+	})
+
+	t.Run("same root and status is announced once", func(t *testing.T) {
+		srv, events, newHeadStateRoot, newHeadRoot := setupHeadV2Service(t, 1)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Gloas, true))
+		requireSingleHeadV2(t, events)
+		require.NoError(t, srv.notifyNewHeadV2Event(t.Context(), 1, newHeadStateRoot, newHeadRoot, version.Gloas, false))
+		require.Equal(t, "empty", requireSingleHeadV2(t, events).PayloadStatus.String())
 	})
 }
 
@@ -286,7 +567,7 @@ func TestRetrieveHead_ReadOnly(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(t.Context(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(t.Context(), headState, newRoot))
-	require.NoError(t, service.saveHead(t.Context(), newRoot, wsb, headState))
+	require.NoError(t, service.saveHead(t.Context(), newRoot, wsb, headState, false))
 
 	rOnlyState, err := service.HeadStateReadOnly(ctx)
 	require.NoError(t, err)
@@ -443,20 +724,20 @@ func TestSaveOrphanedOps(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	service.head = &head{state: st}
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	blk1, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	blk1.Block.ParentRoot = rG[:]
 	r1, err := blk1.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	blk2, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	blk2.Block.ParentRoot = r1[:]
 	r2, err := blk2.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -467,7 +748,7 @@ func TestSaveOrphanedOps(t *testing.T) {
 	blkConfig.NumAttesterSlashings = 1
 	blkConfig.NumVoluntaryExits = 1
 	blk3, err := util.GenerateFullBlock(st, keys, blkConfig, 3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	blk3.Block.ParentRoot = r2[:]
 	r3, err := blk3.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -700,7 +981,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
 	require.NoError(t, beaconDB.SaveState(ctx, bellatrixState, bellatrixBlkRoot))
-	service.cfg.StateGen.SaveFinalizedState(0, bellatrixBlkRoot, bellatrixState)
+	service.cfg.StateGen.SaveFinalizedState(bellatrixBlkRoot, bellatrixState)
 
 	headRoot := service.headRoot()
 	require.Equal(t, [32]byte{}, headRoot)

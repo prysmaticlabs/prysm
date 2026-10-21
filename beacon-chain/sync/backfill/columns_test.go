@@ -11,13 +11,17 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
 	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/pkg/errors"
 )
 
 // Helper function to create a columnBatch for testing
@@ -38,6 +42,19 @@ func testToDownload(remaining peerdas.ColumnIndices, commitments [][]byte) *toDo
 
 // TestColumnBatchNeeded tests the needed() method of columnBatch
 func TestColumnBatchNeeded(t *testing.T) {
+	t.Run("undecided payload is not needed", func(t *testing.T) {
+		custodyGroups := peerdas.NewColumnIndicesFromSlice([]uint64{0, 1, 2})
+		undecided := testToDownload(peerdas.NewColumnIndicesFromSlice([]uint64{0, 1}), nil)
+		undecided.undecidedPayload = true
+		toDownload := map[[32]byte]*toDownload{
+			[32]byte{0x01}: undecided,
+			[32]byte{0x02}: testToDownload(peerdas.NewColumnIndicesFromSlice([]uint64{2}), nil),
+		}
+
+		result := testColumnBatch(custodyGroups, toDownload).needed()
+		require.DeepEqual(t, []uint64{2}, result.ToSlice())
+	})
+
 	t.Run("empty batch conditions", func(t *testing.T) {
 		t.Run("empty batch returns empty indices", func(t *testing.T) {
 			custodyGroups := peerdas.NewColumnIndicesFromSlice([]uint64{0, 1, 2})
@@ -352,9 +369,60 @@ func TestBuildColumnBatch(t *testing.T) {
 		p := p2ptest.NewTestP2P(t)
 		store := filesystem.NewEphemeralDataColumnStorage(t)
 
-		cb, err := buildColumnBatch(ctx, batch{}, verifiedROBlocks{}, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, 0, 0, verifiedROBlocks{}, p, store, specNeeds)
 		require.NoError(t, err)
 		nilIshColumnBatch(t, cb)
+	})
+
+	t.Run("gloas empty payload needs no columns", func(t *testing.T) {
+		p := p2ptest.NewTestP2P(t)
+		store := filesystem.NewEphemeralDataColumnStorage(t)
+
+		blks := testGloasEmptyPayloadBlocks(t, fuluSlot+1)
+		cb, err := buildColumnBatch(t.Context(), fuluSlot+1, fuluSlot+3, blks, p, store, specNeeds)
+		require.NoError(t, err)
+		require.NotNil(t, cb)
+
+		td, ok := cb.toDownload[blks[0].Root()]
+		require.Equal(t, true, ok, "empty payload block should stay known")
+		require.Equal(t, true, td.emptyPayload)
+		require.Equal(t, 0, td.remaining.Count())
+		require.Equal(t, 0, cb.needed().Count())
+	})
+
+	t.Run("gloas last block payload is undecided", func(t *testing.T) {
+		p := p2ptest.NewTestP2P(t)
+		store := filesystem.NewEphemeralDataColumnStorage(t)
+
+		// The child of the last block is outside of the batch.
+		last := testGloasBlock(t, fuluSlot+1, [32]byte{}, [32]byte{'p'}, [32]byte{'l'}, 1)
+		cb, err := buildColumnBatch(t.Context(), fuluSlot+1, fuluSlot+2, verifiedROBlocks{last}, p, store, specNeeds)
+		require.NoError(t, err)
+		require.NotNil(t, cb)
+
+		td, ok := cb.toDownload[last.Root()]
+		require.Equal(t, true, ok)
+		require.Equal(t, true, td.undecidedPayload)
+		require.Equal(t, false, td.emptyPayload)
+		require.Equal(t, 0, cb.needed().Count())
+	})
+
+	t.Run("gloas full payload needs columns", func(t *testing.T) {
+		p := p2ptest.NewTestP2P(t)
+		store := filesystem.NewEphemeralDataColumnStorage(t)
+
+		parentHash, fullHash := [32]byte{'p'}, [32]byte{'f'}
+		full := testGloasBlock(t, fuluSlot+1, [32]byte{}, parentHash, fullHash, 1)
+		// The child builds on the payload of `full`.
+		child := testGloasBlock(t, fuluSlot+2, full.Root(), fullHash, [32]byte{'c'}, 0)
+		cb, err := buildColumnBatch(t.Context(), fuluSlot+1, fuluSlot+3, verifiedROBlocks{full, child}, p, store, specNeeds)
+		require.NoError(t, err)
+		require.NotNil(t, cb)
+
+		td, ok := cb.toDownload[full.Root()]
+		require.Equal(t, true, ok)
+		require.Equal(t, false, td.emptyPayload)
+		require.Equal(t, cb.custodyGroups.Count(), td.remaining.Count())
 	})
 
 	t.Run("pre-Fulu batch end returns nil", func(t *testing.T) {
@@ -369,7 +437,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   denebSlot + 10,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		nilIshColumnBatch(t, cb)
 	})
@@ -386,7 +454,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + 10,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		nilIshColumnBatch(t, cb)
 	})
@@ -403,7 +471,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb, "batch at Fulu boundary should not be nil")
 	})
@@ -420,7 +488,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + 1,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb, "last block at Fulu boundary should not be nil")
 	})
@@ -436,7 +504,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		nilIshColumnBatch(t, cb)
 	})
@@ -462,7 +530,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + primitives.Slot(postFuluCount),
 		}
 
-		cb, err := buildColumnBatch(ctx, b, allBlocks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, allBlocks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb, "mixed epoch batch should not be nil")
 		// Should only include Fulu blocks
@@ -481,7 +549,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + 100,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb, "first block at Fulu should not be nil")
 		require.Equal(t, 3, len(cb.toDownload), "should include all 3 blocks")
@@ -498,7 +566,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + 10,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb)
 		require.Equal(t, fuluSlot, cb.first, "first slot should be set")
@@ -517,7 +585,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + 10,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, blks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, blks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb)
 		require.Equal(t, fuluSlot, cb.first, "first should be slot of first block with commitments")
@@ -547,7 +615,7 @@ func TestBuildColumnBatch(t *testing.T) {
 			end:   fuluSlot + 10,
 		}
 
-		cb, err := buildColumnBatch(ctx, b, allBlocks, p, store, specNeeds)
+		cb, err := buildColumnBatch(ctx, b.begin, b.end, allBlocks, p, store, specNeeds)
 		require.NoError(t, err)
 		require.NotNil(t, cb)
 		// Should only have 2 blocks (those with commitments)
@@ -625,6 +693,13 @@ func TestColumnSync_ColumnsNeeded(t *testing.T) {
 		require.Equal(t, true, result.Has(1))
 		require.Equal(t, true, result.Has(2))
 	})
+}
+
+// TestBatch_ColumnsNeeded covers a non-nil columnSync with a nil embedded columnBatch (what
+// newColumnSync returns when no columns are needed), which panicked via the promoted needed().
+func TestBatch_ColumnsNeeded(t *testing.T) {
+	require.Equal(t, 0, batch{}.columnsNeeded().Count())
+	require.Equal(t, 0, batch{columns: &columnSync{}}.columnsNeeded().Count())
 }
 
 // TestValidatingColumnRequest_CountedValidation tests the countedValidation method
@@ -729,6 +804,45 @@ func TestValidatingColumnRequest_CountedValidation(t *testing.T) {
 		require.ErrorIs(t, err, errCommitmentLengthMismatch)
 	})
 
+	t.Run("sidecar signed block header signature mismatch returns error", func(t *testing.T) {
+		blockRoot := [32]byte{0x01}
+		commitment := make([]byte, 48)
+		commitment[0] = 0xaa
+		params := []util.DataColumnParam{
+			{
+				Index:          0,
+				Slot:           100,
+				ProposerIndex:  1,
+				ParentRoot:     blockRoot[:],
+				KzgCommitments: [][]byte{commitment},
+			},
+		}
+		roCols, _ := util.CreateTestVerifiedRoDataColumnSidecars(t, params)
+
+		var localBlockSig [fieldparams.BLSSignatureLength]byte
+		localBlockSig[0] = 0xff
+
+		vcr := &validatingColumnRequest{
+			columnSync: &columnSync{
+				columnBatch: &columnBatch{
+					toDownload: map[[32]byte]*toDownload{
+						roCols[0].BlockRoot(): {
+							remaining:      peerdas.NewColumnIndicesFromSlice([]uint64{0}),
+							commitments:    [][]byte{commitment},
+							blockSignature: localBlockSig,
+						},
+					},
+				},
+				peer: mockPeer,
+			},
+			bisector: newColumnBisector(func(peer.ID, string, error) {}),
+		}
+
+		err := vcr.countedValidation(roCols[0])
+		require.ErrorIs(t, err, errSidecarSignatureMismatch)
+		require.ErrorIs(t, err, errInvalidDataColumnResponse, "must trigger shouldDownscore")
+	})
+
 	t.Run("commitment value mismatch returns error", func(t *testing.T) {
 		blockRoot := [32]byte{0x01}
 		params := []util.DataColumnParam{
@@ -827,6 +941,46 @@ func TestValidatingColumnRequest_CountedValidation(t *testing.T) {
 		require.Equal(t, false, remaining.Has(0), "column 0 should be removed from remaining after validation")
 		require.Equal(t, 0, remaining.Count(), "remaining should be empty")
 	})
+
+	t.Run("gloas sidecar seeds bid commitments from block", func(t *testing.T) {
+		blockRoot := [32]byte{0x02}
+		commitment := make([]byte, 48)
+		commitment[0] = 0xaa
+
+		roCol, err := blocks.NewRODataColumnGloas(&ethpb.DataColumnSidecarGloas{
+			Index:           0,
+			Slot:            100,
+			BeaconBlockRoot: blockRoot[:],
+		})
+		require.NoError(t, err)
+
+		colStore := filesystem.NewEphemeralDataColumnStorage(t)
+		p2p := p2ptest.NewTestP2P(t)
+		remaining := peerdas.NewColumnIndicesFromSlice([]uint64{0})
+		bisector := newColumnBisector(func(peer.ID, string, error) {})
+		sr := func(primitives.Slot) bool { return true }
+		vcr := &validatingColumnRequest{
+			columnSync: &columnSync{
+				columnBatch: &columnBatch{
+					toDownload: map[[32]byte]*toDownload{
+						roCol.BlockRoot(): {
+							remaining:   remaining,
+							commitments: [][]byte{commitment},
+						},
+					},
+				},
+				store:   das.NewLazilyPersistentStoreColumn(colStore, testNewDataColumnsVerifier(), p2p.NodeID(), 1, bisector, sr),
+				current: primitives.Slot(200),
+				peer:    mockPeer,
+			},
+			bisector: bisector,
+		}
+
+		// Without seeding the bid commitments, KzgCommitments() would error for gloas.
+		err = vcr.countedValidation(roCol)
+		require.NoError(t, err)
+		require.Equal(t, false, remaining.Has(0), "column 0 should be removed from remaining after validation")
+	})
 }
 
 // TestNewColumnSync tests the newColumnSync function
@@ -853,7 +1007,7 @@ func TestNewColumnSync(t *testing.T) {
 		}
 
 		// Empty blocks should result in nil columnBatch
-		cs, err := newColumnSync(ctx, batch{}, verifiedROBlocks{}, current, p2p, cfg)
+		cs, err := newColumnSync(ctx, 0, 0, verifiedROBlocks{}, current, p2p, cfg)
 		require.NoError(t, err)
 		require.NotNil(t, cs, "columnSync should not be nil")
 		require.Equal(t, true, cs.columnBatch == nil, "columnBatch should be nil for empty blocks")
@@ -865,21 +1019,15 @@ func TestNewColumnSync(t *testing.T) {
 		colStore := filesystem.NewEphemeralDataColumnStorage(t)
 		current := fuluSlot + 100
 
-		blks, _ := testBlobGen(t, fuluSlot, 2)
-		b := batch{
-			begin:  fuluSlot,
-			end:    fuluSlot + 10,
-			blocks: blks,
-		}
-
 		cfg := &workerCfg{
 			colStore:     colStore,
 			downscore:    func(peer.ID, string, error) {},
 			currentNeeds: func() das.CurrentNeeds { return mockCurrentSpecNeeds() },
 		}
-
-		cs, err := newColumnSync(ctx, b, blks, current, p2p, cfg)
+		blks, _ := testBlobGen(t, fuluSlot, 2)
+		cs, err := newColumnSync(ctx, fuluSlot, fuluSlot+10, blks, current, p2p, cfg)
 		require.NoError(t, err)
+
 		require.NotNil(t, cs)
 		require.NotNil(t, cs.columnBatch, "columnBatch should be initialized")
 		require.NotNil(t, cs.store, "store should be initialized")
@@ -1034,6 +1182,15 @@ func TestNeededSidecarsByColumn(t *testing.T) {
 			expectedCounts: map[uint64]int{},
 		},
 		{
+			name: "UndecidedPayloadNotCounted",
+			toDownload: map[[32]byte]*toDownload{
+				[32]byte{0x01}: {remaining: peerdas.NewColumnIndicesFromSlice([]uint64{0, 1}), undecidedPayload: true},
+				[32]byte{0x02}: testToDownload(peerdas.NewColumnIndicesFromSlice([]uint64{1}), nil),
+			},
+			peerHas:        peerdas.NewColumnIndicesFromSlice([]uint64{0, 1}),
+			expectedCounts: map[uint64]int{1: 1},
+		},
+		{
 			name: "EmptyPeer",
 			toDownload: map[[32]byte]*toDownload{
 				[32]byte{0x01}: testToDownload(peerdas.NewColumnIndicesFromSlice([]uint64{0, 1}), nil),
@@ -1174,6 +1331,14 @@ func TestNeededSidecarCount(t *testing.T) {
 			name:       "EmptyBatch",
 			toDownload: make(map[[32]byte]*toDownload),
 			expected:   0,
+		},
+		{
+			name: "UndecidedPayloadNotCounted",
+			toDownload: map[[32]byte]*toDownload{
+				[32]byte{0x01}: {remaining: peerdas.NewColumnIndicesFromSlice([]uint64{0, 1}), undecidedPayload: true},
+				[32]byte{0x02}: testToDownload(peerdas.NewColumnIndicesFromSlice([]uint64{2}), nil),
+			},
+			expected: 1,
 		},
 		{
 			name: "SingleBlockEmpty",
@@ -1702,7 +1867,7 @@ func TestRetentionCheckWithOverride(t *testing.T) {
 			current, err := slots.EpochStart(tc.currentEpoch)
 			require.NoError(t, err)
 			cs := func() primitives.Slot { return current }
-			sn, err := das.NewSyncNeeds(cs, tc.oldestSlot, tc.retentionFlag)
+			sn, err := das.NewSyncNeeds(cs, tc.oldestSlot, nil, tc.retentionFlag)
 			require.NoError(t, err)
 
 			sr := func(slot primitives.Slot) bool {
@@ -1722,7 +1887,7 @@ func TestRetentionCheckWithOverride(t *testing.T) {
 			blocks := make([]blocks.ROBlock, 0, len(fixtures))
 			for _, fix := range fixtures {
 				for _, col := range fix.cols {
-					if indices.Has(col.Index) {
+					if indices.Has(col.Index()) {
 						require.NoError(t, avs.Persist(current, col))
 					}
 				}
@@ -1765,4 +1930,61 @@ func testBlockWithColumnSpan(t *testing.T, slot primitives.Slot, colSpan das.Nee
 		parent = blk.Root()
 	}
 	return res
+}
+
+func TestDecideLastPayload(t *testing.T) {
+	parentHash, lastHash := [32]byte{'p'}, [32]byte{'l'}
+	custody := peerdas.NewColumnIndicesFromSlice([]uint64{0, 1})
+
+	setup := func(t *testing.T) (*columnSync, blocks.ROBlock) {
+		last := testGloasBlock(t, 100, [32]byte{}, parentHash, lastHash, 1)
+		cs := &columnSync{columnBatch: testColumnBatch(custody, map[[32]byte]*toDownload{
+			last.Root(): {remaining: custody.Copy(), undecidedPayload: true},
+		})}
+		return cs, last
+	}
+	childOf := func(child interfaces.ReadOnlyBeaconBlock) childLookup {
+		return func(context.Context, [32]byte) (interfaces.ReadOnlyBeaconBlock, error) { return child, nil }
+	}
+
+	t.Run("unknown child keeps the payload undecided", func(t *testing.T) {
+		cs, last := setup(t)
+		require.NoError(t, cs.decideLastPayload(t.Context(), []blocks.ROBlock{last}, childOf(nil)))
+
+		td := cs.toDownload[last.Root()]
+		require.Equal(t, true, td.undecidedPayload)
+		require.Equal(t, 0, cs.needed().Count())
+	})
+
+	t.Run("child built on the payload makes it full", func(t *testing.T) {
+		cs, last := setup(t)
+		child := testGloasBlock(t, 101, last.Root(), lastHash, [32]byte{'c'}, 0)
+		require.NoError(t, cs.decideLastPayload(t.Context(), []blocks.ROBlock{last}, childOf(child.Block())))
+
+		td := cs.toDownload[last.Root()]
+		require.Equal(t, false, td.undecidedPayload)
+		require.Equal(t, false, td.emptyPayload)
+		require.DeepEqual(t, custody.ToMap(), cs.needed().ToMap())
+	})
+
+	t.Run("child not built on the payload makes it empty", func(t *testing.T) {
+		cs, last := setup(t)
+		child := testGloasBlock(t, 101, last.Root(), parentHash, [32]byte{'c'}, 0)
+		require.NoError(t, cs.decideLastPayload(t.Context(), []blocks.ROBlock{last}, childOf(child.Block())))
+
+		td := cs.toDownload[last.Root()]
+		require.Equal(t, false, td.undecidedPayload)
+		require.Equal(t, true, td.emptyPayload)
+		require.Equal(t, 0, td.remaining.Count())
+		require.Equal(t, true, cs.emptyPayloadRoots()[last.Root()])
+	})
+
+	t.Run("decided payload does not look up the child", func(t *testing.T) {
+		cs, last := setup(t)
+		cs.toDownload[last.Root()].undecidedPayload = false
+		failing := func(context.Context, [32]byte) (interfaces.ReadOnlyBeaconBlock, error) {
+			return nil, errors.New("unexpected child lookup")
+		}
+		require.NoError(t, cs.decideLastPayload(t.Context(), []blocks.ROBlock{last}, failing))
+	})
 }

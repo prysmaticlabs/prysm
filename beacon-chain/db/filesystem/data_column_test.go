@@ -112,7 +112,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 		alteredVerifiedRoDataColumnSidecars = append(alteredVerifiedRoDataColumnSidecars, verifiedRoDataColumnSidecars[0])
 
 		altered, err := blocks.NewRODataColumnWithRoot(
-			verifiedRoDataColumnSidecars[1].RODataColumn.DataColumnSidecar,
+			verifiedRoDataColumnSidecars[1].RODataColumn.DataColumnSidecar(),
 			verifiedRoDataColumnSidecars[0].BlockRoot(),
 		)
 		require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 			)
 
 			// Build expected bytes.
-			firstSszEncodedDataColumnSidecar, err := expectedDataColumnSidecars[0].MarshalSSZ()
+			firstSszEncodedDataColumnSidecar, err := expectedDataColumnSidecars[0].RODataColumn.DataColumnSidecar().MarshalSSZ()
 			require.NoError(t, err)
 
 			dataColumnSidecarsCount := len(expectedDataColumnSidecars)
@@ -272,7 +272,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 			sszEncodedDataColumnSidecars := make([]byte, 0, dataColumnSidecarsCount*sszEncodedDataColumnSidecarSize)
 			sszEncodedDataColumnSidecars = append(sszEncodedDataColumnSidecars, firstSszEncodedDataColumnSidecar...)
 			for _, dataColumnSidecar := range expectedDataColumnSidecars[1:] {
-				sszEncodedDataColumnSidecar, err := dataColumnSidecar.MarshalSSZ()
+				sszEncodedDataColumnSidecar, err := dataColumnSidecar.RODataColumn.DataColumnSidecar().MarshalSSZ()
 				require.NoError(t, err)
 				sszEncodedDataColumnSidecars = append(sszEncodedDataColumnSidecars, sszEncodedDataColumnSidecar...)
 			}
@@ -362,11 +362,17 @@ func TestGetDataColumnSidecars(t *testing.T) {
 
 		verifiedRODataColumnSidecars, err := dataColumnStorage.Get(root, nil)
 		require.NoError(t, err)
-		require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars, verifiedRODataColumnSidecars)
+		require.Equal(t, len(expectedVerifiedRoDataColumnSidecars), len(verifiedRODataColumnSidecars))
+		for i := range expectedVerifiedRoDataColumnSidecars {
+			require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars[i].DataColumnSidecar(), verifiedRODataColumnSidecars[i].DataColumnSidecar())
+		}
 
 		verifiedRODataColumnSidecars, err = dataColumnStorage.Get(root, []uint64{12, 13, 14})
 		require.NoError(t, err)
-		require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars, verifiedRODataColumnSidecars)
+		require.Equal(t, len(expectedVerifiedRoDataColumnSidecars), len(verifiedRODataColumnSidecars))
+		for i := range expectedVerifiedRoDataColumnSidecars {
+			require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars[i].DataColumnSidecar(), verifiedRODataColumnSidecars[i].DataColumnSidecar())
+		}
 	})
 }
 
@@ -715,16 +721,10 @@ func TestExtractFileMetadata(t *testing.T) {
 		// Test with Unix-style path separators (/)
 		path := "12/1234/0x8bb2f09de48c102635622dc27e6de03ae2b22639df7c33edbc8222b2ec423746.sszs"
 		metadata, err := extractFileMetadata(path)
-		if filepath.Separator == '/' {
-			// On Unix systems, this should succeed
-			require.NoError(t, err)
-			require.Equal(t, uint64(12), metadata.period)
-			require.Equal(t, primitives.Epoch(1234), metadata.epoch)
-			return
-		}
-
-		// On Windows systems, this should fail because it uses the wrong separator
-		require.NotNil(t, err)
+		// Unix-style WarmCache paths must succeed on both Unix and Windows.
+		require.NoError(t, err)
+		require.Equal(t, uint64(12), metadata.period)
+		require.Equal(t, primitives.Epoch(1234), metadata.epoch)
 	})
 
 	t.Run("Windows", func(t *testing.T) {

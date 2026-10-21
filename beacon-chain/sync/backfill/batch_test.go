@@ -5,10 +5,98 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/das"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/pkg/errors"
 )
+
+func TestBlockRequest(t *testing.T) {
+	cases := []struct {
+		name          string
+		begin         primitives.Slot
+		end           primitives.Slot
+		expectedCount uint64
+	}{
+		{
+			name:          "normal case",
+			begin:         100,
+			end:           200,
+			expectedCount: 100,
+		},
+		{
+			name:          "end equals begin",
+			begin:         100,
+			end:           100,
+			expectedCount: 0,
+		},
+		{
+			name:          "end less than begin (would underflow without check)",
+			begin:         200,
+			end:           100,
+			expectedCount: 0,
+		},
+		{
+			name:          "zero values",
+			begin:         0,
+			end:           0,
+			expectedCount: 0,
+		},
+		{
+			name:          "single slot",
+			begin:         0,
+			end:           1,
+			expectedCount: 1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := batch{begin: tc.begin, end: tc.end}
+			req := b.blockRequest()
+			require.Equal(t, tc.expectedCount, req.Count)
+			require.Equal(t, tc.begin, req.StartSlot)
+			require.Equal(t, uint64(1), req.Step)
+		})
+	}
+}
+
+func TestBlobRequest(t *testing.T) {
+	cases := []struct {
+		name          string
+		begin         primitives.Slot
+		end           primitives.Slot
+		expectedCount uint64
+	}{
+		{
+			name:          "normal case",
+			begin:         100,
+			end:           200,
+			expectedCount: 100,
+		},
+		{
+			name:          "end equals begin",
+			begin:         100,
+			end:           100,
+			expectedCount: 0,
+		},
+		{
+			name:          "end less than begin (would underflow without check)",
+			begin:         200,
+			end:           100,
+			expectedCount: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := batch{begin: tc.begin, end: tc.end}
+			req := b.blobRequest()
+			require.Equal(t, tc.expectedCount, req.Count)
+			require.Equal(t, tc.begin, req.StartSlot)
+		})
+	}
+}
 
 func TestSortBatchDesc(t *testing.T) {
 	orderIn := []primitives.Slot{100, 10000, 1}
@@ -21,6 +109,22 @@ func TestSortBatchDesc(t *testing.T) {
 	for i := range orderOut {
 		require.Equal(t, orderOut[i], batches[i].end)
 	}
+}
+
+// TestRetryAfterSetupFailure covers handleBlocks failing after b.blocks is set but before
+// b.columns is constructed (e.g. a newColumnSync error): the router's retry path
+// (resetToRetryColumns -> transitionToNext) must rebuild the batch from batchSequenced
+// rather than dereference the nil columnSync.
+func TestRetryAfterSetupFailure(t *testing.T) {
+	expErr := errors.New("newColumnSync failed")
+	b := batch{state: batchSequenced, blocks: verifiedROBlocks{}}.withRetryableError(expErr)
+	b = resetToRetryColumns(b, das.CurrentNeeds{})
+	require.Equal(t, batchSequenced, b.state)
+
+	// Repeat for a nil blocks value
+	b = batch{state: batchSequenced, blocks: nil}.withRetryableError(expErr)
+	b = resetToRetryColumns(b, das.CurrentNeeds{})
+	require.Equal(t, batchSequenced, b.state)
 }
 
 func TestWaitUntilReady(t *testing.T) {

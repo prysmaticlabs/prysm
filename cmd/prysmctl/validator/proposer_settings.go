@@ -16,7 +16,6 @@ import (
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
 	"github.com/ethereum/go-ethereum/common"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -70,6 +69,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		log.Infof("The default fee recipient is set to %s", defaultFeeRecipient)
 		var builderSettings *validatorpb.BuilderConfig
 		if c.Bool(WithBuilderFlag.Name) {
+			log.Warnf("--%s generates legacy (pre-gloas) mev-boost settings; they are discontinued at the gloas fork. Gloas builder participation requires v2 proposer settings with a builders list.", WithBuilderFlag.Name)
 			builderSettings = &validatorpb.BuilderConfig{
 				Enabled:  true,
 				GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
