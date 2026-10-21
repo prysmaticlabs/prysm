@@ -951,7 +951,7 @@ func TestLateBlockTasks_GloasFCU(t *testing.T) {
 	service.SetForkChoiceGenesisTime(service.genesisTime)
 
 	service.lateBlockTasks(tr.ctx)
-	require.LogsDoNotContain(t, logHook, "could not perform late block tasks")
+	require.LogsDoNotContain(t, logHook, "Could not update forkchoice with payload attributes")
 
 	// Payload ID should have been cached by the Gloas FCU path.
 	cachedPid, has := service.cfg.PayloadIDCache.PayloadID(service.CurrentSlot()+1, headRoot, false)
@@ -999,5 +999,5 @@ func TestLateBlockTasks_GloasForkBoundary_PreforkBidUsesHeadRoot(t *testing.T) {
 	service.SetForkChoiceGenesisTime(service.genesisTime)
 
 	service.lateBlockTasks(tr.ctx)
-	require.LogsDoNotContain(t, logHook, "could not perform late block tasks")
+	require.LogsDoNotContain(t, logHook, "Could not update forkchoice with payload attributes")
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	payloadattribute "github.com/OffchainLabs/prysm/v7/consensus-types/payload-attribute"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/container/slice"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls"
@@ -1246,29 +1247,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	}
 
 	if headState.Version() >= version.Gloas {
-		bid, err := headState.LatestExecutionPayloadBid()
-		if err != nil {
-			log.WithError(err).Debug("could not perform late block tasks: failed to retrieve execution payload bid")
-			return
-		}
-		bh := bid.ParentBlockHash()
-		if full {
-			bh = bid.BlockHash()
-		}
-		id, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, headRoot, bh, attribute)
-		if err != nil {
-			log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
-		}
-		if id != nil {
-			s.cfg.PayloadIDCache.Set(currentSlot+1, headRoot, full, [8]byte(*id))
-			log.WithFields(logrus.Fields{
-				"blockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
-				"headSlot":  s.HeadSlot(),
-				"nextSlot":  currentSlot + 1,
-				"payloadID": fmt.Sprintf("%#x", bytesutil.Trunc(id[:])),
-			}).Info("Forkchoice updated with payload attributes for proposal")
-			s.firePayloadAttributesEventForHead(headRoot, currentSlot+1, attribute, bh[:], fcs)
-		}
+		s.updateForkchoiceWithAttributesGloas(ctx, headState, headRoot, full, currentSlot+1, attribute)
 		return
 	}
 	s.headLock.RLock()
@@ -1291,6 +1270,33 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
+	}
+}
+
+// updateForkchoiceWithAttributesGloas sends a forkchoice update with the given payload attributes and caches the returned payload ID for slot.
+func (s *Service) updateForkchoiceWithAttributesGloas(ctx context.Context, headState state.BeaconState, headRoot [32]byte, full bool, slot primitives.Slot, attribute payloadattribute.Attributer) {
+	bid, err := headState.LatestExecutionPayloadBid()
+	if err != nil {
+		log.WithError(err).Debug("Could not update forkchoice with payload attributes: failed to retrieve execution payload bid")
+		return
+	}
+	bh := bid.ParentBlockHash()
+	if full {
+		bh = bid.BlockHash()
+	}
+	id, fcs, err := s.notifyForkchoiceUpdateGloas(ctx, headRoot, bh, attribute)
+	if err != nil {
+		log.WithError(err).Debug("Could not update forkchoice with payload attributes: failed to update forkchoice with engine")
+	}
+	if id != nil {
+		s.cfg.PayloadIDCache.Set(slot, headRoot, full, [8]byte(*id))
+		log.WithFields(logrus.Fields{
+			"blockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+			"headSlot":  s.HeadSlot(),
+			"nextSlot":  slot,
+			"payloadID": fmt.Sprintf("%#x", bytesutil.Trunc(id[:])),
+		}).Info("Forkchoice updated with payload attributes for proposal")
+		s.firePayloadAttributesEventForHead(headRoot, slot, attribute, bh[:], fcs)
 	}
 }
 

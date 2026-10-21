@@ -231,6 +231,7 @@ func (s *Service) Start() {
 	go s.runLateBlockTasks()
 	go s.runLatePayloadTasks()
 	go s.runGloasDepositWarmup()
+	go s.runInclusionListRefresh()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
