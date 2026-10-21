@@ -60,6 +60,10 @@ func TestWrappedROExecutionPayloadBid(t *testing.T) {
 				name:   "fee recipient",
 				mutate: func(b *ethpb.ExecutionPayloadBid) { b.FeeRecipient = []byte{0x06} },
 			},
+			{
+				name:   "execution requests root",
+				mutate: func(b *ethpb.ExecutionPayloadBid) { b.ExecutionRequestsRoot = []byte{0x07} },
+			},
 		}
 
 		for _, tc := range testCases {
@@ -112,9 +116,7 @@ func TestWrappedROSignedExecutionPayloadBid(t *testing.T) {
 		wrapped, err := blocks.WrappedROSignedExecutionPayloadBid(signed)
 		require.NoError(t, err)
 
-		bid, err := wrapped.Bid()
-		require.NoError(t, err)
-		require.Equal(t, primitives.Gwei(8), bid.ExecutionPayment())
+		require.Equal(t, primitives.Gwei(8), wrapped.Bid().ExecutionPayment())
 
 		gotSig := wrapped.Signature()
 		assert.DeepEqual(t, [96]byte(sig), gotSig)
@@ -125,5 +127,11 @@ func TestWrappedROSignedExecutionPayloadBid(t *testing.T) {
 		gotRoot, err := wrapped.SigningRoot(domain)
 		require.NoError(t, err)
 		require.Equal(t, wantRoot, gotRoot)
+
+		wantHTR, err := signed.HashTreeRoot()
+		require.NoError(t, err)
+		gotHTR, err := wrapped.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, wantHTR, gotHTR)
 	})
 }

@@ -44,7 +44,8 @@ func (h executionPayloadBidGloas) IsNil() bool {
 		len(h.payload.ParentBlockRoot) != 32 ||
 		len(h.payload.BlockHash) != 32 ||
 		len(h.payload.PrevRandao) != 32 ||
-		len(h.payload.FeeRecipient) != 20 {
+		len(h.payload.FeeRecipient) != 20 ||
+		len(h.payload.ExecutionRequestsRoot) != 32 {
 		return true
 	}
 
@@ -78,8 +79,8 @@ func WrappedROExecutionPayloadBid(pb *ethpb.ExecutionPayloadBid) (interfaces.ROE
 }
 
 // Bid returns the execution payload bid as a read-only interface.
-func (s signedExecutionPayloadBid) Bid() (interfaces.ROExecutionPayloadBid, error) {
-	return WrappedROExecutionPayloadBid(s.bid.Message)
+func (s signedExecutionPayloadBid) Bid() interfaces.ROExecutionPayloadBid {
+	return executionPayloadBidGloas{payload: s.bid.Message}
 }
 
 // SigningRoot computes the signing root for the execution payload bid with the given domain.
@@ -90,6 +91,11 @@ func (s signedExecutionPayloadBid) SigningRoot(domain []byte) ([32]byte, error) 
 // Signature returns the BLS signature as a 96-byte array.
 func (s signedExecutionPayloadBid) Signature() [96]byte {
 	return [96]byte(s.bid.Signature)
+}
+
+// HashTreeRoot returns the hash tree root of the signed execution payload bid.
+func (s signedExecutionPayloadBid) HashTreeRoot() ([32]byte, error) {
+	return s.bid.HashTreeRoot()
 }
 
 // ParentBlockHash returns the hash of the parent execution block.
@@ -154,8 +160,5 @@ func (h executionPayloadBidGloas) FeeRecipient() [20]byte {
 
 // ExecutionRequestsRoot returns the hash tree root of the execution requests.
 func (h executionPayloadBidGloas) ExecutionRequestsRoot() [32]byte {
-	if h.payload == nil || len(h.payload.ExecutionRequestsRoot) < 32 {
-		return [32]byte{}
-	}
 	return [32]byte(h.payload.ExecutionRequestsRoot)
 }
