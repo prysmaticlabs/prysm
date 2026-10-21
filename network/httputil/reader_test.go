@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestRespondWithSsz(t *testing.T) {
@@ -37,6 +37,13 @@ func TestRespondWithSsz(t *testing.T) {
 	t.Run("ssz_content_type_preferred_2", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example", nil)
 		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.95,%s;q=0.9", api.OctetStreamMediaType, api.JsonMediaType)}
+		result := RespondWithSsz(request)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("json_excluded_ssz_after_comma_and_space", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0, %s", api.JsonMediaType, api.OctetStreamMediaType)}
 		result := RespondWithSsz(request)
 		assert.Equal(t, true, result)
 	})

@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/validator/client/beacon-api/mock"
-	testhelpers "github.com/OffchainLabs/prysm/v6/validator/client/beacon-api/test-helpers"
-	"github.com/OffchainLabs/prysm/v6/validator/client/iface"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/validator/client/beacon-api/mock"
+	testhelpers "github.com/OffchainLabs/prysm/v7/validator/client/beacon-api/test-helpers"
+	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
 	"github.com/pkg/errors"
 	"go.uber.org/mock/gomock"
 )
@@ -96,13 +96,13 @@ func TestGetAggregatedSyncSelections(t *testing.T) {
 	for _, test := range testcases {
 		t.Run(test.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			handler := mock.NewMockHandler(ctrl)
 
 			reqBody, err := json.Marshal(test.req)
 			require.NoError(t, err)
 
 			ctx := t.Context()
-			jsonRestHandler.EXPECT().Post(
+			handler.EXPECT().Post(
 				gomock.Any(),
 				"/eth/v1/validator/sync_committee_selections",
 				nil,
@@ -115,7 +115,7 @@ func TestGetAggregatedSyncSelections(t *testing.T) {
 				test.endpointError,
 			).Times(1)
 
-			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &beaconApiValidatorClient{handler: handler}
 			res, err := validatorClient.AggregatedSyncSelections(ctx, test.req)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)

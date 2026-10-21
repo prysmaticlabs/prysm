@@ -3,14 +3,14 @@ package blocks
 import (
 	"bytes"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	consensus_types "github.com/OffchainLabs/prysm/v6/consensus-types"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/encoding/ssz"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	consensus_types "github.com/OffchainLabs/prysm/v7/consensus-types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/wrappers"
 	"github.com/pkg/errors"
-	fastssz "github.com/prysmaticlabs/fastssz"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -42,6 +42,16 @@ func NewWrappedExecutionData(v proto.Message) (interfaces.ExecutionData, error) 
 		return WrappedExecutionPayloadDeneb(pbStruct.Payload)
 	case *enginev1.ExecutionBundleFulu:
 		return WrappedExecutionPayloadDeneb(pbStruct.Payload)
+	case *enginev1.ExecutionPayloadGloas:
+		return WrappedExecutionPayloadGloas(pbStruct)
+	case *enginev1.ExecutionBundleGloas:
+		return WrappedExecutionPayloadGloas(pbStruct.Payload)
+	case *enginev1.ExecutionPayloadHeader:
+		return WrappedExecutionPayloadHeader(pbStruct)
+	case *enginev1.ExecutionPayloadHeaderCapella:
+		return WrappedExecutionPayloadHeaderCapella(pbStruct)
+	case *enginev1.ExecutionPayloadHeaderDeneb:
+		return WrappedExecutionPayloadHeaderDeneb(pbStruct)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedVersion, "type %T", pbStruct)
 	}
@@ -94,7 +104,7 @@ func (e executionPayload) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith --
-func (e executionPayload) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayload) HashTreeRootWith(hh *ssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
@@ -188,6 +198,11 @@ func (executionPayload) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// BlockAccessList --
+func (executionPayload) BlockAccessList() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // BlobGasUsed --
 func (e executionPayload) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
@@ -252,7 +267,7 @@ func (e executionPayloadHeader) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith --
-func (e executionPayloadHeader) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
@@ -346,6 +361,11 @@ func (executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// BlockAccessList --
+func (executionPayloadHeader) BlockAccessList() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // BlobGasUsed --
 func (e executionPayloadHeader) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
@@ -362,7 +382,7 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 	if err != nil {
 		return nil, err
 	}
-	txRoot, err := ssz.TransactionsRoot(txs)
+	txRoot, err := wrappers.TransactionsRoot(txs)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +458,7 @@ func (e executionPayloadCapella) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith --
-func (e executionPayloadCapella) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadCapella) HashTreeRootWith(hh *ssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
@@ -532,6 +552,11 @@ func (executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// BlockAccessList --
+func (executionPayloadCapella) BlockAccessList() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // BlobGasUsed --
 func (e executionPayloadCapella) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
@@ -596,7 +621,7 @@ func (e executionPayloadHeaderCapella) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith --
-func (e executionPayloadHeaderCapella) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadHeaderCapella) HashTreeRootWith(hh *ssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
@@ -690,6 +715,11 @@ func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
+// BlockAccessList --
+func (executionPayloadHeaderCapella) BlockAccessList() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // BlobGasUsed --
 func (e executionPayloadHeaderCapella) BlobGasUsed() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
@@ -706,7 +736,7 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 	if err != nil {
 		return nil, err
 	}
-	txRoot, err := ssz.TransactionsRoot(txs)
+	txRoot, err := wrappers.TransactionsRoot(txs)
 	if err != nil {
 		return nil, err
 	}
@@ -714,7 +744,7 @@ func PayloadToHeaderCapella(payload interfaces.ExecutionData) (*enginev1.Executi
 	if err != nil {
 		return nil, err
 	}
-	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	withdrawalsRoot, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -744,7 +774,7 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	if err != nil {
 		return nil, err
 	}
-	txRoot, err := ssz.TransactionsRoot(txs)
+	txRoot, err := wrappers.TransactionsRoot(txs)
 	if err != nil {
 		return nil, err
 	}
@@ -752,7 +782,7 @@ func PayloadToHeaderDeneb(payload interfaces.ExecutionData) (*enginev1.Execution
 	if err != nil {
 		return nil, err
 	}
-	withdrawalsRoot, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	withdrawalsRoot, err := wrappers.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -900,7 +930,7 @@ func (e executionPayloadHeaderDeneb) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith --
-func (e executionPayloadHeaderDeneb) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadHeaderDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
@@ -994,6 +1024,11 @@ func (e executionPayloadHeaderDeneb) WithdrawalsRoot() ([]byte, error) {
 	return e.p.WithdrawalsRoot, nil
 }
 
+// BlockAccessList --
+func (executionPayloadHeaderDeneb) BlockAccessList() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 // BlobGasUsed --
 func (e executionPayloadHeaderDeneb) BlobGasUsed() (uint64, error) {
 	return e.p.BlobGasUsed, nil
@@ -1058,7 +1093,7 @@ func (e executionPayloadDeneb) HashTreeRoot() ([32]byte, error) {
 }
 
 // HashTreeRootWith --
-func (e executionPayloadDeneb) HashTreeRootWith(hh *fastssz.Hasher) error {
+func (e executionPayloadDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
 	return e.p.HashTreeRootWith(hh)
 }
 
@@ -1152,6 +1187,11 @@ func (e executionPayloadDeneb) WithdrawalsRoot() ([]byte, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
+// BlockAccessList --
+func (executionPayloadDeneb) BlockAccessList() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
 func (e executionPayloadDeneb) BlobGasUsed() (uint64, error) {
 	return e.p.BlobGasUsed, nil
 }
@@ -1162,5 +1202,174 @@ func (e executionPayloadDeneb) ExcessBlobGas() (uint64, error) {
 
 // IsBlinded returns true if the underlying data is blinded.
 func (e executionPayloadDeneb) IsBlinded() bool {
+	return false
+}
+
+// executionPayloadGloas is a convenience wrapper around a beacon block body's execution payload data structure
+// This wrapper allows us to conform to a common interface so that beacon
+// blocks for future forks can also be applied across Prysm without issues.
+type executionPayloadGloas struct {
+	p *enginev1.ExecutionPayloadGloas
+}
+
+var _ interfaces.ExecutionData = &executionPayloadGloas{}
+
+// WrappedExecutionPayloadGloas is a constructor which wraps a protobuf execution payload into an interface.
+func WrappedExecutionPayloadGloas(p *enginev1.ExecutionPayloadGloas) (interfaces.ExecutionData, error) {
+	w := executionPayloadGloas{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// IsNil checks if the underlying data is nil.
+func (e executionPayloadGloas) IsNil() bool {
+	return e.p == nil
+}
+
+// MarshalSSZ --
+func (e executionPayloadGloas) MarshalSSZ() ([]byte, error) {
+	return e.p.MarshalSSZ()
+}
+
+// MarshalSSZTo --
+func (e executionPayloadGloas) MarshalSSZTo(dst []byte) ([]byte, error) {
+	return e.p.MarshalSSZTo(dst)
+}
+
+// SizeSSZ --
+func (e executionPayloadGloas) SizeSSZ() int {
+	return e.p.SizeSSZ()
+}
+
+// UnmarshalSSZ --
+func (e executionPayloadGloas) UnmarshalSSZ(buf []byte) error {
+	return e.p.UnmarshalSSZ(buf)
+}
+
+// HashTreeRoot --
+func (e executionPayloadGloas) HashTreeRoot() ([32]byte, error) {
+	return e.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (e executionPayloadGloas) HashTreeRootWith(hh *ssz.Hasher) error {
+	return e.p.HashTreeRootWith(hh)
+}
+
+// Proto --
+func (e executionPayloadGloas) Proto() proto.Message {
+	return e.p
+}
+
+// ParentHash --
+func (e executionPayloadGloas) ParentHash() []byte {
+	return e.p.ParentHash
+}
+
+// FeeRecipient --
+func (e executionPayloadGloas) FeeRecipient() []byte {
+	return e.p.FeeRecipient
+}
+
+// StateRoot --
+func (e executionPayloadGloas) StateRoot() []byte {
+	return e.p.StateRoot
+}
+
+// ReceiptsRoot --
+func (e executionPayloadGloas) ReceiptsRoot() []byte {
+	return e.p.ReceiptsRoot
+}
+
+// LogsBloom --
+func (e executionPayloadGloas) LogsBloom() []byte {
+	return e.p.LogsBloom
+}
+
+// PrevRandao --
+func (e executionPayloadGloas) PrevRandao() []byte {
+	return e.p.PrevRandao
+}
+
+// BlockNumber --
+func (e executionPayloadGloas) BlockNumber() uint64 {
+	return e.p.BlockNumber
+}
+
+// GasLimit --
+func (e executionPayloadGloas) GasLimit() uint64 {
+	return e.p.GasLimit
+}
+
+// GasUsed --
+func (e executionPayloadGloas) GasUsed() uint64 {
+	return e.p.GasUsed
+}
+
+// Timestamp --
+func (e executionPayloadGloas) Timestamp() uint64 {
+	return e.p.Timestamp
+}
+
+// ExtraData --
+func (e executionPayloadGloas) ExtraData() []byte {
+	return e.p.ExtraData
+}
+
+// BaseFeePerGas --
+func (e executionPayloadGloas) BaseFeePerGas() []byte {
+	return e.p.BaseFeePerGas
+}
+
+// BlockHash --
+func (e executionPayloadGloas) BlockHash() []byte {
+	return e.p.BlockHash
+}
+
+// Transactions returns read-only views into the payload's serialized
+// transaction list. No transaction bytes are copied.
+func (e executionPayloadGloas) Transactions() ([][]byte, error) {
+	return e.p.Transactions.Slice(), nil
+}
+
+// TransactionsRoot is computed directly from the serialized transaction list,
+// without materializing the transactions.
+func (e executionPayloadGloas) TransactionsRoot() ([]byte, error) {
+	root, err := e.p.Transactions.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	return root[:], nil
+}
+
+// Withdrawals --
+func (e executionPayloadGloas) Withdrawals() ([]*enginev1.Withdrawal, error) {
+	return e.p.Withdrawals, nil
+}
+
+// WithdrawalsRoot --
+func (executionPayloadGloas) WithdrawalsRoot() ([]byte, error) {
+	return nil, consensus_types.ErrUnsupportedField
+}
+
+// BlockAccessList --
+func (e executionPayloadGloas) BlockAccessList() ([]byte, error) {
+	return e.p.BlockAccessList, nil
+}
+
+// BlobGasUsed --
+func (e executionPayloadGloas) BlobGasUsed() (uint64, error) {
+	return e.p.BlobGasUsed, nil
+}
+
+// ExcessBlobGas --
+func (e executionPayloadGloas) ExcessBlobGas() (uint64, error) {
+	return e.p.ExcessBlobGas, nil
+}
+
+// IsBlinded returns true if the underlying data is blinded.
+func (e executionPayloadGloas) IsBlinded() bool {
 	return false
 }

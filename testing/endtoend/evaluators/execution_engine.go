@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/params"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/policies"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/types"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/policies"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/types"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -33,6 +33,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		if err != nil {
 			return err
 		}
+		defer func() { _ = httpResp.Body.Close() }()
 		if httpResp.StatusCode != http.StatusOK {
 			e := httputil.DefaultJsonError{}
 			if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
@@ -59,6 +60,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			if err != nil {
 				return err
 			}
+			defer func() { _ = httpResp.Body.Close() }()
 			if httpResp.StatusCode == http.StatusNotFound {
 				// Continue in the event of non-existent blocks.
 				continue

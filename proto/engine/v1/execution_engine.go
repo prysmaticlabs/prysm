@@ -1,6 +1,6 @@
 package enginev1
 
-import "github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
+import "github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 
 type copier[T any] interface {
 	Copy() T
@@ -9,7 +9,7 @@ type copier[T any] interface {
 func copySlice[T any, C copier[T]](original []C) []T {
 	// Create a new slice with the same length as the original
 	newSlice := make([]T, len(original))
-	for i := 0; i < len(newSlice); i++ {
+	for i := range newSlice {
 		newSlice[i] = original[i].Copy()
 	}
 	return newSlice
@@ -64,6 +64,30 @@ func (cr *ConsolidationRequest) Copy() *ConsolidationRequest {
 		SourceAddress: bytesutil.SafeCopyBytes(cr.SourceAddress),
 		SourcePubkey:  bytesutil.SafeCopyBytes(cr.SourcePubkey),
 		TargetPubkey:  bytesutil.SafeCopyBytes(cr.TargetPubkey),
+	}
+}
+
+// Copy --
+func (bdr *BuilderDepositRequest) Copy() *BuilderDepositRequest {
+	if bdr == nil {
+		return nil
+	}
+	return &BuilderDepositRequest{
+		Pubkey:                bytesutil.SafeCopyBytes(bdr.Pubkey),
+		WithdrawalCredentials: bytesutil.SafeCopyBytes(bdr.WithdrawalCredentials),
+		Amount:                bdr.Amount,
+		Signature:             bytesutil.SafeCopyBytes(bdr.Signature),
+	}
+}
+
+// Copy --
+func (ber *BuilderExitRequest) Copy() *BuilderExitRequest {
+	if ber == nil {
+		return nil
+	}
+	return &BuilderExitRequest{
+		SourceAddress: bytesutil.SafeCopyBytes(ber.SourceAddress),
+		Pubkey:        bytesutil.SafeCopyBytes(ber.Pubkey),
 	}
 }
 

@@ -4,20 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/contracts/deposit"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/contracts/deposit"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -50,7 +49,7 @@ func (vs *Server) ValidatorStatus(
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 
-	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey, func() (primitives.ValidatorIndex, error) { return helpers.LastActivatedValidatorIndex(ctx, headState) })
+	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey)
 	return vStatus, nil
 }
 
@@ -92,9 +91,8 @@ func (vs *Server) MultipleValidatorStatus(
 	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubKeys))
 	indices := make([]primitives.ValidatorIndex, len(pubKeys))
-	lastActivated, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
 	for i, pubKey := range pubKeys {
-		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, hpErr })
+		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey)
 	}
 
 	return &ethpb.MultipleValidatorStatusResponse{
@@ -232,13 +230,11 @@ func (vs *Server) activationStatus(
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*ethpb.ValidatorActivationResponse_Status, len(pubKeys))
-	// only run calculation of last activated once per state
-	lastActivated, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
 	for i, pubKey := range pubKeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, hpErr })
+		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey)
 		if vStatus == nil {
 			continue
 		}
@@ -283,7 +279,6 @@ func (vs *Server) validatorStatus(
 	ctx context.Context,
 	headState state.ReadOnlyBeaconState,
 	pubKey []byte,
-	lastActiveValidatorFn func() (primitives.ValidatorIndex, error),
 ) (*ethpb.ValidatorStatusResponse, primitives.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
 	defer span.End()
@@ -355,17 +350,6 @@ func (vs *Server) validatorStatus(
 				}
 			}
 		}
-		if lastActiveValidatorFn == nil {
-			return resp, idx
-		}
-		lastActivatedvalidatorIndex, err := lastActiveValidatorFn()
-		if err != nil {
-			return resp, idx
-		}
-		// Our position in the activation queue is the above index - our validator index.
-		if lastActivatedvalidatorIndex < idx {
-			resp.PositionInActivationQueue = uint64(idx - lastActivatedvalidatorIndex)
-		}
 		return resp, idx
 	default:
 		return resp, idx
@@ -411,7 +395,7 @@ func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.
 
 func assignmentStatus(beaconState state.ReadOnlyBeaconState, validatorIndex primitives.ValidatorIndex) ethpb.ValidatorStatus {
 	validator, err := beaconState.ValidatorAtIndexReadOnly(validatorIndex)
-	if err != nil || validator.IsNil() {
+	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
 

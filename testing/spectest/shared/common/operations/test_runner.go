@@ -7,16 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 type blockWithSSZObject func([]byte) (interfaces.SignedBeaconBlock, error)
@@ -72,12 +69,5 @@ func comparePostState(t *testing.T, postSSZFilepath string, sszToState SSZToStat
 	require.NoError(t, err, "Failed to decompress")
 	postBeaconState, err := sszToState(postBeaconStateSSZ)
 	require.NoError(t, err)
-	postBeaconStatePb, ok := postBeaconState.ToProtoUnsafe().(proto.Message)
-	require.Equal(t, true, ok, "post beacon state did not return a proto.Message")
-	pbState, ok := want.ToProtoUnsafe().(proto.Message)
-	require.Equal(t, true, ok, "beacon state did not return a proto.Message")
-	if !proto.Equal(pbState, postBeaconStatePb) {
-		t.Log(cmp.Diff(postBeaconStatePb, pbState, protocmp.Transform()))
-		t.Fatal("Post state does not match expected")
-	}
+	require.DeepSSZEqual(t, postBeaconState.ToProtoUnsafe(), want.ToProtoUnsafe(), "Post state does not match expected")
 }

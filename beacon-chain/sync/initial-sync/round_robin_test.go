@@ -2,25 +2,27 @@ package initialsync
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async/abool"
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/das"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	dbtest "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	p2pt "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/container/slice"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/das"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	dbtest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	p2pt "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/container/slice"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/paulbellamy/ratecounter"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -309,14 +311,19 @@ func TestService_roundRobinSync(t *testing.T) {
 				ValidatorsRoot: vr,
 			} // no-op mock
 			clock := startup.NewClock(gt, vr)
+			chainStarted := &atomic.Bool{}
+			chainStarted.Store(true)
 			s := &Service{
 				ctx:          t.Context(),
 				cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
-				synced:       abool.New(),
-				chainStarted: abool.NewBool(true),
+				synced:       &atomic.Bool{},
+				chainStarted: chainStarted,
 				clock:        clock,
 			}
 			s.genesisTime = makeGenesisTime(tt.currentSlot)
+			s.blobRetentionChecker = func(primitives.Slot) bool {
+				return true
+			}
 			assert.NoError(t, s.roundRobinSync())
 			if s.cfg.Chain.HeadSlot() < tt.currentSlot {
 				t.Errorf("Head slot (%d) is less than expected currentSlot (%d)", s.cfg.Chain.HeadSlot(), tt.currentSlot)
@@ -376,7 +383,7 @@ func TestService_processBlock(t *testing.T) {
 		rowsb, err := blocks.NewROBlock(wsb)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, blocks.BlockWithROSidecars{Block: rowsb}, func(
-			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityStore) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityChecker) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot, nil))
 			return nil
 		}, nil)
@@ -388,7 +395,7 @@ func TestService_processBlock(t *testing.T) {
 		rowsb, err = blocks.NewROBlock(wsb)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, blocks.BlockWithROSidecars{Block: rowsb}, func(
-			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityStore) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityChecker) error {
 			return nil
 		}, nil)
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
@@ -399,7 +406,7 @@ func TestService_processBlock(t *testing.T) {
 		rowsb, err = blocks.NewROBlock(wsb)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, blocks.BlockWithROSidecars{Block: rowsb}, func(
-			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityStore) error {
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityChecker) error {
 			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot, nil))
 			return nil
 		}, nil)
@@ -469,21 +476,21 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		cbnormal := func(ctx context.Context, blks []blocks.ROBlock, avs das.AvailabilityStore) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, avs))
+		cbnormal := func(ctx context.Context, blks []blocks.ROBlock, _ []interfaces.ROSignedExecutionPayloadEnvelope, avs das.AvailabilityChecker) error {
+			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, nil, avs))
 			return nil
 		}
 		// Process block normally.
-		count, err := s.processBatchedBlocks(ctx, batch, cbnormal)
+		count, err := s.processBatchedBlocks(ctx, batch, nil, cbnormal)
 		assert.NoError(t, err)
 		require.Equal(t, uint64(len(batch)), count)
 
-		cbnil := func(ctx context.Context, blocks []blocks.ROBlock, _ das.AvailabilityStore) error {
+		cbnil := func(ctx context.Context, blocks []blocks.ROBlock, _ []interfaces.ROSignedExecutionPayloadEnvelope, _ das.AvailabilityChecker) error {
 			return nil
 		}
 
 		// Duplicate processing should trigger error.
-		count, err = s.processBatchedBlocks(ctx, batch, cbnil)
+		count, err = s.processBatchedBlocks(ctx, batch, nil, cbnil)
 		assert.ErrorContains(t, "block is already processed", err)
 		require.Equal(t, uint64(0), count)
 
@@ -497,20 +504,85 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		// Bad batch should fail because it is non linear
-		count, err = s.processBatchedBlocks(ctx, badBatch2, cbnil)
+		count, err = s.processBatchedBlocks(ctx, badBatch2, nil, cbnil)
 		expectedSubErr := "expected linear block list"
 		assert.ErrorContains(t, expectedSubErr, err)
 		require.Equal(t, uint64(0), count)
 
 		// Continue normal processing, should proceed w/o errors.
-		count, err = s.processBatchedBlocks(ctx, batch2, cbnormal)
+		count, err = s.processBatchedBlocks(ctx, batch2, nil, cbnormal)
 		assert.NoError(t, err)
 		assert.Equal(t, primitives.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 		require.Equal(t, uint64(len(batch2)), count)
 	})
 }
 
+func TestService_processBatchedBlocksReturnsFilteredCount(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	genesisBlk := util.NewBeaconBlock()
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, t.Context(), beaconDB, genesisBlk)
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	s := NewService(t.Context(), &Config{
+		P2P: p2pt.NewTestP2P(t),
+		DB:  beaconDB,
+		Chain: &mock.ChainService{
+			State: st,
+			Root:  genesisBlkRoot[:],
+			DB:    beaconDB,
+			FinalizedCheckPoint: &eth.Checkpoint{
+				Epoch: 0,
+			},
+		},
+		StateNotifier: &mock.MockStateNotifier{},
+	})
+	s.genesisTime = makeGenesisTime(32)
+	ctx := t.Context()
+
+	// Build a linear chain of 9 blocks (slots 1–9).
+	var allBlocks []blocks.BlockWithROSidecars
+	currRoot := genesisBlkRoot
+	for i := primitives.Slot(1); i <= 9; i++ {
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = i
+		blk.Block.ParentRoot = currRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, beaconDB, blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		rob, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		allBlocks = append(allBlocks, blocks.BlockWithROSidecars{Block: rob})
+		currRoot = root
+	}
+
+	// Process slots 1–5 so they are in the DB and head advances to slot 5.
+	cb := func(ctx context.Context, blks []blocks.ROBlock, _ []interfaces.ROSignedExecutionPayloadEnvelope, avs das.AvailabilityChecker) error {
+		return s.cfg.Chain.ReceiveBlockBatch(ctx, blks, nil, avs)
+	}
+	count, err := s.processBatchedBlocks(ctx, allBlocks[:5], nil, cb)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), count)
+	require.Equal(t, primitives.Slot(5), s.cfg.Chain.HeadSlot())
+
+	// Now process the full batch (slots 1–9). Slots 1–5 are already processed,
+	// so only slots 6–9 should be counted.
+	count, err = s.processBatchedBlocks(ctx, allBlocks, nil, cb)
+	require.NoError(t, err)
+	require.Equal(t, uint64(4), count, "count should reflect only unprocessed blocks, not the entire batch")
+}
+
 func TestService_blockProviderScoring(t *testing.T) {
+	// Use a slot much longer than the test, so the current slot does not change while the test runs.
+	// The exact value does not matter.
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.SlotDurationMilliseconds = uint64((24 * time.Hour).Milliseconds())
+	params.OverrideBeaconConfig(cfg)
+
 	currentPeriod := blockLimiterPeriod
 	blockLimiterPeriod = 1 * time.Second
 	defer func() {
@@ -569,11 +641,13 @@ func TestService_blockProviderScoring(t *testing.T) {
 		ValidatorsRoot: vr,
 	} // no-op mock
 	clock := startup.NewClock(gt, vr)
+	chainStarted := &atomic.Bool{}
+	chainStarted.Store(true)
 	s := &Service{
 		ctx:          t.Context(),
 		cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
-		synced:       abool.New(),
-		chainStarted: abool.NewBool(true),
+		synced:       &atomic.Bool{},
+		chainStarted: chainStarted,
 		clock:        clock,
 	}
 	scorer := s.cfg.P2P.Peers().Scorers().BlockProviderScorer()
@@ -638,11 +712,13 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		Genesis:        gt,
 		ValidatorsRoot: vr,
 	}
+	chainStarted := &atomic.Bool{}
+	chainStarted.Store(true)
 	s := &Service{
 		ctx:          t.Context(),
 		cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
-		synced:       abool.New(),
-		chainStarted: abool.NewBool(true),
+		synced:       &atomic.Bool{},
+		chainStarted: chainStarted,
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		clock:        clock,
 	}
@@ -705,14 +781,73 @@ func TestService_ValidUnprocessed(t *testing.T) {
 		currBlockRoot = blk1Root
 	}
 
-	retBlocks, err := validUnprocessed(t.Context(), batch, 2, func(ctx context.Context, block blocks.ROBlock) bool {
+	notProcessed := func(_ context.Context, _ interfaces.ROSignedExecutionPayloadEnvelope) bool { return false }
+	retBlocks, _, err := validUnprocessed(t.Context(), batch, nil, 2, func(ctx context.Context, block blocks.ROBlock) bool {
 		// Ignore first 2 blocks in the batch.
 		return block.Block().Slot() <= 2
-	})
+	}, notProcessed)
 	require.NoError(t, err)
 
 	// Ensure that the unprocessed batch is returned correctly.
 	assert.Equal(t, len(retBlocks), len(batch)-2)
+
+	t.Run("gloas: ancestor envelope dropped with the imported origin", func(t *testing.T) {
+		parentHash, ancestorRoot := [32]byte{0x0a}, [32]byte{0x02}
+		origin := makeGloasBlock(t, 32, ancestorRoot, parentHash)
+		// The origin's payload was withheld, so b1's bid parent hash is the ancestor's payload hash.
+		b1 := makeGloasBlock(t, 33, origin.Root(), parentHash)
+		envAncestor := makeEnvelopeForRoot(t, 31, ancestorRoot, parentHash, [32]byte{})
+		envB1 := makeEnvelopeForRoot(t, 33, b1.Root(), [32]byte{0x0b}, parentHash)
+		isProcessed := func(_ context.Context, b blocks.ROBlock) bool { return b.Root() == origin.Root() }
+
+		remaining, got, err := validUnprocessed(t.Context(), []blocks.BlockWithROSidecars{{Block: origin}, {Block: b1}},
+			[]interfaces.ROSignedExecutionPayloadEnvelope{envAncestor, envB1}, origin.Block().Slot(), isProcessed, notProcessed)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(remaining))
+		require.Equal(t, b1.Root(), remaining[0].Block.Root())
+		require.Equal(t, 1, len(got))
+		env, err := got[0].Envelope()
+		require.NoError(t, err)
+		require.Equal(t, b1.Root(), env.BeaconBlockRoot())
+	})
+}
+
+func TestEnvelopesForBlocks(t *testing.T) {
+	ctx := t.Context()
+	notProcessed := func(context.Context, interfaces.ROSignedExecutionPayloadEnvelope) bool { return false }
+
+	parentHash := [32]byte{0x0a}
+	b1OwnHash := [32]byte{0x0b}
+	ancestorRoot := [32]byte{0x02}
+	originRoot := makeGloasBlock(t, 32, ancestorRoot, parentHash).Root()
+
+	// b1 is the first unprocessed block; its parent's payload was not revealed, so its bid
+	// parent hash points at the last revealed ancestor's payload.
+	b1 := makeGloasBlock(t, 33, originRoot, parentHash)
+	bwb := []blocks.BlockWithROSidecars{{Block: b1}}
+
+	envAncestor := makeEnvelopeForRoot(t, 31, ancestorRoot, parentHash, [32]byte{})
+	envParent := makeEnvelopeForRoot(t, 32, originRoot, parentHash, [32]byte{})
+	envB1 := makeEnvelopeForRoot(t, 33, b1.Root(), b1OwnHash, parentHash)
+
+	t.Run("keep parent envelope needed by the first unprocessed block", func(t *testing.T) {
+		got := envelopesForBlocks(ctx, bwb, []interfaces.ROSignedExecutionPayloadEnvelope{envParent, envB1}, notProcessed)
+		require.Equal(t, 2, len(got))
+		env, err := got[0].Envelope()
+		require.NoError(t, err)
+		require.Equal(t, originRoot, env.BeaconBlockRoot())
+	})
+
+	t.Run("return no envelopes when only an ancestor envelope is available", func(t *testing.T) {
+		got := envelopesForBlocks(ctx, bwb, []interfaces.ROSignedExecutionPayloadEnvelope{envAncestor}, notProcessed)
+		require.Equal(t, 0, len(got))
+	})
+
+	t.Run("skip already processed payload envelope", func(t *testing.T) {
+		processed := func(context.Context, interfaces.ROSignedExecutionPayloadEnvelope) bool { return true }
+		got := envelopesForBlocks(ctx, bwb, []interfaces.ROSignedExecutionPayloadEnvelope{envB1}, processed)
+		require.Equal(t, 0, len(got))
+	})
 }
 
 func TestService_PropcessFetchedDataRegSync(t *testing.T) {
@@ -810,7 +945,7 @@ func TestService_processBlocksWithDataColumns(t *testing.T) {
 		require.NoError(t, err)
 
 		service := new(Service)
-		err = service.processBlocksWithDataColumns(ctx, nil, nil, roFuluBlock)
+		err = service.processBlocksWithDataColumns(ctx, nil, nil, nil, roFuluBlock)
 		require.NoError(t, err)
 	})
 
@@ -851,12 +986,12 @@ func TestService_processBlocksWithDataColumns(t *testing.T) {
 			counter: ratecounter.NewRateCounter(counterSeconds * time.Second),
 		}
 
-		receiverFunc := func(ctx context.Context, blks []blocks.ROBlock, avs das.AvailabilityStore) error {
+		receiverFunc := func(ctx context.Context, blks []blocks.ROBlock, _ []interfaces.ROSignedExecutionPayloadEnvelope, avs das.AvailabilityChecker) error {
 			require.Equal(t, 1, len(blks))
 			return nil
 		}
 
-		err = service.processBlocksWithDataColumns(ctx, blocksWithSidecars, receiverFunc, roFuluBlock)
+		err = service.processBlocksWithDataColumns(ctx, blocksWithSidecars, nil, receiverFunc, roFuluBlock)
 		require.NoError(t, err)
 
 		// Verify that the data columns were saved correctly.
@@ -865,4 +1000,102 @@ func TestService_processBlocksWithDataColumns(t *testing.T) {
 			require.Equal(t, true, summary.HasIndex(i))
 		}
 	})
+}
+
+type originColumnsChain struct {
+	*mock.ChainService
+	onEnvelope func(interfaces.ROSignedExecutionPayloadEnvelope)
+	onBatch    func([]blocks.ROBlock, []interfaces.ROSignedExecutionPayloadEnvelope)
+}
+
+func (c *originColumnsChain) ReceiveExecutionPayloadEnvelope(ctx context.Context, e interfaces.ROSignedExecutionPayloadEnvelope) error {
+	c.onEnvelope(e)
+	return c.ChainService.ReceiveExecutionPayloadEnvelope(ctx, e)
+}
+
+func (c *originColumnsChain) ReceiveBlockBatch(ctx context.Context, blks []blocks.ROBlock, envs []interfaces.ROSignedExecutionPayloadEnvelope, avs das.AvailabilityChecker) error {
+	c.onBatch(blks, envs)
+	return c.ChainService.ReceiveBlockBatch(ctx, blks, envs, avs)
+}
+
+func TestService_ProcessFetchedData(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.SetGenesisFork(t, params.BeaconConfig().Copy(), version.Gloas)
+
+	for _, mode := range []string{"regular", "batch"} {
+		t.Run(mode+" sync saves carried origin columns before processing", func(t *testing.T) {
+			ctx := t.Context()
+			storage := filesystem.NewEphemeralDataColumnStorage(t)
+			beaconDB := dbtest.SetupDB(t)
+			const originSlot = primitives.Slot(32)
+			originHash, ancestorHash := [32]byte{0x91}, [32]byte{0x90}
+			originProto := util.NewBeaconBlockGloas()
+			originProto.Block.Slot = originSlot
+			bid := originProto.Block.Body.SignedExecutionPayloadBid.Message
+			bid.ParentBlockHash, bid.BlockHash = ancestorHash[:], originHash[:]
+			bid.BlobKzgCommitments = [][]byte{make([]byte, fieldparams.KzgCommitmentSize)}
+			originSigned, err := blocks.NewSignedBeaconBlock(originProto)
+			require.NoError(t, err)
+			origin, err := blocks.NewROBlock(originSigned)
+			require.NoError(t, err)
+			originRoot := origin.Root()
+			child := makeGloasBlock(t, originSlot+1, originRoot, originHash)
+			envelope := makeEnvelopeForRoot(t, originSlot, originRoot, originHash, ancestorHash)
+			require.NoError(t, beaconDB.SaveBlock(ctx, origin))
+			column, err := blocks.NewRODataColumnGloas(&eth.DataColumnSidecarGloas{
+				Column: [][]byte{make([]byte, 2048)}, KzgProofs: [][]byte{make([]byte, fieldparams.KzgCommitmentSize)},
+				Slot: originSlot, BeaconBlockRoot: originRoot[:],
+			})
+			require.NoError(t, err)
+			st, err := util.NewBeaconStateGloas()
+			require.NoError(t, err)
+			require.NoError(t, st.SetSlot(originSlot))
+			chain := &originColumnsChain{ChainService: &mock.ChainService{
+				FinalizedCheckPoint: &eth.Checkpoint{}, DB: beaconDB, State: st, Root: originRoot[:],
+			}}
+			received := false
+			assertStored := func() {
+				stored, err := storage.Get(originRoot, nil)
+				require.NoError(t, err)
+				require.Equal(t, 1, len(stored))
+				require.Equal(t, true, stored[0].IsGloas())
+				require.Equal(t, originRoot, stored[0].BlockRoot())
+			}
+			chain.onEnvelope = func(e interfaces.ROSignedExecutionPayloadEnvelope) {
+				require.Equal(t, 0, len(chain.BlocksReceived))
+				require.DeepEqual(t, envelope.Proto(), e.Proto())
+				assertStored()
+				received = true
+			}
+			chain.onBatch = func(blks []blocks.ROBlock, envs []interfaces.ROSignedExecutionPayloadEnvelope) {
+				require.Equal(t, 1, len(blks))
+				require.Equal(t, child.Root(), blks[0].Root())
+				require.Equal(t, 1, len(envs))
+				require.DeepEqual(t, envelope.Proto(), envs[0].Proto())
+				assertStored()
+				received = true
+			}
+			service := &Service{
+				cfg:         &Config{Chain: chain, DB: beaconDB, P2P: p2pt.NewTestP2P(t), DataColumnStorage: storage},
+				genesisTime: makeGenesisTime(originSlot * 2),
+				counter:     ratecounter.NewRateCounter(counterSeconds * time.Second),
+			}
+			data := &blocksQueueFetchedData{
+				bwb:           []blocks.BlockWithROSidecars{{Block: origin}, {Block: child}},
+				envelopes:     []interfaces.ROSignedExecutionPayloadEnvelope{envelope},
+				columnsToSave: []blocks.VerifiedRODataColumn{blocks.NewVerifiedRODataColumn(column)},
+			}
+			require.Equal(t, uint64(0), storage.Summary(originRoot).Count())
+			if mode == "regular" {
+				processed, err := service.processFetchedDataRegSync(ctx, data)
+				require.NoError(t, err)
+				require.Equal(t, uint64(1), processed)
+			} else {
+				service.processFetchedData(ctx, data)
+			}
+			require.Equal(t, true, received)
+			require.Equal(t, 1, len(chain.BlocksReceived))
+			require.Equal(t, child.Block().Slot(), chain.BlocksReceived[0].Block().Slot())
+		})
+	}
 }

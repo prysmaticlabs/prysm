@@ -2,13 +2,16 @@ package beacon_api
 
 import (
 	"context"
+	"strconv"
+	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -28,6 +31,22 @@ func (c *beaconApiValidatorClient) domainData(ctx context.Context, epoch primiti
 	genesisValidatorRoot, err := bytesutil.DecodeHexWithLength(genesis.GenesisValidatorsRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")
+	}
+
+	// EIP-7044: once the chain is in Deneb, the beacon node verifies every voluntary exit
+	// with the Capella fork version, whatever the exit epoch.
+	if domainType == params.BeaconConfig().DomainVoluntaryExit {
+		genesisTime, err := strconv.ParseInt(genesis.GenesisTime, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse genesis time %s", genesis.GenesisTime)
+		}
+		if slots.ToEpoch(slots.CurrentSlot(time.Unix(genesisTime, 0))) >= params.BeaconConfig().DenebForkEpoch {
+			fork = &ethpb.Fork{
+				PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+				CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+				Epoch:           params.BeaconConfig().CapellaForkEpoch,
+			}
+		}
 	}
 
 	signatureDomain, err := signing.Domain(fork, epoch, domainType, genesisValidatorRoot)

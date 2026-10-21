@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/sync"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -145,30 +145,4 @@ func IsSyncing(
 		Code:    http.StatusServiceUnavailable}
 	httputil.WriteError(w, errJson)
 	return true
-}
-
-// IsOptimistic checks whether the beacon node is currently optimistic and writes it to the response.
-func IsOptimistic(
-	ctx context.Context,
-	w http.ResponseWriter,
-	optimisticModeFetcher blockchain.OptimisticModeFetcher,
-) (bool, error) {
-	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		errJson := &httputil.DefaultJsonError{
-			Message: "Could not check optimistic status: " + err.Error(),
-			Code:    http.StatusInternalServerError,
-		}
-		httputil.WriteError(w, errJson)
-		return true, err
-	}
-	if !isOptimistic {
-		return false, nil
-	}
-	errJson := &httputil.DefaultJsonError{
-		Code:    http.StatusServiceUnavailable,
-		Message: "Beacon node is currently optimistic and not serving validators",
-	}
-	httputil.WriteError(w, errJson)
-	return true, nil
 }

@@ -1,14 +1,11 @@
 package db
 
 import (
-	beacondb "github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	"github.com/OffchainLabs/prysm/v6/runtime/tos"
-	"github.com/sirupsen/logrus"
+	beacondb "github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/runtime/tos"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "db")
 
 // Commands for interacting with a beacon chain database.
 var Commands = &cli.Command{

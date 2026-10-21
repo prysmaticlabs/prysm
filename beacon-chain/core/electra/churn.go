@@ -3,11 +3,11 @@ package electra
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/math"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/math"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 // ComputeConsolidationEpochAndUpdateChurn fulfills the consensus spec definition below. This method
@@ -43,11 +43,11 @@ func ComputeConsolidationEpochAndUpdateChurn(ctx context.Context, s state.Beacon
 		return 0, err
 	}
 	earliestConsolidationEpoch := max(earliestEpoch, helpers.ActivationExitEpoch(slots.ToEpoch(s.Slot())))
-	activeBal, err := helpers.TotalActiveBalance(s)
+	activeBal, err := helpers.TotalActiveBalance(ctx, s)
 	if err != nil {
 		return 0, err
 	}
-	perEpochConsolidationChurn := helpers.ConsolidationChurnLimit(primitives.Gwei(activeBal))
+	perEpochConsolidationChurn := helpers.ConsolidationChurnLimitForVersion(s.Version(), primitives.Gwei(activeBal))
 
 	// New epoch for consolidations.
 	var consolidationBalanceToConsume primitives.Gwei

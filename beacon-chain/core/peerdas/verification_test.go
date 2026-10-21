@@ -3,12 +3,12 @@ package peerdas_test
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/kzg"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/peerdas"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func TestDataColumnsAlignWithBlock(t *testing.T) {
@@ -41,21 +41,21 @@ func TestDataColumnsAlignWithBlock(t *testing.T) {
 
 	t.Run("column size mismatch", func(t *testing.T) {
 		block, sidecars, _ := util.GenerateTestFuluBlockWithSidecars(t, 2, util.WithSlot(fs))
-		sidecars[0].Column = [][]byte{}
+		sidecars[0].DataColumnSidecar().Column = [][]byte{}
 		err := peerdas.DataColumnsAlignWithBlock(block, sidecars)
 		require.ErrorIs(t, err, peerdas.ErrBlockColumnSizeMismatch)
 	})
 
 	t.Run("KZG commitments size mismatch", func(t *testing.T) {
 		block, sidecars, _ := util.GenerateTestFuluBlockWithSidecars(t, 2, util.WithSlot(fs))
-		sidecars[0].KzgCommitments = [][]byte{}
+		sidecars[0].DataColumnSidecar().KzgCommitments = [][]byte{}
 		err := peerdas.DataColumnsAlignWithBlock(block, sidecars)
 		require.ErrorIs(t, err, peerdas.ErrBlockColumnSizeMismatch)
 	})
 
 	t.Run("KZG proofs mismatch", func(t *testing.T) {
 		block, sidecars, _ := util.GenerateTestFuluBlockWithSidecars(t, 2, util.WithSlot(fs))
-		sidecars[0].KzgProofs = [][]byte{}
+		sidecars[0].DataColumnSidecar().KzgProofs = [][]byte{}
 		err := peerdas.DataColumnsAlignWithBlock(block, sidecars)
 		require.ErrorIs(t, err, peerdas.ErrBlockColumnSizeMismatch)
 	})
@@ -63,7 +63,7 @@ func TestDataColumnsAlignWithBlock(t *testing.T) {
 	t.Run("commitment mismatch", func(t *testing.T) {
 		block, _, _ := util.GenerateTestFuluBlockWithSidecars(t, 2, util.WithSlot(fs))
 		_, alteredSidecars, _ := util.GenerateTestFuluBlockWithSidecars(t, 2, util.WithSlot(fs))
-		alteredSidecars[1].KzgCommitments[0][0]++ // Overflow is OK
+		alteredSidecars[1].DataColumnSidecar().KzgCommitments[0][0]++ // Overflow is OK
 		err := peerdas.DataColumnsAlignWithBlock(block, alteredSidecars)
 		require.ErrorIs(t, err, peerdas.ErrCommitmentMismatch)
 	})

@@ -11,12 +11,13 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -24,51 +25,38 @@ import (
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
 // IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
 var placeholderFields = []string{
-	"AGGREGATE_DUE_BPS",
-	"AGGREGATE_DUE_BPS_GLOAS",
 	"ATTESTATION_DEADLINE",
-	"ATTESTATION_DUE_BPS",
-	"ATTESTATION_DUE_BPS_GLOAS",
 	"BLOB_SIDECAR_SUBNET_COUNT_FULU",
 	"CELLS_PER_EXT_BLOB",
-	"CONTRIBUTION_DUE_BPS",
-	"CONTRIBUTION_DUE_BPS_GLOAS",
 	"EIP6110_FORK_EPOCH",
 	"EIP6110_FORK_VERSION",
 	"EIP7002_FORK_EPOCH",
 	"EIP7002_FORK_VERSION",
-	"EIP7441_FORK_EPOCH",
-	"EIP7441_FORK_VERSION",
 	"EIP7732_FORK_EPOCH",
 	"EIP7732_FORK_VERSION",
-	"EIP7805_FORK_EPOCH",
-	"EIP7805_FORK_VERSION",
 	"EIP7928_FORK_EPOCH",
 	"EIP7928_FORK_VERSION",
+	"EIP8025_FORK_EPOCH",
+	"EIP8025_FORK_VERSION",
+	"EIP8198_FORK_EPOCH",
+	"EIP8198_FORK_VERSION",
+	"EIP8321_FORK_EPOCH",
+	"EIP8321_FORK_VERSION",
 	"EPOCHS_PER_SHUFFLING_PHASE",
 	"FIELD_ELEMENTS_PER_CELL",     // Configured as a constant in config/fieldparams/mainnet.go
 	"FIELD_ELEMENTS_PER_EXT_BLOB", // Configured in proto/ssz_proto_library.bzl
-	"GLOAS_FORK_EPOCH",
-	"GLOAS_FORK_VERSION",
+	"INCLUSION_LIST_COMMITTEE_SIZE",
+	"INCLUSION_LIST_DUE_BPS",
 	"INCLUSION_LIST_SUBMISSION_DEADLINE",
-	"INCLUSION_LIST_SUBMISSION_DUE_BPS",
 	"KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH", // Configured in proto/ssz_proto_library.bzl
-	"MAX_BYTES_PER_INCLUSION_LIST",
-	"MAX_REQUEST_BLOB_SIDECARS_FULU",
 	"MAX_REQUEST_INCLUSION_LIST",
-	"MAX_REQUEST_PAYLOADS", // Compile time constant on BeaconBlockBody.ExecutionRequests
-	"PAYLOAD_ATTESTATION_DUE_BPS",
-	"PROPOSER_INCLUSION_LIST_CUTOFF",
-	"PROPOSER_INCLUSION_LIST_CUTOFF_BPS",
-	"PROPOSER_REORG_CUTOFF_BPS",
-	"PROPOSER_SCORE_BOOST_EIP7732",
-	"PROPOSER_SELECTION_GAP",
-	"SLOT_DURATION_MS",
-	"SYNC_MESSAGE_DUE_BPS_GLOAS",
+	"MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST",
+	"MIN_BLOB_DATA_RETENTION_MS",
+	"MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS",
+	"NUMBER_OF_COLUMNS", // Configured as a constant in config/fieldparams/mainnet.go
+	"SLOT_DURATION_MS_EIP8198",
 	"TARGET_NUMBER_OF_PEERS",
 	"UPDATE_TIMEOUT",
-	"VIEW_FREEZE_CUTOFF_BPS",
-	"VIEW_FREEZE_DEADLINE",
 	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
 	"WHISK_FORK_EPOCH",
 	"WHISK_FORK_VERSION",
@@ -101,6 +89,10 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.HysteresisQuotient, actual.HysteresisQuotient, "%s: HysteresisQuotient", name)
 	assert.Equal(t, expected.HysteresisDownwardMultiplier, actual.HysteresisDownwardMultiplier, "%s: HysteresisDownwardMultiplier", name)
 	assert.Equal(t, expected.HysteresisUpwardMultiplier, actual.HysteresisUpwardMultiplier, "%s: HysteresisUpwardMultiplier", name)
+	assert.Equal(t, expected.AttestationDueBPS, actual.AttestationDueBPS, "%s: AttestationDueBPS", name)
+	assert.Equal(t, expected.AggregateDueBPS, actual.AggregateDueBPS, "%s: AggregateDueBPS", name)
+	assert.Equal(t, expected.ContributionDueBPS, actual.ContributionDueBPS, "%s: ContributionDueBPS", name)
+	assert.Equal(t, expected.ProposerReorgCutoffBPS, actual.ProposerReorgCutoffBPS, "%s: ProposerReorgCutoffBPS", name)
 	assert.Equal(t, expected.SyncMessageDueBPS, actual.SyncMessageDueBPS, "%s: SyncMessageDueBPS", name)
 
 	// Validator params.
@@ -124,11 +116,14 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	// Initial values.
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.BLSWithdrawalPrefixByte, actual.BLSWithdrawalPrefixByte, "%s: BLSWithdrawalPrefixByte", name)
+	assert.DeepEqual(t, expected.BuilderWithdrawalPrefixByte, actual.BuilderWithdrawalPrefixByte, "%s: BuilderWithdrawalPrefixByte", name)
+	assert.DeepEqual(t, expected.PayloadBuilderVersion, actual.PayloadBuilderVersion, "%s: PayloadBuilderVersion", name)
 	assert.DeepEqual(t, expected.ETH1AddressWithdrawalPrefixByte, actual.ETH1AddressWithdrawalPrefixByte, "%s: ETH1AddressWithdrawalPrefixByte", name)
 
 	// Time parameters.
 	assert.Equal(t, expected.GenesisDelay, actual.GenesisDelay, "%s: GenesisDelay", name)
 	assert.Equal(t, expected.SecondsPerSlot, actual.SecondsPerSlot, "%s: SecondsPerSlot", name)
+	assert.Equal(t, expected.SlotDurationMilliseconds, actual.SlotDurationMilliseconds, "%s: SlotDurationMilliseconds", name)
 	assert.Equal(t, expected.MinAttestationInclusionDelay, actual.MinAttestationInclusionDelay, "%s: MinAttestationInclusionDelay", name)
 	assert.Equal(t, expected.SlotsPerEpoch, actual.SlotsPerEpoch, "%s: SlotsPerEpoch", name)
 	assert.Equal(t, expected.MinSeedLookahead, actual.MinSeedLookahead, "%s: MinSeedLookahead", name)
@@ -179,6 +174,8 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.DenebForkEpoch, actual.DenebForkEpoch, "%s: DenebForkEpoch", name)
 	assert.Equal(t, expected.ElectraForkEpoch, actual.ElectraForkEpoch, "%s: ElectraForkEpoch", name)
 	assert.Equal(t, expected.FuluForkEpoch, actual.FuluForkEpoch, "%s: FuluForkEpoch", name)
+	assert.Equal(t, expected.GloasForkEpoch, actual.GloasForkEpoch, "%s: GloasForkEpoch", name)
+	assert.Equal(t, expected.HezeForkEpoch, actual.HezeForkEpoch, "%s: HezeForkEpoch", name)
 	assert.Equal(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch, "%s: SqrRootSlotsPerEpoch", name)
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
@@ -187,6 +184,8 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.DeepEqual(t, expected.DenebForkVersion, actual.DenebForkVersion, "%s: DenebForkVersion", name)
 	assert.DeepEqual(t, expected.ElectraForkVersion, actual.ElectraForkVersion, "%s: ElectraForkVersion", name)
 	assert.DeepEqual(t, expected.FuluForkVersion, actual.FuluForkVersion, "%s: FuluForkVersion", name)
+	assert.DeepEqual(t, expected.GloasForkVersion, actual.GloasForkVersion, "%s: GloasForkVersion", name)
+	assert.DeepEqual(t, expected.HezeForkVersion, actual.HezeForkVersion, "%s: HezeForkVersion", name)
 
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
@@ -401,7 +400,7 @@ func fieldsFromYamls(t *testing.T, fps []string) []string {
 	for _, fp := range fps {
 		yamlFile, err := os.ReadFile(fp)
 		require.NoError(t, err)
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		require.NoError(t, yaml.Unmarshal(yamlFile, &m))
 
 		for k := range m {
@@ -421,7 +420,7 @@ func fieldsFromYamls(t *testing.T, fps []string) []string {
 
 func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *params.BeaconChainConfig) {
 	// Ensure all fields from the yaml file exist, were set, and correctly match the expected value.
-	ft1 := reflect.TypeOf(*c1)
+	ft1 := reflect.TypeFor[params.BeaconChainConfig]()
 	for _, field := range fields {
 		var found bool
 		for i := 0; i < ft1.NumField(); i++ {
@@ -436,7 +435,10 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 				v1 := reflect.ValueOf(*c1).Field(i).Interface()
 				v2 := reflect.ValueOf(*c2).Field(i).Interface()
 				if reflect.ValueOf(v1).Kind() == reflect.Slice {
-					assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
+					// A nil slice and an empty yaml list are equivalent configs.
+					if reflect.ValueOf(v1).Len() != 0 || reflect.ValueOf(v2).Len() != 0 {
+						assert.DeepEqual(t, v1, v2, "%s: %s", name, field)
+					}
 				} else {
 					assert.Equal(t, v1, v2, "%s: %s", name, field)
 				}
@@ -451,4 +453,113 @@ func assertYamlFieldsMatch(t *testing.T, name string, fields []string, c1, c2 *p
 
 func isPlaceholderField(field string) bool {
 	return slices.Contains(placeholderFields, field)
+}
+
+func TestUnmarshalConfig_SlotDurationReconciliation(t *testing.T) {
+	// A config file may set either SECONDS_PER_SLOT or SLOT_DURATION_MS. Whichever it omits keeps
+	// the preset base value, so the omitted one has to be derived from the one that is present.
+	tests := []struct {
+		name         string
+		yaml         string
+		wantSeconds  uint64
+		wantMillis   uint64
+		wantErrParts string
+	}{
+		{
+			name:        "only SLOT_DURATION_MS, as written by the ethereum-package",
+			yaml:        "PRESET_BASE: 'mainnet'\nSLOT_DURATION_MS: 6000\n",
+			wantSeconds: 6,
+			wantMillis:  6000,
+		},
+		{
+			name:        "only SECONDS_PER_SLOT",
+			yaml:        "PRESET_BASE: 'mainnet'\nSECONDS_PER_SLOT: 6\n",
+			wantSeconds: 6,
+			wantMillis:  6000,
+		},
+		{
+			name:        "both, consistent",
+			yaml:        "PRESET_BASE: 'mainnet'\nSECONDS_PER_SLOT: 6\nSLOT_DURATION_MS: 6000\n",
+			wantSeconds: 6,
+			wantMillis:  6000,
+		},
+		{
+			name:        "neither, preset defaults kept",
+			yaml:        "PRESET_BASE: 'mainnet'\n",
+			wantSeconds: 12,
+			wantMillis:  12000,
+		},
+		{
+			name:        "non-whole second slot duration",
+			yaml:        "PRESET_BASE: 'mainnet'\nSLOT_DURATION_MS: 6500\n",
+			wantSeconds: 6,
+			wantMillis:  6500,
+		},
+		{
+			name:        "sub-second slot duration",
+			yaml:        "PRESET_BASE: 'mainnet'\nSLOT_DURATION_MS: 250\n",
+			wantSeconds: 0,
+			wantMillis:  250,
+		},
+		{
+			name:         "zero slot duration",
+			yaml:         "PRESET_BASE: 'mainnet'\nSLOT_DURATION_MS: 0\n",
+			wantErrParts: "slot duration cannot be zero",
+		},
+		{
+			name:         "zero seconds per slot",
+			yaml:         "PRESET_BASE: 'mainnet'\nSECONDS_PER_SLOT: 0\n",
+			wantErrParts: "slot duration cannot be zero",
+		},
+		{
+			name:         "both, contradictory",
+			yaml:         "PRESET_BASE: 'mainnet'\nSECONDS_PER_SLOT: 6\nSLOT_DURATION_MS: 12000\n",
+			wantErrParts: "contradictory slot durations",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := params.UnmarshalConfig([]byte(tt.yaml), nil)
+			if tt.wantErrParts != "" {
+				require.ErrorContains(t, tt.wantErrParts, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantSeconds, cfg.SecondsPerSlot)
+			require.Equal(t, tt.wantMillis, cfg.SlotDurationMillis())
+			require.Equal(t, time.Duration(tt.wantMillis)*time.Millisecond, cfg.SlotDuration())
+		})
+	}
+}
+
+func TestConfigToYaml_SlotDuration(t *testing.T) {
+	t.Run("whole seconds emit both keys and round-trip", func(t *testing.T) {
+		cfg := params.MainnetConfig().Copy()
+		cfg.SlotDurationMilliseconds = 6000
+		cfg.SecondsPerSlot = 6
+
+		yaml := string(params.ConfigToYaml(cfg))
+		require.StringContains(t, "SLOT_DURATION_MS: 6000", yaml)
+		require.StringContains(t, "SECONDS_PER_SLOT: 6", yaml)
+
+		got, err := params.UnmarshalConfig([]byte(yaml), nil)
+		require.NoError(t, err)
+		require.Equal(t, uint64(6000), got.SlotDurationMillis())
+	})
+
+	t.Run("sub-second omits the legacy key so the output still round-trips", func(t *testing.T) {
+		cfg := params.MainnetConfig().Copy()
+		cfg.SlotDurationMilliseconds = 500
+		cfg.SecondsPerSlot = 0
+
+		yaml := string(params.ConfigToYaml(cfg))
+		require.StringContains(t, "SLOT_DURATION_MS: 500", yaml)
+		require.Equal(t, false, strings.Contains(yaml, "SECONDS_PER_SLOT:"))
+
+		got, err := params.UnmarshalConfig([]byte(yaml), nil)
+		require.NoError(t, err)
+		require.Equal(t, uint64(500), got.SlotDurationMillis())
+		require.Equal(t, 500*time.Millisecond, got.SlotDuration())
+	})
 }

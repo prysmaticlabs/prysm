@@ -4,11 +4,11 @@ import (
 	"path"
 	"testing"
 
-	kzgPrysm "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/kzg"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/utils"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	kzgPrysm "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ghodss/yaml"
 )
@@ -23,9 +23,9 @@ func TestComputeCellsAndKzgProofs(t *testing.T) {
 		Output [][]string `json:"output"`
 	}
 	require.NoError(t, kzgPrysm.Start())
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "fulu", "kzg/compute_cells_and_kzg_proofs/kzg-mainnet")
+	testFolders, testFolderPath := utils.TestFolders(t, "kzg", "compute_cells_and_kzg_proofs", "")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "fulu", "kzg/compute_cells_and_kzg_proofs/kzg-mainnet")
+		t.Fatalf("No test folders found for kzg/compute_cells_and_kzg_proofs")
 	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -42,18 +42,16 @@ func TestComputeCellsAndKzgProofs(t *testing.T) {
 			}
 			b := kzgPrysm.Blob(blob)
 
-			cellsAndProofsForBlob, err := kzgPrysm.ComputeCellsAndKZGProofs(&b)
+			cells, proofs, err := kzgPrysm.ComputeCellsAndKZGProofs(&b)
 			if test.Output != nil {
 				require.NoError(t, err)
 				var combined [][]string
-				cs := cellsAndProofsForBlob.Cells
-				csRaw := make([]string, 0, len(cs))
-				for _, c := range cs {
+				csRaw := make([]string, 0, len(cells))
+				for _, c := range cells {
 					csRaw = append(csRaw, hexutil.Encode(c[:]))
 				}
-				ps := cellsAndProofsForBlob.Proofs
-				psRaw := make([]string, 0, len(ps))
-				for _, p := range ps {
+				psRaw := make([]string, 0, len(proofs))
+				for _, p := range proofs {
 					psRaw = append(psRaw, hexutil.Encode(p[:]))
 				}
 				combined = append(combined, csRaw)

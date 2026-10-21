@@ -3,14 +3,14 @@ package light_client
 import (
 	"fmt"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	consensustypes "github.com/OffchainLabs/prysm/v6/consensus-types"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	consensustypes "github.com/OffchainLabs/prysm/v7/consensus-types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -28,6 +28,8 @@ func NewWrappedHeader(m proto.Message) (interfaces.LightClientHeader, error) {
 			return NewWrappedHeaderElectra(t)
 		}
 		return NewWrappedHeaderDeneb(t)
+	case *pb.LightClientHeaderGloas:
+		return NewWrappedHeaderGloas(t)
 	default:
 		return nil, fmt.Errorf("cannot construct light client header from type %T", t)
 	}
@@ -271,4 +273,36 @@ func (h *headerElectra) Execution() (interfaces.ExecutionData, error) {
 
 func (h *headerElectra) ExecutionBranch() (interfaces.LightClientExecutionBranch, error) {
 	return h.executionBranch, nil
+}
+
+func (h *headerAltair) ExecutionBlockHash() ([fieldparams.RootLength]byte, error) {
+	return [fieldparams.RootLength]byte{}, consensustypes.ErrNotSupported("ExecutionBlockHash", h.Version())
+}
+
+func (h *headerAltair) ExecutionBranchGloas() (interfaces.LightClientExecutionBranchGloas, error) {
+	return interfaces.LightClientExecutionBranchGloas{}, consensustypes.ErrNotSupported("ExecutionBranchGloas", h.Version())
+}
+
+func (h *headerCapella) ExecutionBlockHash() ([fieldparams.RootLength]byte, error) {
+	return [fieldparams.RootLength]byte{}, consensustypes.ErrNotSupported("ExecutionBlockHash", h.Version())
+}
+
+func (h *headerCapella) ExecutionBranchGloas() (interfaces.LightClientExecutionBranchGloas, error) {
+	return interfaces.LightClientExecutionBranchGloas{}, consensustypes.ErrNotSupported("ExecutionBranchGloas", h.Version())
+}
+
+func (h *headerDeneb) ExecutionBlockHash() ([fieldparams.RootLength]byte, error) {
+	return [fieldparams.RootLength]byte{}, consensustypes.ErrNotSupported("ExecutionBlockHash", h.Version())
+}
+
+func (h *headerDeneb) ExecutionBranchGloas() (interfaces.LightClientExecutionBranchGloas, error) {
+	return interfaces.LightClientExecutionBranchGloas{}, consensustypes.ErrNotSupported("ExecutionBranchGloas", h.Version())
+}
+
+func (h *headerElectra) ExecutionBlockHash() ([fieldparams.RootLength]byte, error) {
+	return [fieldparams.RootLength]byte{}, consensustypes.ErrNotSupported("ExecutionBlockHash", h.Version())
+}
+
+func (h *headerElectra) ExecutionBranchGloas() (interfaces.LightClientExecutionBranchGloas, error) {
+	return interfaces.LightClientExecutionBranchGloas{}, consensustypes.ErrNotSupported("ExecutionBranchGloas", h.Version())
 }

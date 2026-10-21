@@ -1,10 +1,10 @@
-load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
     srcs = ["forkchecker.go"],
-    importpath = "github.com/OffchainLabs/prysm/v6/tools/forkchecker",
+    importpath = "github.com/OffchainLabs/prysm/v7/tools/forkchecker",
     visibility = ["//visibility:private"],
     deps = [
         "//config/params:go_default_library",

@@ -9,19 +9,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	statefeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/slashings"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/slasher/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	beaconChainSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/async/event"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/slasher/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	beaconChainSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 const (
@@ -99,7 +99,7 @@ func (s *Service) run() {
 	}
 	numVals := headState.NumValidators()
 	validatorIndices := make([]primitives.ValidatorIndex, numVals)
-	for i := 0; i < numVals; i++ {
+	for i := range numVals {
 		validatorIndices[i] = primitives.ValidatorIndex(i)
 	}
 	start := time.Now()
@@ -147,10 +147,10 @@ func (s *Service) run() {
 	s.wg.Add(1)
 	go s.receiveBlocks(s.ctx, beaconBlockHeadersChan)
 
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	s.attsSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
-	s.blocksSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
-	s.pruningSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
+	slotDuration := params.BeaconConfig().SlotDuration()
+	s.attsSlotTicker = slots.NewSlotTicker(s.genesisTime, slotDuration)
+	s.blocksSlotTicker = slots.NewSlotTicker(s.genesisTime, slotDuration)
+	s.pruningSlotTicker = slots.NewSlotTicker(s.genesisTime, slotDuration)
 
 	s.wg.Add(1)
 	go s.processQueuedAttestations(s.ctx, s.attsSlotTicker.C())
@@ -201,7 +201,7 @@ func (*Service) Status() error {
 func (s *Service) waitForChainInitialization() {
 	clock, err := s.serviceCfg.ClockWaiter.WaitForClock(s.ctx)
 	if err != nil {
-		log.WithError(err).Error("Could not receive chain start notification")
+		log.WithError(err).Error("Could not receive genesis clock")
 	}
 	s.genesisTime = clock.GenesisTime()
 	log.WithField("genesisTime", s.genesisTime).Info(
@@ -213,7 +213,7 @@ func (s *Service) waitForSync(genesisTime time.Time) {
 	if slots.CurrentSlot(genesisTime) < params.BeaconConfig().SlotsPerEpoch || !s.serviceCfg.SyncChecker.Syncing() {
 		return
 	}
-	slotTicker := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	slotTicker := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SlotDuration())
 	defer slotTicker.Done()
 	for {
 		select {

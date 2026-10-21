@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -22,9 +22,9 @@ import (
 func ProcessAttestations(
 	ctx context.Context,
 	state state.ReadOnlyBeaconState,
-	vp []*Validator,
+	vp []Validator,
 	pBal *Balance,
-) ([]*Validator, *Balance, error) {
+) ([]Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
 
@@ -141,7 +141,7 @@ func SameHead(state state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (boo
 }
 
 // UpdateValidator updates pre computed validator store.
-func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *ethpb.PendingAttestation, aSlot primitives.Slot) []*Validator {
+func UpdateValidator(vp []Validator, record *Validator, indices []uint64, a *ethpb.PendingAttestation, aSlot primitives.Slot) []Validator {
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {
@@ -171,8 +171,9 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *et
 }
 
 // UpdateBalance updates pre computed balance store.
-func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
-	for _, v := range vp {
+func UpdateBalance(vp []Validator, bBal *Balance, stateVersion int) *Balance {
+	for i := range vp {
+		v := &vp[i]
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {
 				bBal.CurrentEpochAttested += v.CurrentEpochEffectiveBalance

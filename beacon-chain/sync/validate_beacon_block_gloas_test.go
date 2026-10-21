@@ -1,0 +1,315 @@
+package sync
+
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	lruwrpr "github.com/OffchainLabs/prysm/v7/cache/lru"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/stretchr/testify/require"
+)
+
+func TestValidateExecutionPayloadBid_Accept(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	parentRoot := bytesutil.PadTo([]byte{0x01}, fieldparams.RootLength)
+	block := util.NewBeaconBlockGloas()
+	block.Block.ParentRoot = parentRoot
+	block.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockRoot = parentRoot
+	block.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = nil
+
+	wsb, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	known := true
+	s := &Service{cfg: &config{chain: &mock.ChainService{HasPayloadBlockHashVal: &known}}}
+	res, err := s.validateExecutionPayloadBid(ctx, wsb.Block())
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestValidateExecutionPayloadBid_RejectUnknownParentBlockHash(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	parentRoot := bytesutil.PadTo([]byte{0x01}, fieldparams.RootLength)
+	block := util.NewBeaconBlockGloas()
+	block.Block.ParentRoot = parentRoot
+	block.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockRoot = parentRoot
+	block.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = nil
+
+	wsb, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	unknown := false
+	s := &Service{cfg: &config{chain: &mock.ChainService{HasPayloadBlockHashVal: &unknown}}}
+	res, err := s.validateExecutionPayloadBid(ctx, wsb.Block())
+	require.ErrorContains(t, err, "bid does not build on the parent's execution head")
+	require.Equal(t, pubsub.ValidationReject, res)
+}
+
+func TestValidateExecutionPayloadBid_RejectParentRootMismatch(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	block := util.NewBeaconBlockGloas()
+	block.Block.ParentRoot = bytesutil.PadTo([]byte{0x01}, fieldparams.RootLength)
+	block.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockRoot = bytesutil.PadTo([]byte{0x02}, fieldparams.RootLength)
+
+	wsb, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	s := &Service{}
+	res, err := s.validateExecutionPayloadBid(ctx, wsb.Block())
+	require.Error(t, err)
+	require.Equal(t, pubsub.ValidationReject, res)
+}
+
+func TestValidateExecutionPayloadBid_RejectTooManyCommitments(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	parentRoot := bytesutil.PadTo([]byte{0x01}, fieldparams.RootLength)
+	block := util.NewBeaconBlockGloas()
+	block.Block.ParentRoot = parentRoot
+	block.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockRoot = parentRoot
+
+	maxBlobs := params.BeaconConfig().MaxBlobsPerBlockAtEpoch(0)
+	commitments := make([][]byte, maxBlobs+1)
+	for i := range commitments {
+		commitments[i] = bytesutil.PadTo([]byte{0x02}, fieldparams.BLSPubkeyLength)
+	}
+	block.Block.Body.SignedExecutionPayloadBid.Message.BlobKzgCommitments = commitments
+
+	wsb, err := blocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	s := &Service{}
+	res, err := s.validateExecutionPayloadBid(ctx, wsb.Block())
+	require.Error(t, err)
+	require.Equal(t, pubsub.ValidationReject, res)
+}
+
+func TestValidateExecutionPayloadBidParentSeen_PreGloas(t *testing.T) {
+	ctx := context.Background()
+	blk := util.HydrateSignedBeaconBlockDeneb(nil)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	s := &Service{}
+	res, err := s.validateExecutionPayloadBidParentSeen(ctx, wsb.Block())
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestValidateExecutionPayloadBidParentSeen_Accept(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	ready := true
+	s := &Service{cfg: &config{chain: &mock.ChainService{ParentPayloadReadyVal: &ready}}}
+
+	blk := util.NewBeaconBlockGloas()
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	res, err := s.validateExecutionPayloadBidParentSeen(ctx, wsb.Block())
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestValidateExecutionPayloadBidParentSeen_Ignore(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	notReady := false
+	s := &Service{cfg: &config{chain: &mock.ChainService{ParentPayloadReadyVal: &notReady}}}
+
+	blk := util.NewBeaconBlockGloas()
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	res, err := s.validateExecutionPayloadBidParentSeen(ctx, wsb.Block())
+	require.Error(t, err)
+	require.Equal(t, pubsub.ValidationIgnore, res)
+}
+
+func TestValidateExecutionPayloadBidParentValid_PreGloas(t *testing.T) {
+	ctx := context.Background()
+	blk := util.HydrateSignedBeaconBlockDeneb(nil)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	s := &Service{}
+	res, err := s.validateExecutionPayloadBidParentValid(ctx, wsb.Block())
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestValidateExecutionPayloadBidParentValid_Accept(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	s := &Service{badPayloadCache: lruwrpr.New(10)}
+
+	blk := util.NewBeaconBlockGloas()
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	res, err := s.validateExecutionPayloadBidParentValid(ctx, wsb.Block())
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestValidateExecutionPayloadBidParentValid_RejectWhenBuildingOnInvalidPayload(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	s := &Service{
+		badPayloadCache: lruwrpr.New(10),
+		cfg:             &config{chain: &mock.ChainService{BuiltOnFullParentVal: true}},
+	}
+
+	blk := util.NewBeaconBlockGloas()
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	parentRoot := wsb.Block().ParentRoot()
+	s.badPayloadCache.Add(string(parentRoot[:]), true)
+
+	res, err := s.validateExecutionPayloadBidParentValid(ctx, wsb.Block())
+	require.Error(t, err)
+	require.Equal(t, pubsub.ValidationReject, res)
+}
+
+func TestValidateExecutionPayloadBidParentValid_AcceptWhenBuildingOnEmptyParent(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := context.Background()
+
+	s := &Service{
+		badPayloadCache: lruwrpr.New(10),
+		cfg:             &config{chain: &mock.ChainService{BuiltOnFullParentVal: false}},
+	}
+
+	blk := util.NewBeaconBlockGloas()
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	parentRoot := wsb.Block().ParentRoot()
+	s.badPayloadCache.Add(string(parentRoot[:]), true)
+
+	res, err := s.validateExecutionPayloadBidParentValid(ctx, wsb.Block())
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestRequestPayloadEnvelope_SkipsWhenAlreadyResolved(t *testing.T) {
+	root := [32]byte{0x42}
+
+	tests := []struct {
+		name  string
+		setup func(*Service)
+	}{
+		{
+			name: "already have full node",
+			setup: func(s *Service) {
+				s.cfg.chain = &mock.ChainService{ForkchoiceRoots: map[[32]byte]bool{root: true}}
+			},
+		},
+		{
+			name: "payload marked bad",
+			setup: func(s *Service) {
+				s.cfg.chain = &mock.ChainService{}
+				s.badPayloadCache.Add(string(root[:]), true)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// p2p is nil — getBestPeers would panic if the guards don't short-circuit.
+			s := &Service{
+				cfg:             &config{},
+				badPayloadCache: lruwrpr.New(10),
+			}
+			tt.setup(s)
+			require.NotPanics(t, func() { s.requestPayloadEnvelope(root) })
+		})
+	}
+}
+
+func TestFetchPayloadEnvelope_ReceiveHasDeadline(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.FuluForkEpoch = 0
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+	params.BeaconConfig().InitializeForkSchedule()
+
+	ctxMap, err := ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
+	require.NoError(t, err)
+
+	p1, p2 := p2ptest.NewTestP2P(t), p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	p1.Peers().SetConnectionState(p2.PeerID(), peers.Connected)
+	p1.Peers().SetChainState(p2.PeerID(), &ethpb.StatusV2{})
+
+	root := [32]byte{0x42}
+	envelope := &ethpb.SignedExecutionPayloadEnvelope{
+		Message: &ethpb.ExecutionPayloadEnvelope{
+			Payload: &enginev1.ExecutionPayloadGloas{
+				ParentHash:    make([]byte, fieldparams.RootLength),
+				FeeRecipient:  make([]byte, 20),
+				StateRoot:     make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				LogsBloom:     make([]byte, 256),
+				PrevRandao:    make([]byte, fieldparams.RootLength),
+				BaseFeePerGas: make([]byte, fieldparams.RootLength),
+				BlockHash:     make([]byte, fieldparams.RootLength),
+				SlotNumber:    1,
+			},
+			BeaconBlockRoot:       root[:],
+			ParentBeaconBlockRoot: make([]byte, fieldparams.RootLength),
+		},
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
+	}
+
+	protocol := fmt.Sprintf("%s/ssz_snappy", p2p.RPCExecutionPayloadEnvelopesByRootTopicV1)
+	p2.SetStreamHandler(protocol, func(stream network.Stream) {
+		req := new(p2ptypes.ExecutionPayloadEnvelopesByRootReq)
+		require.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, req))
+		require.NoError(t, WriteExecutionPayloadEnvelopeChunk(stream, p2.Encoding(), envelope))
+		require.NoError(t, stream.CloseWrite())
+	})
+
+	chain := &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
+	s := &Service{
+		ctx: context.Background(),
+		cfg: &config{
+			chain: chain,
+			p2p:   p1,
+			clock: startup.NewClock(time.Now(), [fieldparams.RootLength]byte{}),
+		},
+		ctxMap:          ctxMap,
+		badPayloadCache: lruwrpr.New(10),
+	}
+
+	s.fetchPayloadEnvelope(root)
+	require.True(t, chain.ReceivePayloadEnvelopeCtxHadDeadline)
+}

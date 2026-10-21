@@ -8,16 +8,16 @@ import (
 	"path"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/validator/client"
-	beacon_api "github.com/OffchainLabs/prysm/v6/validator/client/beacon-api"
-	"github.com/OffchainLabs/prysm/v6/validator/client/iface"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/validator/client"
+	beacon_api "github.com/OffchainLabs/prysm/v7/validator/client/beacon-api"
+	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -47,7 +47,7 @@ func (acm *CLIManager) Exit(ctx context.Context) error {
 	if nodeClient == nil {
 		return errors.New("could not prepare beacon node client")
 	}
-	syncStatus, err := (*nodeClient).SyncStatus(ctx, &emptypb.Empty{})
+	syncStatus, err := nodeClient.SyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,8 @@ func (acm *CLIManager) Exit(ctx context.Context) error {
 	}
 
 	cfg := PerformExitCfg{
-		*validatorClient,
-		*nodeClient,
+		validatorClient,
+		nodeClient,
 		acm.keymanager,
 		acm.rawPubKeys,
 		acm.formattedPubKeys,
@@ -71,7 +71,11 @@ func (acm *CLIManager) Exit(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	displayExitInfo(rawExitedKeys, trimmedExitedKeys)
+	if len(acm.exitJSONOutputPath) > 0 {
+		displayExitJSONInfo(trimmedExitedKeys, acm.exitJSONOutputPath)
+	} else {
+		displayExitInfo(rawExitedKeys, trimmedExitedKeys)
+	}
 
 	return nil
 }
@@ -156,7 +160,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 			urlFormattedPubKeys[i] = formatBeaconChaURL(key)
 		}
 
-		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
+		ifaceKeys := make([]any, len(urlFormattedPubKeys))
 		for i, k := range urlFormattedPubKeys {
 			ifaceKeys[i] = k
 		}
@@ -167,6 +171,17 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		log.WithField("pubkeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
 	} else {
 		log.Info("No successful voluntary exits")
+	}
+}
+
+func displayExitJSONInfo(trimmedExitedKeys []string, outputDirectory string) {
+	if len(trimmedExitedKeys) > 0 {
+		log.WithField("pubkeys", strings.Join(trimmedExitedKeys, ", ")).Infof(
+			"Signed voluntary exit files were written to %s. No exits were broadcast to the network. "+
+				"The validators listed will NOT exit until these files are submitted to a beacon node.",
+			outputDirectory)
+	} else {
+		log.Info("No signed voluntary exit files were written")
 	}
 }
 
@@ -197,7 +212,7 @@ func writeSignedVoluntaryExitJSON(sve *eth.SignedVoluntaryExit, outputDirectory 
 
 	filepath := path.Join(outputDirectory, fmt.Sprintf("validator-exit-%s.json", jsve.Message.ValidatorIndex))
 	if err := file.WriteFile(filepath, b); err != nil {
-		return errors.Wrap(err, "failed to write validator exist json")
+		return errors.Wrap(err, "failed to write validator exit json")
 	}
 
 	log.Infof("Wrote signed validator exit JSON to %s", filepath)

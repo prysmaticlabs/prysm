@@ -5,13 +5,17 @@ import (
 	"slices"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/container/slice"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 
@@ -24,7 +28,7 @@ const rateLimitingAmount = 1
 var notDataColumnsByRangeIdentifiersError = errors.New("not data columns by range identifiers")
 
 // dataColumnSidecarsByRangeRPCHandler looks up the request data columns from the database from a given start slot index
-func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg any, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.DataColumnSidecarsByRangeHandler")
 	defer span.End()
 
@@ -38,8 +42,8 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 	defer cancel()
 
 	SetRPCStreamDeadlines(stream)
-	beaconConfig := params.BeaconConfig()
-	maxRequestDataColumnSidecars := beaconConfig.MaxRequestDataColumnSidecars
+	cfg := params.BeaconConfig()
+	maxRequestDataColumnSidecars := cfg.MaxRequestDataColumnSidecars
 	remotePeer := stream.Conn().RemotePeer()
 
 	log := log.WithFields(logrus.Fields{
@@ -50,7 +54,7 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 
 	if log.Logger.Level >= logrus.DebugLevel {
 		slices.Sort(request.Columns)
-		log = log.WithField("requestedColumns", helpers.PrettySlice(request.Columns))
+		log = log.WithField("requestedColumns", slice.PrettySlice(request.Columns))
 	}
 
 	// Validate the request regarding rate limiting.
@@ -70,6 +74,7 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 	log.Trace("Serving data column sidecars by range")
 
 	if rangeParameters == nil {
+		closeStream(stream, log)
 		return nil
 	}
 
@@ -101,7 +106,7 @@ func (s *Service) dataColumnSidecarsByRangeRPCHandler(ctx context.Context, msg i
 
 		// Once the quota is reached, we're done serving the request.
 		if maxRequestDataColumnSidecars == 0 {
-			log.WithField("initialQuota", beaconConfig.MaxRequestDataColumnSidecars).Trace("Reached quota for data column sidecars by range request")
+			log.WithField("initialQuota", cfg.MaxRequestDataColumnSidecars).Trace("Reached quota for data column sidecars by range request")
 			break
 		}
 	}
@@ -132,7 +137,8 @@ func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, q
 	}
 
 	// Loop over the blocks in the batch.
-	for _, block := range batch.canonical() {
+	canonicalBlocks := batch.canonical()
+	for i, block := range canonicalBlocks {
 		// Get the block blockRoot.
 		blockRoot := block.Root()
 
@@ -142,13 +148,24 @@ func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, q
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return quota, errors.Wrapf(err, "get data column sidecars: block root %#x", blockRoot)
 		}
+		if len(verifiedRODataColumns) == 0 {
+			continue
+		}
+
+		included, err := s.payloadIncluded(ctx, canonicalBlocks, i)
+		if err != nil {
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			return quota, errors.Wrapf(err, "payload included: block root %#x", blockRoot)
+		}
+		if !included {
+			continue
+		}
 
 		// Write the retrieved sidecars to the stream.
 		for _, verifiedRODataColumn := range verifiedRODataColumns {
-			sidecar := verifiedRODataColumn.DataColumnSidecar
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 
-			if err := WriteDataColumnSidecarChunk(stream, s.cfg.clock, s.cfg.p2p.Encoding(), sidecar); err != nil {
+			if err := WriteDataColumnSidecarChunk(stream, s.cfg.clock, s.cfg.p2p.Encoding(), verifiedRODataColumn.RODataColumn); err != nil {
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 				tracing.AnnotateError(span, err)
 				return quota, errors.Wrap(err, "write data column sidecar chunk")
@@ -165,6 +182,31 @@ func (s *Service) streamDataColumnBatch(ctx context.Context, batch blockBatch, q
 	}
 
 	return quota, nil
+}
+
+// Columns of a block whose payload never became canonical (empty slot) are not chain data, mirroring the envelopes by range walk.
+func (s *Service) payloadIncluded(ctx context.Context, canonicalBlocks []blocks.ROBlock, i int) (bool, error) {
+	block := canonicalBlocks[i]
+	if block.Block().Version() < version.Gloas {
+		return true, nil
+	}
+
+	var successor interfaces.ReadOnlyBeaconBlock
+	if i+1 < len(canonicalBlocks) {
+		successor = canonicalBlocks[i+1].Block()
+	} else {
+		successorBlock, _, err := s.canonicalSuccessorBlock(ctx, block.Block().Slot()+1)
+		if err != nil {
+			return false, errors.Wrap(err, "canonical successor block")
+		}
+		// Without a direct child fullness is undecided, the parent root check also rejects the kv head root fallback returning the block itself.
+		if successorBlock == nil || successorBlock.Block().ParentRoot() != block.Root() {
+			return s.cfg.beaconDB.HasExecutionPayloadEnvelope(ctx, block.Root()), nil
+		}
+		successor = successorBlock.Block()
+	}
+
+	return blocks.BlockBuiltOnParentPayload(block.Block(), successor)
 }
 
 func validateDataColumnsByRange(request *pb.DataColumnSidecarsByRangeRequest, currentSlot primitives.Slot) (*rangeParams, error) {
@@ -210,6 +252,8 @@ func validateDataColumnsByRange(request *pb.DataColumnSidecarsByRangeRequest, cu
 		return nil, errors.Wrap(p2ptypes.ErrInvalidRequest, "overflow end - start + 1")
 	}
 
-	rangeParameters := &rangeParams{start: startSlot, end: endSlot, size: uint64(size)}
+	batchSize := min(uint64(size), uint64(flags.Get().BlockBatchLimit))
+
+	rangeParameters := &rangeParams{start: startSlot, end: endSlot, size: batchSize}
 	return rangeParameters, nil
 }

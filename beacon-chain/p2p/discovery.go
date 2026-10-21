@@ -9,14 +9,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/peerdas"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	ecdsaprysm "github.com/OffchainLabs/prysm/v6/crypto/ecdsa"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	ecdsaprysm "github.com/OffchainLabs/prysm/v7/crypto/ecdsa"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -24,7 +25,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/sirupsen/logrus"
 )
 
@@ -789,7 +789,8 @@ func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 		}
 		nodeAddrs, err := retrieveMultiAddrsFromNode(enodeAddr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Could not get multiaddr")
+			log.WithError(err).Errorf("Could not get multiaddr from peer %s", stringAddr)
+			continue
 		}
 		allAddrs = append(allAddrs, nodeAddrs...)
 	}
@@ -958,6 +959,11 @@ func getPort(node *enode.Node, protocol internetProtocol) (uint, bool, error) {
 		return 0, false, errors.Wrap(err, "could not get port")
 	}
 
+	// A zero port is not a usable endpoint; treat it as absent so callers do not build /tcp/0 dial addresses.
+	if port == 0 {
+		return port, false, nil
+	}
+
 	return port, true, nil
 }
 
@@ -999,6 +1005,10 @@ func peerIdsFromMultiAddrs(addrs []ma.Multiaddr) []peer.ID {
 		info, err := peer.AddrInfoFromP2pAddr(a)
 		if err != nil {
 			log.WithError(err).Errorf("Could not derive peer info from multiaddress %s", a.String())
+			continue
+		}
+		if len(info.Addrs) == 0 {
+			log.WithField("peerID", info.ID).Warn("Skipping peer with no transport address")
 			continue
 		}
 		peers = append(peers, info.ID)

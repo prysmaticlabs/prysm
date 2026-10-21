@@ -9,7 +9,6 @@ go_library(
         "block_header.go",
         "bls_to_execution_changes.go",
         "consolidations.go",
-        "deposit.go",
         "deposit_request.go",
         "execution_payload.go",
         "helpers.go",
@@ -19,7 +18,7 @@ go_library(
         "withdrawal_request.go",
         "withdrawals.go",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/testing/spectest/shared/fulu/operations",
+    importpath = "github.com/OffchainLabs/prysm/v7/testing/spectest/shared/fulu/operations",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/electra:go_default_library",

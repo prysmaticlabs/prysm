@@ -4,11 +4,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/container/slice"
-	"github.com/OffchainLabs/prysm/v6/crypto/hash"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 )
 
 const seedSize = int8(32)
@@ -18,18 +17,6 @@ const pivotViewSize = seedSize + roundSize
 const totalSize = seedSize + roundSize + positionWindowSize
 
 var maxShuffleListSize uint64 = 1 << 40
-
-// SplitIndices splits a list into n pieces.
-func SplitIndices(l []uint64, n uint64) [][]uint64 {
-	var divided [][]uint64
-	var lSize = uint64(len(l))
-	for i := uint64(0); i < n; i++ {
-		start := slice.SplitOffset(lSize, n, i)
-		end := slice.SplitOffset(lSize, n, i+1)
-		divided = append(divided, l[start:end])
-	}
-	return divided
-}
 
 // ShuffledIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with “seed“ as entropy.
 // We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
@@ -103,10 +90,7 @@ func ComputeShuffledIndex(index primitives.ValidatorIndex, indexCount uint64, se
 		pivot := hash8Int % indexCount
 		flip := (pivot + indexCount - uint64(index)) % indexCount
 		// Consider every pair only once by picking the highest pair index to retrieve randomness.
-		position := uint64(index)
-		if flip > position {
-			position = flip
-		}
+		position := max(flip, uint64(index))
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
 		binary.LittleEndian.PutUint64(posBuffer[:8], position>>8)

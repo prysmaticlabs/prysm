@@ -11,43 +11,54 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	mockChain "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	builderTest "github.com/OffchainLabs/prysm/v6/beacon-chain/builder/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	dbutil "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	doublylinkedtree "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/attestations"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/synccommittee"
-	p2pmock "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/core"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/testutil"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	mockSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/common"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	ethpbalpha "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	mockChain "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	builderTest "github.com/OffchainLabs/prysm/v7/beacon-chain/builder/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	dbutil "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/synccommittee"
+	p2pmock "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/lookup"
+	validatorv1alpha1 "github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/prysm/v1alpha1/validator"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/common"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	ethpbalpha "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	mock2 "github.com/OffchainLabs/prysm/v7/testing/mock"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
+	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"go.uber.org/mock/gomock"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func TestGetAggregateAttestation(t *testing.T) {
+func TestGetAggregateAttestationV2(t *testing.T) {
 	root1 := bytesutil.PadTo([]byte("root1"), 32)
 	root2 := bytesutil.PadTo([]byte("root2"), 32)
 	key, err := bls.RandKey()
@@ -80,7 +91,10 @@ func TestGetAggregateAttestation(t *testing.T) {
 		}
 	}
 
-	t.Run("V1", func(t *testing.T) {
+	t.Run("pre-electra", func(t *testing.T) {
+		committeeBits := bitfield.NewBitvector64()
+		committeeBits.SetBitAt(1, true)
+
 		aggSlot1_Root1_1 := createAttestation(1, bitfield.Bitlist{0b11100}, root1)
 		aggSlot1_Root1_2 := createAttestation(1, bitfield.Bitlist{0b10111}, root1)
 		aggSlot1_Root2 := createAttestation(1, bitfield.Bitlist{0b11100}, root2)
@@ -89,6 +103,10 @@ func TestGetAggregateAttestation(t *testing.T) {
 		unaggSlot3_Root1_2 := createAttestation(3, bitfield.Bitlist{0b10100}, root1)
 		unaggSlot3_Root2 := createAttestation(3, bitfield.Bitlist{0b11000}, root2)
 		unaggSlot4 := createAttestation(4, bitfield.Bitlist{0b11000}, root1)
+
+		// Add one post-electra attestation to ensure that it is being ignored.
+		// We choose slot 2 where we have one pre-electra attestation with less attestation bits.
+		postElectraAtt := createAttestationElectra(2, bitfield.Bitlist{0b11111}, root1)
 
 		compareResult := func(
 			t *testing.T,
@@ -119,9 +137,9 @@ func TestGetAggregateAttestation(t *testing.T) {
 		require.NoError(t, pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{unaggSlot3_Root1_1, unaggSlot3_Root1_2, unaggSlot3_Root2, unaggSlot4}), "Failed to save unaggregated attestations")
 		unagg := pool.UnaggregatedAttestations()
 		require.Equal(t, 4, len(unagg), "Expected 4 unaggregated attestations")
-		require.NoError(t, pool.SaveAggregatedAttestations([]ethpbalpha.Att{aggSlot1_Root1_1, aggSlot1_Root1_2, aggSlot1_Root2, aggSlot2}), "Failed to save aggregated attestations")
+		require.NoError(t, pool.SaveAggregatedAttestations([]ethpbalpha.Att{aggSlot1_Root1_1, aggSlot1_Root1_2, aggSlot1_Root2, aggSlot2, postElectraAtt}), "Failed to save aggregated attestations")
 		agg := pool.AggregatedAttestations()
-		require.Equal(t, 4, len(agg), "Expected 4 aggregated attestations")
+		require.Equal(t, 5, len(agg), "Expected 5 aggregated attestations, 4 pre electra and 1 post electra")
 		s := &Server{
 			AttestationsPool: pool,
 		}
@@ -130,22 +148,22 @@ func TestGetAggregateAttestation(t *testing.T) {
 			reqRoot, err := aggSlot2.Data.HashTreeRoot()
 			require.NoError(t, err, "Failed to generate attestation data hash tree root")
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 
-			s.GetAggregateAttestation(writer, request)
+			s.GetAggregateAttestationV2(writer, request)
 			assert.Equal(t, http.StatusNotFound, writer.Code, "Expected HTTP status NotFound for non-matching request")
 		})
 		t.Run("1 matching aggregated attestation", func(t *testing.T) {
 			reqRoot, err := aggSlot2.Data.HashTreeRoot()
 			require.NoError(t, err, "Failed to generate attestation data hash tree root")
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 
-			s.GetAggregateAttestation(writer, request)
+			s.GetAggregateAttestationV2(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
 
 			var resp structs.AggregateAttestationResponse
@@ -157,15 +175,32 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 			compareResult(t, attestation, "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal())
 		})
+		t.Run("1 matching aggregated attestation - SSZ", func(t *testing.T) {
+			reqRoot, err := aggSlot2.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp ethpbalpha.Attestation
+			require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+			compareResult(t, *structs.AttFromConsensus(&resp), "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal())
+		})
 		t.Run("multiple matching aggregated attestations - return the one with most bits", func(t *testing.T) {
 			reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
 			require.NoError(t, err, "Failed to generate attestation data hash tree root")
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 
-			s.GetAggregateAttestation(writer, request)
+			s.GetAggregateAttestationV2(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
 
 			var resp structs.AggregateAttestationResponse
@@ -177,422 +212,301 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 			compareResult(t, attestation, "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal())
 		})
-		t.Run("1 matching unaggregated attestation", func(t *testing.T) {
-			reqRoot, err := unaggSlot4.Data.HashTreeRoot()
+		t.Run("multiple matching aggregated attestations - return the one with most bits - SSZ", func(t *testing.T) {
+			reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
 			require.NoError(t, err, "Failed to generate attestation data hash tree root")
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=4"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp ethpbalpha.Attestation
+			require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+			compareResult(t, *structs.AttFromConsensus(&resp), "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal())
+		})
+	})
+	t.Run("post-electra", func(t *testing.T) {
+		aggSlot1_Root1_1 := createAttestationElectra(1, bitfield.Bitlist{0b11100}, root1)
+		aggSlot1_Root1_2 := createAttestationElectra(1, bitfield.Bitlist{0b10111}, root1)
+		aggSlot1_Root2 := createAttestationElectra(1, bitfield.Bitlist{0b11100}, root2)
+		aggSlot2 := createAttestationElectra(2, bitfield.Bitlist{0b11100}, root1)
+		unaggSlot3_Root1_1 := createAttestationElectra(3, bitfield.Bitlist{0b11000}, root1)
+		unaggSlot3_Root1_2 := createAttestationElectra(3, bitfield.Bitlist{0b10100}, root1)
+		unaggSlot3_Root2 := createAttestationElectra(3, bitfield.Bitlist{0b11000}, root2)
+		unaggSlot4 := createAttestationElectra(4, bitfield.Bitlist{0b11000}, root1)
+
+		// Add one pre-electra attestation to ensure that it is being ignored.
+		// We choose slot 2 where we have one post-electra attestation with less attestation bits.
+		preElectraAtt := createAttestation(2, bitfield.Bitlist{0b11111}, root1)
+
+		compareResult := func(
+			t *testing.T,
+			attestation structs.AttestationElectra,
+			expectedSlot string,
+			expectedAggregationBits string,
+			expectedRoot []byte,
+			expectedSig []byte,
+			expectedCommitteeBits string,
+		) {
+			assert.Equal(t, expectedAggregationBits, attestation.AggregationBits, "Unexpected aggregation bits in attestation")
+			assert.Equal(t, expectedCommitteeBits, attestation.CommitteeBits)
+			assert.Equal(t, hexutil.Encode(expectedSig), attestation.Signature, "Signature mismatch")
+			assert.Equal(t, expectedSlot, attestation.Data.Slot, "Slot mismatch in attestation data")
+			assert.Equal(t, "0", attestation.Data.CommitteeIndex, "Committee index mismatch")
+			assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.BeaconBlockRoot, "Beacon block root mismatch")
+
+			// Source checkpoint checks
+			require.NotNil(t, attestation.Data.Source, "Source checkpoint should not be nil")
+			assert.Equal(t, "1", attestation.Data.Source.Epoch, "Source epoch mismatch")
+			assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.Source.Root, "Source root mismatch")
+
+			// Target checkpoint checks
+			require.NotNil(t, attestation.Data.Target, "Target checkpoint should not be nil")
+			assert.Equal(t, "1", attestation.Data.Target.Epoch, "Target epoch mismatch")
+			assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.Target.Root, "Target root mismatch")
+		}
+
+		pool := attestations.NewPool()
+		require.NoError(t, pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{unaggSlot3_Root1_1, unaggSlot3_Root1_2, unaggSlot3_Root2, unaggSlot4}), "Failed to save unaggregated attestations")
+		unagg := pool.UnaggregatedAttestations()
+		require.Equal(t, 4, len(unagg), "Expected 4 unaggregated attestations")
+		require.NoError(t, pool.SaveAggregatedAttestations([]ethpbalpha.Att{aggSlot1_Root1_1, aggSlot1_Root1_2, aggSlot1_Root2, aggSlot2, preElectraAtt}), "Failed to save aggregated attestations")
+		agg := pool.AggregatedAttestations()
+		require.Equal(t, 5, len(agg), "Expected 5 aggregated attestations, 4 electra and 1 pre electra")
+		bs, err := util.NewBeaconState()
+		require.NoError(t, err)
+
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig()
+		config.ElectraForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		chainService := &mockChain.ChainService{State: bs}
+		s := &Server{
+			ChainInfoFetcher: chainService,
+			TimeFetcher:      chainService,
+			AttestationsPool: pool,
+		}
+		t.Run("non-matching attestation request", func(t *testing.T) {
+			reqRoot, err := aggSlot2.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 
-			s.GetAggregateAttestation(writer, request)
+			s.GetAggregateAttestationV2(writer, request)
+			assert.Equal(t, http.StatusNotFound, writer.Code, "Expected HTTP status NotFound for non-matching request")
+		})
+		t.Run("1 matching aggregated attestation", func(t *testing.T) {
+			reqRoot, err := aggSlot2.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
 
 			var resp structs.AggregateAttestationResponse
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
 			require.NotNil(t, resp.Data, "Response data should not be nil")
 
-			var attestation structs.Attestation
+			var attestation structs.AttestationElectra
 			require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-			compareResult(t, attestation, "4", hexutil.Encode(unaggSlot4.AggregationBits), root1, sig.Marshal())
+
+			compareResult(t, attestation, "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot2.CommitteeBits))
+		})
+		t.Run("1 matching aggregated attestation - SSZ", func(t *testing.T) {
+			reqRoot, err := aggSlot2.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp ethpbalpha.AttestationElectra
+			require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+			compareResult(t, *structs.AttElectraFromConsensus(&resp), "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot2.CommitteeBits))
+		})
+		t.Run("multiple matching aggregated attestations - return the one with most bits", func(t *testing.T) {
+			reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp structs.AggregateAttestationResponse
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
+			require.NotNil(t, resp.Data, "Response data should not be nil")
+
+			var attestation structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
+
+			compareResult(t, attestation, "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot1_Root1_1.CommitteeBits))
+		})
+		t.Run("multiple matching aggregated attestations - return the one with most bits - SSZ", func(t *testing.T) {
+			reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp ethpbalpha.AttestationElectra
+			require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+			compareResult(t, *structs.AttElectraFromConsensus(&resp), "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot1_Root1_1.CommitteeBits))
+		})
+		t.Run("1 matching unaggregated attestation", func(t *testing.T) {
+			reqRoot, err := unaggSlot4.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=4" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp structs.AggregateAttestationResponse
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
+			require.NotNil(t, resp.Data, "Response data should not be nil")
+
+			var attestation structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
+			compareResult(t, attestation, "4", hexutil.Encode(unaggSlot4.AggregationBits), root1, sig.Marshal(), hexutil.Encode(unaggSlot4.CommitteeBits))
+		})
+		t.Run("1 matching unaggregated attestation - SSZ", func(t *testing.T) {
+			reqRoot, err := unaggSlot4.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=4" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp ethpbalpha.AttestationElectra
+			require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+			compareResult(t, *structs.AttElectraFromConsensus(&resp), "4", hexutil.Encode(unaggSlot4.AggregationBits), root1, sig.Marshal(), hexutil.Encode(unaggSlot4.CommitteeBits))
 		})
 		t.Run("multiple matching unaggregated attestations - their aggregate is returned", func(t *testing.T) {
 			reqRoot, err := unaggSlot3_Root1_1.Data.HashTreeRoot()
 			require.NoError(t, err, "Failed to generate attestation data hash tree root")
 			attDataRoot := hexutil.Encode(reqRoot[:])
-			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3"
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=0"
 			request := httptest.NewRequest(http.MethodGet, url, nil)
 			writer := httptest.NewRecorder()
 
-			s.GetAggregateAttestation(writer, request)
+			s.GetAggregateAttestationV2(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
 
 			var resp structs.AggregateAttestationResponse
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
 			require.NotNil(t, resp.Data, "Response data should not be nil")
 
-			var attestation structs.Attestation
+			var attestation structs.AttestationElectra
 			require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
 			sig1, err := bls.SignatureFromBytes(unaggSlot3_Root1_1.Signature)
 			require.NoError(t, err)
 			sig2, err := bls.SignatureFromBytes(unaggSlot3_Root1_2.Signature)
 			require.NoError(t, err)
 			expectedSig := bls.AggregateSignatures([]common.Signature{sig1, sig2})
-			compareResult(t, attestation, "3", hexutil.Encode(bitfield.Bitlist{0b11100}), root1, expectedSig.Marshal())
+			compareResult(t, attestation, "3", hexutil.Encode(bitfield.Bitlist{0b11100}), root1, expectedSig.Marshal(), hexutil.Encode(unaggSlot3_Root1_1.CommitteeBits))
+		})
+		t.Run("multiple matching unaggregated attestations - their aggregate is returned - SSZ", func(t *testing.T) {
+			reqRoot, err := unaggSlot3_Root1_1.Data.HashTreeRoot()
+			require.NoError(t, err, "Failed to generate attestation data hash tree root")
+			attDataRoot := hexutil.Encode(reqRoot[:])
+			url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=0"
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Add("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
+
+			var resp ethpbalpha.AttestationElectra
+			require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+
+			sig1, err := bls.SignatureFromBytes(unaggSlot3_Root1_1.Signature)
+			require.NoError(t, err)
+			sig2, err := bls.SignatureFromBytes(unaggSlot3_Root1_2.Signature)
+			require.NoError(t, err)
+			expectedSig := bls.AggregateSignatures([]common.Signature{sig1, sig2})
+			compareResult(t, *structs.AttElectraFromConsensus(&resp), "3", hexutil.Encode(bitfield.Bitlist{0b11100}), root1, expectedSig.Marshal(), hexutil.Encode(unaggSlot3_Root1_1.CommitteeBits))
+		})
+		t.Run("pre-electra attestation is ignored", func(t *testing.T) {
+
 		})
 	})
-	t.Run("V2", func(t *testing.T) {
-		t.Run("pre-electra", func(t *testing.T) {
-			committeeBits := bitfield.NewBitvector64()
-			committeeBits.SetBitAt(1, true)
+	t.Run("gloas", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig().Copy()
+		config.ElectraForkEpoch = 0
+		config.FuluForkEpoch = 0
+		config.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(config)
 
-			aggSlot1_Root1_1 := createAttestation(1, bitfield.Bitlist{0b11100}, root1)
-			aggSlot1_Root1_2 := createAttestation(1, bitfield.Bitlist{0b10111}, root1)
-			aggSlot1_Root2 := createAttestation(1, bitfield.Bitlist{0b11100}, root2)
-			aggSlot2 := createAttestation(2, bitfield.Bitlist{0b11100}, root1)
-			unaggSlot3_Root1_1 := createAttestation(3, bitfield.Bitlist{0b11000}, root1)
-			unaggSlot3_Root1_2 := createAttestation(3, bitfield.Bitlist{0b10100}, root1)
-			unaggSlot3_Root2 := createAttestation(3, bitfield.Bitlist{0b11000}, root2)
-			unaggSlot4 := createAttestation(4, bitfield.Bitlist{0b11000}, root1)
+		att := util.NewAttestationGloas()
+		att.Data.Slot = 1
+		root, err := att.Data.HashTreeRoot()
+		require.NoError(t, err)
 
-			// Add one post-electra attestation to ensure that it is being ignored.
-			// We choose slot 2 where we have one pre-electra attestation with less attestation bits.
-			postElectraAtt := createAttestationElectra(2, bitfield.Bitlist{0b11111}, root1)
+		pool := attestations.NewPool()
+		require.NoError(t, pool.SaveAggregatedAttestation(att))
+		s := &Server{AttestationsPool: pool}
+		url := fmt.Sprintf(
+			"http://example.com?attestation_data_root=%s&slot=1&committee_index=0",
+			hexutil.Encode(root[:]),
+		)
 
-			compareResult := func(
-				t *testing.T,
-				attestation structs.Attestation,
-				expectedSlot string,
-				expectedAggregationBits string,
-				expectedRoot []byte,
-				expectedSig []byte,
-			) {
-				assert.Equal(t, expectedAggregationBits, attestation.AggregationBits, "Unexpected aggregation bits in attestation")
-				assert.Equal(t, hexutil.Encode(expectedSig), attestation.Signature, "Signature mismatch")
-				assert.Equal(t, expectedSlot, attestation.Data.Slot, "Slot mismatch in attestation data")
-				assert.Equal(t, "0", attestation.Data.CommitteeIndex, "Committee index mismatch")
-				assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.BeaconBlockRoot, "Beacon block root mismatch")
+		t.Run("json", func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			writer := httptest.NewRecorder()
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 
-				// Source checkpoint checks
-				require.NotNil(t, attestation.Data.Source, "Source checkpoint should not be nil")
-				assert.Equal(t, "1", attestation.Data.Source.Epoch, "Source epoch mismatch")
-				assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.Source.Root, "Source root mismatch")
-
-				// Target checkpoint checks
-				require.NotNil(t, attestation.Data.Target, "Target checkpoint should not be nil")
-				assert.Equal(t, "1", attestation.Data.Target.Epoch, "Target epoch mismatch")
-				assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.Target.Root, "Target root mismatch")
-			}
-
-			pool := attestations.NewPool()
-			require.NoError(t, pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{unaggSlot3_Root1_1, unaggSlot3_Root1_2, unaggSlot3_Root2, unaggSlot4}), "Failed to save unaggregated attestations")
-			unagg := pool.UnaggregatedAttestations()
-			require.Equal(t, 4, len(unagg), "Expected 4 unaggregated attestations")
-			require.NoError(t, pool.SaveAggregatedAttestations([]ethpbalpha.Att{aggSlot1_Root1_1, aggSlot1_Root1_2, aggSlot1_Root2, aggSlot2, postElectraAtt}), "Failed to save aggregated attestations")
-			agg := pool.AggregatedAttestations()
-			require.Equal(t, 5, len(agg), "Expected 5 aggregated attestations, 4 pre electra and 1 post electra")
-			s := &Server{
-				AttestationsPool: pool,
-			}
-
-			t.Run("non-matching attestation request", func(t *testing.T) {
-				reqRoot, err := aggSlot2.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				assert.Equal(t, http.StatusNotFound, writer.Code, "Expected HTTP status NotFound for non-matching request")
-			})
-			t.Run("1 matching aggregated attestation", func(t *testing.T) {
-				reqRoot, err := aggSlot2.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp structs.AggregateAttestationResponse
-				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
-				require.NotNil(t, resp.Data, "Response data should not be nil")
-
-				var attestation structs.Attestation
-				require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-
-				compareResult(t, attestation, "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal())
-			})
-			t.Run("1 matching aggregated attestation - SSZ", func(t *testing.T) {
-				reqRoot, err := aggSlot2.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request.Header.Add("Accept", "application/octet-stream")
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp ethpbalpha.Attestation
-				require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-
-				compareResult(t, *structs.AttFromConsensus(&resp), "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal())
-			})
-			t.Run("multiple matching aggregated attestations - return the one with most bits", func(t *testing.T) {
-				reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp structs.AggregateAttestationResponse
-				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
-				require.NotNil(t, resp.Data, "Response data should not be nil")
-
-				var attestation structs.Attestation
-				require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-
-				compareResult(t, attestation, "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal())
-			})
-			t.Run("multiple matching aggregated attestations - return the one with most bits - SSZ", func(t *testing.T) {
-				reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request.Header.Add("Accept", "application/octet-stream")
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp ethpbalpha.Attestation
-				require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-
-				compareResult(t, *structs.AttFromConsensus(&resp), "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal())
-			})
+			resp := &structs.AggregateAttestationResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.Equal(t, version.String(version.Gloas), resp.Version)
+			var got structs.AttestationElectra
+			require.NoError(t, json.Unmarshal(resp.Data, &got))
+			assert.DeepEqual(t, structs.AttGloasFromConsensus(att), &got)
 		})
-		t.Run("post-electra", func(t *testing.T) {
-			aggSlot1_Root1_1 := createAttestationElectra(1, bitfield.Bitlist{0b11100}, root1)
-			aggSlot1_Root1_2 := createAttestationElectra(1, bitfield.Bitlist{0b10111}, root1)
-			aggSlot1_Root2 := createAttestationElectra(1, bitfield.Bitlist{0b11100}, root2)
-			aggSlot2 := createAttestationElectra(2, bitfield.Bitlist{0b11100}, root1)
-			unaggSlot3_Root1_1 := createAttestationElectra(3, bitfield.Bitlist{0b11000}, root1)
-			unaggSlot3_Root1_2 := createAttestationElectra(3, bitfield.Bitlist{0b10100}, root1)
-			unaggSlot3_Root2 := createAttestationElectra(3, bitfield.Bitlist{0b11000}, root2)
-			unaggSlot4 := createAttestationElectra(4, bitfield.Bitlist{0b11000}, root1)
+		t.Run("ssz", func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request.Header.Set("Accept", "application/octet-stream")
+			writer := httptest.NewRecorder()
+			s.GetAggregateAttestationV2(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 
-			// Add one pre-electra attestation to ensure that it is being ignored.
-			// We choose slot 2 where we have one post-electra attestation with less attestation bits.
-			preElectraAtt := createAttestation(2, bitfield.Bitlist{0b11111}, root1)
-
-			compareResult := func(
-				t *testing.T,
-				attestation structs.AttestationElectra,
-				expectedSlot string,
-				expectedAggregationBits string,
-				expectedRoot []byte,
-				expectedSig []byte,
-				expectedCommitteeBits string,
-			) {
-				assert.Equal(t, expectedAggregationBits, attestation.AggregationBits, "Unexpected aggregation bits in attestation")
-				assert.Equal(t, expectedCommitteeBits, attestation.CommitteeBits)
-				assert.Equal(t, hexutil.Encode(expectedSig), attestation.Signature, "Signature mismatch")
-				assert.Equal(t, expectedSlot, attestation.Data.Slot, "Slot mismatch in attestation data")
-				assert.Equal(t, "0", attestation.Data.CommitteeIndex, "Committee index mismatch")
-				assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.BeaconBlockRoot, "Beacon block root mismatch")
-
-				// Source checkpoint checks
-				require.NotNil(t, attestation.Data.Source, "Source checkpoint should not be nil")
-				assert.Equal(t, "1", attestation.Data.Source.Epoch, "Source epoch mismatch")
-				assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.Source.Root, "Source root mismatch")
-
-				// Target checkpoint checks
-				require.NotNil(t, attestation.Data.Target, "Target checkpoint should not be nil")
-				assert.Equal(t, "1", attestation.Data.Target.Epoch, "Target epoch mismatch")
-				assert.Equal(t, hexutil.Encode(expectedRoot), attestation.Data.Target.Root, "Target root mismatch")
-			}
-
-			pool := attestations.NewPool()
-			require.NoError(t, pool.SaveUnaggregatedAttestations([]ethpbalpha.Att{unaggSlot3_Root1_1, unaggSlot3_Root1_2, unaggSlot3_Root2, unaggSlot4}), "Failed to save unaggregated attestations")
-			unagg := pool.UnaggregatedAttestations()
-			require.Equal(t, 4, len(unagg), "Expected 4 unaggregated attestations")
-			require.NoError(t, pool.SaveAggregatedAttestations([]ethpbalpha.Att{aggSlot1_Root1_1, aggSlot1_Root1_2, aggSlot1_Root2, aggSlot2, preElectraAtt}), "Failed to save aggregated attestations")
-			agg := pool.AggregatedAttestations()
-			require.Equal(t, 5, len(agg), "Expected 5 aggregated attestations, 4 electra and 1 pre electra")
-			bs, err := util.NewBeaconState()
-			require.NoError(t, err)
-
-			params.SetupTestConfigCleanup(t)
-			config := params.BeaconConfig()
-			config.ElectraForkEpoch = 0
-			params.OverrideBeaconConfig(config)
-
-			chainService := &mockChain.ChainService{State: bs}
-			s := &Server{
-				ChainInfoFetcher: chainService,
-				TimeFetcher:      chainService,
-				AttestationsPool: pool,
-			}
-			t.Run("non-matching attestation request", func(t *testing.T) {
-				reqRoot, err := aggSlot2.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				assert.Equal(t, http.StatusNotFound, writer.Code, "Expected HTTP status NotFound for non-matching request")
-			})
-			t.Run("1 matching aggregated attestation", func(t *testing.T) {
-				reqRoot, err := aggSlot2.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp structs.AggregateAttestationResponse
-				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
-				require.NotNil(t, resp.Data, "Response data should not be nil")
-
-				var attestation structs.AttestationElectra
-				require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-
-				compareResult(t, attestation, "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot2.CommitteeBits))
-			})
-			t.Run("1 matching aggregated attestation - SSZ", func(t *testing.T) {
-				reqRoot, err := aggSlot2.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=2" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request.Header.Add("Accept", "application/octet-stream")
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp ethpbalpha.AttestationElectra
-				require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-
-				compareResult(t, *structs.AttElectraFromConsensus(&resp), "2", hexutil.Encode(aggSlot2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot2.CommitteeBits))
-			})
-			t.Run("multiple matching aggregated attestations - return the one with most bits", func(t *testing.T) {
-				reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp structs.AggregateAttestationResponse
-				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
-				require.NotNil(t, resp.Data, "Response data should not be nil")
-
-				var attestation structs.AttestationElectra
-				require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-
-				compareResult(t, attestation, "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot1_Root1_1.CommitteeBits))
-			})
-			t.Run("multiple matching aggregated attestations - return the one with most bits - SSZ", func(t *testing.T) {
-				reqRoot, err := aggSlot1_Root1_1.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=1" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request.Header.Add("Accept", "application/octet-stream")
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp ethpbalpha.AttestationElectra
-				require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-
-				compareResult(t, *structs.AttElectraFromConsensus(&resp), "1", hexutil.Encode(aggSlot1_Root1_2.AggregationBits), root1, sig.Marshal(), hexutil.Encode(aggSlot1_Root1_1.CommitteeBits))
-			})
-			t.Run("1 matching unaggregated attestation", func(t *testing.T) {
-				reqRoot, err := unaggSlot4.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=4" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp structs.AggregateAttestationResponse
-				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
-				require.NotNil(t, resp.Data, "Response data should not be nil")
-
-				var attestation structs.AttestationElectra
-				require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-				compareResult(t, attestation, "4", hexutil.Encode(unaggSlot4.AggregationBits), root1, sig.Marshal(), hexutil.Encode(unaggSlot4.CommitteeBits))
-			})
-			t.Run("1 matching unaggregated attestation - SSZ", func(t *testing.T) {
-				reqRoot, err := unaggSlot4.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=4" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request.Header.Add("Accept", "application/octet-stream")
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp ethpbalpha.AttestationElectra
-				require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-
-				compareResult(t, *structs.AttElectraFromConsensus(&resp), "4", hexutil.Encode(unaggSlot4.AggregationBits), root1, sig.Marshal(), hexutil.Encode(unaggSlot4.CommitteeBits))
-			})
-			t.Run("multiple matching unaggregated attestations - their aggregate is returned", func(t *testing.T) {
-				reqRoot, err := unaggSlot3_Root1_1.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp structs.AggregateAttestationResponse
-				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp), "Failed to unmarshal response")
-				require.NotNil(t, resp.Data, "Response data should not be nil")
-
-				var attestation structs.AttestationElectra
-				require.NoError(t, json.Unmarshal(resp.Data, &attestation), "Failed to unmarshal attestation data")
-				sig1, err := bls.SignatureFromBytes(unaggSlot3_Root1_1.Signature)
-				require.NoError(t, err)
-				sig2, err := bls.SignatureFromBytes(unaggSlot3_Root1_2.Signature)
-				require.NoError(t, err)
-				expectedSig := bls.AggregateSignatures([]common.Signature{sig1, sig2})
-				compareResult(t, attestation, "3", hexutil.Encode(bitfield.Bitlist{0b11100}), root1, expectedSig.Marshal(), hexutil.Encode(unaggSlot3_Root1_1.CommitteeBits))
-			})
-			t.Run("multiple matching unaggregated attestations - their aggregate is returned - SSZ", func(t *testing.T) {
-				reqRoot, err := unaggSlot3_Root1_1.Data.HashTreeRoot()
-				require.NoError(t, err, "Failed to generate attestation data hash tree root")
-				attDataRoot := hexutil.Encode(reqRoot[:])
-				url := "http://example.com?attestation_data_root=" + attDataRoot + "&slot=3" + "&committee_index=0"
-				request := httptest.NewRequest(http.MethodGet, url, nil)
-				request.Header.Add("Accept", "application/octet-stream")
-				writer := httptest.NewRecorder()
-
-				s.GetAggregateAttestationV2(writer, request)
-				require.Equal(t, http.StatusOK, writer.Code, "Expected HTTP status OK")
-
-				var resp ethpbalpha.AttestationElectra
-				require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-
-				sig1, err := bls.SignatureFromBytes(unaggSlot3_Root1_1.Signature)
-				require.NoError(t, err)
-				sig2, err := bls.SignatureFromBytes(unaggSlot3_Root1_2.Signature)
-				require.NoError(t, err)
-				expectedSig := bls.AggregateSignatures([]common.Signature{sig1, sig2})
-				compareResult(t, *structs.AttElectraFromConsensus(&resp), "3", hexutil.Encode(bitfield.Bitlist{0b11100}), root1, expectedSig.Marshal(), hexutil.Encode(unaggSlot3_Root1_1.CommitteeBits))
-			})
-			t.Run("pre-electra attestation is ignored", func(t *testing.T) {
-
-			})
+			got := &ethpbalpha.AttestationGloas{}
+			require.NoError(t, got.UnmarshalSSZ(writer.Body.Bytes()))
+			assert.DeepEqual(t, att, got)
 		})
 	})
 }
@@ -705,307 +619,344 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 	})
 }
 
-func TestSubmitAggregateAndProofs(t *testing.T) {
+func TestSubmitAggregateAndProofsV2(t *testing.T) {
 	slot := primitives.Slot(0)
 	mock := &mockChain.ChainService{Slot: &slot, Genesis: time.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)}
 	s := &Server{
-		CoreService: &core.Service{GenesisTimeFetcher: mock},
+		CoreService: &core.Service{GenesisTimeFetcher: mock, OperationNotifier: &mockChain.MockOperationNotifier{}},
 		TimeFetcher: mock,
 	}
-	t.Run("V1", func(t *testing.T) {
-		t.Run("single", func(t *testing.T) {
-			broadcaster := &p2pmock.MockBroadcaster{}
-			s.CoreService.Broadcaster = broadcaster
 
-			var body bytes.Buffer
-			_, err := body.WriteString(singleAggregate)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
+	t.Run("single", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig()
+		config.ElectraForkEpoch = 0
+		params.OverrideBeaconConfig(config)
 
-			s.SubmitAggregateAndProofs(writer, request)
-			assert.Equal(t, http.StatusOK, writer.Code)
-			assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
-		})
-		t.Run("multiple", func(t *testing.T) {
-			broadcaster := &p2pmock.MockBroadcaster{}
-			s.CoreService.Broadcaster = broadcaster
-			s.CoreService.SyncCommitteePool = synccommittee.NewStore()
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
 
-			var body bytes.Buffer
-			_, err := body.WriteString(multipleAggregates)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregateElectra)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-			s.SubmitAggregateAndProofs(writer, request)
-			assert.Equal(t, http.StatusOK, writer.Code)
-			assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
-		})
-		t.Run("Phase 0 post electra", func(t *testing.T) {
-			params.SetupTestConfigCleanup(t)
-			config := params.BeaconConfig()
-			config.ElectraForkEpoch = 0
-			params.OverrideBeaconConfig(config)
-
-			var body bytes.Buffer
-			_, err := body.WriteString(singleAggregate)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofs(writer, request)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.ErrorContains(t, "old aggregate and proof", errors.New(e.Message))
-		})
-		t.Run("no body", func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofs(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-		})
-		t.Run("empty", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString("[]")
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofs(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-		})
-		t.Run("invalid", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString(invalidAggregate)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofs(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-		})
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
 	})
-	t.Run("V2", func(t *testing.T) {
-		t.Run("single", func(t *testing.T) {
-			params.SetupTestConfigCleanup(t)
-			config := params.BeaconConfig()
-			config.ElectraForkEpoch = 0
-			params.OverrideBeaconConfig(config)
+	t.Run("single-pre-electra", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
 
-			broadcaster := &p2pmock.MockBroadcaster{}
-			s.CoreService.Broadcaster = broadcaster
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-			var body bytes.Buffer
-			_, err := body.WriteString(singleAggregateElectra)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Electra))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusOK, writer.Code)
-			assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
-		})
-		t.Run("single-pre-electra", func(t *testing.T) {
-			broadcaster := &p2pmock.MockBroadcaster{}
-			s.CoreService.Broadcaster = broadcaster
-
-			var body bytes.Buffer
-			_, err := body.WriteString(singleAggregate)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Phase0))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusOK, writer.Code)
-			assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
-		})
-		t.Run("multiple", func(t *testing.T) {
-			params.SetupTestConfigCleanup(t)
-			config := params.BeaconConfig()
-			config.ElectraForkEpoch = 0
-			params.OverrideBeaconConfig(config)
-
-			broadcaster := &p2pmock.MockBroadcaster{}
-			s.CoreService.Broadcaster = broadcaster
-			s.CoreService.SyncCommitteePool = synccommittee.NewStore()
-
-			var body bytes.Buffer
-			_, err := body.WriteString(multipleAggregatesElectra)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Electra))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusOK, writer.Code)
-			assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
-		})
-		t.Run("multiple-pre-electra", func(t *testing.T) {
-			broadcaster := &p2pmock.MockBroadcaster{}
-			s.CoreService.Broadcaster = broadcaster
-			s.CoreService.SyncCommitteePool = synccommittee.NewStore()
-
-			var body bytes.Buffer
-			_, err := body.WriteString(multipleAggregates)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Phase0))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusOK, writer.Code)
-			assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
-		})
-		t.Run("Phase 0 post electra", func(t *testing.T) {
-			params.SetupTestConfigCleanup(t)
-			config := params.BeaconConfig()
-			config.ElectraForkEpoch = 0
-			params.OverrideBeaconConfig(config)
-
-			var body bytes.Buffer
-			_, err := body.WriteString(singleAggregate)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Phase0))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.ErrorContains(t, "old aggregate and proof", errors.New(e.Message))
-		})
-		t.Run("electra agg pre electra", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString(singleAggregateElectra)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Electra))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.ErrorContains(t, "electra aggregate and proof not supported yet", errors.New(e.Message))
-		})
-		t.Run("no body", func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
-			request.Header.Set(api.VersionHeader, version.String(version.Electra))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-		})
-		t.Run("no body-pre-electra", func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
-			request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-		})
-		t.Run("empty", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString("[]")
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Electra))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-		})
-		t.Run("empty-pre-electra", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString("[]")
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Altair))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-			assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-		})
-		t.Run("invalid", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString(invalidAggregateElectra)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Electra))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-		})
-		t.Run("invalid-pre-electra", func(t *testing.T) {
-			var body bytes.Buffer
-			_, err := body.WriteString(invalidAggregate)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-			request.Header.Set(api.VersionHeader, version.String(version.Deneb))
-			writer := httptest.NewRecorder()
-			writer.Body = &bytes.Buffer{}
-
-			s.SubmitAggregateAndProofsV2(writer, request)
-			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultJsonError{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-			assert.Equal(t, http.StatusBadRequest, e.Code)
-		})
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
 	})
+	t.Run("multiple", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig()
+		config.ElectraForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
+		s.CoreService.SyncCommitteePool = synccommittee.NewStore()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleAggregatesElectra)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		opChannel := make(chan *feed.Event, 2)
+		opSub := s.CoreService.OperationNotifier.OperationFeed().Subscribe(opChannel)
+		defer opSub.Unsubscribe()
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+		require.Equal(t, 2, len(opChannel))
+		for range 2 {
+			e := <-opChannel
+			assert.Equal(t, feed.EventType(operation.AggregatedAttReceived), e.Type)
+		}
+	})
+	t.Run("multiple-pre-electra", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
+		s.CoreService.SyncCommitteePool = synccommittee.NewStore()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleAggregates)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+	})
+	t.Run("Phase 0 post electra", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig()
+		config.ElectraForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.ErrorContains(t, "old aggregate and proof", errors.New(e.Message))
+	})
+	t.Run("electra agg pre electra", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(singleAggregateElectra)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.ErrorContains(t, "electra aggregate and proof not supported yet", errors.New(e.Message))
+	})
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("no body-pre-electra", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("empty-pre-electra", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("invalid", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidAggregateElectra)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("invalid-pre-electra", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString(invalidAggregate)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("single ssz", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig()
+		config.ElectraForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
+
+		body := bytes.NewBuffer(sszAggregateList(t, singleAggregateElectra, version.Electra))
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	})
+	t.Run("single ssz-pre-electra", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
+
+		body := bytes.NewBuffer(sszAggregateList(t, singleAggregate, version.Phase0))
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", body)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	})
+	t.Run("multiple ssz", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig()
+		config.ElectraForkEpoch = 0
+		params.OverrideBeaconConfig(config)
+
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
+		s.CoreService.SyncCommitteePool = synccommittee.NewStore()
+
+		body := bytes.NewBuffer(sszAggregateList(t, multipleAggregatesElectra, version.Electra))
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", body)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+	})
+	t.Run("multiple ssz-pre-electra", func(t *testing.T) {
+		broadcaster := &p2pmock.MockBroadcaster{}
+		s.CoreService.Broadcaster = broadcaster
+		s.CoreService.SyncCommitteePool = synccommittee.NewStore()
+
+		body := bytes.NewBuffer(sszAggregateList(t, multipleAggregates, version.Phase0))
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", body)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, 2, len(broadcaster.BroadcastMessages))
+	})
+	t.Run("no body ssz", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+	})
+	t.Run("invalid ssz", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBuffer([]byte{1, 2, 3}))
+		request.Header.Set(api.VersionHeader, version.String(version.Electra))
+		request.Header.Set("Content-Type", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitAggregateAndProofsV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+}
+
+// sszAggregateList re-encodes a JSON aggregate array as the SSZ List[SignedAggregateAndProof].
+func sszAggregateList(t *testing.T, jsonList string, v int) []byte {
+	var raw []json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(jsonList), &raw))
+
+	elements := make([][]byte, len(raw))
+	for i, item := range raw {
+		aggregate, err := unmarshalSignedAggregateJSON(item, v)
+		require.NoError(t, err)
+		elements[i], err = aggregate.MarshalSSZ()
+		require.NoError(t, err)
+	}
+
+	var offsets, data []byte
+	offset := 4 * len(elements)
+	for _, e := range elements {
+		offsets = ssz.WriteOffset(offsets, offset)
+		offset += len(e)
+		data = append(data, e...)
+	}
+	return append(offsets, data...)
 }
 
 func TestSubmitSyncCommitteeSubscription(t *testing.T) {
@@ -1023,7 +974,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 	require.NoError(t, bs.SetBlockRoots(roots))
 
 	pubkeys := make([][]byte, len(deposits))
-	for i := 0; i < len(deposits); i++ {
+	for i := range deposits {
 		pubkeys[i] = deposits[i].Data.PublicKey
 	}
 
@@ -1049,9 +1000,8 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		s.SubmitSyncCommitteeSubscription(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		subnets, _, _, _ := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkeys[1], 0)
-		require.Equal(t, 2, len(subnets))
+		require.Equal(t, 1, len(subnets))
 		assert.Equal(t, uint64(0), subnets[0])
-		assert.Equal(t, uint64(2), subnets[1])
 	})
 	t.Run("multiple", func(t *testing.T) {
 		cache.SyncSubnetIDs.EmptyAllCaches()
@@ -1070,7 +1020,7 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 		assert.Equal(t, uint64(0), subnets[0])
 		subnets, _, _, _ = cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkeys[1], 0)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(2), subnets[0])
+		assert.Equal(t, uint64(0), subnets[0])
 	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
@@ -1196,7 +1146,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 	require.NoError(t, bs.SetBlockRoots(roots))
 
 	pubkeys := make([][]byte, len(deposits))
-	for i := 0; i < len(deposits); i++ {
+	for i := range deposits {
 		pubkeys[i] = deposits[i].Data.PublicKey
 	}
 
@@ -1205,8 +1155,9 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	s := &Server{
-		HeadFetcher: chain,
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:               chain,
+		SyncChecker:               &mockSync.Sync{IsSyncing: false},
+		SubscribedValidatorsCache: cache.NewSubscribedValidatorsCache(),
 	}
 
 	t.Run("single", func(t *testing.T) {
@@ -1223,7 +1174,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(3), subnets[0])
 	})
 	t.Run("multiple", func(t *testing.T) {
 		cache.SubnetIDs.EmptyAllCaches()
@@ -1239,8 +1190,8 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		subnets := cache.SubnetIDs.GetAttesterSubnetIDs(1)
 		require.Equal(t, 2, len(subnets))
-		assert.Equal(t, uint64(5), subnets[0])
-		assert.Equal(t, uint64(4), subnets[1])
+		assert.Equal(t, uint64(3), subnets[0])
+		assert.Equal(t, uint64(2), subnets[1])
 	})
 	t.Run("is aggregator", func(t *testing.T) {
 		cache.SubnetIDs.EmptyAllCaches()
@@ -1256,7 +1207,7 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 		subnets := cache.SubnetIDs.GetAggregatorSubnetIDs(1)
 		require.Equal(t, 1, len(subnets))
-		assert.Equal(t, uint64(5), subnets[0])
+		assert.Equal(t, uint64(3), subnets[0])
 	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
@@ -1298,6 +1249,23 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
+	})
+	t.Run("out of bounds index does not leak earlier indices into cache", func(t *testing.T) {
+		s := &Server{
+			HeadFetcher:               chain,
+			SyncChecker:               &mockSync.Sync{IsSyncing: false},
+			SubscribedValidatorsCache: cache.NewSubscribedValidatorsCache(),
+		}
+		var body bytes.Buffer
+		_, err := body.WriteString(outOfBoundsBeaconCommitteeContribution)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitBeaconCommitteeSubscription(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.Equal(t, false, s.SubscribedValidatorsCache.Has(1))
 	})
 	t.Run("sync not ready", func(t *testing.T) {
 		st, err := util.NewBeaconState()
@@ -1980,6 +1948,154 @@ func TestGetAttestationData(t *testing.T) {
 		var att ethpbalpha.AttestationData
 		require.NoError(t, att.UnmarshalSSZ(writer.Body.Bytes()))
 	})
+
+	t.Run("committeeIndex omitted before gloas", func(t *testing.T) {
+		for _, tc := range []struct {
+			name         string
+			electraEpoch primitives.Epoch
+		}{
+			{name: "phase0", electraEpoch: params.BeaconConfig().FarFutureEpoch},
+			{name: "fulu", electraEpoch: 0},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				params.SetupTestConfigCleanup(t)
+				cfg := params.BeaconConfig()
+				cfg.ElectraForkEpoch = tc.electraEpoch
+				cfg.FuluForkEpoch = tc.electraEpoch
+				params.OverrideBeaconConfig(cfg)
+
+				block := util.NewBeaconBlock()
+				block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+				justifiedBlock := util.NewBeaconBlock()
+				justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+				blockRoot, err := block.Block.HashTreeRoot()
+				require.NoError(t, err)
+				justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
+				require.NoError(t, err)
+				slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+				beaconState, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, beaconState.SetSlot(slot))
+				justifiedCheckpoint := &ethpbalpha.Checkpoint{Epoch: 2, Root: justifiedRoot[:]}
+				require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
+				offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+				chain := &mockChain.ChainService{
+					Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+					Root:                       blockRoot[:],
+					CurrentJustifiedCheckPoint: justifiedCheckpoint,
+					TargetRoot:                 blockRoot,
+					State:                      beaconState,
+				}
+				s := &Server{
+					SyncChecker:           &mockSync.Sync{IsSyncing: false},
+					HeadFetcher:           chain,
+					TimeFetcher:           chain,
+					OptimisticModeFetcher: chain,
+					CoreService: &core.Service{
+						HeadFetcher:           chain,
+						GenesisTimeFetcher:    chain,
+						FinalizedFetcher:      chain,
+						AttestationCache:      cache.NewAttestationDataCache(),
+						OptimisticModeFetcher: chain,
+					},
+				}
+
+				request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com?slot=%d", slot), nil)
+				writer := httptest.NewRecorder()
+				writer.Body = &bytes.Buffer{}
+
+				s.GetAttestationData(writer, request)
+
+				require.Equal(t, http.StatusOK, writer.Code, writer.Body.String())
+				resp := &structs.GetAttestationDataResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				assert.Equal(t, "0", resp.Data.CommitteeIndex)
+				assert.Equal(t, hexutil.Encode(blockRoot[:]), resp.Data.BeaconBlockRoot)
+			})
+		}
+	})
+
+	t.Run("committeeIndex omitted after gloas", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig()
+		cfg.GloasForkEpoch = 3
+		params.OverrideBeaconConfig(cfg)
+
+		block := util.NewBeaconBlock()
+		block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+		targetBlock := util.NewBeaconBlock()
+		targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
+		justifiedBlock := util.NewBeaconBlock()
+		justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+		blockRoot, err := block.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not hash beacon block")
+		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
+		require.NoError(t, err, "Could not get signing root for justified block")
+		slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+		beaconState, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, beaconState.SetSlot(slot))
+		justifiedCheckpoint := &ethpbalpha.Checkpoint{
+			Epoch: 2,
+			Root:  justifiedRoot[:],
+		}
+		require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(justifiedCheckpoint))
+		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+		chain := &mockChain.ChainService{
+			Optimistic:                 false,
+			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			Root:                       blockRoot[:],
+			CurrentJustifiedCheckPoint: justifiedCheckpoint,
+			TargetRoot:                 blockRoot,
+			State:                      beaconState,
+			MockCanonicalRoots:         map[primitives.Slot][32]byte{slot: blockRoot},
+			MockCanonicalFull:          map[primitives.Slot]bool{slot: false},
+		}
+
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chain,
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			CoreService: &core.Service{
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				ChainInfoFetcher:      chain,
+				FinalizedFetcher:      chain,
+				AttestationCache:      cache.NewAttestationDataCache(),
+				OptimisticModeFetcher: chain,
+			},
+		}
+
+		url := fmt.Sprintf("http://example.com?slot=%d", slot)
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttestationData(writer, request)
+
+		expectedResponse := &structs.GetAttestationDataResponse{
+			Data: &structs.AttestationData{
+				Slot:            strconv.FormatUint(uint64(slot), 10),
+				BeaconBlockRoot: hexutil.Encode(blockRoot[:]),
+				CommitteeIndex:  strconv.FormatUint(0, 10),
+				Source: &structs.Checkpoint{
+					Epoch: strconv.FormatUint(2, 10),
+					Root:  hexutil.Encode(justifiedRoot[:]),
+				},
+				Target: &structs.Checkpoint{
+					Epoch: strconv.FormatUint(3, 10),
+					Root:  hexutil.Encode(blockRoot[:]),
+				},
+			},
+		}
+
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetAttestationDataResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		assert.DeepEqual(t, expectedResponse, resp)
+	})
 }
 
 func TestProduceSyncCommitteeContribution(t *testing.T) {
@@ -2140,6 +2256,22 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	})
 }
 
+func TestServer_RegisterValidator_PostGloasNoOp(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	body := bytes.NewBufferString(registrations)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/register_validator", body)
+	writer := httptest.NewRecorder()
+	zero := primitives.Slot(0)
+	// BlockBuilder is nil: post-Gloas the handler no-ops before that check.
+	server := &Server{TimeFetcher: &mockChain.ChainService{Slot: &zero}}
+	server.RegisterValidator(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+}
+
 func TestServer_RegisterValidator(t *testing.T) {
 
 	tests := []struct {
@@ -2180,7 +2312,8 @@ func TestServer_RegisterValidator(t *testing.T) {
 				BlockBuilder: &builderTest.MockBuilderService{
 					HasConfigured: true,
 				},
-				BeaconDB: db,
+				BeaconDB:    db,
+				TimeFetcher: &mockChain.ChainService{},
 			}
 
 			server.RegisterValidator(writer, request)
@@ -2217,7 +2350,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	require.NoError(t, bs.SetValidators(vals))
 
 	pubKeys := make([][]byte, len(deposits))
-	for i := 0; i < len(deposits); i++ {
+	for i := range deposits {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
@@ -2243,7 +2376,9 @@ func TestGetAttesterDuties(t *testing.T) {
 		TimeFetcher:           chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: chain,
+		HeadFetcher:           chain,
 		BeaconDB:              db,
+		CoreService:           &core.Service{},
 	}
 
 	t.Run("single validator", func(t *testing.T) {
@@ -2421,6 +2556,7 @@ func TestGetAttesterDuties(t *testing.T) {
 			Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
+			HeadFetcher:           chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BeaconDB:              db,
 		}
@@ -2461,6 +2597,62 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
 	})
+	t.Run("state not found returns 404", func(t *testing.T) {
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		stateNotFoundErr := lookup.NewStateNotFoundError(8192, []byte("test"))
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: &stateNotFoundErr},
+			TimeFetcher:           chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: chain,
+			HeadFetcher:           chain,
+		}
+
+		var body bytes.Buffer
+		_, err = body.WriteString("[\"0\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "State not found", e.Message)
+	})
+	t.Run("state fetch error returns 500", func(t *testing.T) {
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: errors.New("internal error")},
+			TimeFetcher:           chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: chain,
+			HeadFetcher:           chain,
+		}
+
+		var body bytes.Buffer
+		_, err = body.WriteString("[\"0\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusInternalServerError, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusInternalServerError, e.Code)
+	})
 }
 
 func TestGetProposerDuties(t *testing.T) {
@@ -2480,7 +2672,7 @@ func TestGetProposerDuties(t *testing.T) {
 	roots[31] = []byte("next_epoch_dependent_root")
 
 	pubKeys := make([][]byte, len(deposits))
-	for i := 0; i < len(deposits); i++ {
+	for i := range deposits {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
@@ -2497,14 +2689,15 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		s := &Server{
-			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
-			HeadFetcher:            chain,
-			TimeFetcher:            chain,
-			OptimisticModeFetcher:  chain,
-			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			PayloadIDCache:         cache.NewPayloadIDCache(),
-			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-			BeaconDB:               db,
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+			CoreService:              &core.Service{},
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -2539,14 +2732,15 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		s := &Server{
-			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
-			HeadFetcher:            chain,
-			TimeFetcher:            chain,
-			OptimisticModeFetcher:  chain,
-			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			PayloadIDCache:         cache.NewPayloadIDCache(),
-			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-			BeaconDB:               db,
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+			CoreService:              &core.Service{},
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -2582,14 +2776,15 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		s := &Server{
-			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
-			HeadFetcher:            chain,
-			TimeFetcher:            chain,
-			OptimisticModeFetcher:  chain,
-			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			PayloadIDCache:         cache.NewPayloadIDCache(),
-			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-			BeaconDB:               db,
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+			CoreService:              &core.Service{},
 		}
 
 		currentEpoch := slots.ToEpoch(bs.Slot())
@@ -2621,14 +2816,15 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		s := &Server{
-			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
-			HeadFetcher:            chain,
-			TimeFetcher:            chain,
-			OptimisticModeFetcher:  chain,
-			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			PayloadIDCache:         cache.NewPayloadIDCache(),
-			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-			BeaconDB:               db,
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+			CoreService:              &core.Service{},
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -2664,6 +2860,224 @@ func TestGetProposerDuties(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
 	})
+	t.Run("state not found returns 404", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(t.Context(), deposits, 0, eth1Data)
+		require.NoError(t, err)
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		stateNotFoundErr := lookup.NewStateNotFoundError(8192, []byte("test"))
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: &stateNotFoundErr},
+			TimeFetcher:           chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: chain,
+			HeadFetcher:           chain,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "State not found", e.Message)
+	})
+	t.Run("state fetch error returns 500", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(t.Context(), deposits, 0, eth1Data)
+		require.NoError(t, err)
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: errors.New("internal error")},
+			TimeFetcher:           chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: chain,
+			HeadFetcher:           chain,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusInternalServerError, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusInternalServerError, e.Code)
+	})
+}
+
+func TestGetProposerDutiesV2(t *testing.T) {
+	helpers.ClearCache()
+
+	genesis := util.NewBeaconBlock()
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	db := dbutil.SetupDB(t)
+	require.NoError(t, db.SaveGenesisBlockRoot(t.Context(), genesisRoot))
+
+	t.Run("epoch 0 returns genesis block root", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(t.Context(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		s := &Server{
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v2/validator/duties/proposer/{epoch}", nil)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDutiesV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
+		assert.Equal(t, 31, len(resp.Data))
+	})
+	t.Run("pre-fulu uses ProposalDependentRootV2", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.FuluForkEpoch = 100 // well beyond our test epoch
+		params.OverrideBeaconConfig(cfg)
+
+		bs, err := transition.GenesisBeaconState(t.Context(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		roots := make([][]byte, fieldparams.BlockRootsLength)
+		preFuluRoot := [32]byte{'p', 'r', 'e'}
+		roots[31] = preFuluRoot[:]
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		s := &Server{
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+		}
+
+		// Request epoch 1 (pre-Fulu since FuluForkEpoch=100).
+		// V2 pre-Fulu uses ProposalDependentRoot (epoch_start - 1), i.e. slot 31.
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v2/validator/duties/proposer/{epoch}", nil)
+		request.SetPathValue("epoch", "1")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDutiesV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(preFuluRoot[:]), resp.DependentRoot)
+		assert.Equal(t, 32, len(resp.Data))
+	})
+	t.Run("post-fulu epoch 1 returns genesis block root", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.FuluForkEpoch = 0 // Fulu active from genesis
+		params.OverrideBeaconConfig(cfg)
+
+		bs, _ := util.DeterministicGenesisStateFulu(t, depChainStart)
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		s := &Server{
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+		}
+
+		// Request epoch 1 (post-Fulu since FuluForkEpoch=0).
+		// V2 uses AttestationDependentRoot semantics for Fulu, where epoch 1 depends on genesis.
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v2/validator/duties/proposer/{epoch}", nil)
+		request.SetPathValue("epoch", "1")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDutiesV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
+		assert.Equal(t, 32, len(resp.Data))
+	})
+	t.Run("next epoch lookahead", func(t *testing.T) {
+		bs, err := transition.GenesisBeaconState(t.Context(), deposits, 0, eth1Data)
+		require.NoError(t, err, "Could not set up genesis state")
+		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+		roots := make([][]byte, fieldparams.BlockRootsLength)
+		lookaheadRoot := [32]byte{'l', 'o', 'o', 'k'}
+		roots[31] = lookaheadRoot[:]
+		require.NoError(t, bs.SetBlockRoots(roots))
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		}
+		s := &Server{
+			Stater:                   &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			HeadFetcher:              chain,
+			TimeFetcher:              chain,
+			OptimisticModeFetcher:    chain,
+			SyncChecker:              &mockSync.Sync{IsSyncing: false},
+			PayloadIDCache:           cache.NewPayloadIDCache(),
+			ProposerPreferencesCache: cache.NewProposerPreferencesCache(),
+			BeaconDB:                 db,
+		}
+
+		// Request epoch 1 when current epoch is 0, triggering next-epoch lookahead.
+		// dutiesEpoch remains 1, so pre-Fulu helper still uses slot 31.
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v2/validator/duties/proposer/{epoch}", nil)
+		request.SetPathValue("epoch", "1")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDutiesV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(lookaheadRoot[:]), resp.DependentRoot)
+		assert.Equal(t, 32, len(resp.Data))
+	})
 }
 
 func TestGetSyncCommitteeDuties(t *testing.T) {
@@ -2679,7 +3093,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	require.NoError(t, st.SetGenesisTime(genesisTime))
 	vals := st.Validators()
 	currCommittee := &ethpbalpha.SyncCommittee{}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
 		currCommittee.AggregatePubkey = make([]byte, 48)
 	}
@@ -2694,13 +3108,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	}
 	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
 
-	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
+	mockChainService := &mockChain.ChainService{Genesis: genesisTime, State: st}
 	s := &Server{
 		Stater:                &testutil.MockStater{BeaconState: st},
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		TimeFetcher:           mockChainService,
 		HeadFetcher:           mockChainService,
 		OptimisticModeFetcher: mockChainService,
+		CoreService:           &core.Service{},
 	}
 
 	t.Run("single validator", func(t *testing.T) {
@@ -2871,7 +3286,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		require.NoError(t, newSyncPeriodSt.SetCurrentSyncCommittee(currCommittee))
 		nextCommittee := &ethpbalpha.SyncCommittee{}
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
 			nextCommittee.AggregatePubkey = make([]byte, 48)
 
@@ -2885,13 +3300,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 				return newSyncPeriodSt
 			}
 		}
-		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
+		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot, State: newSyncPeriodSt}
 		s := &Server{
 			Stater:                &testutil.MockStater{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			CoreService:           &core.Service{},
 		}
 
 		var body bytes.Buffer
@@ -2933,6 +3349,93 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, "1", duty.ValidatorSyncCommitteeIndices[0])
 	})
+	t.Run("past sync committee period", func(t *testing.T) {
+		// Chain is two periods ahead, the request targets epoch 0 (a past period).
+		// The handler must load the state at the requested period's start epoch and
+		// use its CurrentSyncCommittee, NOT the current state's committee.
+		pastEpochStartSlot := primitives.Slot(0)
+		currentSlot := primitives.Slot(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * 2 * uint64(params.BeaconConfig().SlotsPerEpoch))
+
+		pastSt, _ := util.DeterministicGenesisStateAltair(t, numVals)
+		require.NoError(t, pastSt.SetSlot(pastEpochStartSlot))
+		require.NoError(t, pastSt.SetGenesisTime(genesisTime))
+
+		pastVals := pastSt.Validators()
+		pastCommittee := &ethpbalpha.SyncCommittee{AggregatePubkey: make([]byte, 48)}
+
+		for i := range 5 {
+			pastCommittee.Pubkeys = append(pastCommittee.Pubkeys, pastVals[i].PublicKey)
+		}
+
+		require.NoError(t, pastSt.SetCurrentSyncCommittee(pastCommittee))
+
+		pastNextCommittee := &ethpbalpha.SyncCommittee{AggregatePubkey: make([]byte, 48)}
+		for i := 5; i < 10; i++ {
+			pastNextCommittee.Pubkeys = append(pastNextCommittee.Pubkeys, pastVals[i].PublicKey)
+		}
+
+		require.NoError(t, pastSt.SetNextSyncCommittee(pastNextCommittee))
+
+		// Current state has different sync committees so that if the handler used
+		// the current state instead of the past state, assertions below would fail.
+		currentSt, _ := util.DeterministicGenesisStateAltair(t, numVals)
+		require.NoError(t, currentSt.SetSlot(currentSlot))
+		require.NoError(t, currentSt.SetGenesisTime(genesisTime))
+
+		currentVals := currentSt.Validators()
+		currentCommittee := &ethpbalpha.SyncCommittee{AggregatePubkey: make([]byte, 48)}
+
+		for i := 5; i < 10; i++ {
+			currentCommittee.Pubkeys = append(currentCommittee.Pubkeys, currentVals[i].PublicKey)
+		}
+
+		require.NoError(t, currentSt.SetCurrentSyncCommittee(currentCommittee))
+
+		currentNextCommittee := &ethpbalpha.SyncCommittee{AggregatePubkey: make([]byte, 48)}
+		for i := range 5 {
+			currentNextCommittee.Pubkeys = append(currentNextCommittee.Pubkeys, currentVals[i].PublicKey)
+		}
+
+		require.NoError(t, currentSt.SetNextSyncCommittee(currentNextCommittee))
+
+		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &currentSlot, State: currentSt}
+		s := &Server{
+			Stater: &testutil.MockStater{StatesByEpoch: map[primitives.Epoch]state.BeaconState{
+				0: pastSt,
+				primitives.Epoch(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * 2): currentSt,
+			}},
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+		}
+
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"1\"]")
+		require.NoError(t, err)
+
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetSyncCommitteeDuties(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 1, len(resp.Data))
+
+		duty := resp.Data[0]
+		// Validator 1 is in pastSt's CurrentSyncCommittee at index 1. If the handler
+		// had loaded currentSt instead, validator 1 would not appear in its
+		// CurrentSyncCommittee and no duty would be returned.
+		require.Equal(t, hexutil.Encode(pastVals[1].PublicKey), duty.Pubkey)
+		require.Equal(t, "1", duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		require.Equal(t, "1", duty.ValidatorSyncCommitteeIndices[0])
+	})
+
 	t.Run("epoch too far in the future", func(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"5\"]")
@@ -2966,8 +3469,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		slot, err := slots.EpochStart(1)
 		require.NoError(t, err)
 
-		st2, err := util.NewBeaconStateBellatrix()
-		require.NoError(t, err)
+		st2 := st.Copy()
 		require.NoError(t, st2.SetSlot(slot))
 
 		mockChainService := &mockChain.ChainService{
@@ -2981,13 +3483,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 			State: st2,
 		}
 		s := &Server{
-			Stater:                &testutil.MockStater{BeaconState: st},
+			Stater:                &testutil.MockStater{BeaconState: st2},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			TimeFetcher:           mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
 			ChainInfoFetcher:      mockChainService,
 			BeaconDB:              db,
+			CoreService:           &core.Service{},
 		}
 
 		var body bytes.Buffer
@@ -3026,65 +3529,477 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
 	})
+	t.Run("state not found returns 404", func(t *testing.T) {
+		slot := 2 * params.BeaconConfig().SlotsPerEpoch
+		chainService := &mockChain.ChainService{
+			Slot: &slot,
+		}
+		stateNotFoundErr := lookup.NewStateNotFoundError(8192, []byte("test"))
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: &stateNotFoundErr},
+			TimeFetcher:           chainService,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: chainService,
+			HeadFetcher:           chainService,
+		}
+
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
+		request.SetPathValue("epoch", "1")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetSyncCommitteeDuties(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "State not found", e.Message)
+	})
+	t.Run("state fetch error returns 500", func(t *testing.T) {
+		slot := 2 * params.BeaconConfig().SlotsPerEpoch
+		chainService := &mockChain.ChainService{
+			Slot: &slot,
+		}
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: errors.New("internal error")},
+			TimeFetcher:           chainService,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: chainService,
+			HeadFetcher:           chainService,
+		}
+
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", &body)
+		request.SetPathValue("epoch", "1")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetSyncCommitteeDuties(writer, request)
+		assert.Equal(t, http.StatusInternalServerError, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusInternalServerError, e.Code)
+	})
 }
 
+func TestGetPTCDuties(t *testing.T) {
+	helpers.ClearCache()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.GloasForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	// Use fixed slot 0 for deterministic tests.
+	slot := primitives.Slot(0)
+	genesisTime := time.Now()
+	// Need enough validators for PTC selection (PTC_SIZE is 512 on mainnet, 2 on minimal)
+	numVals := uint64(fieldparams.PTCSize * 2)
+	st, _ := util.DeterministicGenesisStateGloas(t, numVals)
+	require.NoError(t, st.SetGenesisTime(genesisTime))
+	// Initialize the committee cache for epoch 0.
+	require.NoError(t, helpers.UpdateCommitteeCache(t.Context(), st, 0))
+
+	// Set up a genesis block root for dependent_root calculation.
+	genesisRoot := [32]byte{1, 2, 3}
+	db := dbutil.SetupDB(t)
+	require.NoError(t, db.SaveGenesisBlockRoot(t.Context(), genesisRoot))
+
+	mockChainService := &mockChain.ChainService{Genesis: genesisTime, State: st, Slot: &slot}
+	s := &Server{
+		Stater:                &testutil.MockStater{BeaconState: st},
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:           mockChainService,
+		HeadFetcher:           mockChainService,
+		OptimisticModeFetcher: mockChainService,
+		BeaconDB:              db,
+	}
+
+	t.Run("single validator in PTC", func(t *testing.T) {
+		// Request duties for validator index 0
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.NotEmpty(t, resp.DependentRoot)
+	})
+
+	t.Run("verifies PTC duties correctness", func(t *testing.T) {
+		// Request duties for a range of validators.
+		// Some will be in the PTC, some won't.
+		var indices []string
+		requestedSet := make(map[primitives.ValidatorIndex]struct{})
+		for i := range 100 {
+			indices = append(indices, strconv.Itoa(i))
+			requestedSet[primitives.ValidatorIndex(i)] = struct{}{}
+		}
+
+		// Test ptcDuties directly.
+		directDuties, err := ptcDuties(t.Context(), st, 0, requestedSet)
+		require.NoError(t, err)
+		// Should return some duties (not necessarily all 100, depends on PTC selection).
+		require.NotEmpty(t, directDuties, "Should return at least some duties")
+
+		// All returned duties should be for slots within epoch 0.
+		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+		for _, duty := range directDuties {
+			if uint64(duty.slot) >= uint64(slotsPerEpoch) {
+				t.Errorf("Duty slot %d should be within epoch 0 (< %d)", duty.slot, slotsPerEpoch)
+			}
+			// Verify returned validator was in the request.
+			_, ok := requestedSet[duty.validatorIndex]
+			if !ok {
+				t.Errorf("Returned validator %d should be in requested set", duty.validatorIndex)
+			}
+		}
+
+		// Test via HTTP - should return same count.
+		indicesJSON, err := json.Marshal(indices)
+		require.NoError(t, err)
+
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", bytes.NewReader(indicesJSON))
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+		// HTTP response should match direct call.
+		assert.Equal(t, len(directDuties), len(resp.Data), "HTTP response should match direct PTCDuties call")
+	})
+
+	t.Run("multiple validators", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\",\"2\",\"3\",\"4\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.NotEmpty(t, resp.DependentRoot)
+		// Verify any returned duties have correct structure
+		for _, duty := range resp.Data {
+			assert.NotEmpty(t, duty.Pubkey)
+			assert.NotEmpty(t, duty.ValidatorIndex)
+			assert.NotEmpty(t, duty.Slot)
+		}
+	})
+
+	t.Run("duplicate validator indices are deduplicated", func(t *testing.T) {
+		// Request the same validator multiple times - should be deduplicated.
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"0\",\"0\",\"1\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		// Each validator should appear at most once in the response.
+		seen := make(map[string]bool)
+		for _, duty := range resp.Data {
+			if seen[duty.ValidatorIndex] {
+				t.Errorf("Validator %s appears multiple times in response", duty.ValidatorIndex)
+			}
+			seen[duty.ValidatorIndex] = true
+		}
+	})
+
+	t.Run("pre-Gloas epoch returns error", func(t *testing.T) {
+		// Temporarily set GloasForkEpoch to 10
+		cfg := params.BeaconConfig()
+		cfg.GloasForkEpoch = 10
+		params.OverrideBeaconConfig(cfg)
+		defer func() {
+			cfg.GloasForkEpoch = 0
+			params.OverrideBeaconConfig(cfg)
+		}()
+
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "PTC duties are not available before Gloas fork", e.Message)
+	})
+
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", nil)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "No data submitted", e.Message)
+	})
+
+	t.Run("empty body", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "No data submitted", e.Message)
+	})
+
+	t.Run("invalid validator index string", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"foo\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+	})
+
+	t.Run("out of bounds validator index", func(t *testing.T) {
+		// Request a validator index that's way beyond the number of validators.
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"999999999\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "0")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		// Invalid validator index should return 400, matching attester duties behavior.
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "Invalid validator index", e.Message)
+	})
+
+	t.Run("next epoch returns duties in correct slot range", func(t *testing.T) {
+		// Request epoch 1 (next epoch) while current slot is 0 (epoch 0).
+		// The handler should accept this and return duties with slots in [SlotsPerEpoch, 2*SlotsPerEpoch).
+		var indices []string
+		for i := range numVals {
+			indices = append(indices, strconv.FormatUint(i, 10))
+		}
+		indicesJSON, err := json.Marshal(indices)
+		require.NoError(t, err)
+
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", bytes.NewReader(indicesJSON))
+		request.SetPathValue("epoch", "1") // next epoch
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotEmpty(t, resp.Data, "expected PTC duties for next epoch")
+
+		slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+		for _, duty := range resp.Data {
+			slotVal, err := strconv.ParseUint(duty.Slot, 10, 64)
+			require.NoError(t, err)
+			if slotVal < uint64(slotsPerEpoch) {
+				t.Errorf("next-epoch duty slot %d is below epoch 1 start %d", slotVal, slotsPerEpoch)
+			}
+			if slotVal >= uint64(slotsPerEpoch*2) {
+				t.Errorf("next-epoch duty slot %d is at or after epoch 1 end %d", slotVal, slotsPerEpoch*2)
+			}
+		}
+	})
+
+	t.Run("epoch current+2 is rejected", func(t *testing.T) {
+		// Epoch 2 should be rejected when current epoch is 0 (next epoch is 1).
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "2")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "can not be greater than next epoch", e.Message)
+	})
+
+	t.Run("epoch too far in future", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://www.example.com/eth/v1/validator/duties/ptc/{epoch}", &body)
+		request.SetPathValue("epoch", "100") // Far future epoch
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPTCDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "can not be greater than next epoch", e.Message)
+	})
+}
+
+// TestGetPTCDuties_ForkBoundary verifies the Gloas fork epoch PTC is served only from the post-upgrade state.
+func TestGetPTCDuties_ForkBoundary(t *testing.T) {
+	helpers.ClearCache()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.GloasForkEpoch = 2 // Epochs 0-1 = Fulu, epoch 2 = Gloas.
+	params.OverrideBeaconConfig(cfg)
+	spe := params.BeaconConfig().SlotsPerEpoch
+
+	genesisTime := time.Now()
+	numVals := uint64(fieldparams.PTCSize * 2)
+	fuluSt, _ := util.DeterministicGenesisStateFulu(t, numVals)
+	require.NoError(t, fuluSt.SetGenesisTime(genesisTime))
+	gloasSt, err := transition.ProcessSlots(t.Context(), fuluSt.Copy(), 2*spe)
+	require.NoError(t, err)
+	require.Equal(t, version.Gloas, gloasSt.Version())
+	// The dependent root of the fork epoch is the block root at start(fork epoch - 1) - 1.
+	dependentRoot := [32]byte{4, 5, 6}
+	require.NoError(t, gloasSt.UpdateBlockRootAtIndex(uint64(spe-1), dependentRoot))
+
+	genesisRoot := [32]byte{1, 2, 3}
+	db := dbutil.SetupDB(t)
+	require.NoError(t, db.SaveGenesisBlockRoot(t.Context(), genesisRoot))
+
+	var indices []string
+	for i := range numVals {
+		indices = append(indices, strconv.FormatUint(i, 10))
+	}
+	indicesJSON, err := json.Marshal(indices)
+	require.NoError(t, err)
+
+	newServer := func(genesis time.Time, slot primitives.Slot) *Server {
+		mockChainService := &mockChain.ChainService{Genesis: genesis, Slot: &slot}
+		return &Server{
+			Stater:                &testutil.MockStater{StatesByEpoch: map[primitives.Epoch]state.BeaconState{1: fuluSt, 2: gloasSt}},
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			BeaconDB:              db,
+		}
+	}
+	request := func(s *Server) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost,
+			"http://www.example.com/eth/v1/validator/duties/ptc/{epoch}",
+			bytes.NewReader(indicesJSON))
+		req.SetPathValue("epoch", "2")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		s.GetPTCDuties(writer, req)
+		return writer
+	}
+
+	t.Run("fork epoch requested before the fork is rejected", func(t *testing.T) {
+		writer := request(newServer(genesisTime, spe))
+		require.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.StringContains(t, "not available until the fork", e.Message)
+	})
+
+	t.Run("fork epoch requested within clock disparity of the fork returns duties", func(t *testing.T) {
+		genesis := time.Now().Add(-params.EpochsDuration(2, params.BeaconConfig()) + 200*time.Millisecond)
+		writer := request(newServer(genesis, 2*spe-1))
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.NotEqual(t, 0, len(resp.Data))
+		assert.Equal(t, hexutil.Encode(dependentRoot[:]), resp.DependentRoot)
+	})
+
+	t.Run("fork epoch requested at the fork returns duties", func(t *testing.T) {
+		writer := request(newServer(genesisTime, 2*spe))
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.GetPTCDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.NotEqual(t, 0, len(resp.Data))
+		assert.Equal(t, hexutil.Encode(dependentRoot[:]), resp.DependentRoot)
+	})
+}
+
+// TestPrepareBeaconProposer verifies pre-(Gloas-1 epoch) writes land in the
+// per-validator defaults store.
 func TestPrepareBeaconProposer(t *testing.T) {
+	const feeRecipient = "0xb698D697092822185bF0311052215d5B5e1F3934"
 	tests := []struct {
-		name    string
-		request []*structs.FeeRecipient
-		code    int
-		wantErr string
+		name       string
+		gloasEpoch primitives.Epoch
+		wantCached bool
 	}{
-		{
-			name: "Happy Path",
-			request: []*structs.FeeRecipient{{
-				FeeRecipient:   "0xb698D697092822185bF0311052215d5B5e1F3934",
-				ValidatorIndex: "1",
-			},
-			},
-			code:    http.StatusOK,
-			wantErr: "",
-		},
-		{
-			name: "invalid fee recipient length",
-			request: []*structs.FeeRecipient{{
-				FeeRecipient:   "0xb698D697092822185bF0311052",
-				ValidatorIndex: "1",
-			},
-			},
-			code:    http.StatusBadRequest,
-			wantErr: "Invalid fee_recipient",
-		},
+		{"pre-Gloas caches the default", params.BeaconConfig().FarFutureEpoch, true},
+		{"post-Gloas is a no-op", 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := json.Marshal(tt.request)
-			require.NoError(t, err)
-			var body bytes.Buffer
-			_, err = body.WriteString(string(b))
-			require.NoError(t, err)
-			url := "http://example.com/eth/v1/validator/prepare_beacon_proposer"
-			request := httptest.NewRequest(http.MethodPost, url, &body)
+			params.SetupTestConfigCleanup(t)
+			cfg := params.BeaconConfig().Copy()
+			cfg.GloasForkEpoch = tt.gloasEpoch
+			params.OverrideBeaconConfig(cfg)
+
+			body := bytes.NewBufferString(`[{"validator_index":"1","fee_recipient":"` + feeRecipient + `"}]`)
+			request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/prepare_beacon_proposer", body)
 			writer := httptest.NewRecorder()
-			db := dbutil.SetupDB(t)
+			zero := primitives.Slot(0)
 			server := &Server{
-				BeaconDB:               db,
-				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-				PayloadIDCache:         cache.NewPayloadIDCache(),
+				ProposerPreferencesCache:  cache.NewProposerPreferencesCache(),
+				SubscribedValidatorsCache: cache.NewSubscribedValidatorsCache(),
+				TimeFetcher:               &mockChain.ChainService{Slot: &zero},
 			}
 			server.PrepareBeaconProposer(writer, request)
-			require.Equal(t, tt.code, writer.Code)
-			if tt.wantErr != "" {
-				require.Equal(t, strings.Contains(writer.Body.String(), tt.wantErr), true)
-			} else {
+			require.Equal(t, http.StatusOK, writer.Code)
+
+			got, ok := server.ProposerPreferencesCache.DefaultFor(1)
+			require.Equal(t, tt.wantCached, ok)
+			if tt.wantCached {
+				expected, err := hexutil.Decode(feeRecipient)
 				require.NoError(t, err)
-				feebytes, err := hexutil.Decode(tt.request[0].FeeRecipient)
-				require.NoError(t, err)
-				index, err := strconv.ParseUint(tt.request[0].ValidatorIndex, 10, 64)
-				require.NoError(t, err)
-				val, tracked := server.TrackedValidatorsCache.Validator(primitives.ValidatorIndex(index))
-				require.Equal(t, true, tracked)
-				require.Equal(t, primitives.ExecutionAddress(feebytes), val.FeeRecipient)
+				require.DeepEqual(t, expected, got.FeeRecipient[:])
 			}
 		})
 	}
@@ -3092,13 +4007,17 @@ func TestPrepareBeaconProposer(t *testing.T) {
 
 func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	hook := logTest.NewGlobal()
+	logrus.SetLevel(logrus.DebugLevel)
+
 	db := dbutil.SetupDB(t)
 
 	// New validator
 	proposerServer := &Server{
-		BeaconDB:               db,
-		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-		PayloadIDCache:         cache.NewPayloadIDCache(),
+		BeaconDB:                  db,
+		ProposerPreferencesCache:  cache.NewProposerPreferencesCache(),
+		SubscribedValidatorsCache: cache.NewSubscribedValidatorsCache(),
+		PayloadIDCache:            cache.NewPayloadIDCache(),
+		TimeFetcher:               &mockChain.ChainService{},
 	}
 	req := []*structs.FeeRecipient{{
 		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
@@ -3181,20 +4100,22 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 	db := dbutil.SetupDB(b)
 	proposerServer := &Server{
-		BeaconDB:               db,
-		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
-		PayloadIDCache:         cache.NewPayloadIDCache(),
+		BeaconDB:                  db,
+		ProposerPreferencesCache:  cache.NewProposerPreferencesCache(),
+		PayloadIDCache:            cache.NewPayloadIDCache(),
+		SubscribedValidatorsCache: cache.NewSubscribedValidatorsCache(),
+		TimeFetcher:               &mockChain.ChainService{},
 	}
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
 	recipients := make([]*structs.FeeRecipient, 0)
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		recipients = append(recipients, &structs.FeeRecipient{FeeRecipient: hexutil.Encode(f), ValidatorIndex: fmt.Sprint(i)})
 	}
 	byt, err := json.Marshal(recipients)
 	require.NoError(b, err)
 	var body bytes.Buffer
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, err = body.WriteString(string(byt))
 		require.NoError(b, err)
 		url := "http://example.com/eth/v1/validator/prepare_beacon_proposer"
@@ -3386,6 +4307,128 @@ func TestGetLiveness(t *testing.T) {
 	})
 }
 
+func TestGetPayloadAttestationData(t *testing.T) {
+	t.Run("core error translates to BadRequest", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 100
+		params.OverrideBeaconConfig(cfg)
+
+		slot := primitives.Slot(0)
+		chainService := &mockChain.ChainService{Slot: &slot}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			CoreService:           &core.Service{GenesisTimeFetcher: chainService, ForkchoiceFetcher: chainService, HeadFetcher: chainService, ChainInfoFetcher: chainService},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/payload_attestation_data?slot=0", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPayloadAttestationData(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, "Gloas fork", writer.Body.String())
+	})
+	t.Run("no block seen for slot returns 204 with no body", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		slot := primitives.Slot(5)
+		timeChain := &mockChain.ChainService{Slot: &slot}
+		fcChain := &mockChain.ChainService{BlockSlot: primitives.Slot(4)}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           timeChain,
+			TimeFetcher:           timeChain,
+			OptimisticModeFetcher: timeChain,
+			CoreService:           &core.Service{GenesisTimeFetcher: timeChain, ForkchoiceFetcher: fcChain},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/payload_attestation_data?slot=5", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPayloadAttestationData(writer, request)
+		assert.Equal(t, http.StatusNoContent, writer.Code)
+		assert.Equal(t, 0, writer.Body.Len())
+	})
+	t.Run("ok json", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		slot := primitives.Slot(5)
+		root := bytesutil.PadTo([]byte("head-root"), 32)
+		chainService := &mockChain.ChainService{
+			Slot:               &slot,
+			Root:               root,
+			MockCanonicalRoots: map[primitives.Slot][32]byte{slot: bytesutil.ToBytes32(root)},
+			MockDataAvailable:  map[[32]byte]bool{bytesutil.ToBytes32(root): true},
+			MockPayloadEarly:   map[[32]byte]bool{bytesutil.ToBytes32(root): true},
+		}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			CoreService:           &core.Service{GenesisTimeFetcher: chainService, ForkchoiceFetcher: chainService, HeadFetcher: chainService, ChainInfoFetcher: chainService},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/payload_attestation_data?slot=5", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPayloadAttestationData(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+
+		resp := &structs.GetPayloadAttestationDataResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, "gloas", resp.Version)
+		assert.Equal(t, "5", resp.Data.Slot)
+		assert.Equal(t, hexutil.Encode(root), resp.Data.BeaconBlockRoot)
+		assert.Equal(t, true, resp.Data.PayloadPresent)
+		assert.Equal(t, true, resp.Data.BlobDataAvailable)
+		assert.Equal(t, version.String(version.Gloas), writer.Header().Get(api.VersionHeader))
+	})
+	t.Run("ok ssz", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig().Copy()
+		cfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(cfg)
+
+		slot := primitives.Slot(5)
+		root := bytesutil.PadTo([]byte("head-root"), 32)
+		chainService := &mockChain.ChainService{Slot: &slot, Root: root}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			CoreService:           &core.Service{GenesisTimeFetcher: chainService, ForkchoiceFetcher: chainService, HeadFetcher: chainService, ChainInfoFetcher: chainService},
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/payload_attestation_data?slot=5", nil)
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetPayloadAttestationData(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		assert.Equal(t, version.String(version.Gloas), writer.Header().Get(api.VersionHeader))
+
+		data := &ethpbalpha.PayloadAttestationData{}
+		require.NoError(t, data.UnmarshalSSZ(writer.Body.Bytes()))
+		assert.Equal(t, primitives.Slot(5), data.Slot)
+		assert.DeepEqual(t, root, data.BeaconBlockRoot)
+	})
+}
+
 var (
 	singleContribution = `[
   {
@@ -3561,7 +4604,7 @@ var (
       "aggregator_index": "1",
       "aggregate": {
         "aggregation_bits": "0x01",
-        "committee_bits": "0x01",
+        "committee_bits": "0x0100000000000000",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -3588,7 +4631,7 @@ var (
       "aggregator_index": "1",
       "aggregate": {
         "aggregation_bits": "0x01",
-		"committee_bits": "0x01",
+		"committee_bits": "0x0100000000000000",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -3613,7 +4656,7 @@ var (
       "aggregator_index": "1",
       "aggregate": {
         "aggregation_bits": "0x01",
-		"committee_bits": "0x01",
+		"committee_bits": "0x0100000000000000",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -3642,7 +4685,7 @@ var (
       "aggregator_index": "foo",
       "aggregate": {
         "aggregation_bits": "0x01",
-		"committee_bits": "0x01",
+		"committee_bits": "0x0100000000000000",
         "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
         "data": {
           "slot": "1",
@@ -3780,6 +4823,23 @@ var (
     "is_aggregator": false
   }
 ]`
+	// First index is valid, second is out of bounds for the head state.
+	outOfBoundsBeaconCommitteeContribution = `[
+  {
+    "validator_index": "1",
+    "committee_index": "1",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  },
+  {
+    "validator_index": "9999999999",
+    "committee_index": "0",
+    "committees_at_slot": "2",
+    "slot": "1",
+    "is_aggregator": false
+  }
+]`
 	// validator_index is invalid
 	invalidBeaconCommitteeContribution = `[
   {
@@ -3808,3 +4868,217 @@ var (
     "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
   }]`
 )
+
+func validProposerPreferencesBody() string {
+	return `[{
+		"message": {
+			"dependent_root": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+			"proposal_slot": "32",
+			"validator_index": "2",
+			"fee_recipient": "0x0000000000000000000000000000000000000000",
+			"target_gas_limit": "30000000"
+		},
+		"signature": "0x` + strings.Repeat("00", 96) + `"
+	}]`
+}
+
+func TestSubmitSignedProposerPreferences_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	currentSlot := primitives.Slot(31)
+	proposalSlot := primitives.Slot(32)
+	c := cache.NewProposerPreferencesCache()
+	v1alpha1Server := &validatorv1alpha1.Server{
+		SyncChecker:              &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:              &mockChain.ChainService{Slot: &currentSlot},
+		P2P:                      &p2pmock.MockBroadcaster{},
+		ProposerPreferencesCache: c,
+		OperationNotifier:        (&mockChain.ChainService{}).OperationNotifier(),
+	}
+
+	s := &Server{V1Alpha1Server: v1alpha1Server}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/proposer_preferences", bytes.NewBufferString(validProposerPreferencesBody()))
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	pref, ok := c.Get(bytesutil.ToBytes32(bytes.Repeat([]byte{0xcc}, 32)), proposalSlot)
+	require.Equal(t, true, ok)
+	require.Equal(t, primitives.ValidatorIndex(2), pref.ValidatorIndex)
+	require.Equal(t, uint64(30_000_000), pref.TargetGasLimit)
+}
+
+func TestSubmitSignedProposerPreferences_SSZ_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+
+	currentSlot := primitives.Slot(31)
+	proposalSlot := primitives.Slot(32)
+	c := cache.NewProposerPreferencesCache()
+	v1alpha1Server := &validatorv1alpha1.Server{
+		SyncChecker:              &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:              &mockChain.ChainService{Slot: &currentSlot},
+		P2P:                      &p2pmock.MockBroadcaster{},
+		ProposerPreferencesCache: c,
+		OperationNotifier:        (&mockChain.ChainService{}).OperationNotifier(),
+	}
+
+	pref := &ethpbalpha.SignedProposerPreferences{
+		Message: &ethpbalpha.ProposerPreferences{
+			DependentRoot:  bytes.Repeat([]byte{0xcc}, 32),
+			ProposalSlot:   proposalSlot,
+			ValidatorIndex: 2,
+			FeeRecipient:   make([]byte, 20),
+			TargetGasLimit: 30_000_000,
+		},
+		Signature: make([]byte, 96),
+	}
+	body, err := pref.MarshalSSZ()
+	require.NoError(t, err)
+
+	s := &Server{V1Alpha1Server: v1alpha1Server}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/proposer_preferences", bytes.NewBuffer(body))
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	req.Header.Set("Content-Type", api.OctetStreamMediaType)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	got, ok := c.Get(bytesutil.ToBytes32(bytes.Repeat([]byte{0xcc}, 32)), proposalSlot)
+	require.Equal(t, true, ok)
+	require.Equal(t, primitives.ValidatorIndex(2), got.ValidatorIndex)
+	require.Equal(t, uint64(30_000_000), got.TargetGasLimit)
+}
+
+func TestSubmitSignedProposerPreferences_SSZ_InvalidSize(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBuffer([]byte{0x01, 0x02, 0x03}))
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	req.Header.Set("Content-Type", api.OctetStreamMediaType)
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSubmitSignedProposerPreferences_NoBody(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	e := &httputil.DefaultJsonError{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), e))
+	assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
+}
+
+func TestSubmitSignedProposerPreferences_Empty(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBufferString("[]"))
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSubmitSignedProposerPreferences_InvalidJSON(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBufferString(`[{"message": null, "signature": "0x00"}]`))
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	e := &server.IndexedErrorContainer{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), e))
+	require.Equal(t, 1, len(e.Failures))
+	assert.Equal(t, 0, e.Failures[0].Index)
+}
+
+func runWithGRPCError(t *testing.T, code codes.Code) int {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+	v1alpha1Server.EXPECT().
+		SubmitSignedProposerPreferences(gomock.Any(), gomock.Any()).
+		Return(nil, status.Error(code, "boom"))
+
+	s := &Server{V1Alpha1Server: v1alpha1Server}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBufferString(validProposerPreferencesBody()))
+	req.Header.Set(api.VersionHeader, version.String(version.Gloas))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	return w.Code
+}
+
+func TestSubmitSignedProposerPreferences_InvalidArgumentMapsTo400(t *testing.T) {
+	assert.Equal(t, http.StatusBadRequest, runWithGRPCError(t, codes.InvalidArgument))
+}
+
+func TestSubmitSignedProposerPreferences_UnavailableMapsTo503(t *testing.T) {
+	assert.Equal(t, http.StatusServiceUnavailable, runWithGRPCError(t, codes.Unavailable))
+}
+
+func TestSubmitSignedProposerPreferences_InternalMapsTo500(t *testing.T) {
+	assert.Equal(t, http.StatusInternalServerError, runWithGRPCError(t, codes.Internal))
+}
+
+func TestSubmitSignedProposerPreferences_MissingVersionHeader(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBufferString(validProposerPreferencesBody()))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	e := &httputil.DefaultJsonError{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), e))
+	assert.Equal(t, true, strings.Contains(e.Message, api.VersionHeader+" header is required"))
+}
+
+func TestSubmitSignedProposerPreferences_InvalidVersionHeader(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBufferString(validProposerPreferencesBody()))
+	req.Header.Set(api.VersionHeader, "notaversion")
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	e := &httputil.DefaultJsonError{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), e))
+	assert.Equal(t, true, strings.Contains(e.Message, "Invalid version"))
+}
+
+func TestSubmitSignedProposerPreferences_PreGloasVersion(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodPost, "http://example.com", bytes.NewBufferString(validProposerPreferencesBody()))
+	req.Header.Set(api.VersionHeader, version.String(version.Fulu))
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+
+	s.SubmitSignedProposerPreferences(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	e := &httputil.DefaultJsonError{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), e))
+	assert.Equal(t, true, strings.Contains(e.Message, "only supported from the gloas fork"))
+}

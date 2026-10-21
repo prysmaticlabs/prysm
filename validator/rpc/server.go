@@ -9,20 +9,36 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/api/server/httprest"
-	"github.com/OffchainLabs/prysm/v6/api/server/middleware"
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/io/logs"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/wallet"
-	"github.com/OffchainLabs/prysm/v6/validator/client"
-	iface "github.com/OffchainLabs/prysm/v6/validator/client/iface"
-	"github.com/OffchainLabs/prysm/v6/validator/db"
-	"github.com/OffchainLabs/prysm/v6/validator/web"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server/httprest"
+	"github.com/OffchainLabs/prysm/v7/api/server/middleware"
+	"github.com/OffchainLabs/prysm/v7/async/event"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/proposer"
+	"github.com/OffchainLabs/prysm/v7/io/logs"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/wallet"
+	iface "github.com/OffchainLabs/prysm/v7/validator/client/iface"
+	"github.com/OffchainLabs/prysm/v7/validator/db"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
+	remoteweb3signer "github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer"
+	"github.com/OffchainLabs/prysm/v7/validator/web"
 	"github.com/pkg/errors"
 )
+
+// ValidatorService is what the keymanager and wallet handlers need from the running validator client.
+type ValidatorService interface {
+	Keymanager() (keymanager.IKeymanager, error)
+	RemoteSignerConfig() *remoteweb3signer.SetupConfig
+	ProposerSettings() *proposer.Settings
+	GenesisTime() time.Time
+	UpdateProposerSettings(ctx context.Context, mutate func(*proposer.Settings) (*proposer.Settings, error)) error
+	Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error)
+	SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error
+	DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error
+}
 
 // Config options for the HTTP server.
 type Config struct {
@@ -34,13 +50,14 @@ type Config struct {
 	GRPCHeaders            []string
 	BeaconNodeGRPCEndpoint string
 	BeaconApiEndpoint      string
+	BeaconAPIHeaders       map[string][]string
 	BeaconApiTimeout       time.Duration
 	BeaconNodeCert         string
 	DB                     db.Database
 	Wallet                 *wallet.Wallet
 	WalletDir              string
 	WalletInitializedFeed  *event.Feed
-	ValidatorService       *client.ValidatorService
+	ValidatorService       ValidatorService
 	AuthTokenPath          string
 	Middlewares            []middleware.Middleware
 	Router                 *http.ServeMux
@@ -54,7 +71,7 @@ type Server struct {
 	walletInitializedFeed     *event.Feed
 	beaconApiTimeout          time.Duration
 	wallet                    *wallet.Wallet
-	validatorService          *client.ValidatorService
+	validatorService          ValidatorService
 	httpPort                  int
 	cancel                    context.CancelFunc
 	grpcRetries               uint
@@ -64,6 +81,7 @@ type Server struct {
 	authTokenPath             string
 	beaconNodeCert            string
 	beaconApiEndpoint         string
+	beaconApiHeaders          map[string][]string
 	beaconNodeEndpoint        string
 	healthClient              ethpb.HealthClient
 	nodeClient                iface.NodeClient
@@ -83,6 +101,15 @@ type Server struct {
 // NewServer instantiates a new HTTP server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
+
+	// TODO(17165): walletInitialized should be removed anyway.
+	walletInitialized := cfg.Wallet != nil
+	if cfg.ValidatorService != nil && cfg.ValidatorService.RemoteSignerConfig() != nil {
+		// Consider the wallet initialized when remote signer is configured,
+		// as this flag blocks the VC from starting up and serving requests, even though the keymanager is ready.
+		walletInitialized = true
+	}
+
 	server := &Server{
 		ctx:                    ctx,
 		cancel:                 cancel,
@@ -99,10 +126,11 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		db:                     cfg.DB,
 		walletDir:              cfg.WalletDir,
 		walletInitializedFeed:  cfg.WalletInitializedFeed,
-		walletInitialized:      cfg.Wallet != nil,
+		walletInitialized:      walletInitialized,
 		wallet:                 cfg.Wallet,
 		beaconApiTimeout:       cfg.BeaconApiTimeout,
 		beaconApiEndpoint:      cfg.BeaconApiEndpoint,
+		beaconApiHeaders:       cfg.BeaconAPIHeaders,
 		beaconNodeEndpoint:     cfg.BeaconNodeGRPCEndpoint,
 		router:                 cfg.Router,
 	}
@@ -166,7 +194,9 @@ func (s *Server) InitializeRoutesWithWebHandler() error {
 		}
 		if features.Get().EnableWeb {
 			web.Handler(w, r)
+			return
 		}
+		httputil.HandleError(w, "Not found", http.StatusNotFound)
 	})
 	return nil
 }
@@ -195,6 +225,9 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("GET /eth/v1/validator/{pubkey}/graffiti", s.GetGraffiti)
 	s.router.HandleFunc("POST /eth/v1/validator/{pubkey}/graffiti", s.SetGraffiti)
 	s.router.HandleFunc("DELETE /eth/v1/validator/{pubkey}/graffiti", s.DeleteGraffiti)
+	s.router.HandleFunc("GET /eth/v1/validator/{pubkey}/builder_config", s.GetBuilderConfig)
+	s.router.HandleFunc("POST /eth/v1/validator/{pubkey}/builder_config", s.SetBuilderConfig)
+	s.router.HandleFunc("DELETE /eth/v1/validator/{pubkey}/builder_config", s.DeleteBuilderConfig)
 
 	// auth endpoint
 	s.router.HandleFunc("GET "+api.WebUrlPrefix+"initialize", s.Initialize)
@@ -236,4 +269,21 @@ func (s *Server) Status() error {
 		return s.startFailure
 	}
 	return nil
+}
+
+// keymanagerKind returns the kind of the configured keymanager.
+// Return boolean as well as the kind to indicate whether the wallet is ready or not.
+func (s *Server) keymanagerKind() (keymanager.Kind, bool) {
+	// If remote signer is configured, return Web3Signer kind.
+	if s.validatorService != nil && s.validatorService.RemoteSignerConfig() != nil {
+		return keymanager.Web3Signer, true
+	}
+
+	// Prysm wallet is not set. This path is only reachable for Web/RPC path.
+	// Alert caller with false to indicate that the wallet is not initialized.
+	if s.wallet == nil {
+		return 0, false
+	}
+
+	return s.wallet.KeymanagerKind(), true
 }

@@ -3,14 +3,14 @@ package testing
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/common"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/common"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 // GeneratePendingDeposit is used for testing and producing a signed pending deposit
@@ -31,7 +31,7 @@ func GeneratePendingDeposit(t *testing.T, key common.SecretKey, amount uint64, w
 		Amount:                dm.Amount,
 		Signature:             sig.Marshal(),
 	}
-	valid, err := blocks.IsValidDepositSignature(depositData)
+	valid, err := helpers.IsValidDepositSignature(depositData)
 	require.NoError(t, err)
 	require.Equal(t, true, valid)
 	return &ethpb.PendingDeposit{

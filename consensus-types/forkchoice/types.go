@@ -3,8 +3,8 @@ package forkchoice
 import (
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 type NodeValidity uint8
@@ -26,6 +26,60 @@ func (v NodeValidity) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+type PayloadStatus uint8
+
+const (
+	PayloadStatusEmpty   PayloadStatus = 0
+	PayloadStatusFull    PayloadStatus = 1
+	PayloadStatusPending PayloadStatus = 2
+)
+
+func (p PayloadStatus) String() string {
+	switch p {
+	case PayloadStatusEmpty:
+		return "empty"
+	case PayloadStatusFull:
+		return "full"
+	case PayloadStatusPending:
+		return "pending"
+	default:
+		return "unknown"
+	}
+}
+
+type DumpV2 struct {
+	JustifiedCheckpoint           *eth.Checkpoint
+	FinalizedCheckpoint           *eth.Checkpoint
+	UnrealizedJustifiedCheckpoint *eth.Checkpoint
+	UnrealizedFinalizedCheckpoint *eth.Checkpoint
+	ProposerBoostRoot             []byte
+	PreviousProposerBoostRoot     []byte
+	HeadRoot                      []byte
+	ForkChoiceNodes               []*NodeV2
+}
+
+type NodeV2 struct {
+	BlockRoot                       []byte
+	ParentRoot                      []byte
+	ExecutionBlockHash              []byte
+	Target                          []byte
+	Timestamp                       time.Time
+	Slot                            primitives.Slot
+	Weight                          uint64
+	Balance                         uint64
+	JustifiedEpoch                  primitives.Epoch
+	FinalizedEpoch                  primitives.Epoch
+	UnrealizedJustifiedEpoch        primitives.Epoch
+	UnrealizedFinalizedEpoch        primitives.Epoch
+	PayloadAttesterCount            uint64
+	PayloadAvailabilityYesCount     uint64
+	PayloadDataAvailabilityYesCount uint64
+	GasLimit                        uint64
+	PayloadStatus                   PayloadStatus
+	Validity                        NodeValidity
+	ExecutionOptimistic             bool
 }
 
 type Dump struct {

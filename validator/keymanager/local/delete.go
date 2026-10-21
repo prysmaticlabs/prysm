@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,6 +21,8 @@ import (
 func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
 ) ([]*keymanager.KeyStatus, error) {
+	km.mu.Lock()
+	defer km.mu.Unlock()
 	// Check for duplicate keys and filter them out.
 	trackedPublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
 	statuses := make([]*keymanager.KeyStatus, 0, len(publicKeys))
@@ -64,7 +66,7 @@ func (km *Keymanager) DeleteKeystores(
 		return statuses, nil
 	}
 	// 3 & 4) save to disk and re-initializes keystore
-	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
+	if err := km.saveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
 

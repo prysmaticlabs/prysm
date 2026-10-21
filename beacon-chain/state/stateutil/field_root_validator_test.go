@@ -6,10 +6,11 @@ import (
 	"sync"
 	"testing"
 
-	mathutil "github.com/OffchainLabs/prysm/v6/math"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	mathutil "github.com/OffchainLabs/prysm/v7/math"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestValidatorConstants(t *testing.T) {
@@ -18,7 +19,7 @@ func TestValidatorConstants(t *testing.T) {
 	numFields := refV.NumField()
 	numOfValFields := 0
 
-	for i := 0; i < numFields; i++ {
+	for i := range numFields {
 		if strings.Contains(refV.Type().Field(i).Name, "state") ||
 			strings.Contains(refV.Type().Field(i).Name, "sizeCache") ||
 			strings.Contains(refV.Type().Field(i).Name, "unknownFields") {
@@ -29,27 +30,28 @@ func TestValidatorConstants(t *testing.T) {
 	assert.Equal(t, validatorFieldRoots, numOfValFields)
 	assert.Equal(t, uint64(validatorFieldRoots), mathutil.PowerOf2(validatorTreeDepth))
 
-	_, err := ValidatorRegistryRoot([]*ethpb.Validator{v})
+	cv := CompactValidatorFromProto(v)
+	_, err := ValidatorRegistryRoot(version.Phase0, []CompactValidator{cv})
 	assert.NoError(t, err)
 }
 
 func TestHashValidatorHelper(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	v := &ethpb.Validator{}
-	valList := make([]*ethpb.Validator, 10*validatorFieldRoots)
+	v := CompactValidator{}
+	valList := make([]CompactValidator, 10*validatorFieldRoots)
 	for i := range valList {
 		valList[i] = v
 	}
 	roots := make([][32]byte, len(valList))
 	hashValidatorHelper(valList, roots, 2, 2, &wg)
-	for i := 0; i < 4*validatorFieldRoots; i++ {
+	for i := range 4 * validatorFieldRoots {
 		require.Equal(t, [32]byte{}, roots[i])
 	}
-	emptyValRoots, err := ValidatorFieldRoots(v)
+	emptyValRoots, err := v.fieldRoots()
 	require.NoError(t, err)
 	for i := 4; i < 6; i++ {
-		for j := 0; j < validatorFieldRoots; j++ {
+		for j := range validatorFieldRoots {
 			require.Equal(t, emptyValRoots[j], roots[i*validatorFieldRoots+j])
 		}
 	}

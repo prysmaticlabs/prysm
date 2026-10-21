@@ -3,14 +3,15 @@ package ssz_static
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	common "github.com/OffchainLabs/prysm/v6/testing/spectest/shared/common/ssz_static"
-	fssz "github.com/prysmaticlabs/fastssz"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	common "github.com/OffchainLabs/prysm/v7/testing/spectest/shared/common/ssz_static"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.
@@ -18,14 +19,14 @@ func RunSSZStaticTests(t *testing.T, config string) {
 	common.RunSSZStaticTests(t, config, "fulu", UnmarshalledSSZ, customHtr)
 }
 
-func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
+func customHtr(t *testing.T, htrs []common.HTR, object any) []common.HTR {
 	_, ok := object.(*ethpb.BeaconStateFulu)
 	if !ok {
 		return htrs
 	}
 
-	htrs = append(htrs, func(s interface{}) ([32]byte, error) {
-		beaconState, err := state_native.InitializeFromProtoFulu(s.(*ethpb.BeaconStateFulu))
+	htrs = append(htrs, func(s any) ([32]byte, error) {
+		beaconState, err := state_native.InitializeFromProtoUnsafeFulu(s.(*ethpb.BeaconStateFulu))
 		require.NoError(t, err)
 		return beaconState.HashTreeRoot(context.Background())
 	})
@@ -33,8 +34,8 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 }
 
 // UnmarshalledSSZ unmarshalls serialized input.
-func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
-	var obj interface{}
+func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (any, error) {
+	var obj any
 	switch folderName {
 	case "ExecutionPayload":
 		obj = &enginev1.ExecutionPayloadDeneb{}
@@ -66,9 +67,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Deposit_Data{}
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
-	case "Eth1Block":
-		t.Skip("Unused type")
-		return nil, nil
 	case "Fork":
 		obj = &ethpb.Fork{}
 	case "ForkData":
@@ -153,16 +151,18 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.DataColumnSidecar{}
 	case "DataColumnsByRootIdentifier":
 		obj = &ethpb.DataColumnsByRootIdentifier{}
-	case "MatrixEntry":
+	case "MatrixEntry", "Eth1Block", "PartialDataColumnHeader", "PartialDataColumnPartsMetadata", "PartialDataColumnSidecar", "PartialDataColumnGroupID":
 		t.Skip("Unused type")
+	case "NewPayloadRequest":
+		t.Skip("Not a consensus type")
 	default:
 		return nil, errors.New("type not found")
 	}
 	var err error
-	if o, ok := obj.(fssz.Unmarshaler); ok {
+	if o, ok := obj.(ssz.Unmarshaler); ok {
 		err = o.UnmarshalSSZ(serializedBytes)
 	} else {
-		err = errors.New("could not unmarshal object, not a fastssz compatible object")
+		err = fmt.Errorf("selected type %T for folder %s does not implement ssz.Unmarshaler", obj, folderName)
 	}
 	return obj, err
 }

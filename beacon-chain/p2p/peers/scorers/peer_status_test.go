@@ -3,14 +3,14 @@ package scorers_test
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers/peerdata"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers/scorers"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/peerdata"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/scorers"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -193,4 +193,26 @@ func TestScorers_PeerStatus_PeerStatus(t *testing.T) {
 	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer1"))
 	assert.ErrorContains(t, p2ptypes.ErrInvalidEpoch.Error(), peerStatuses.Scorers().ValidationError("peer2"))
 	assert.Equal(t, nil, peerStatuses.Scorers().ValidationError("peer3"))
+}
+
+func TestScorers_PeerStatus_ValidationErrorKeepsPreviousState(t *testing.T) {
+	peerStatuses := peers.NewStatus(t.Context(), &peers.StatusConfig{
+		ScorerParams: &scorers.Config{},
+	})
+	scorer := peerStatuses.Scorers().PeerStatusScorer()
+
+	scorer.SetPeerStatus("peer1", &pb.StatusV2{HeadSlot: 128, FinalizedEpoch: 4}, nil)
+	scorer.SetPeerStatus("peer1", &pb.StatusV2{HeadSlot: 256, FinalizedEpoch: 9}, p2ptypes.ErrInvalidEpoch)
+
+	status, err := scorer.PeerStatus("peer1")
+	require.NoError(t, err)
+	assert.Equal(t, primitives.Slot(128), status.HeadSlot)
+	assert.Equal(t, primitives.Epoch(4), status.FinalizedEpoch)
+	assert.ErrorContains(t, p2ptypes.ErrInvalidEpoch.Error(), peerStatuses.Scorers().ValidationError("peer1"))
+
+	scorer.SetPeerStatus("peer2", &pb.StatusV2{HeadSlot: 256, FinalizedEpoch: 9}, p2ptypes.ErrInvalidEpoch)
+
+	status, err = scorer.PeerStatus("peer2")
+	require.ErrorContains(t, peerdata.ErrNoPeerStatus.Error(), err)
+	assert.Equal(t, (*pb.StatusV2)(nil), status)
 }

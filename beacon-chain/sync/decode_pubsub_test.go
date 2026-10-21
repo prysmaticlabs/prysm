@@ -7,21 +7,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	p2ptesting "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/wrapper"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/metadata"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	p2ptesting "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/wrapper"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/metadata"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/d4l3k/messagediff"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -35,7 +35,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 		name    string
 		topic   string
 		input   *pubsub.Message
-		want    interface{}
+		want    any
 		wantErr error
 	}{
 		{
@@ -64,7 +64,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 		},
 		{
 			name:  "valid message -- beacon block",
-			topic: fmt.Sprintf(p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlock{})], entry.ForkDigest),
+			topic: fmt.Sprintf(p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlock]()], entry.ForkDigest),
 			input: &pubsub.Message{
 				Message: &pb.Message{
 					Data: func() []byte {
@@ -118,6 +118,7 @@ func TestService_decodePubsubMessage(t *testing.T) {
 func TestExtractDataType(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.BeaconConfig().FuluForkEpoch = params.BeaconConfig().ElectraForkEpoch + 4096*2
+	params.BeaconConfig().GloasForkEpoch = params.BeaconConfig().FuluForkEpoch + 4096*2
 	params.BeaconConfig().InitializeForkSchedule()
 
 	type args struct {
@@ -262,6 +263,23 @@ func TestExtractDataType(t *testing.T) {
 			wantMd:          wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{}),
 			wantAtt:         &ethpb.SingleAttestation{},
 			wantAggregate:   &ethpb.SignedAggregateAttestationAndProofElectra{},
+			wantAttSlashing: &ethpb.AttesterSlashingElectra{},
+			wantErr:         false,
+		},
+		{
+			name: "gloas fork version",
+			args: args{
+				digest: params.ForkDigest(params.BeaconConfig().GloasForkEpoch),
+				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+			},
+			wantBlock: func() interfaces.ReadOnlySignedBeaconBlock {
+				wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockGloas{Block: &ethpb.BeaconBlockGloas{Body: &ethpb.BeaconBlockBodyGloas{}}})
+				require.NoError(t, err)
+				return wsb
+			}(),
+			wantMd:          wrapper.WrappedMetadataV2(&ethpb.MetaDataV2{}),
+			wantAtt:         &ethpb.SingleAttestation{},
+			wantAggregate:   &ethpb.SignedAggregateAttestationAndProofGloas{},
 			wantAttSlashing: &ethpb.AttesterSlashingElectra{},
 			wantErr:         false,
 		},

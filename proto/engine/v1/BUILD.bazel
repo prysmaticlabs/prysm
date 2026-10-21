@@ -10,7 +10,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
-load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
+load("//tools:methodical.bzl", "ssz_methodical")
 
 proto_library(
     name = "proto",
@@ -27,31 +27,13 @@ proto_library(
 ##############################################################################
 # Go
 ##############################################################################
-ssz_gen_marshal(
-    name = "ssz_generated_files",
+
+ssz_methodical(
+    name = "methodical_engine",
+    deps = [":go_proto"],
+    config_file = "engine.yaml",
+    override_package_name = "enginev1",
     out = "engine.ssz.go",
-    go_proto = ":go_proto",
-    includes = [
-        "//consensus-types/primitives:go_default_library",
-    ],
-    objs = [
-        "ExecutionPayload",
-        "ExecutionPayloadCapella",
-        "ExecutionPayloadHeader",
-        "ExecutionPayloadHeaderCapella",
-        "ExecutionPayloadHeaderDeneb",
-        "ExecutionPayloadDeneb",
-        "ExecutionPayloadDenebAndBlobsBundle",
-        "ExecutionPayloadDenebAndBlobsBundleV2",
-        "BlindedBlobsBundle",
-        "BlobsBundle",
-        "BlobsBundleV2",
-        "Withdrawal",
-        "WithdrawalRequest",
-        "DepositRequest",
-        "ConsolidationRequest",
-        "ExecutionRequests",
-    ],
 )
 
 go_proto_library(
@@ -59,7 +41,7 @@ go_proto_library(
     compilers = [
         "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/proto/engine/v1",
+    importpath = "github.com/OffchainLabs/prysm/v7/proto/engine/v1",
     proto = ":proto",
     visibility = ["//visibility:public"],
     deps = [
@@ -80,13 +62,15 @@ go_library(
         "electra.go",
         "execution_engine.go",
         "fulu.go",
+        "gloas.go",
         "json_marshal_unmarshal.go",
-        ":ssz_generated_files",  # keep
+        "transaction_list.go",
+        ":methodical_engine",  # keep
     ],
     embed = [
         ":go_proto",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/proto/engine/v1",
+    importpath = "github.com/OffchainLabs/prysm/v7/proto/engine/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",
@@ -94,12 +78,12 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//proto/eth/ext:go_default_library",
         "//runtime/version:go_default_library",
+        "//internal/valid:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
@@ -107,6 +91,7 @@ go_library(
         "@org_golang_google_protobuf//encoding/protojson:go_default_library",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+        "@com_github_offchainlabs_methodical_ssz//ssz:go_default_library",
     ],  # keep
 )
 
@@ -116,6 +101,7 @@ ssz_proto_files(
         "electra.proto",
         "execution_engine.proto",
         "fulu.proto",
+	"gloas.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
@@ -127,9 +113,11 @@ ssz_proto_files(
 go_test(
     name = "go_default_test",
     srcs = [
+        "electra_test.go",
         "execution_engine_fuzz_test.go",
         "export_test.go",
         "json_marshal_unmarshal_test.go",
+        "transaction_list_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -137,7 +125,9 @@ go_test(
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/prysm/wrappers:go_default_library",
         "//testing/require:go_default_library",
+        "@com_github_offchainlabs_methodical_ssz//ssz:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",

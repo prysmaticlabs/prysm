@@ -3,7 +3,7 @@ package features
 import (
 	"time"
 
-	backfill "github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/sync/backfill/flags"
+	backfill "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,13 +29,10 @@ var (
 		Name:  "mainnet",
 		Usage: "Runs on Ethereum main network. This is the default and can be omitted.",
 	}
-	devModeFlag = &cli.BoolFlag{
+	// DevModeFlag enables the development mode flags.
+	DevModeFlag = &cli.BoolFlag{
 		Name:  "dev",
 		Usage: "Enables experimental features still in development. These features may not be stable.",
-	}
-	writeSSZStateTransitionsFlag = &cli.BoolFlag{
-		Name:  "interop-write-ssz-state-transitions",
-		Usage: "Writes SSZ states to disk after attempted state transitio.",
 	}
 	saveInvalidBlockTempFlag = &cli.BoolFlag{
 		Name:  "save-invalid-block-temp",
@@ -91,6 +88,10 @@ var (
 		Name:  "disable-attest-timely",
 		Usage: "Disable validator attesting timely after current block processes. See #8185 for more details.",
 	}
+	disableDutyAwareShutdown = &cli.BoolFlag{
+		Name:  "disable-duty-aware-shutdown",
+		Usage: "Stop the validator client immediately on SIGINT/SIGTERM, instead of waiting for the moment in the slot where a restart would not miss any rewarded duty.",
+	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database.",
@@ -101,8 +102,8 @@ var (
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
-		Usage: `Enables the validator to perform a doppelganger check. 
-		This is not a foolproof method to find duplicate instances in the network. 
+		Usage: `Enables the validator to perform a doppelganger check.
+		This is not a foolproof method to find duplicate instances in the network.
 		Your validator will still be vulnerable if it is being run in unsafe configurations.`,
 	}
 	disableStakinContractCheck = &cli.BoolFlag{
@@ -130,12 +131,22 @@ var (
 		Usage: "Saves beacon blocks with full execution payloads instead of execution payload headers in the database.",
 	}
 	EnableBeaconRESTApi = &cli.BoolFlag{
-		Name:  "enable-beacon-rest-api",
-		Usage: "(Experimental): Enables of the beacon REST API when querying a beacon node.",
+		Name:    "enable-beacon-rest-api",
+		Aliases: []string{"enable-rest"},
+		Usage:   "(Experimental): Enables the beacon REST API when querying a beacon node. Optional: also enabled implicitly when --beacon-rest-api-provider is set.",
+	}
+	enableHashtree = &cli.BoolFlag{
+		Name:  "enable-hashtree",
+		Usage: "(Experimental): Enables the hashtree hashing library.",
 	}
 	disableVerboseSigVerification = &cli.BoolFlag{
 		Name:  "disable-verbose-sig-verification",
 		Usage: "Disables identifying invalid signatures if batch verification fails when processing block.",
+	}
+	enableProposerPreprocessing = &cli.BoolFlag{
+		Name:  "enable-proposer-preprocessing",
+		Usage: "Enables proposer pre-processing of blocks before proposing.",
+		Value: false,
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
@@ -148,11 +159,6 @@ var (
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager.",
-	}
-	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
-	DisableRegistrationCache = &cli.BoolFlag{
-		Name:  "disable-registration-cache",
-		Usage: "Temporary flag for disabling the validator registration cache instead of using the DB. Note: registrations do not clear on restart while using the DB.",
 	}
 	// BlobSaveFsync enforces durable filesystem writes for use cases where blob availability is critical.
 	BlobSaveFsync = &cli.BoolFlag{
@@ -171,6 +177,25 @@ var (
 	enableExperimentalAttestationPool = &cli.BoolFlag{
 		Name:  "enable-experimental-attestation-pool",
 		Usage: "Enables an experimental attestation pool design.",
+	}
+	enableFastConfirmation = &cli.BoolFlag{
+		Name:  "enable-fast-confirmation",
+		Usage: "Enables the fast confirmation rule (FCR) for rapid block confirmation under synchrony assumptions.",
+	}
+	EnableStateDiff = &cli.BoolFlag{
+		Name:  "enable-state-diff",
+		Usage: "Enables the state diff feature.",
+	}
+	EnableArchive = &cli.BoolFlag{
+		Name: "enable-archive",
+		Usage: `Turns the node into an archive node: backfills blocks down to the archive origin state (see --archive-origin-state, genesis by default)
+		and then regenerates every historical state into the state-diff tree. (Implies --` + EnableStateDiff.Name + ` and --` + backfill.EnableExperimentalBackfill.Name + `.)`,
+	}
+	reorgLatePayloads = &cli.BoolFlag{
+		Name:   "reorg-late-payloads",
+		Usage:  "Enables reorging late payloads.",
+		Value:  false,
+		Hidden: true,
 	}
 	// forceHeadFlag is a flag to force the head of the beacon chain to a specific block.
 	forceHeadFlag = &cli.StringFlag{
@@ -197,6 +222,31 @@ var (
 		Usage: "(Work in progress): Enables the web portal for the validator client.",
 		Value: false,
 	}
+	// deprecatedDisableLastEpochTargets is a flag to disable processing of attestations for old blocks.
+	deprecatedDisableLastEpochTargets = &cli.BoolFlag{
+		Name:  "disable-last-epoch-targets",
+		Usage: "Deprecated: disables processing of last epoch targets.",
+	}
+	// ignoreUnviableAttestations flag to skip attestations whose target state is not viable with respect to head (from lagging nodes).
+	ignoreUnviableAttestations = &cli.BoolFlag{
+		Name:  "ignore-unviable-attestations",
+		Usage: "Ignores attestations whose target state is not viable with respect to the current head (avoid expensive state replay from lagging attesters).",
+	}
+	disableTrackEquivocations = &cli.BoolFlag{
+		Name:  "disable-track-equivocations",
+		Usage: "Disables recording proposer equivocations observed on gossip into forkchoice.",
+	}
+	// submitBlacklistedBuilderBids lets a builder broadcast its own bids even while this node's
+	// circuit breaker has it blacklisted. Testing only: peers still ignore the bid on gossip.
+	submitBlacklistedBuilderBids = &cli.BoolFlag{
+		Name:   "submit-blacklisted-builder-bids",
+		Usage:  "Skips the builder circuit breaker check when submitting a signed execution payload bid, so a blacklisted builder still broadcasts its bid. For testing only.",
+		Hidden: true,
+	}
+	disableBuilderRelayCircuitBreaker = &cli.BoolFlag{
+		Name:  "disable-builder-relay-circuit-breaker",
+		Usage: "Stops the builder circuit breaker from tracking which builders each direct connection endpoint serves, so a failing builder no longer bans the endpoints serving it.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -213,6 +263,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	disableAttestTimely,
+	disableDutyAwareShutdown,
 	enableSlashingProtectionPruning,
 	EnableMinimalSlashingProtection,
 	enableDoppelGangerProtection,
@@ -228,8 +279,7 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = combinedFlags([]cli.Flag{
-	devModeFlag,
-	writeSSZStateTransitionsFlag,
+	DevModeFlag,
 	saveInvalidBlockTempFlag,
 	saveInvalidBlobTempFlag,
 	disableGRPCConnectionLogging,
@@ -242,21 +292,30 @@ var BeaconChainFlags = combinedFlags([]cli.Flag{
 	disableStakinContractCheck,
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
+	ignoreUnviableAttestations,
+	disableTrackEquivocations,
 	enableFullSSZDataLogging,
 	disableVerboseSigVerification,
+	enableProposerPreprocessing,
 	prepareAllPayloads,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
 	disableResourceManager,
-	DisableRegistrationCache,
 	EnableLightClient,
 	BlobSaveFsync,
 	DisableQUIC,
 	EnableDiscoveryReboot,
 	enableExperimentalAttestationPool,
+	enableFastConfirmation,
+	EnableStateDiff,
+	EnableArchive,
+	reorgLatePayloads,
 	forceHeadFlag,
 	blacklistRoots,
+	enableHashtree,
+	submitBlacklistedBuilderBids,
+	disableBuilderRelayCircuitBreaker,
 }, deprecatedBeaconFlags, deprecatedFlags, upcomingDeprecation)
 
 func combinedFlags(flags ...[]cli.Flag) []cli.Flag {

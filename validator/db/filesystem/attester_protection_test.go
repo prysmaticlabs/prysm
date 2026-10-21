@@ -4,12 +4,12 @@ import (
 	"sync"
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/validator/db/common"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/validator/db/common"
 )
 
 func TestStore_EIPImportBlacklistedPublicKeys(t *testing.T) {
@@ -58,7 +58,7 @@ func TestStore_LowestSignedTargetEpoch(t *testing.T) {
 	}
 
 	// Save the attestation.
-	err = store.SaveAttestationForPubKey(t.Context(), pubkey, [32]byte{}, attestation)
+	err = store.SaveAttestationForPubKey(t.Context(), pubkey, []byte{}, attestation)
 	require.NoError(t, err, "SaveAttestationForPubKey should not return an error")
 
 	// Get the lowest signed target epoch.
@@ -92,7 +92,7 @@ func TestStore_LowestSignedSourceEpoch(t *testing.T) {
 	}
 
 	// Save the attestation.
-	err = store.SaveAttestationForPubKey(t.Context(), pubkey, [32]byte{}, attestation)
+	err = store.SaveAttestationForPubKey(t.Context(), pubkey, []byte{}, attestation)
 	require.NoError(t, err, "SaveAttestationForPubKey should not return an error")
 
 	// Get the lowest signed target epoch.
@@ -117,7 +117,7 @@ func TestStore_AttestedPublicKeys(t *testing.T) {
 	// Attest for some pubkeys.
 	attestedPubkeys := pubkeys[1:3]
 	for _, pubkey := range attestedPubkeys {
-		err = s.SaveAttestationForPubKey(t.Context(), pubkey, [32]byte{}, &ethpb.IndexedAttestation{
+		err = s.SaveAttestationForPubKey(t.Context(), pubkey, []byte{}, &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 42},
 				Target: &ethpb.Checkpoint{Epoch: 43},
@@ -275,13 +275,13 @@ func TestStore_SaveAttestationForPubKey(t *testing.T) {
 
 			if tt.existingAttInDB != nil {
 				// Simulate an already existing slashing protection.
-				err = store.SaveAttestationForPubKey(t.Context(), pubkey, [32]byte{}, tt.existingAttInDB)
+				err = store.SaveAttestationForPubKey(t.Context(), pubkey, []byte{}, tt.existingAttInDB)
 				require.NoError(t, err, "failed to save attestation when simulating an already existing slashing protection")
 			}
 
 			if tt.incomingAtt != nil {
 				// Attempt to save a new attestation.
-				err = store.SaveAttestationForPubKey(t.Context(), pubkey, [32]byte{}, tt.incomingAtt)
+				err = store.SaveAttestationForPubKey(t.Context(), pubkey, []byte{}, tt.incomingAtt)
 				if len(tt.expectedErr) > 0 {
 					require.ErrorContains(t, tt.expectedErr, err)
 				} else {
@@ -293,7 +293,7 @@ func TestStore_SaveAttestationForPubKey(t *testing.T) {
 }
 
 func pointerFromInt(i uint64) *uint64 {
-	return &i
+	return new(i)
 }
 
 func TestStore_SaveAttestationsForPubKey2(t *testing.T) {
@@ -401,7 +401,7 @@ func TestStore_SaveAttestationsForPubKey2(t *testing.T) {
 
 			// Simulate an already existing slashing protection.
 			if tt.existingAttInDB != nil {
-				err = store.SaveAttestationForPubKey(ctx, pubkey, [32]byte{}, tt.existingAttInDB)
+				err = store.SaveAttestationForPubKey(ctx, pubkey, []byte{}, tt.existingAttInDB)
 				require.NoError(t, err, "failed to save attestation when simulating an already existing slashing protection")
 			}
 
@@ -443,7 +443,7 @@ func TestStore_AttestationHistoryForPubKey(t *testing.T) {
 	}
 
 	// Save the attestation.
-	err = store.SaveAttestationForPubKey(t.Context(), pubkey, [32]byte{}, attestation)
+	err = store.SaveAttestationForPubKey(t.Context(), pubkey, []byte{}, attestation)
 	require.NoError(t, err, "SaveAttestationForPubKey should not return an error")
 
 	// Get the attestation history.
@@ -488,21 +488,16 @@ func BenchmarkStore_SaveAttestationForPubKey(b *testing.B) {
 	validatorDB, err := NewStore(b.TempDir(), &Config{PubKeys: pubkeys})
 	require.NoError(b, err)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.StopTimer()
 		err := validatorDB.ClearDB()
 		require.NoError(b, err)
 
-		for _, pubkey := range pubkeys {
-			wg.Add(1)
-
-			go func(pk [fieldparams.BLSPubkeyLength]byte) {
-				defer wg.Done()
-
-				err := validatorDB.SaveAttestationForPubKey(ctx, pk, signingRoot, attestation)
+		for _, pk := range pubkeys {
+			wg.Go(func() {
+				err := validatorDB.SaveAttestationForPubKey(ctx, pk, signingRoot[:], attestation)
 				require.NoError(b, err)
-			}(pubkey)
+			})
 		}
 
 		b.StartTimer()

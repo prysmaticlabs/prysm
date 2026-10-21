@@ -8,16 +8,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	validatorpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/validator-client"
-	"github.com/OffchainLabs/prysm/v6/runtime/interop"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/iface"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/petnames"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager"
+	"github.com/OffchainLabs/prysm/v7/async/event"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/iface"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/petnames"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
 	"github.com/google/uuid"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
@@ -42,6 +41,7 @@ const (
 // Keymanager implementation for local keystores utilizing EIP-2335.
 type Keymanager struct {
 	wallet              iface.Wallet
+	mu                  sync.Mutex // serializes accountsStore mutations
 	accountsStore       *accountStore
 	accountsChangedFeed *event.Feed
 }
@@ -71,10 +71,10 @@ func (a *accountStore) Copy() *accountStore {
 // AccountsKeystoreRepresentation defines an internal Prysm representation
 // of validator accounts, encrypted according to the EIP-2334 standard.
 type AccountsKeystoreRepresentation struct {
-	Crypto  map[string]interface{} `json:"crypto"`
-	ID      string                 `json:"uuid"`
-	Version uint                   `json:"version"`
-	Name    string                 `json:"name"`
+	Crypto  map[string]any `json:"crypto"`
+	ID      string         `json:"uuid"`
+	Version uint           `json:"version"`
+	Name    string         `json:"name"`
 }
 
 // ResetCaches for the keymanager.
@@ -102,38 +102,6 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		// all-accounts.keystore.json file in the wallet directory.
 		go k.listenForAccountChanges(ctx)
 	}
-	return k, nil
-}
-
-// InteropKeymanagerConfig is used on validator launch to initialize the keymanager.
-// InteropKeys are used for testing purposes.
-type InteropKeymanagerConfig struct {
-	Offset           uint64
-	NumValidatorKeys uint64
-}
-
-// NewInteropKeymanager instantiates a new imported keymanager with the deterministically generated interop keys.
-// InteropKeys are used for testing purposes.
-func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
-	k := &Keymanager{
-		accountsChangedFeed: new(event.Feed),
-	}
-	if numValidatorKeys == 0 {
-		return k, nil
-	}
-	secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(offset, numValidatorKeys)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not generate interop keys")
-	}
-	lock.Lock()
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidatorKeys)
-	for i := uint64(0); i < numValidatorKeys; i++ {
-		publicKey := bytesutil.ToBytes48(publicKeys[i].Marshal())
-		pubKeys[i] = publicKey
-		secretKeysCache[publicKey] = secretKeys[i]
-	}
-	orderedPublicKeys = pubKeys
-	lock.Unlock()
 	return k, nil
 }
 
@@ -266,7 +234,9 @@ func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
 
 // CreateAccountsKeystore creates a new keystore holding the provided keys.
 func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, privateKeys [][]byte, publicKeys [][]byte) (*AccountsKeystoreRepresentation, error) {
-	if err := km.CreateOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys); err != nil {
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	if err := km.createOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys); err != nil {
 		return nil, err
 	}
 	return CreateAccountsKeystoreRepresentation(ctx, km.accountsStore, km.wallet.Password())
@@ -274,6 +244,12 @@ func (km *Keymanager) CreateAccountsKeystore(ctx context.Context, privateKeys []
 
 // SaveStoreAndReInitialize saves the store to disk and re-initializes the account keystore from file
 func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accountStore) error {
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	return km.saveStoreAndReInitialize(ctx, store)
+}
+
+func (km *Keymanager) saveStoreAndReInitialize(ctx context.Context, store *accountStore) error {
 	// Save the copy to disk
 	accountsKeystore, err := CreateAccountsKeystoreRepresentation(ctx, store, km.wallet.Password())
 	if err != nil {
@@ -302,7 +278,7 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	}
 
 	// manually reload the account from the keystore the first time
-	km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
+	km.reloadAccountsFromKeystoreFileLocked(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
 	// listen to account changes of the new file
 	go km.listenForAccountChanges(ctx)
 	return nil
@@ -344,7 +320,13 @@ func CreateEmptyKeyStoreRepresentationForNewWallet(ctx context.Context, walletPa
 
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
 // This function DOES NOT save the accounts store to disk.
-func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys, publicKeys [][]byte) error {
+func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(ctx context.Context, privateKeys, publicKeys [][]byte) error {
+	km.mu.Lock()
+	defer km.mu.Unlock()
+	return km.createOrUpdateInMemoryAccountsStore(ctx, privateKeys, publicKeys)
+}
+
+func (km *Keymanager) createOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys, publicKeys [][]byte) error {
 	if len(privateKeys) != len(publicKeys) {
 		return fmt.Errorf(
 			"number of private keys and public keys is not equal: %d != %d", len(privateKeys), len(publicKeys),
@@ -374,7 +356,7 @@ func updateAccountsStoreKeys(store *accountStore, privateKeys, publicKeys [][]by
 	}
 	// We append to the accounts store keys only
 	// if the private/secret key do not already exist, to prevent duplicates.
-	for i := 0; i < len(privateKeys); i++ {
+	for i := range privateKeys {
 		sk := privateKeys[i]
 		pk := publicKeys[i]
 		_, privKeyExists := existingPrivKeys[string(sk)]
@@ -402,10 +384,6 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", numAccounts)
 	}
-	fmt.Println(
-		au.BrightRed("View the eth1 deposit transaction data for your accounts " +
-			"by running `validator accounts list --show-deposit-data`"),
-	)
 
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
@@ -418,7 +396,7 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 			return errors.Wrap(err, "could not fetch private keys")
 		}
 	}
-	for i := 0; i < len(accountNames); i++ {
+	for i := range accountNames {
 		fmt.Println("")
 		fmt.Printf("%s | %s\n", au.BrightBlue(fmt.Sprintf("Account %d", i)).Bold(), au.BrightGreen(accountNames[i]).Bold())
 		fmt.Printf("%s %#x\n", au.BrightMagenta("[validating public key]").Bold(), pubKeys[i])
@@ -433,12 +411,12 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 }
 
 func CreatePrintoutOfKeys(keys [][]byte) string {
-	var keysStr string
+	var keysStr strings.Builder
 	for i, k := range keys {
 		if i != 0 {
-			keysStr += "," // Add a comma before each key except the first one
+			keysStr.WriteString(",") // Add a comma before each key except the first one
 		}
-		keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
+		keysStr.WriteString(fmt.Sprintf("%#x", bytesutil.Trunc(k)))
 	}
-	return keysStr
+	return keysStr.String()
 }

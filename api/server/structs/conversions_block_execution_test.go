@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -560,4 +561,87 @@ func TestExecutionRequests_ToConsensus_HappyPath(t *testing.T) {
 	require.Equal(t, uint64(555), result.Withdrawals[0].Amount)
 	require.Equal(t, 1, len(result.Consolidations))
 	require.DeepEqual(t, fillByteSlice(48, 0xcc), result.Consolidations[0].TargetPubkey)
+}
+
+func TestExecutionRequestsGloasFromConsensus_HappyPath(t *testing.T) {
+	er := &enginev1.ExecutionRequestsGloas{
+		Deposits: []*enginev1.DepositRequest{
+			{Pubkey: fillByteSlice(48, 0xba), WithdrawalCredentials: fillByteSlice(32, 0xaa), Amount: 33, Signature: fillByteSlice(96, 0xff), Index: 44},
+		},
+		BuilderDeposits: []*enginev1.BuilderDepositRequest{
+			{Pubkey: fillByteSlice(48, 0xb1), WithdrawalCredentials: fillByteSlice(32, 0xa1), Amount: 77, Signature: fillByteSlice(96, 0xf1)},
+		},
+		BuilderExits: []*enginev1.BuilderExitRequest{
+			{SourceAddress: fillByteSlice(20, 0xc1), Pubkey: fillByteSlice(48, 0xd1)},
+		},
+	}
+
+	result := ExecutionRequestsGloasFromConsensus(er)
+	require.NotNil(t, result)
+	require.Equal(t, 1, len(result.Deposits))
+	require.Equal(t, "33", result.Deposits[0].Amount)
+	require.Equal(t, 1, len(result.BuilderDeposits))
+	require.Equal(t, "77", result.BuilderDeposits[0].Amount)
+	require.Equal(t, hexutil.Encode(fillByteSlice(48, 0xb1)), result.BuilderDeposits[0].Pubkey)
+	require.Equal(t, hexutil.Encode(fillByteSlice(96, 0xf1)), result.BuilderDeposits[0].Signature)
+	require.Equal(t, 1, len(result.BuilderExits))
+	require.Equal(t, hexutil.Encode(fillByteSlice(20, 0xc1)), result.BuilderExits[0].SourceAddress)
+	require.Equal(t, hexutil.Encode(fillByteSlice(48, 0xd1)), result.BuilderExits[0].Pubkey)
+}
+
+// overElectraDepositCap returns one more JSON deposit request than the Electra
+// MAX_DEPOSIT_REQUESTS_PER_PAYLOAD allows.
+func overElectraDepositCap() []*DepositRequest {
+	deposits := make([]*DepositRequest, params.BeaconConfig().MaxDepositRequestsPerPayload+1)
+	for i := range deposits {
+		deposits[i] = &DepositRequest{
+			Pubkey:                hexutil.Encode(fillByteSlice(48, 0xb1)),
+			WithdrawalCredentials: hexutil.Encode(fillByteSlice(32, 0xa1)),
+			Amount:                "32000000000",
+			Signature:             hexutil.Encode(fillByteSlice(96, 0xf1)),
+			Index:                 fmt.Sprintf("%d", i),
+		}
+	}
+	return deposits
+}
+
+// Electra bounds deposit requests by MAX_DEPOSIT_REQUESTS_PER_PAYLOAD.
+func TestExecutionRequests_ToConsensus_RejectsOverCapDeposits(t *testing.T) {
+	execReq := &ExecutionRequests{Deposits: overElectraDepositCap()}
+
+	_, err := execReq.ToConsensus()
+	require.ErrorContains(t, "exceeds max of", err)
+}
+
+// Gloas removed MAX_DEPOSIT_REQUESTS_PER_PAYLOAD (consensus-specs #5436), so the
+// Electra cap must not apply to the gloas type.
+func TestExecutionRequestsGloas_ToConsensus_NoDepositCap(t *testing.T) {
+	deposits := overElectraDepositCap()
+	execReq := &ExecutionRequestsGloas{Deposits: deposits}
+
+	result, err := execReq.ToConsensus()
+	require.NoError(t, err)
+	require.Equal(t, len(deposits), len(result.Deposits))
+	require.Equal(t, uint64(len(deposits)-1), result.Deposits[len(deposits)-1].Index)
+}
+
+func TestExecutionRequestsGloas_ToConsensus_HappyPath(t *testing.T) {
+	execReq := &ExecutionRequestsGloas{
+		BuilderDeposits: []*BuilderDepositRequest{
+			{Pubkey: hexutil.Encode(fillByteSlice(48, 0xb1)), WithdrawalCredentials: hexutil.Encode(fillByteSlice(32, 0xa1)), Amount: "77", Signature: hexutil.Encode(fillByteSlice(96, 0xf1))},
+		},
+		BuilderExits: []*BuilderExitRequest{
+			{SourceAddress: hexutil.Encode(fillByteSlice(20, 0xc1)), Pubkey: hexutil.Encode(fillByteSlice(48, 0xd1))},
+		},
+	}
+
+	result, err := execReq.ToConsensus()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(result.BuilderDeposits))
+	require.Equal(t, uint64(77), result.BuilderDeposits[0].Amount)
+	require.DeepEqual(t, fillByteSlice(48, 0xb1), result.BuilderDeposits[0].Pubkey)
+	require.DeepEqual(t, fillByteSlice(96, 0xf1), result.BuilderDeposits[0].Signature)
+	require.Equal(t, 1, len(result.BuilderExits))
+	require.DeepEqual(t, fillByteSlice(20, 0xc1), result.BuilderExits[0].SourceAddress)
+	require.DeepEqual(t, fillByteSlice(48, 0xd1), result.BuilderExits[0].Pubkey)
 }

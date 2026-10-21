@@ -6,25 +6,25 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/iface"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/crypto/rand"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	v1 "github.com/OffchainLabs/prysm/v6/proto/eth/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assertions"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/iface"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/crypto/rand"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	v1 "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assertions"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 )
@@ -279,7 +279,7 @@ func generateProposerSlashings(
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
 	proposerSlashings := make([]*ethpb.ProposerSlashing, numSlashings)
-	for i := uint64(0); i < numSlashings; i++ {
+	for i := range numSlashings {
 		proposerIndex, err := randValIndex(bState)
 		if err != nil {
 			return nil, err
@@ -407,7 +407,7 @@ func generateAttesterSlashings(
 ) ([]ethpb.AttSlashing, error) {
 	attesterSlashings := make([]ethpb.AttSlashing, numSlashings)
 	randGen := rand.NewDeterministicGenerator()
-	for i := uint64(0); i < numSlashings; i++ {
+	for i := range numSlashings {
 		committeeIndex := randGen.Uint64() % helpers.SlotCommitteeCount(uint64(bState.NumValidators()))
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), bState, bState.Slot(), primitives.CommitteeIndex(committeeIndex))
 		if err != nil {
@@ -625,7 +625,7 @@ func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 	return b
 }
 
-func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
+func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b any) interfaces.SignedBeaconBlock {
 	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(tb, err)
 	require.NoError(tb, db.SaveBlock(ctx, wsb))
@@ -1293,7 +1293,7 @@ func generateWithdrawals(
 	numWithdrawals uint64,
 ) ([]*enginev1.Withdrawal, error) {
 	withdrawalRequests := make([]*enginev1.Withdrawal, numWithdrawals)
-	for i := uint64(0); i < numWithdrawals; i++ {
+	for i := range numWithdrawals {
 		valIndex, err := randValIndex(bState)
 		if err != nil {
 			return nil, err
@@ -1472,4 +1472,194 @@ func HydrateBlindedBeaconBlockBodyFulu(b *ethpb.BlindedBeaconBlockBodyElectra) *
 	}
 	b.ExecutionRequests = HydrateExecutionRequests(b.ExecutionRequests)
 	return b
+}
+
+// HydrateSignedBeaconBlockGloas hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockGloas(b *ethpb.SignedBeaconBlockGloas) *ethpb.SignedBeaconBlockGloas {
+	if b == nil {
+		b = &ethpb.SignedBeaconBlockGloas{}
+	}
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Block = HydrateBeaconBlockGloas(b.Block)
+	return b
+}
+
+// HydrateBeaconBlockGloas hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockGloas(b *ethpb.BeaconBlockGloas) *ethpb.BeaconBlockGloas {
+	if b == nil {
+		b = &ethpb.BeaconBlockGloas{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateBeaconBlockBodyGloas(b.Body)
+	return b
+}
+
+// HydrateBeaconBlockBodyGloas hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateBeaconBlockBodyGloas(b *ethpb.BeaconBlockBodyGloas) *ethpb.BeaconBlockBodyGloas {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyGloas{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, fieldparams.RootLength)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	b.SignedExecutionPayloadBid = HydrateSignedExecutionPayloadBid(b.SignedExecutionPayloadBid)
+	if b.PayloadAttestations == nil {
+		b.PayloadAttestations = make([]*ethpb.PayloadAttestation, 0)
+	}
+	if b.ParentExecutionRequests == nil {
+		b.ParentExecutionRequests = &enginev1.ExecutionRequestsGloas{}
+	}
+	return b
+}
+
+// HydrateSignedExecutionPayloadBid hydrates a signed execution payload bid with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedExecutionPayloadBid(b *ethpb.SignedExecutionPayloadBid) *ethpb.SignedExecutionPayloadBid {
+	if b == nil {
+		b = &ethpb.SignedExecutionPayloadBid{}
+	}
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Message = HydrateExecutionPayloadBid(b.Message)
+	return b
+}
+
+// HydrateExecutionPayloadBid hydrates an execution payload bid with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateExecutionPayloadBid(b *ethpb.ExecutionPayloadBid) *ethpb.ExecutionPayloadBid {
+	if b == nil {
+		b = &ethpb.ExecutionPayloadBid{}
+	}
+	if b.ParentBlockHash == nil {
+		b.ParentBlockHash = make([]byte, fieldparams.RootLength)
+	}
+	if b.ParentBlockRoot == nil {
+		b.ParentBlockRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.BlockHash == nil {
+		b.BlockHash = make([]byte, fieldparams.RootLength)
+	}
+	if b.PrevRandao == nil {
+		b.PrevRandao = make([]byte, fieldparams.RootLength)
+	}
+	if b.FeeRecipient == nil {
+		b.FeeRecipient = make([]byte, fieldparams.FeeRecipientLength)
+	}
+	if b.BlobKzgCommitments == nil {
+		b.BlobKzgCommitments = make([][]byte, 0)
+	}
+	if b.ExecutionRequestsRoot == nil {
+		b.ExecutionRequestsRoot = make([]byte, fieldparams.RootLength)
+	}
+	return b
+}
+
+// HydratePayloadAttestation hydrates a payload attestation with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydratePayloadAttestation(p *ethpb.PayloadAttestation) *ethpb.PayloadAttestation {
+	if p == nil {
+		p = &ethpb.PayloadAttestation{}
+	}
+	if p.AggregationBits == nil {
+		p.AggregationBits = make([]byte, 64)
+	}
+	if p.Signature == nil {
+		p.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	p.Data = HydratePayloadAttestationData(p.Data)
+	return p
+}
+
+// HydratePayloadAttestationData hydrates a payload attestation data with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydratePayloadAttestationData(d *ethpb.PayloadAttestationData) *ethpb.PayloadAttestationData {
+	if d == nil {
+		d = &ethpb.PayloadAttestationData{}
+	}
+	if d.BeaconBlockRoot == nil {
+		d.BeaconBlockRoot = make([]byte, fieldparams.RootLength)
+	}
+	return d
+}
+
+// GenerateTestPayloadAttestations generates a slice of payload attestations with non-zero test values.
+// This is useful for testing Gloas-specific fields.
+func GenerateTestPayloadAttestations(count int, slot primitives.Slot) []*ethpb.PayloadAttestation {
+	attestations := make([]*ethpb.PayloadAttestation, count)
+	for i := range count {
+		aggregationBits := make([]byte, 64)
+		aggregationBits[0] = 0x01 // Set at least one bit
+		signature := make([]byte, fieldparams.BLSSignatureLength)
+		signature[0] = byte(i + 1) // Make each signature unique
+		beaconBlockRoot := make([]byte, fieldparams.RootLength)
+		beaconBlockRoot[0] = byte(i + 1) // Make each root unique
+
+		attestations[i] = &ethpb.PayloadAttestation{
+			AggregationBits: aggregationBits,
+			Signature:       signature,
+			Data: &ethpb.PayloadAttestationData{
+				BeaconBlockRoot:   beaconBlockRoot,
+				Slot:              slot,
+				PayloadPresent:    true,
+				BlobDataAvailable: true,
+			},
+		}
+	}
+	return attestations
+}
+
+// GenerateTestSignedExecutionPayloadBid generates a signed execution payload bid with non-zero test values.
+// This is useful for testing Gloas-specific fields.
+func GenerateTestSignedExecutionPayloadBid(slot primitives.Slot) *ethpb.SignedExecutionPayloadBid {
+	parentBlockHash := bytesutil.PadTo([]byte{0x01}, fieldparams.RootLength)
+	parentBlockRoot := bytesutil.PadTo([]byte{0x02}, fieldparams.RootLength)
+	blockHash := bytesutil.PadTo([]byte{0x03}, fieldparams.RootLength)
+	prevRandao := bytesutil.PadTo([]byte{0x04}, fieldparams.RootLength)
+	feeRecipient := bytesutil.PadTo([]byte{0x05}, fieldparams.FeeRecipientLength)
+	blobKzgCommitment := bytesutil.PadTo([]byte{0x06}, fieldparams.BLSPubkeyLength)
+	signature := bytesutil.PadTo([]byte{0x07}, fieldparams.BLSSignatureLength)
+
+	return &ethpb.SignedExecutionPayloadBid{
+		Message: &ethpb.ExecutionPayloadBid{
+			Slot:                  slot,
+			BuilderIndex:          1,
+			ParentBlockHash:       parentBlockHash,
+			ParentBlockRoot:       parentBlockRoot,
+			BlockHash:             blockHash,
+			GasLimit:              30000000,
+			PrevRandao:            prevRandao,
+			FeeRecipient:          feeRecipient,
+			Value:                 1000000,
+			ExecutionPayment:      2000000,
+			BlobKzgCommitments:    [][]byte{blobKzgCommitment},
+			ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
+		},
+		Signature: signature,
+	}
 }

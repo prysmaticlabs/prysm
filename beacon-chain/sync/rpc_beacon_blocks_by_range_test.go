@@ -7,28 +7,28 @@ import (
 	"testing"
 	"time"
 
-	chainMock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	db2 "github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	db "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	mockExecution "github.com/OffchainLabs/prysm/v6/beacon-chain/execution/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/encoder"
-	p2ptest "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	leakybucket "github.com/OffchainLabs/prysm/v6/container/leaky-bucket"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	db2 "github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	db "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	mockExecution "github.com/OffchainLabs/prysm/v7/beacon-chain/execution/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/encoder"
+	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -282,6 +282,127 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
+}
+
+func TestWriteBlockBatchToStream_ReconstructedBlocksPreserveCanonicalOrder(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	require.Equal(t, 1, len(p1.BHost.Network().Peers()))
+
+	clock := startup.NewClock(time.Unix(0, 0), [32]byte{})
+
+	makePayload := func(tag byte) *enginev1.ExecutionPayload {
+		blockHash := bytesutil.PadTo([]byte{tag}, fieldparams.RootLength)
+		return &enginev1.ExecutionPayload{
+			ParentHash:    bytesutil.PadTo([]byte{'p', tag}, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:     bytesutil.PadTo([]byte{'s', tag}, fieldparams.RootLength),
+			ReceiptsRoot:  bytesutil.PadTo([]byte{'r', tag}, fieldparams.RootLength),
+			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:    blockHash,
+			BlockNumber:   0,
+			GasLimit:      0,
+			GasUsed:       0,
+			Timestamp:     0,
+			ExtraData:     nil,
+			BlockHash:     blockHash,
+			BaseFeePerGas: bytesutil.PadTo([]byte{'b', tag}, fieldparams.RootLength),
+			Transactions:  nil,
+		}
+	}
+
+	makeBlindedROBlock := func(slot primitives.Slot, payload *enginev1.ExecutionPayload) blocks.ROBlock {
+		blinded := util.NewBlindedBeaconBlockBellatrix()
+		blinded.Block.Slot = slot
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
+		require.NoError(t, err)
+		blinded.Block.Body.ExecutionPayloadHeader = header
+		signed, err := blocks.NewSignedBeaconBlock(blinded)
+		require.NoError(t, err)
+		root, err := blinded.Block.HashTreeRoot()
+		require.NoError(t, err)
+		ro, err := blocks.NewROBlockWithRoot(signed, root)
+		require.NoError(t, err)
+		return ro
+	}
+
+	makeFullROBlock := func(slot primitives.Slot) blocks.ROBlock {
+		full := util.NewBeaconBlockBellatrix()
+		full.Block.Slot = slot
+		signed, err := blocks.NewSignedBeaconBlock(full)
+		require.NoError(t, err)
+		root, err := full.Block.HashTreeRoot()
+		require.NoError(t, err)
+		ro, err := blocks.NewROBlockWithRoot(signed, root)
+		require.NoError(t, err)
+		return ro
+	}
+
+	payload1 := makePayload(0x11)
+	payload3 := makePayload(0x33)
+	block1 := makeBlindedROBlock(1, payload1)
+	block2 := makeFullROBlock(2)
+	block3 := makeBlindedROBlock(3, payload3)
+
+	mockEngine := &mockExecution.EngineClient{
+		ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{
+			bytesutil.ToBytes32(payload1.BlockHash): payload1,
+			bytesutil.ToBytes32(payload3.BlockHash): payload3,
+		},
+	}
+
+	r := &Service{cfg: &config{p2p: p1, clock: clock, executionReconstructor: mockEngine}}
+	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
+
+	slotsCh := make(chan []primitives.Slot, 1)
+	errCh := make(chan error, 1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		got := make([]primitives.Slot, 0, 3)
+		for range 3 {
+			expectSuccess(t, stream)
+			blk := util.NewBeaconBlockBellatrix()
+			if err := p2.Encoding().DecodeWithMaxLength(stream, blk); err != nil {
+				errCh <- err
+				return
+			}
+			wrapped, err := blocks.NewSignedBeaconBlock(blk)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if wrapped.IsBlinded() {
+				errCh <- errors.New("expected reconstructed full block, got blinded block")
+				return
+			}
+			got = append(got, wrapped.Block().Slot())
+		}
+		slotsCh <- got
+	})
+
+	stream, err := p1.BHost.NewStream(t.Context(), p2.BHost.ID(), pcl)
+	require.NoError(t, err)
+
+	err = r.writeBlockBatchToStream(
+		t.Context(),
+		blockBatch{lin: []blocks.ROBlock{block1, block2, block3}},
+		stream,
+	)
+	require.NoError(t, err)
+	require.NoError(t, stream.Close())
+
+	select {
+	case err := <-errCh:
+		require.NoError(t, err)
+	case got := <-slotsCh:
+		assert.DeepEqual(t, []primitives.Slot{1, 2, 3}, got)
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for streamed blocks")
+	}
+
+	require.Equal(t, uint64(2), mockEngine.NumReconstructedPayloads)
 }
 
 func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {

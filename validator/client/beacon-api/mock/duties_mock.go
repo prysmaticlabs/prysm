@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	structs "github.com/OffchainLabs/prysm/v6/api/server/structs"
-	primitives "github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
+	structs "github.com/OffchainLabs/prysm/v7/api/server/structs"
+	primitives "github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -70,6 +70,21 @@ func (m *MockdutiesProvider) Committees(ctx context.Context, epoch primitives.Ep
 func (mr *MockdutiesProviderMockRecorder) Committees(ctx, epoch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Committees", reflect.TypeOf((*MockdutiesProvider)(nil).Committees), ctx, epoch)
+}
+
+// PTCDuties mocks base method.
+func (m *MockdutiesProvider) PTCDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) (*structs.GetPTCDutiesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PTCDuties", ctx, epoch, validatorIndices)
+	ret0, _ := ret[0].(*structs.GetPTCDutiesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PTCDuties indicates an expected call of PTCDuties.
+func (mr *MockdutiesProviderMockRecorder) PTCDuties(ctx, epoch, validatorIndices any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PTCDuties", reflect.TypeOf((*MockdutiesProvider)(nil).PTCDuties), ctx, epoch, validatorIndices)
 }
 
 // ProposerDuties mocks base method.

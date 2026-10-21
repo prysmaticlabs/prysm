@@ -2,11 +2,8 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "flags.go",
-        "interop.go",
-    ],
-    importpath = "github.com/OffchainLabs/prysm/v6/cmd/validator/flags",
+    srcs = ["flags.go"],
+    importpath = "github.com/OffchainLabs/prysm/v7/cmd/validator/flags",
     visibility = [
         "//cmd/prysmctl:__subpackages__",
         "//cmd/validator:__subpackages__",

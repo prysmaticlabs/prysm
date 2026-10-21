@@ -1,26 +1,27 @@
 package sync
 
 import (
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	blockfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/block"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	statefeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/execution"
-	lightClient "github.com/OffchainLabs/prysm/v6/beacon-chain/light-client"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/attestations"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/blstoexec"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/slashings"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/synccommittee"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/voluntaryexits"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/sync/backfill/coverage"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	"github.com/OffchainLabs/prysm/v6/crypto/rand"
+	"github.com/OffchainLabs/prysm/v7/async/event"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	blockfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/block"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
+	lightClient "github.com/OffchainLabs/prysm/v7/beacon-chain/light-client"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/blstoexec"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/payloadattestation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/synccommittee"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/voluntaryexits"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/sync/backfill/coverage"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/crypto/rand"
 )
 
 type Option func(s *Service) error
@@ -199,10 +200,38 @@ func WithAvailableBlocker(avb coverage.AvailableBlocker) Option {
 	}
 }
 
-// WithTrackedValidatorsCache for tracked validators cache.
-func WithTrackedValidatorsCache(c *cache.TrackedValidatorsCache) Option {
+func WithPayloadAttestationCache(c *cache.PayloadAttestationCache) Option {
 	return func(s *Service) error {
-		s.trackedValidatorsCache = c
+		s.payloadAttestationCache = c
+		return nil
+	}
+}
+
+func WithProposerPreferencesCache(c *cache.ProposerPreferencesCache) Option {
+	return func(s *Service) error {
+		s.proposerPreferencesCache = c
+		return nil
+	}
+}
+
+// WithBuilderCircuitBreaker sets the tracker used to ignore bids from blacklisted builders.
+func WithBuilderCircuitBreaker(c *cache.BuilderCircuitBreaker) Option {
+	return func(s *Service) error {
+		s.builderCircuitBreaker = c
+		return nil
+	}
+}
+
+func WithSubscribedValidatorsCache(c *cache.SubscribedValidatorsCache) Option {
+	return func(s *Service) error {
+		s.subscribedValidatorsCache = c
+		return nil
+	}
+}
+
+func WithPayloadAttestationPool(pool payloadattestation.PoolManager) Option {
+	return func(s *Service) error {
+		s.cfg.payloadAttestationPool = pool
 		return nil
 	}
 }

@@ -3,14 +3,14 @@ package filesystem
 import (
 	"encoding/binary"
 	"os"
+	"path/filepath"
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/spf13/afero"
 )
 
@@ -87,22 +87,6 @@ func TestWarmCache(t *testing.T) {
 }
 
 func TestSaveDataColumnsSidecars(t *testing.T) {
-	t.Run("wrong numbers of columns", func(t *testing.T) {
-		cfg := params.BeaconConfig().Copy()
-		cfg.NumberOfColumns = 0
-		params.OverrideBeaconConfig(cfg)
-		params.SetupTestConfigCleanup(t)
-
-		_, verifiedRoDataColumnSidecars := util.CreateTestVerifiedRoDataColumnSidecars(
-			t,
-			[]util.DataColumnParam{{Index: 12}, {Index: 1_000_000}, {Index: 48}},
-		)
-
-		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
-		err := dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.ErrorIs(t, err, errWrongNumberOfColumns)
-	})
-
 	t.Run("one of the column index is too large", func(t *testing.T) {
 		_, verifiedRoDataColumnSidecars := util.CreateTestVerifiedRoDataColumnSidecars(
 			t,
@@ -128,7 +112,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 		alteredVerifiedRoDataColumnSidecars = append(alteredVerifiedRoDataColumnSidecars, verifiedRoDataColumnSidecars[0])
 
 		altered, err := blocks.NewRODataColumnWithRoot(
-			verifiedRoDataColumnSidecars[1].RODataColumn.DataColumnSidecar,
+			verifiedRoDataColumnSidecars[1].RODataColumn.DataColumnSidecar(),
 			verifiedRoDataColumnSidecars[0].BlockRoot(),
 		)
 		require.NoError(t, err)
@@ -279,7 +263,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 			)
 
 			// Build expected bytes.
-			firstSszEncodedDataColumnSidecar, err := expectedDataColumnSidecars[0].MarshalSSZ()
+			firstSszEncodedDataColumnSidecar, err := expectedDataColumnSidecars[0].RODataColumn.DataColumnSidecar().MarshalSSZ()
 			require.NoError(t, err)
 
 			dataColumnSidecarsCount := len(expectedDataColumnSidecars)
@@ -288,7 +272,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 			sszEncodedDataColumnSidecars := make([]byte, 0, dataColumnSidecarsCount*sszEncodedDataColumnSidecarSize)
 			sszEncodedDataColumnSidecars = append(sszEncodedDataColumnSidecars, firstSszEncodedDataColumnSidecar...)
 			for _, dataColumnSidecar := range expectedDataColumnSidecars[1:] {
-				sszEncodedDataColumnSidecar, err := dataColumnSidecar.MarshalSSZ()
+				sszEncodedDataColumnSidecar, err := dataColumnSidecar.RODataColumn.DataColumnSidecar().MarshalSSZ()
 				require.NoError(t, err)
 				sszEncodedDataColumnSidecars = append(sszEncodedDataColumnSidecars, sszEncodedDataColumnSidecar...)
 			}
@@ -378,11 +362,17 @@ func TestGetDataColumnSidecars(t *testing.T) {
 
 		verifiedRODataColumnSidecars, err := dataColumnStorage.Get(root, nil)
 		require.NoError(t, err)
-		require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars, verifiedRODataColumnSidecars)
+		require.Equal(t, len(expectedVerifiedRoDataColumnSidecars), len(verifiedRODataColumnSidecars))
+		for i := range expectedVerifiedRoDataColumnSidecars {
+			require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars[i].DataColumnSidecar(), verifiedRODataColumnSidecars[i].DataColumnSidecar())
+		}
 
 		verifiedRODataColumnSidecars, err = dataColumnStorage.Get(root, []uint64{12, 13, 14})
 		require.NoError(t, err)
-		require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars, verifiedRODataColumnSidecars)
+		require.Equal(t, len(expectedVerifiedRoDataColumnSidecars), len(verifiedRODataColumnSidecars))
+		for i := range expectedVerifiedRoDataColumnSidecars {
+			require.DeepSSZEqual(t, expectedVerifiedRoDataColumnSidecars[i].DataColumnSidecar(), verifiedRODataColumnSidecars[i].DataColumnSidecar())
+		}
 	})
 }
 
@@ -723,5 +713,33 @@ func TestPrune(t *testing.T) {
 		dirs, err = listDir(dataColumnStorage.fs, "3/14098")
 		require.NoError(t, err)
 		require.Equal(t, true, compareSlices([]string{"0x0de28a18cae63cbc6f0b20dc1afb0b1df38da40824a5f09f92d485ade04de97f.sszs"}, dirs))
+	})
+}
+
+func TestExtractFileMetadata(t *testing.T) {
+	t.Run("Unix", func(t *testing.T) {
+		// Test with Unix-style path separators (/)
+		path := "12/1234/0x8bb2f09de48c102635622dc27e6de03ae2b22639df7c33edbc8222b2ec423746.sszs"
+		metadata, err := extractFileMetadata(path)
+		// Unix-style WarmCache paths must succeed on both Unix and Windows.
+		require.NoError(t, err)
+		require.Equal(t, uint64(12), metadata.period)
+		require.Equal(t, primitives.Epoch(1234), metadata.epoch)
+	})
+
+	t.Run("Windows", func(t *testing.T) {
+		// Test with Windows-style path separators (\)
+		path := "12\\1234\\0x8bb2f09de48c102635622dc27e6de03ae2b22639df7c33edbc8222b2ec423746.sszs"
+		metadata, err := extractFileMetadata(path)
+		if filepath.Separator == '\\' {
+			// On Windows systems, this should succeed
+			require.NoError(t, err)
+			require.Equal(t, uint64(12), metadata.period)
+			require.Equal(t, primitives.Epoch(1234), metadata.epoch)
+			return
+		}
+
+		// On Unix systems, this should fail because it uses the wrong separator
+		require.NotNil(t, err)
 	})
 }

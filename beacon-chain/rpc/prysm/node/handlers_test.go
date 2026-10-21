@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers"
-	mockp2p "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	mockp2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	corenet "github.com/libp2p/go-libp2p/core/network"
@@ -91,7 +91,7 @@ func TestListTrustedPeer(t *testing.T) {
 		// assert number of trusted peer is right
 		assert.Equal(t, 9, len(peers))
 
-		for i := 0; i < 9; i++ {
+		for i := range 9 {
 			pid, err := peer.Decode(peers[i].PeerId)
 			require.NoError(t, err)
 			if pid == ids[8] {
@@ -220,6 +220,20 @@ func TestAddTrustedPeer_BadAddress(t *testing.T) {
 	assert.StringContains(t, "Could not derive peer info from multiaddress", e.Message)
 }
 
+func TestAddTrustedPeer_NoTransportAddress(t *testing.T) {
+	peerFetcher := &mockp2p.MockPeersProvider{}
+	peerFetcher.ClearPeers()
+	s := Server{PeersFetcher: peerFetcher}
+
+	body := bytes.NewBufferString(`{"addr":"/p2p/16Uiu2HAm1n583t4huDMMqEUUBuQs6bLts21mxCfX3tiqu9JfHvRJ"}`)
+	request := httptest.NewRequest("POST", "http://anything.is.fine", body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.AddTrustedPeer(writer, request)
+	assert.Equal(t, http.StatusBadRequest, writer.Code)
+}
+
 func TestRemoveTrustedPeer(t *testing.T) {
 	peerFetcher := &mockp2p.MockPeersProvider{}
 	peerFetcher.ClearPeers()
@@ -227,6 +241,7 @@ func TestRemoveTrustedPeer(t *testing.T) {
 
 	url := "http://anything.is.fine.but.last.is.important/16Uiu2HAm1n583t4huDMMqEUUBuQs6bLts21mxCfX3tiqu9JfHvRJ"
 	request := httptest.NewRequest("DELETE", url, nil)
+	request.SetPathValue("peer_id", "16Uiu2HAm1n583t4huDMMqEUUBuQs6bLts21mxCfX3tiqu9JfHvRJ")
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 	s.RemoveTrustedPeer(writer, request)

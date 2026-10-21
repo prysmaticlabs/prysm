@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers/peerdata"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/peerdata"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	corenet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -85,7 +84,14 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, errJson)
 		return
 	}
-
+	if len(info.Addrs) == 0 {
+		errJson := &httputil.DefaultJsonError{
+			Message: "Multiaddress must include a transport address",
+			Code:    http.StatusBadRequest,
+		}
+		httputil.WriteError(w, errJson)
+		return
+	}
 	// also add new peerdata to peers
 	direction, err := s.PeersFetcher.Peers().Direction(info.ID)
 	if err != nil {
@@ -105,8 +111,7 @@ func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "node.RemoveTrustedPeer")
 	defer span.End()
 
-	segments := strings.Split(r.URL.Path, "/")
-	id := segments[len(segments)-1]
+	id := r.PathValue("peer_id")
 	peerId, err := peer.Decode(id)
 	if err != nil {
 		errJson := &httputil.DefaultJsonError{

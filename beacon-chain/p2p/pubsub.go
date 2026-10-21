@@ -2,16 +2,15 @@ package p2p
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/encoder"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	pbrpc "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/encoder"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	pbrpc "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -39,13 +38,9 @@ const (
 	rSubD = 8 // random gossip target
 )
 
-var ErrInvalidTopic = errors.New("invalid topic format")
-
-// Specifies the fixed size context length.
-const digestLength = 4
-
-// Specifies the prefix for any pubsub topic.
-const gossipTopicPrefix = "/eth2/"
+// ErrInvalidTopic aliases p2ptypes.ErrInvalidTopic, which lives in the leaf types
+// package so p2p subpackages can use it without an import cycle.
+var ErrInvalidTopic = p2ptypes.ErrInvalidTopic
 
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
@@ -53,6 +48,11 @@ func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topi
 	defer s.joinedTopicsLock.Unlock()
 
 	if _, ok := s.joinedTopics[topic]; !ok {
+		if strings.Contains(topic, GossipDataColumnSidecarMessage) && s.partialColumnBroadcaster != nil {
+			opts = append(opts, pubsub.RequestPartialMessages())
+			log.WithField("topic", topic).Debug("Joining data column sidecar topic with partial messages")
+		}
+
 		topicHandle, err := s.pubsub.Join(topic, opts...)
 		if err != nil {
 			return nil, err
@@ -93,8 +93,28 @@ func (s *Service) PublishToTopic(ctx context.Context, topic string, data []byte,
 		select {
 		case <-ctx.Done():
 			return errors.Wrapf(ctx.Err(), "unable to find requisite number of peers for topic %s, 0 peers found to publish to", topic)
-		default:
-			time.Sleep(100 * time.Millisecond)
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
+
+// addToBatch joins (if necessary) a topic and adds the message to a message batch.
+func (s *Service) addToBatch(ctx context.Context, batch *pubsub.MessageBatch, topic string, data []byte, opts ...pubsub.PubOpt) error {
+	topicHandle, err := s.JoinTopic(topic)
+	if err != nil {
+		return fmt.Errorf("joining topic: %w", err)
+	}
+
+	// Wait for at least 1 peer to be available to receive the published message.
+	for {
+		if flags.Get().MinimumSyncPeers == 0 || len(topicHandle.ListPeers()) > 0 {
+			return topicHandle.AddToBatch(ctx, batch, data, opts...)
+		}
+		select {
+		case <-ctx.Done():
+			return errors.Wrapf(ctx.Err(), "unable to find requisite number of peers for topic %s, 0 peers found to publish to", topic)
+		case <-time.After(100 * time.Millisecond):
+			// reenter the for loop after 100ms
 		}
 	}
 }
@@ -140,7 +160,7 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 		pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
 		pubsub.WithNoAuthor(),
 		pubsub.WithMessageIdFn(func(pmsg *pubsubpb.Message) string {
-			return MsgID(s.genesisValidatorsRoot, pmsg)
+			return MsgID(pmsg)
 		}),
 		pubsub.WithSubscriptionFilter(filt),
 		pubsub.WithPeerOutboundQueueSize(int(s.cfg.QueueSize)),
@@ -149,7 +169,7 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 		pubsub.WithPeerScore(peerScoringParams(s.cfg.IPColocationWhitelist)),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
-		pubsub.WithRawTracer(gossipTracer{host: s.host}),
+		pubsub.WithRawTracer(&gossipTracer{host: s.host, allowedTopics: filt}),
 	}
 
 	if len(s.cfg.StaticPeers) > 0 {
@@ -159,6 +179,9 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 			return psOpts
 		}
 		psOpts = append(psOpts, pubsub.WithDirectPeers(directPeersAddrInfos))
+	}
+	if s.partialColumnBroadcaster != nil {
+		psOpts = s.partialColumnBroadcaster.AppendPubSubOpts(psOpts)
 	}
 
 	return psOpts
@@ -196,7 +219,7 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 // to configure our message id time-cache rather than instantiating
 // it with a router instance.
 func setPubSubParameters() {
-	seenTtl := 2 * time.Second * time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	seenTtl := 2 * params.EpochsDuration(1, params.BeaconConfig())
 	pubsub.TimeCacheDuration = seenTtl
 }
 
@@ -215,28 +238,8 @@ func convertTopicScores(topicMap map[string]*pubsub.TopicScoreSnapshot) map[stri
 }
 
 // ExtractGossipDigest extracts the relevant fork digest from the gossip topic.
-// Topics are in the form of /eth2/{fork-digest}/{topic} and this method extracts the
-// fork digest from the topic string to a 4 byte array.
 func ExtractGossipDigest(topic string) ([4]byte, error) {
-	// Ensure the topic prefix is correct.
-	if len(topic) < len(gossipTopicPrefix)+1 || topic[:len(gossipTopicPrefix)] != gossipTopicPrefix {
-		return [4]byte{}, ErrInvalidTopic
-	}
-	start := len(gossipTopicPrefix)
-	end := strings.Index(topic[start:], "/")
-	if end == -1 { // Ensure a topic suffix exists.
-		return [4]byte{}, ErrInvalidTopic
-	}
-	end += start
-	strDigest := topic[start:end]
-	digest, err := hex.DecodeString(strDigest)
-	if err != nil {
-		return [4]byte{}, err
-	}
-	if len(digest) != digestLength {
-		return [4]byte{}, errors.Errorf("invalid digest length wanted %d but got %d", digestLength, len(digest))
-	}
-	return bytesutil.ToBytes4(digest), nil
+	return p2ptypes.ExtractGossipDigest(topic)
 }
 
 // MaxMessageSize returns the maximum allowed compressed message size.

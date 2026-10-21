@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	contracts "github.com/OffchainLabs/prysm/v6/contracts/deposit"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	e2e "github.com/OffchainLabs/prysm/v6/testing/endtoend/params"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/types"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	contracts "github.com/OffchainLabs/prysm/v7/contracts/deposit"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	e2e "github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/types"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -198,7 +198,7 @@ func (d *Depositor) SendAndMineByBatch(ctx context.Context, offset, nvals, batch
 	}
 	numBatch := len(deposits) / batchSize
 	log.WithField("numDeposits", len(deposits)).WithField("batchSize", batchSize).WithField("numBatches", numBatch).WithField("balance", balance.String()).WithField("account", d.Key.Address.Hex()).Info("SendAndMineByBatch check")
-	for i := 0; i < numBatch; i++ {
+	for i := range numBatch {
 		txo, err := d.txops(ctx)
 		if err != nil {
 			return err
@@ -267,7 +267,23 @@ func (d *Depositor) txops(ctx context.Context) (*bind.TransactOpts, error) {
 		return nil, err
 	}
 	txo.Nonce = big.NewInt(0).SetUint64(nonce)
+	gasPrice, err := d.Client.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, err
+	}
+	txo.GasPrice = depositGasPrice(gasPrice)
 	return txo, nil
+}
+
+// depositGasPrice keeps deposit txs ahead of the normal e2e traffic. WaitForBlocks
+// spams replacement txs from this same account while mining batches, and the tx
+// generator runs at 100 gwei, so bump well above the suggestion and hold a high floor.
+func depositGasPrice(suggested *big.Int) *big.Int {
+	gasPrice := new(big.Int).Mul(suggested, big.NewInt(10))
+	if gasPrice.Cmp(big.NewInt(1e12)) < 0 {
+		return big.NewInt(1e12)
+	}
+	return gasPrice
 }
 
 // contractDepositor is a little helper method that inits and caches a DepositContract value.

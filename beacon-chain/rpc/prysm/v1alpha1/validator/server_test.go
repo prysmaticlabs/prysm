@@ -1,3 +1,5 @@
+//go:build minimal
+
 package validator
 
 import (
@@ -7,23 +9,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	mockChain "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache/depositsnapshot"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	mockExecution "github.com/OffchainLabs/prysm/v6/beacon-chain/execution/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/genesis"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/mock"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	mockChain "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache/depositsnapshot"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	mockExecution "github.com/OffchainLabs/prysm/v7/beacon-chain/execution/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/genesis"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/mock"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"go.uber.org/mock/gomock"
@@ -79,12 +80,11 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	require.NoError(t, err)
 
 	vs := &Server{
-		Ctx:               ctx,
-		ChainStartFetcher: &mockExecution.Chain{},
-		BlockFetcher:      &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		Ctx:             ctx,
+		BlockFetcher:    &mockExecution.Chain{},
+		Eth1InfoFetcher: &mockExecution.Chain{},
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey(1)},
@@ -146,9 +146,8 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	s, err := state_native.InitializeFromProtoUnsafePhase0(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
-		Ctx:               t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{},
-		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
+		Ctx:         t.Context(),
+		HeadFetcher: &mockChain.ChainService{State: s, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2, pubKey3},
@@ -172,9 +171,8 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 				{
 					PublicKey: pubKey2,
 					Status: &ethpb.ValidatorStatusResponse{
-						Status:                    ethpb.ValidatorStatus_PENDING,
-						ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
-						PositionInActivationQueue: 1,
+						Status:          ethpb.ValidatorStatus_PENDING,
+						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 					},
 					Index: 1,
 				},
@@ -196,10 +194,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	chainService := &mockChain.ChainService{}
 	server := &Server{
-		Ctx: ctx,
-		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
-			ChainFeed: new(event.Feed),
-		},
+		Ctx:           ctx,
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 		ClockWaiter:   startup.NewClockSynchronizer(),
@@ -228,10 +223,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 
 	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
-		Ctx: t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{
-			ChainFeed: new(event.Feed),
-		},
+		Ctx:           t.Context(),
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 	}
@@ -254,10 +246,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	chainService := &mockChain.ChainService{State: nil}
 	gs := startup.NewClockSynchronizer()
 	Server := &Server{
-		Ctx: t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{
-			ChainFeed: new(event.Feed),
-		},
+		Ctx:           t.Context(),
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 		ClockWaiter:   gs,
@@ -268,14 +257,12 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	mockStream.EXPECT().Context().Return(t.Context())
 
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		err := Server.WaitForChainStart(&emptypb.Empty{}, mockStream)
 		if s, _ := status.FromError(err); s.Code() != codes.Canceled {
 			assert.NoError(t, err)
 		}
-		wg.Done()
-	}()
+	})
 
 	util.WaitTimeout(wg, time.Second)
 }
@@ -288,10 +275,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	gs := startup.NewClockSynchronizer()
 
 	Server := &Server{
-		Ctx: t.Context(),
-		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
-			ChainFeed: new(event.Feed),
-		},
+		Ctx:           t.Context(),
 		StateNotifier: chainService.StateNotifier(),
 		HeadFetcher:   chainService,
 		ClockWaiter:   gs,
@@ -330,9 +314,8 @@ func testSigDomainForSlot(t *testing.T, domain [4]byte, chsrv *mockChain.ChainSe
 	require.NoError(t, err)
 	chsrv.State = s
 	vs := &Server{
-		Ctx:               t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{},
-		HeadFetcher:       chsrv,
+		Ctx:         t.Context(),
+		HeadFetcher: chsrv,
 	}
 	domainResp, err := vs.DomainData(t.Context(), &ethpb.DomainRequest{
 		Epoch:  epoch,

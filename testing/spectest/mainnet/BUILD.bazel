@@ -188,7 +188,6 @@ go_test(
         "fulu__operations__bls_to_execution_change_test.go",
         "fulu__operations__consolidation_test.go",
         "fulu__operations__deposit_requests_test.go",
-        "fulu__operations__deposit_test.go",
         "fulu__operations__execution_layer_withdrawals_test.go",
         "fulu__operations__execution_payload_test.go",
         "fulu__operations__proposer_slashing_test.go",
@@ -222,6 +221,7 @@ go_test(
         "phase0__rewards__rewards_test.go",
         "phase0__sanity__blocks_test.go",
         "phase0__sanity__slots_test.go",
+        "phase0__shuffling__core_shuffle_test.go",
         "phase0__ssz_static__ssz_static_test.go",
     ],
     data = ["@consensus_spec_tests//:test_data"],
@@ -282,6 +282,7 @@ go_test(
         "//testing/spectest/shared/phase0/operations:go_default_library",
         "//testing/spectest/shared/phase0/rewards:go_default_library",
         "//testing/spectest/shared/phase0/sanity:go_default_library",
+        "//testing/spectest/shared/phase0/shuffling/core/shuffle:go_default_library",
         "//testing/spectest/shared/phase0/ssz_static:go_default_library",
     ],
 )

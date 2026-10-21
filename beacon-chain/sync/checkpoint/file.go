@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/io/file"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/io/file"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +44,7 @@ type FileInitializer struct {
 func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error {
 	origin, err := d.OriginCheckpointBlockRoot(ctx)
 	if err == nil && origin != params.BeaconConfig().ZeroHash {
-		log.Warnf("Origin checkpoint root %#x found in db, ignoring checkpoint sync flags", origin)
+		log.WithField("root", fmt.Sprintf("%#x", origin)).Info("Origin checkpoint found in the database, ignoring checkpoint sync flags")
 		return nil
 	} else {
 		if !errors.Is(err, db.ErrNotFound) {
@@ -59,6 +59,8 @@ func (fi *FileInitializer) Initialize(ctx context.Context, d db.Database) error 
 	if err != nil {
 		return errors.Wrapf(err, "error reading state file %s for checkpoint sync init", fi.blockPath)
 	}
+	// Unlike the API path, files may hold an unfinalized anchor, and the state alone cannot tell.
+	log.Warn("Checkpoint syncing from files. If this anchor is not finalized and is reorged out the node cannot recover and the database must be deleted")
 	return d.SaveOrigin(ctx, serState, serBlock)
 }
 

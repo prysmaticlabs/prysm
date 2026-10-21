@@ -1,10 +1,10 @@
 package wrapper
 
 import (
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/metadata"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/OffchainLabs/go-bitfield"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/metadata"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -42,7 +42,7 @@ func (m MetadataV0) CustodyGroupCount() uint64 {
 }
 
 // InnerObject returns the underlying metadata protobuf structure.
-func (m MetadataV0) InnerObject() interface{} {
+func (m MetadataV0) InnerObject() any {
 	return m.md
 }
 
@@ -71,6 +71,11 @@ func (m MetadataV0) MarshalSSZTo(dst []byte) ([]byte, error) {
 // SizeSSZ returns the serialized size of the metadata object.
 func (m MetadataV0) SizeSSZ() int {
 	return m.md.SizeSSZ()
+}
+
+// MaxSizeSSZ returns the fixed SSZ size.
+func (m MetadataV0) MaxSizeSSZ() int {
+	return m.SizeSSZ()
 }
 
 // UnmarshalSSZ unmarshals the provided byte buffer into
@@ -136,7 +141,7 @@ func (m MetadataV1) CustodyGroupCount() uint64 {
 }
 
 // InnerObject returns the underlying metadata protobuf structure.
-func (m MetadataV1) InnerObject() interface{} {
+func (m MetadataV1) InnerObject() any {
 	return m.md
 }
 
@@ -165,6 +170,11 @@ func (m MetadataV1) MarshalSSZTo(dst []byte) ([]byte, error) {
 // SizeSSZ returns the serialized size of the metadata object.
 func (m MetadataV1) SizeSSZ() int {
 	return m.md.SizeSSZ()
+}
+
+// MaxSizeSSZ returns the fixed SSZ size.
+func (m MetadataV1) MaxSizeSSZ() int {
+	return m.SizeSSZ()
 }
 
 // UnmarshalSSZ unmarshals the provided byte buffer into
@@ -230,7 +240,7 @@ func (m MetadataV2) CustodyGroupCount() uint64 {
 }
 
 // InnerObject returns the underlying metadata protobuf structure.
-func (m MetadataV2) InnerObject() interface{} {
+func (m MetadataV2) InnerObject() any {
 	return m.md
 }
 
@@ -259,6 +269,11 @@ func (m MetadataV2) MarshalSSZTo(dst []byte) ([]byte, error) {
 // SizeSSZ returns the serialized size of the metadata object.
 func (m MetadataV2) SizeSSZ() int {
 	return m.md.SizeSSZ()
+}
+
+// MaxSizeSSZ returns the fixed SSZ size.
+func (m MetadataV2) MaxSizeSSZ() int {
+	return m.SizeSSZ()
 }
 
 // UnmarshalSSZ unmarshals the provided byte buffer into

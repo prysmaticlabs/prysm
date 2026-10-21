@@ -4,12 +4,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/io/prompt"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/io/prompt"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,8 +30,7 @@ https://github.com/prysmaticlabs/prysm/blob/develop/TERMS_OF_SERVICE.md`
 )
 
 var (
-	au  = aurora.NewAurora(true)
-	log = logrus.WithField("prefix", "tos")
+	au = aurora.NewAurora(true)
 )
 
 // VerifyTosAcceptedOrPrompt checks if Tos was accepted before or asks to accept.

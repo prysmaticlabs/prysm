@@ -3,11 +3,11 @@ package p2p
 import (
 	"reflect"
 
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/pkg/errors"
 )
 
@@ -67,6 +67,12 @@ const (
 
 	// DataColumnSidecarsByRangeName is the name for the DataColumnSidecarsByRange v1 message topic.
 	DataColumnSidecarsByRangeName = "/data_column_sidecars_by_range"
+
+	// ExecutionPayloadEnvelopesByRootName is the name for the ExecutionPayloadEnvelopesByRoot v1 message topic.
+	ExecutionPayloadEnvelopesByRootName = "/execution_payload_envelopes_by_root"
+
+	// ExecutionPayloadEnvelopesByRangeName is the name for the ExecutionPayloadEnvelopesByRange v1 message topic.
+	ExecutionPayloadEnvelopesByRangeName = "/execution_payload_envelopes_by_range"
 )
 
 const (
@@ -106,6 +112,13 @@ const (
 	// RPCDataColumnSidecarsByRangeTopicV1 is a topic for requesting data column sidecars by their slot.
 	// /eth2/beacon_chain/req/data_column_sidecars_by_range/1 - New in Fulu.
 	RPCDataColumnSidecarsByRangeTopicV1 = protocolPrefix + DataColumnSidecarsByRangeName + SchemaVersionV1
+	// RPCExecutionPayloadEnvelopesByRootTopicV1 is a topic for requesting execution payload envelopes by their beacon block root.
+	// /eth2/beacon_chain/req/execution_payload_envelopes_by_root/1 - New in Gloas.
+	RPCExecutionPayloadEnvelopesByRootTopicV1 = protocolPrefix + ExecutionPayloadEnvelopesByRootName + SchemaVersionV1
+	// RPCExecutionPayloadEnvelopesByRangeTopicV1 is a topic for requesting execution payload envelopes
+	// in the slot range [start_slot, start_slot + count). New in Gloas.
+	// /eth2/beacon_chain/req/execution_payload_envelopes_by_range/1/
+	RPCExecutionPayloadEnvelopesByRangeTopicV1 = protocolPrefix + ExecutionPayloadEnvelopesByRangeName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCStatusTopicV2 defines the v1 topic for the status rpc method.
@@ -129,7 +142,7 @@ const (
 
 // RPCTopicMappings map the base message type to the rpc request.
 var (
-	RPCTopicMappings = map[string]interface{}{
+	RPCTopicMappings = map[string]any{
 		// RPC Status Message
 		RPCStatusTopicV1: new(pb.Status),
 		RPCStatusTopicV2: new(pb.StatusV2),
@@ -149,9 +162,9 @@ var (
 		RPCPingTopicV1: new(primitives.SSZUint64),
 
 		// RPC Metadata Message
-		RPCMetaDataTopicV1: new(interface{}),
-		RPCMetaDataTopicV2: new(interface{}),
-		RPCMetaDataTopicV3: new(interface{}),
+		RPCMetaDataTopicV1: new(any),
+		RPCMetaDataTopicV2: new(any),
+		RPCMetaDataTopicV3: new(any),
 
 		// BlobSidecarsByRange v1 Message
 		RPCBlobSidecarsByRangeTopicV1: new(pb.BlobSidecarsByRangeRequest),
@@ -162,14 +175,20 @@ var (
 		// Light client
 		RPCLightClientBootstrapTopicV1:        new([fieldparams.RootLength]byte),
 		RPCLightClientUpdatesByRangeTopicV1:   new(pb.LightClientUpdatesByRangeRequest),
-		RPCLightClientFinalityUpdateTopicV1:   new(interface{}),
-		RPCLightClientOptimisticUpdateTopicV1: new(interface{}),
+		RPCLightClientFinalityUpdateTopicV1:   new(any),
+		RPCLightClientOptimisticUpdateTopicV1: new(any),
 
 		// DataColumnSidecarsByRange v1 Message
 		RPCDataColumnSidecarsByRangeTopicV1: new(pb.DataColumnSidecarsByRangeRequest),
 
+		// ExecutionPayloadEnvelopesByRange v1 Message
+		RPCExecutionPayloadEnvelopesByRangeTopicV1: new(pb.ExecutionPayloadEnvelopesByRangeRequest),
+
 		// DataColumnSidecarsByRoot v1 Message
 		RPCDataColumnSidecarsByRootTopicV1: p2ptypes.DataColumnsByRootIdentifiers{},
+
+		// ExecutionPayloadEnvelopesByRoot v1 Message
+		RPCExecutionPayloadEnvelopesByRootTopicV1: new(p2ptypes.ExecutionPayloadEnvelopesByRootReq),
 	}
 
 	// Maps all registered protocol prefixes.
@@ -179,20 +198,22 @@ var (
 
 	// Maps all the protocol message names for the different rpc topics.
 	messageMapping = map[string]bool{
-		StatusMessageName:               true,
-		GoodbyeMessageName:              true,
-		BeaconBlocksByRangeMessageName:  true,
-		BeaconBlocksByRootsMessageName:  true,
-		PingMessageName:                 true,
-		MetadataMessageName:             true,
-		BlobSidecarsByRangeName:         true,
-		BlobSidecarsByRootName:          true,
-		LightClientBootstrapName:        true,
-		LightClientUpdatesByRangeName:   true,
-		LightClientFinalityUpdateName:   true,
-		LightClientOptimisticUpdateName: true,
-		DataColumnSidecarsByRootName:    true,
-		DataColumnSidecarsByRangeName:   true,
+		StatusMessageName:                    true,
+		GoodbyeMessageName:                   true,
+		BeaconBlocksByRangeMessageName:       true,
+		BeaconBlocksByRootsMessageName:       true,
+		PingMessageName:                      true,
+		MetadataMessageName:                  true,
+		BlobSidecarsByRangeName:              true,
+		BlobSidecarsByRootName:               true,
+		LightClientBootstrapName:             true,
+		LightClientUpdatesByRangeName:        true,
+		LightClientFinalityUpdateName:        true,
+		LightClientOptimisticUpdateName:      true,
+		DataColumnSidecarsByRootName:         true,
+		DataColumnSidecarsByRangeName:        true,
+		ExecutionPayloadEnvelopesByRootName:  true,
+		ExecutionPayloadEnvelopesByRangeName: true,
 	}
 
 	// Maps all the RPC messages which are to updated in altair.
@@ -230,7 +251,7 @@ var (
 
 // VerifyTopicMapping verifies that the topic and its accompanying
 // message type is correct.
-func VerifyTopicMapping(topic string, msg interface{}) error {
+func VerifyTopicMapping(topic string, msg any) error {
 	msgType, ok := RPCTopicMappings[topic]
 	if !ok {
 		return errors.New("rpc topic is not registered currently")
@@ -345,17 +366,17 @@ func TopicFromMessage(msg string, epoch primitives.Epoch) (string, error) {
 		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
 
-	beaconConfig := params.BeaconConfig()
+	cfg := params.BeaconConfig()
 
 	// Check if the message is to be updated in fulu.
-	if epoch >= beaconConfig.FuluForkEpoch {
+	if epoch >= cfg.FuluForkEpoch {
 		if version, ok := fuluMapping[msg]; ok {
 			return protocolPrefix + msg + version, nil
 		}
 	}
 
 	// Check if the message is to be updated in altair.
-	if epoch >= beaconConfig.AltairForkEpoch {
+	if epoch >= cfg.AltairForkEpoch {
 		if version, ok := altairMapping[msg]; ok {
 			return protocolPrefix + msg + version, nil
 		}

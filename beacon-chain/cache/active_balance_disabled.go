@@ -3,12 +3,15 @@
 package cache
 
 import (
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 )
 
 // FakeBalanceCache is a fake struct with 1 LRU cache for looking up balance by epoch.
 type FakeBalanceCache struct {
 }
+
+// BalanceCache names the balance cache type under both build tags.
+type BalanceCache = FakeBalanceCache
 
 // NewEffectiveBalanceCache creates a new effective balance cache for storing/accessing total balance by epoch.
 func NewEffectiveBalanceCache() *FakeBalanceCache {

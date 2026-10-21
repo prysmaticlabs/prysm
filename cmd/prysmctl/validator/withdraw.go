@@ -10,15 +10,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/client/beacon"
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/api/client/beacon"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -96,7 +96,7 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*struct
 	if err != nil {
 		return err
 	}
-	data, ok := spec.Data.(map[string]interface{})
+	data, ok := spec.Data.(map[string]any)
 	if !ok {
 		return errors.New("config has incorrect structure")
 	}
@@ -143,7 +143,7 @@ func checkIfWithdrawsAreInPool(ctx context.Context, client *beacon.Client, reque
 	}
 	if len(requestMap) != 0 {
 		for key, address := range requestMap {
-			log.WithFields(log.Fields{
+			log.WithFields(logrus.Fields{
 				"validatorIndex":    key,
 				"executionAddress:": address,
 			}).Warn("Set withdrawal address message not found in the node's operations pool.")

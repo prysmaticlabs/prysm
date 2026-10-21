@@ -3,10 +3,22 @@ package cache_test
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAttestationConsensusData_IsFreshFor(t *testing.T) {
+	headRoot := [32]byte{1}
+	a := &cache.AttestationConsensusData{Slot: 1, HeadRoot: headRoot[:]}
+
+	var missing *cache.AttestationConsensusData
+	require.False(t, missing.IsFreshFor(1, headRoot, false), "nil data is never fresh")
+	require.True(t, a.IsFreshFor(1, headRoot, false))
+	require.False(t, a.IsFreshFor(2, headRoot, false), "another slot")
+	require.False(t, a.IsFreshFor(1, [32]byte{2}, false), "another head root")
+	require.False(t, a.IsFreshFor(1, headRoot, true), "another head payload status")
+}
 
 func TestAttestationCache_RoundTrip(t *testing.T) {
 	c := cache.NewAttestationDataCache()

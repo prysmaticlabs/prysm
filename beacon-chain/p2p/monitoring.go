@@ -3,6 +3,7 @@ package p2p
 import (
 	"strings"
 
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/prometheus/client_golang/prometheus"
@@ -11,26 +12,40 @@ import (
 
 var (
 	knownAgentVersions = []string{
+		"erigon/caplin",
+		"grandine",
+		"js-libp2p",
 		"lighthouse",
+		"lodestar",
 		"nimbus",
 		"prysm",
 		"teku",
-		"lodestar",
-		"js-libp2p",
 		"rust-libp2p",
-		"erigon/caplin",
 	}
 	p2pPeerCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "p2p_peer_count",
 		Help: "The number of peers in a given state.",
 	},
 		[]string{"state"})
+	p2pMaxPeers = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "p2p_max_peers",
+		Help: "The target maximum number of peers.",
+	})
+	p2pPeerCountDirectionType = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "p2p_peer_count_direction_type",
+		Help: "The number of peers in a given direction and type.",
+	},
+		[]string{"direction", "type"})
 	connectedPeersCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "connected_libp2p_peers",
 		Help: "Tracks the total number of connected libp2p peers by agent string",
 	},
 		[]string{"agent"},
 	)
+	minimumPeersPerSubnet = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "p2p_minimum_peers_per_subnet",
+		Help: "The minimum number of peers to connect to per subnet",
+	})
 	avgScoreConnectedClients = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "connected_libp2p_peers_average_scores",
 		Help: "Tracks the overall p2p scores of connected libp2p peers by agent string",
@@ -82,6 +97,11 @@ var (
 		Help: "The number of data column sidecar message broadcast attempts.",
 	})
 
+	// Partial Data Column Metrics
+	partialDataColumnBroadcasts = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "p2p_partial_data_column_broadcasts",
+		Help: "The number of partial data column messages that were broadcasted.",
+	})
 	// Gossip Tracer Metrics
 	pubsubTopicsActive = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "p2p_pubsub_topic_active",
@@ -142,6 +162,11 @@ var (
 		Help: "The number of publish messages received via rpc for a particular topic",
 	},
 		[]string{"topic"})
+	pubsubRPCPubRecvSize = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "p2p_pubsub_rpc_recv_pub_bytes_total",
+		Help: "The total size in bytes of publish messages received via rpc for a particular topic",
+	},
+		[]string{"topic", "is_partial"})
 	pubsubRPCDrop = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_rpc_drop_total",
 		Help: "The number of messages dropped via rpc for a particular control message",
@@ -156,6 +181,11 @@ var (
 		Help: "The number of publish messages dropped via rpc for a particular topic",
 	},
 		[]string{"topic"})
+	pubsubRPCPubDropSize = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "p2p_pubsub_rpc_drop_pub_bytes_total",
+		Help: "The total size in bytes of publish messages dropped via rpc for a particular topic",
+	},
+		[]string{"topic", "is_partial"})
 	pubsubRPCSent = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_rpc_sent_total",
 		Help: "The number of messages sent via rpc for a particular control message",
@@ -170,21 +200,39 @@ var (
 		Help: "The number of publish messages sent via rpc for a particular topic",
 	},
 		[]string{"topic"})
+	pubsubRPCPubSentSize = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "gossipsub_topic_msg_sent_bytes",
+		Help: "The total size of publish messages sent via rpc for a particular topic",
+	},
+		[]string{"topic", "partial"})
+	pubsubMeshPeers = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "gossipsub_mesh_peer_counts",
+		Help: "The number of capable peers in mesh",
+	},
+		[]string{"topic", "supports_partial"})
 )
 
 func (s *Service) updateMetrics() {
+	store := s.Host().Peerstore()
 	connectedPeers := s.peers.Connected()
+
 	p2pPeerCount.WithLabelValues("Connected").Set(float64(len(connectedPeers)))
 	p2pPeerCount.WithLabelValues("Disconnected").Set(float64(len(s.peers.Disconnected())))
 	p2pPeerCount.WithLabelValues("Connecting").Set(float64(len(s.peers.Connecting())))
 	p2pPeerCount.WithLabelValues("Disconnecting").Set(float64(len(s.peers.Disconnecting())))
 	p2pPeerCount.WithLabelValues("Bad").Set(float64(len(s.peers.Bad())))
 
-	store := s.Host().Peerstore()
-	numConnectedPeersByClient := make(map[string]float64)
+	upperTCP := strings.ToUpper(string(peers.TCP))
+	upperQUIC := strings.ToUpper(string(peers.QUIC))
+
+	p2pPeerCountDirectionType.WithLabelValues("inbound", upperTCP).Set(float64(len(s.peers.InboundConnectedWithProtocol(peers.TCP))))
+	p2pPeerCountDirectionType.WithLabelValues("inbound", upperQUIC).Set(float64(len(s.peers.InboundConnectedWithProtocol(peers.QUIC))))
+	p2pPeerCountDirectionType.WithLabelValues("outbound", upperTCP).Set(float64(len(s.peers.OutboundConnectedWithProtocol(peers.TCP))))
+	p2pPeerCountDirectionType.WithLabelValues("outbound", upperQUIC).Set(float64(len(s.peers.OutboundConnectedWithProtocol(peers.QUIC))))
+
+	connectedPeersCountByClient := make(map[string]float64)
 	peerScoresByClient := make(map[string][]float64)
-	for i := 0; i < len(connectedPeers); i++ {
-		p := connectedPeers[i]
+	for _, p := range connectedPeers {
 		pid, err := peer.Decode(p.String())
 		if err != nil {
 			log.WithError(err).Debug("Could not decode peer string")
@@ -192,16 +240,18 @@ func (s *Service) updateMetrics() {
 		}
 
 		foundName := agentFromPid(pid, store)
-		numConnectedPeersByClient[foundName] += 1
+		connectedPeersCountByClient[foundName] += 1
 
 		// Get peer scoring data.
 		overallScore := s.peers.Scorers().Score(pid)
 		peerScoresByClient[foundName] = append(peerScoresByClient[foundName], overallScore)
 	}
+
 	connectedPeersCount.Reset() // Clear out previous results.
-	for agent, total := range numConnectedPeersByClient {
+	for agent, total := range connectedPeersCountByClient {
 		connectedPeersCount.WithLabelValues(agent).Set(total)
 	}
+
 	avgScoreConnectedClients.Reset() // Clear out previous results.
 	for agent, scoringData := range peerScoresByClient {
 		avgScore := average(scoringData)

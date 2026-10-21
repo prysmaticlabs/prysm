@@ -7,15 +7,18 @@ package kv
 // it easy to scan for keys that have a certain shard number as a prefix and return those
 // corresponding attestations.
 var (
-	blocksBucket          = []byte("blocks")
-	stateBucket           = []byte("state")
-	stateSummaryBucket    = []byte("state-summary")
-	chainMetadataBucket   = []byte("chain-metadata")
-	checkpointBucket      = []byte("check-point")
-	powchainBucket        = []byte("powchain")
-	stateValidatorsBucket = []byte("state-validators")
-	feeRecipientBucket    = []byte("fee-recipient")
-	registrationBucket    = []byte("registration")
+	blocksBucket                            = []byte("blocks")
+	stateBucket                             = []byte("state")
+	stateSummaryBucket                      = []byte("state-summary")
+	chainMetadataBucket                     = []byte("chain-metadata")
+	checkpointBucket                        = []byte("check-point")
+	powchainBucket                          = []byte("powchain")
+	stateValidatorsBucket                   = []byte("state-validators")
+	stateDiffBucket                         = []byte("state-diff")
+	hotStateSnapshotsBucket                 = []byte("hot-state-snapshots")
+	archiveResumeSnapshotsBucket            = []byte("archive-resume-snapshots")
+	executionPayloadEnvelopesBucket         = []byte("execution-payload-envelopes")
+	executionPayloadEnvelopeBlockHashBucket = []byte("execution-payload-envelope-block-hash-index")
 
 	// Light Client Updates Bucket
 	lightClientUpdatesBucket       = []byte("light-client-updates")
@@ -46,6 +49,7 @@ var (
 
 	// Below keys are used to identify objects are to be fork compatible.
 	// Objects that are only compatible with specific forks should be prefixed with such keys.
+	phase0Key                  = []byte("phase0")
 	altairKey                  = []byte("altair")
 	bellatrixKey               = []byte("merge")
 	bellatrixBlindKey          = []byte("blind-bellatrix")
@@ -59,10 +63,17 @@ var (
 	fuluKey                    = []byte("fulu")
 	fuluBlindKey               = []byte("blind-fulu")
 
+	// No blindKeys for post-Gloas needed - post-Gloas blocks are never blinded (no execution payload in block body).
+	gloasKey = []byte("gloas")
+	hezeKey  = []byte("heze")
+
 	// block root included in the beacon state used by weak subjectivity initial sync
 	originCheckpointBlockRootKey = []byte("origin-checkpoint-block-root")
 	// tracking data about an ongoing backfill
 	backfillStatusKey = []byte("backfill-status")
+	// tracking data about an ongoing archive state regeneration; lives in stateDiffBucket alongside
+	// offsetKey/exponentsKey, which is collision-free because tree keys are always 16 or 18 bytes.
+	archiveStatusKey = []byte("archive-status")
 
 	// Deprecated: This index key was migrated in PR 6461. Do not use, except for migrations.
 	lastArchivedIndexKey = []byte("last-archived")

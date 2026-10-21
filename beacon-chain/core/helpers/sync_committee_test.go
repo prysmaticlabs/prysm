@@ -1,20 +1,19 @@
 package helpers_test
 
 import (
-	"math/rand"
+	"slices"
 	"strconv"
 	"testing"
-	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestCurrentPeriodPositions(t *testing.T) {
@@ -24,7 +23,7 @@ func TestCurrentPeriodPositions(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		Pubkeys: make([][]byte, params.BeaconConfig().SyncCommitteeSize),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -56,7 +55,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -87,7 +86,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -116,7 +115,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -144,7 +143,7 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -175,7 +174,7 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -203,7 +202,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -231,7 +230,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -262,7 +261,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -290,7 +289,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
 
 	// Test that cache was able to fill on miss.
-	time.Sleep(100 * time.Millisecond)
+	helpers.WaitForSyncCommitteeCacheFills()
 	index, err = helpers.SyncCommitteeCache().CurrentPeriodIndexPosition(root, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []primitives.CommitteeIndex{0}, index)
@@ -304,7 +303,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -332,7 +331,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -363,7 +362,7 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -391,7 +390,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -419,14 +418,14 @@ func TestUpdateSyncCommitteeCache_BadSlot(t *testing.T) {
 		Slot: 1,
 	})
 	require.NoError(t, err)
-	err = helpers.UpdateSyncCommitteeCache(state)
+	err = helpers.UpdateSyncCommitteeCache(t.Context(), state)
 	require.ErrorContains(t, "not at the end of the epoch to update cache", err)
 
 	state, err = state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch - 1,
 	})
 	require.NoError(t, err)
-	err = helpers.UpdateSyncCommitteeCache(state)
+	err = helpers.UpdateSyncCommitteeCache(t.Context(), state)
 	require.ErrorContains(t, "not at sync committee period boundary to update cache", err)
 }
 
@@ -438,7 +437,7 @@ func TestUpdateSyncCommitteeCache_BadRoot(t *testing.T) {
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{StateRoot: params.BeaconConfig().ZeroHash[:]},
 	})
 	require.NoError(t, err)
-	err = helpers.UpdateSyncCommitteeCache(state)
+	err = helpers.UpdateSyncCommitteeCache(t.Context(), state)
 	require.ErrorContains(t, "zero hash state root can't be used to update cache", err)
 }
 
@@ -449,7 +448,7 @@ func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
 	syncCommittee := &ethpb.SyncCommittee{
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
@@ -477,9 +476,8 @@ func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
 	assert.NoError(t, state.SetSlot(primitives.Slot(wantedSlot)))
 	syncCommittee, err = state.CurrentSyncCommittee()
 	assert.NoError(t, err)
-	rand.Shuffle(len(syncCommittee.Pubkeys), func(i, j int) {
-		syncCommittee.Pubkeys[i], syncCommittee.Pubkeys[j] = syncCommittee.Pubkeys[j], syncCommittee.Pubkeys[i]
-	})
+	// Reverse rather than shuffle: a shuffle may leave validator 200 at the same position.
+	slices.Reverse(syncCommittee.Pubkeys)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	newIdxs, err := helpers.CurrentPeriodSyncSubcommitteeIndices(state, 200)
 	require.NoError(t, err)

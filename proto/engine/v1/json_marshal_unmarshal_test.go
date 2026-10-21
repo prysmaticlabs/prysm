@@ -6,11 +6,11 @@ import (
 	"math/big"
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -296,7 +296,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		enc, err := json.Marshal(want)
 		require.NoError(t, err)
 
-		payloadItems := make(map[string]interface{})
+		payloadItems := make(map[string]any)
 		require.NoError(t, json.Unmarshal(enc, &payloadItems))
 
 		blockHash := want.Hash()
@@ -351,7 +351,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		enc, err := json.Marshal(want)
 		require.NoError(t, err)
 
-		payloadItems := make(map[string]interface{})
+		payloadItems := make(map[string]any)
 		require.NoError(t, json.Unmarshal(enc, &payloadItems))
 
 		blockHash := want.Hash()
@@ -410,7 +410,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		enc, err := json.Marshal(want)
 		require.NoError(t, err)
 
-		payloadItems := make(map[string]interface{})
+		payloadItems := make(map[string]any)
 		require.NoError(t, json.Unmarshal(enc, &payloadItems))
 
 		tx := gethtypes.NewTransaction(
@@ -478,7 +478,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		enc, err := json.Marshal(want)
 		require.NoError(t, err)
 
-		payloadItems := make(map[string]interface{})
+		payloadItems := make(map[string]any)
 		require.NoError(t, json.Unmarshal(enc, &payloadItems))
 
 		blockHash := want.Hash()
@@ -569,7 +569,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		enc, err := json.Marshal(want)
 		require.NoError(t, err)
 
-		payloadItems := make(map[string]interface{})
+		payloadItems := make(map[string]any)
 		require.NoError(t, json.Unmarshal(enc, &payloadItems))
 
 		blockHash := want.Hash()
@@ -606,9 +606,6 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 
 		// Expect no transaction objects in the unmarshaled data.
 		require.Equal(t, 0, len(payloadPb.Transactions))
-	})
-	t.Run("execution bundle electra with deneb payload, blob data, and execution requests", func(t *testing.T) {
-		// TODO #14351: update this test when geth updates
 	})
 
 	t.Run("ExecutionPayloadDenebAndBlobsBundleV2 SSZ marshaling", func(t *testing.T) {
@@ -703,7 +700,7 @@ func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {
 }
 
 func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
-	pBody := &enginev1.ExecutionPayloadBody{
+	pBody := &enginev1.ExecutionPayloadBodyV1{
 		Transactions: []hexutil.Bytes{[]byte("random1"), []byte("random2"), []byte("random3")},
 		Withdrawals: []*enginev1.Withdrawal{
 			{
@@ -722,7 +719,7 @@ func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
 	}
 	enc, err := json.Marshal(pBody)
 	require.NoError(t, err)
-	res := &enginev1.ExecutionPayloadBody{}
+	res := &enginev1.ExecutionPayloadBodyV1{}
 	err = json.Unmarshal(enc, res)
 	require.NoError(t, err)
 	require.DeepEqual(t, pBody, res)

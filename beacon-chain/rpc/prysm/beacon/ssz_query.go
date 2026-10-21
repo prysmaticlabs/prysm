@@ -1,0 +1,249 @@
+package beacon
+
+import (
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
+	"github.com/OffchainLabs/prysm/v7/encoding/ssz/query"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	sszquerypb "github.com/OffchainLabs/prysm/v7/proto/ssz_query"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	ssz "github.com/prysmaticlabs/fastssz"
+)
+
+// QueryBeaconState handles SSZ Query request for BeaconState.
+// Returns as bytes serialized SSZQueryResponse.
+func (s *Server) QueryBeaconState(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.QueryBeaconState")
+	defer span.End()
+
+	stateID := r.PathValue("state_id")
+	if stateID == "" {
+		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	// Validate path before lookup: it might be expensive.
+	var req structs.SSZQueryRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case errors.Is(err, io.EOF):
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Query) == 0 {
+		httputil.HandleError(w, "Empty query submitted", http.StatusBadRequest)
+		return
+	}
+
+	path, err := query.ParsePath(req.Query)
+	if err != nil {
+		httputil.HandleError(w, "Could not parse path '"+req.Query+"': "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	stateRoot, err := s.Stater.StateRoot(ctx, []byte(stateID))
+	if !shared.WriteStateRootFetchError(w, err) {
+		return
+	}
+
+	st, err := s.Stater.State(ctx, []byte(stateID))
+	if err != nil {
+		shared.WriteStateFetchError(w, err)
+		return
+	}
+
+	// NOTE: Using unsafe conversion to proto is acceptable here,
+	// as we play with a copy of the state returned by Stater.
+	sszObject, ok := st.ToProtoUnsafe().(query.SSZObject)
+	if !ok {
+		httputil.HandleError(w, "Unsupported state version for querying: "+version.String(st.Version()), http.StatusBadRequest)
+		return
+	}
+
+	info, err := query.AnalyzeObject(sszObject)
+	if err != nil {
+		httputil.HandleError(w, "Could not analyze state object: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	finalInfo, offset, length, err := query.CalculateOffsetAndLength(info, path)
+	if err != nil {
+		httputil.HandleError(w, "Could not calculate offset and length for path '"+req.Query+"': "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var result []byte
+	if path.Length {
+		n, err := finalInfo.LengthValue()
+		if err != nil {
+			httputil.HandleError(w, "Invalid query '"+req.Query+"': "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		result = binary.LittleEndian.AppendUint64(nil, n)
+	} else {
+		encodedState, err := st.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal state to SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result = encodedState[offset : offset+length]
+	}
+
+	response := &sszquerypb.SSZQueryResponse{
+		Root:   stateRoot,
+		Result: result,
+	}
+
+	responseSsz, err := response.MarshalSSZ()
+	if err != nil {
+		httputil.HandleError(w, "Could not marshal response to SSZ: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.VersionHeader, version.String(st.Version()))
+	httputil.WriteSsz(w, responseSsz)
+}
+
+// QueryBeaconBlock handles SSZ Query request for BeaconBlock.
+// Returns as bytes serialized SSZQueryResponse.
+func (s *Server) QueryBeaconBlock(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.QueryBeaconBlock")
+	defer span.End()
+
+	blockId := r.PathValue("block_id")
+	if blockId == "" {
+		httputil.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	// Validate path before lookup: it might be expensive.
+	var req structs.SSZQueryRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case errors.Is(err, io.EOF):
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Query) == 0 {
+		httputil.HandleError(w, "Empty query submitted", http.StatusBadRequest)
+		return
+	}
+
+	path, err := query.ParsePath(req.Query)
+	if err != nil {
+		httputil.HandleError(w, "Could not parse path '"+req.Query+"': "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	signedBlock, err := s.Blocker.Block(ctx, []byte(blockId))
+	if !shared.WriteBlockFetchError(w, signedBlock, err) {
+		return
+	}
+
+	protoBlock, err := signedBlock.Block().Proto()
+	if err != nil {
+		httputil.HandleError(w, "Could not convert block to proto: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	block, ok := protoBlock.(query.SSZObject)
+	if !ok {
+		httputil.HandleError(w, "Unsupported block version for querying: "+version.String(signedBlock.Version()), http.StatusBadRequest)
+		return
+	}
+
+	info, err := query.AnalyzeObject(block)
+	if err != nil {
+		httputil.HandleError(w, "Could not analyze block object: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	finalInfo, offset, length, err := query.CalculateOffsetAndLength(info, path)
+	if err != nil {
+		httputil.HandleError(w, "Could not calculate offset and length for path '"+req.Query+"': "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	blockRoot, err := block.HashTreeRoot()
+	if err != nil {
+		httputil.HandleError(w, "Could not compute block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var result []byte
+	if path.Length {
+		n, err := finalInfo.LengthValue()
+		if err != nil {
+			httputil.HandleError(w, "Invalid query '"+req.Query+"': "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		result = binary.LittleEndian.AppendUint64(nil, n)
+	} else {
+		encodedBlock, err := signedBlock.Block().MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal block to SSZ: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result = encodedBlock[offset : offset+length]
+	}
+
+	var response ssz.Marshaler
+	if req.IncludeProof {
+		proof, err := getSSZQueryProof(info, path)
+		if err != nil {
+			httputil.HandleError(w, "Could not compute merkle proofs: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		response = &sszquerypb.SSZQueryResponseWithProof{
+			Root:   blockRoot[:],
+			Result: result,
+			Proof: &sszquerypb.SSZQueryProof{
+				Leaf:   proof.Leaf,
+				Gindex: uint64(proof.Index),
+				Proofs: proof.Hashes,
+			},
+		}
+	} else {
+		response = &sszquerypb.SSZQueryResponse{
+			Root:   blockRoot[:],
+			Result: result,
+		}
+	}
+	responseSsz, err := response.MarshalSSZ()
+	if err != nil {
+		httputil.HandleError(w, "Could not marshal response to SSZ: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set(api.VersionHeader, version.String(signedBlock.Version()))
+	httputil.WriteSsz(w, responseSsz)
+}
+
+// getSSZQueryProof retrieves Merkle proof for a given SSZInfo object and query path
+func getSSZQueryProof(info *query.SszInfo, path query.Path) (*ssz.Proof, error) {
+	gi, err := query.GetGeneralizedIndexFromPath(info, path)
+	if err != nil {
+		return nil, fmt.Errorf("get generalized index: %w", err)
+	}
+	proof, err := info.Prove(gi)
+	if err != nil {
+		return nil, fmt.Errorf("prove gindex %d: %w", gi, err)
+	}
+	return proof, nil
+}

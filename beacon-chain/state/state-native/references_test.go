@@ -5,14 +5,15 @@ import (
 	"runtime"
 	"runtime/debug"
 	"testing"
+	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native/types"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native/types"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestStateReferenceSharing_Finalizer_Phase0(t *testing.T) {
@@ -31,8 +32,10 @@ func TestStateReferenceSharing_Finalizer_Phase0(t *testing.T) {
 		_ = b
 	}()
 
-	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[types.Slashings].Refs(), "Expected 1 shared reference to RANDAO mixes!")
+	require.Eventually(t, func() bool {
+		runtime.GC()
+		return a.sharedFieldReferences[types.Slashings].Refs() == 1
+	}, 5*time.Second, 10*time.Millisecond, "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
@@ -60,8 +63,10 @@ func TestStateReferenceSharing_Finalizer_Altair(t *testing.T) {
 		_ = b
 	}()
 
-	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[types.Slashings].Refs(), "Expected 1 shared reference to RANDAO mixes!")
+	require.Eventually(t, func() bool {
+		runtime.GC()
+		return a.sharedFieldReferences[types.Slashings].Refs() == 1
+	}, 5*time.Second, 10*time.Millisecond, "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
@@ -89,8 +94,10 @@ func TestStateReferenceSharing_Finalizer_Bellatrix(t *testing.T) {
 		_ = b
 	}()
 
-	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[types.Slashings].Refs(), "Expected 1 shared reference to RANDAO mixes!")
+	require.Eventually(t, func() bool {
+		runtime.GC()
+		return a.sharedFieldReferences[types.Slashings].Refs() == 1
+	}, 5*time.Second, 10*time.Millisecond, "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
@@ -118,8 +125,10 @@ func TestStateReferenceSharing_Finalizer_Capella(t *testing.T) {
 		_ = b
 	}()
 
-	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[types.Slashings].Refs(), "Expected 1 shared reference to RANDAO mixes!")
+	require.Eventually(t, func() bool {
+		runtime.GC()
+		return a.sharedFieldReferences[types.Slashings].Refs() == 1
+	}, 5*time.Second, 10*time.Millisecond, "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
@@ -147,8 +156,10 @@ func TestStateReferenceSharing_Finalizer_Deneb(t *testing.T) {
 		_ = b
 	}()
 
-	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[types.Slashings].Refs(), "Expected 1 shared reference to RANDAO mixes!")
+	require.Eventually(t, func() bool {
+		runtime.GC()
+		return a.sharedFieldReferences[types.Slashings].Refs() == 1
+	}, 5*time.Second, 10*time.Millisecond, "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
@@ -564,10 +575,9 @@ func TestValidatorReferences_RemainsConsistent_Phase0(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for _, val := range a.ValidatorsReadOnlySeq() {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
-		return nil
-	}))
+	}
 }
 
 func TestValidatorReferences_RemainsConsistent_Altair(t *testing.T) {
@@ -599,10 +609,9 @@ func TestValidatorReferences_RemainsConsistent_Altair(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for _, val := range a.ValidatorsReadOnlySeq() {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
-		return nil
-	}))
+	}
 }
 
 func TestValidatorReferences_RemainsConsistent_Capella(t *testing.T) {
@@ -634,10 +643,9 @@ func TestValidatorReferences_RemainsConsistent_Capella(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for _, val := range a.ValidatorsReadOnlySeq() {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
-		return nil
-	}))
+	}
 }
 
 func TestValidatorReferences_RemainsConsistent_Deneb(t *testing.T) {
@@ -669,10 +677,9 @@ func TestValidatorReferences_RemainsConsistent_Deneb(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for _, val := range a.ValidatorsReadOnlySeq() {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
-		return nil
-	}))
+	}
 }
 
 func TestValidatorReferences_RemainsConsistent_Bellatrix(t *testing.T) {
@@ -704,10 +711,9 @@ func TestValidatorReferences_RemainsConsistent_Bellatrix(t *testing.T) {
 	}))
 
 	// Ensure reference is properly accounted for.
-	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for _, val := range a.ValidatorsReadOnlySeq() {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
-		return nil
-	}))
+	}
 }
 
 func TestValidatorReferences_ApplyValidator_BalancesRead(t *testing.T) {

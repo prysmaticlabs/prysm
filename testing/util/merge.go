@@ -1,7 +1,7 @@
 package util
 
 import (
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 // ----------------------------------------------------------------------------
@@ -87,4 +87,13 @@ func NewBeaconBlockContentsFulu() *ethpb.SignedBeaconBlockContentsFulu {
 // NewBlindedBeaconBlockFulu creates a blinded beacon block with minimum marshalable fields.
 func NewBlindedBeaconBlockFulu() *ethpb.SignedBlindedBeaconBlockFulu {
 	return HydrateSignedBlindedBeaconBlockFulu(&ethpb.SignedBlindedBeaconBlockFulu{})
+}
+
+// ----------------------------------------------------------------------------
+// Gloas
+// ----------------------------------------------------------------------------
+
+// NewBeaconBlockGloas creates a beacon block with minimum marshalable fields.
+func NewBeaconBlockGloas() *ethpb.SignedBeaconBlockGloas {
+	return HydrateSignedBeaconBlockGloas(&ethpb.SignedBeaconBlockGloas{})
 }

@@ -18,7 +18,7 @@ package ethereum.engine.v1;
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Engine.V1";
-option go_package = "github.com/OffchainLabs/prysm/v6/proto/engine/v1;enginev1";
+option go_package = "github.com/OffchainLabs/prysm/v7/proto/engine/v1;enginev1";
 option java_multiple_files = true;
 option java_outer_classname = "ExecutionEngineProto";
 option java_package = "org.ethereum.engine.v1";
@@ -28,7 +28,7 @@ message ExecutionPayload {
   bytes parent_hash = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
   bytes fee_recipient = 2 [ (ethereum.eth.ext.ssz_size) = "20" ];
   bytes state_root = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
-    bytes receipts_root = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes receipts_root = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
   bytes logs_bloom = 5 [ (ethereum.eth.ext.ssz_size) = "logs_bloom.size" ];
   bytes prev_randao = 6 [ (ethereum.eth.ext.ssz_size) = "32" ];
   uint64 block_number = 7;
@@ -90,6 +90,42 @@ message ExecutionPayloadDeneb {
       [ (ethereum.eth.ext.ssz_max) = "withdrawal.size" ];
   uint64 blob_gas_used = 16;
   uint64 excess_blob_gas = 17;
+}
+
+message ExecutionPayloadGloas {
+  bytes parent_hash = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes fee_recipient = 2 [ (ethereum.eth.ext.ssz_size) = "20" ];
+  bytes state_root = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes receipts_root = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes logs_bloom = 5 [ (ethereum.eth.ext.ssz_size) = "logs_bloom.size" ];
+  bytes prev_randao = 6 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  uint64 block_number = 7;
+  uint64 gas_limit = 8;
+  uint64 gas_used = 9;
+  uint64 timestamp = 10;
+  bytes extra_data = 11 [ (ethereum.eth.ext.ssz_max) = "extra_data.size" ];
+  bytes base_fee_per_gas = 12 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes block_hash = 13 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  // The transaction list is kept in its SSZ-serialized form; see
+  // ProgressiveTransactionList. Tag 14 carried the `repeated bytes` encoding of
+  // this field and is retired so that older validator clients ignore the new
+  // field instead of misparsing it. SSZ field order follows declaration order,
+  // so this field must stay directly after block_hash.
+  reserved 14;
+  ProgressiveTransactionList transactions = 20;
+  // MAX_WITHDRAWALS_PER_PAYLOAD
+  repeated Withdrawal withdrawals = 15
+      [ (ethereum.eth.ext.ssz_max) = "withdrawal.size" ];
+  uint64 blob_gas_used = 16;
+  uint64 excess_blob_gas = 17;
+  // [New in Gloas:EIP7928] RLP-encoded block access list.
+  bytes block_access_list = 18
+      [ (ethereum.eth.ext.ssz_max) = "1073741824" ];
+  // [New in Gloas:EIP7843]
+  uint64 slot_number = 19 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
 }
 
 message ExecutionPayloadCapellaWithValue {
@@ -193,6 +229,19 @@ message PayloadAttributesV3 {
   bytes parent_beacon_block_root = 5 [ (ethereum.eth.ext.ssz_size) = "32" ];
 }
 
+// PayloadAttributesV4 extends V3 with slot_number (Amsterdam/EIP-7843) and
+// target_gas_limit.
+message PayloadAttributesV4 {
+  uint64 timestamp = 1;
+  bytes prev_randao = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes suggested_fee_recipient = 3 [ (ethereum.eth.ext.ssz_size) = "20" ];
+  repeated Withdrawal withdrawals = 4
+      [ (ethereum.eth.ext.ssz_max) = "withdrawal.size" ];
+  bytes parent_beacon_block_root = 5 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  uint64 slot_number = 6;
+  uint64 target_gas_limit = 7;
+}
+
 message PayloadStatus {
   Status status = 1;
   bytes latest_valid_hash = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
@@ -221,7 +270,7 @@ message Withdrawal {
   // Validator index for the withdrawal
   uint64 validator_index = 2
       [ (ethereum.eth.ext.cast_type) =
-            "github.com/OffchainLabs/prysm/v6/consensus-types/"
+            "github.com/OffchainLabs/prysm/v7/consensus-types/"
             "primitives.ValidatorIndex" ];
 
   // The execution address receiving the funds
@@ -254,10 +303,10 @@ message BlobsBundle {
   ];
 }
 
-// BlobsBundleV2 is retrieved through engine-api from the execution layer client.
-// It consists of the necessary components for constructing data column sidecars
-// objects to gossip through p2p.
-// It is introduced in Fulu network upgrade.
+// BlobsBundleV2 is retrieved through engine-api from the execution layer
+// client. It consists of the necessary components for constructing data column
+// sidecars objects to gossip through p2p. It is introduced in Fulu network
+// upgrade.
 message BlobsBundleV2 {
   repeated bytes kzg_commitments = 1 [
     (ethereum.eth.ext.ssz_size) = "?,48",
@@ -266,7 +315,8 @@ message BlobsBundleV2 {
 
   repeated bytes proofs = 2 [
     (ethereum.eth.ext.ssz_size) = "?,48",
-    (ethereum.eth.ext.ssz_max) = "max_cell_proofs_length.size" // Changed in EIP-7594
+    (ethereum.eth.ext.ssz_max) =
+        "max_cell_proofs_length.size" // Changed in EIP-7594
   ];
 
   repeated bytes blobs = 3 [
@@ -281,18 +331,34 @@ message Blob {
   bytes data = 1 [ (ethereum.eth.ext.ssz_size) = "blob.size" ];
 }
 
-// BlobAndProofV2 consists of the blob and the cell proofs for each cell in the blob.
+// BlobAndProofV2 consists of the blob and the cell proofs for each cell in the
+// blob.
 message BlobAndProof {
   bytes blob = 1 [ (ethereum.eth.ext.ssz_size) = "blob.size" ];
   bytes kzg_proof = 2 [ (ethereum.eth.ext.ssz_size) = "48" ];
 }
 
-// BlobAndProofV2 consists of the blob and the cell proofs for each cell in the blob.
-// It is introduced in Fulu network upgrade.
+// BlobAndProofV2 consists of the blob and the cell proofs for each cell in the
+// blob. It is introduced in Fulu network upgrade.
 message BlobAndProofV2 {
   bytes blob = 1 [ (ethereum.eth.ext.ssz_size) = "blob.size" ];
-  repeated bytes kzg_proofs = 2 [ 
+  repeated bytes kzg_proofs = 2 [
     (ethereum.eth.ext.ssz_size) = "48",
     (ethereum.eth.ext.ssz_max) = "max_cell_proofs_length.size"
   ];
+}
+
+// ProgressiveTransactionList holds an SSZ ProgressiveList[Transaction] in its
+// serialized form. `offsets` is the 4-byte little-endian offset table, with each
+// entry relative to the start of `data` (the SSZ wire offset minus
+// 4 * len(list)), and `data` is the concatenated transaction bytes. Do not read
+// or write the fields directly; use the methods in transaction_list.go.
+//
+// No SSZ code is generated for this message. The ssz_max options exist only so
+// that methodical can parse it when it appears as a field of a generated
+// container; they record the defensive unmarshal bounds, 4 * 2^20 bytes for the
+// offset table and 2^20 * 2^30 bytes for the data.
+message ProgressiveTransactionList {
+  bytes offsets = 1 [ (ethereum.eth.ext.ssz_max) = "4194304" ];
+  bytes data = 2 [ (ethereum.eth.ext.ssz_max) = "1125899906842624" ];
 }

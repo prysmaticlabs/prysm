@@ -1,22 +1,24 @@
+//go:build minimal
+
 package validator
 
 import (
 	"context"
 	"testing"
 
-	chainMock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	blockfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/block"
-	statefeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/state"
-	dbTest "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/mock"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	blockfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/block"
+	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
+	dbTest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/mock"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,7 +38,7 @@ func TestServer_StreamAltairBlocksVerified_ContextCanceled(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		assert.ErrorContains(tt, "Context canceled", server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{
@@ -62,7 +64,7 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
 		assert.ErrorContains(tt, "Context canceled", server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{}, mockStream))
@@ -92,9 +94,9 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
 
-	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: b}}).Do(func(arg0 interface{}) {
+	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: b}}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -137,9 +139,9 @@ func TestServer_StreamCapellaBlocks_OnHeadUpdated(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
 
-	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: b}}).Do(func(arg0 interface{}) {
+	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: b}}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -184,8 +186,8 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
-	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: b}}).Do(func(arg0 interface{}) {
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
+	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: b}}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -228,8 +230,8 @@ func TestServer_StreamCapellaBlocksVerified_OnHeadUpdated(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
-	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: b}}).Do(func(arg0 interface{}) {
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
+	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_CapellaBlock{CapellaBlock: b}}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -320,7 +322,7 @@ func TestServer_StreamSlots_OnHeadUpdated(t *testing.T) {
 		Slot:                      123,
 		PreviousDutyDependentRoot: params.BeaconConfig().ZeroHash[:],
 		CurrentDutyDependentRoot:  params.BeaconConfig().ZeroHash[:],
-	}).Do(func(arg0 interface{}) {
+	}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -359,7 +361,7 @@ func TestServer_StreamSlotsVerified_OnHeadUpdated(t *testing.T) {
 		Slot:                      123,
 		PreviousDutyDependentRoot: params.BeaconConfig().ZeroHash[:],
 		CurrentDutyDependentRoot:  params.BeaconConfig().ZeroHash[:],
-	}).Do(func(arg0 interface{}) {
+	}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -404,8 +406,8 @@ func TestServer_StreamBlocksVerified_FuluBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
-	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_FuluBlock{FuluBlock: b}}).Do(func(arg0 interface{}) {
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
+	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_FuluBlock{FuluBlock: b}}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
@@ -446,9 +448,9 @@ func TestServer_StreamBlocks_FuluBlock(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
+	mockStream := mock.NewMockBeaconNodeValidator_StreamBlocksAltairServer(ctrl)
 
-	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_FuluBlock{FuluBlock: b}}).Do(func(arg0 interface{}) {
+	mockStream.EXPECT().Send(&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_FuluBlock{FuluBlock: b}}).Do(func(arg0 any) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()

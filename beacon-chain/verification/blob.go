@@ -4,32 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/runtime/logging"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/runtime/logging"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
-)
-
-const (
-	RequireBlobIndexInBounds Requirement = iota
-	RequireNotFromFutureSlot
-	RequireSlotAboveFinalized
-	RequireValidProposerSignature
-	RequireSidecarParentSeen
-	RequireSidecarParentValid
-	RequireSidecarParentSlotLower
-	RequireSidecarDescendsFromFinalized
-	RequireSidecarInclusionProven
-	RequireSidecarKzgProofVerified
-	RequireSidecarProposerExpected
-
-	// Data columns specific.
-	RequireValidFields
-	RequireCorrectSubnet
 )
 
 var allBlobSidecarRequirements = []Requirement{
@@ -289,27 +270,15 @@ func (bv *ROBlobVerifier) SidecarKzgProofVerified() (err error) {
 // for later processing while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE this message.
 func (bv *ROBlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireSidecarProposerExpected, &err)
-	e := slots.ToEpoch(bv.blob.Slot())
-	if e > 0 {
-		e = e - 1
-	}
-	r, err := bv.fc.TargetRootForEpoch(bv.blob.ParentRoot(), e)
+	pst, err := bv.parentState(ctx)
 	if err != nil {
+		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("State replay to parent_root failed")
 		return errSidecarUnexpectedProposer
 	}
-	c := &forkchoicetypes.Checkpoint{Root: r, Epoch: e}
-	idx, cached := bv.pc.Proposer(c, bv.blob.Slot())
-	if !cached {
-		pst, err := bv.parentState(ctx)
-		if err != nil {
-			log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("State replay to parent_root failed")
-			return errSidecarUnexpectedProposer
-		}
-		idx, err = bv.pc.ComputeProposer(ctx, bv.blob.ParentRoot(), bv.blob.Slot(), pst)
-		if err != nil {
-			log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("Error computing proposer index from parent state")
-			return errSidecarUnexpectedProposer
-		}
+	idx, err := bv.pc.ComputeProposer(ctx, bv.blob.Slot(), pst)
+	if err != nil {
+		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("Error computing proposer index from parent state")
+		return errSidecarUnexpectedProposer
 	}
 	if idx != bv.blob.ProposerIndex() {
 		log.WithError(errSidecarUnexpectedProposer).

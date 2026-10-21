@@ -11,15 +11,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/execution"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/sync"
-	"github.com/OffchainLabs/prysm/v6/io/logs"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	"github.com/OffchainLabs/prysm/v7/io/logs"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -35,18 +35,19 @@ import (
 // providing RPC endpoints for verifying a beacon node's sync status, genesis and
 // version information, and services the node implements and runs.
 type Server struct {
-	LogsStreamer         logs.Streamer
-	StreamLogsBufferSize int
-	SyncChecker          sync.Checker
-	Server               *grpc.Server
-	BeaconDB             db.ReadOnlyDatabase
-	PeersFetcher         p2p.PeersProvider
-	PeerManager          p2p.PeerManager
-	GenesisTimeFetcher   blockchain.TimeFetcher
-	GenesisFetcher       blockchain.GenesisFetcher
-	POWChainInfoFetcher  execution.ChainInfoFetcher
-	BeaconMonitoringHost string
-	BeaconMonitoringPort int
+	LogsStreamer          logs.Streamer
+	StreamLogsBufferSize  int
+	SyncChecker           sync.Checker
+	Server                *grpc.Server
+	BeaconDB              db.ReadOnlyDatabase
+	PeersFetcher          p2p.PeersProvider
+	PeerManager           p2p.PeerManager
+	GenesisTimeFetcher    blockchain.TimeFetcher
+	GenesisFetcher        blockchain.GenesisFetcher
+	POWChainInfoFetcher   execution.ChainInfoFetcher
+	BeaconMonitoringHost  string
+	BeaconMonitoringPort  int
+	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 }
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
@@ -61,21 +62,28 @@ func (ns *Server) GetHealth(ctx context.Context, request *ethpb.HealthRequest) (
 	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel() // Important to avoid a context leak
 
-	if ns.SyncChecker.Synced() {
+	// Check optimistic status - validators should not participate when optimistic
+	isOptimistic, err := ns.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	}
+
+	if ns.SyncChecker.Synced() && !isOptimistic {
 		return &empty.Empty{}, nil
 	}
 	if ns.SyncChecker.Syncing() || ns.SyncChecker.Initialized() {
-		if request.SyncingStatus != 0 {
-			// override the 200 success with the provided request status
-			if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.FormatUint(request.SyncingStatus, 10))); err != nil {
-				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
-			}
-			return &empty.Empty{}, nil
-		}
+		// Set header for REST API clients (via gRPC-gateway)
 		if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.FormatUint(http.StatusPartialContent, 10))); err != nil {
-			return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
+			return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set status code header: %v", err)
 		}
-		return &empty.Empty{}, nil
+		return &empty.Empty{}, status.Error(codes.Unavailable, "node is syncing")
+	}
+	if isOptimistic {
+		// Set header for REST API clients (via gRPC-gateway)
+		if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", strconv.FormatUint(http.StatusPartialContent, 10))); err != nil {
+			return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set status code header: %v", err)
+		}
+		return &empty.Empty{}, status.Error(codes.Unavailable, "node is optimistic")
 	}
 	return &empty.Empty{}, status.Errorf(codes.Unavailable, "service unavailable")
 }

@@ -5,19 +5,18 @@ import (
 	"math"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/epoch"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"google.golang.org/protobuf/proto"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func TestProcessSyncCommitteeUpdates_CanRotate(t *testing.T) {
@@ -104,7 +103,7 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 	}
 	s, err := state_native.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
-	require.NoError(t, epoch.ProcessSlashings(s))
+	require.NoError(t, epoch.ProcessSlashings(t.Context(), s))
 	wanted := params.BeaconConfig().MaxEffectiveBalance
 	assert.Equal(t, wanted, s.Balances()[0], "Unexpected slashed balance")
 }
@@ -171,10 +170,10 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			helpers.ClearCache()
-			original := proto.Clone(tt.state)
+			original := tt.state.Copy()
 			s, err := state_native.InitializeFromProtoAltair(tt.state)
 			require.NoError(t, err)
-			require.NoError(t, epoch.ProcessSlashings(s))
+			require.NoError(t, epoch.ProcessSlashings(t.Context(), s))
 			assert.Equal(t, tt.want, s.Balances()[0], "ProcessSlashings({%v}) = newState; newState.Balances[0] = %d", original, s.Balances()[0])
 		})
 	}
@@ -189,5 +188,5 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 	}
 	s, err := state_native.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
-	require.ErrorContains(t, "addition overflows", epoch.ProcessSlashings(s))
+	require.ErrorContains(t, "addition overflows", epoch.ProcessSlashings(t.Context(), s))
 }

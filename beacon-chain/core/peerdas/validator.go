@@ -3,13 +3,15 @@ package peerdas
 import (
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/kzg"
-	beaconState "github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
+	beaconState "github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -23,11 +25,15 @@ var (
 var (
 	_ ConstructionPopulator = (*BlockReconstructionSource)(nil)
 	_ ConstructionPopulator = (*SidecarReconstructionSource)(nil)
+	_ ConstructionPopulator = (*BidReconstructionSource)(nil)
+	_ ConstructionPopulator = (*PartialDataColumnHeaderReconstructionSource)(nil)
 )
 
 const (
-	BlockType   = "BeaconBlock"
-	SidecarType = "DataColumnSidecar"
+	BlockType                   = "BeaconBlock"
+	SidecarType                 = "DataColumnSidecar"
+	BidType                     = "ExecutionPayloadBid"
+	PartialDataColumnHeaderType = "PartialDataColumnHeader"
 )
 
 type (
@@ -37,7 +43,7 @@ type (
 	ConstructionPopulator interface {
 		Slot() primitives.Slot
 		Root() [fieldparams.RootLength]byte
-		ProposerIndex() primitives.ValidatorIndex
+		ProposerIndex() (primitives.ValidatorIndex, error)
 		Commitments() ([][]byte, error)
 		Type() string
 
@@ -49,9 +55,20 @@ type (
 		blocks.ROBlock
 	}
 
-	// DataColumnSidecar is a ConstructionPopulator that uses a data column sidecar as the source of data
+	// SidecarReconstructionSource is a ConstructionPopulator that uses a data column sidecar as the source of data
 	SidecarReconstructionSource struct {
 		blocks.VerifiedRODataColumn
+	}
+
+	// BidReconstructionSource is a ConstructionPopulator that uses the execution payload bid
+	// from a Gloas beacon block to extract KZG commitments for data column sidecar construction.
+	BidReconstructionSource struct {
+		blocks.ROBlock
+	}
+
+	PartialDataColumnHeaderReconstructionSource struct {
+		*ethpb.PartialDataColumnHeader
+		root [fieldparams.RootLength]byte
 	}
 
 	blockInfo struct {
@@ -71,74 +88,246 @@ func PopulateFromSidecar(sidecar blocks.VerifiedRODataColumn) *SidecarReconstruc
 	return &SidecarReconstructionSource{VerifiedRODataColumn: sidecar}
 }
 
+// PopulateFromBid creates a BidReconstructionSource from a Gloas beacon block.
+// In Gloas (ePBS), the execution payload is delivered separately via the payload envelope,
+// but the KZG commitments are available in the bid embedded in the block, allowing
+// data column sidecars to be constructed from the EL as soon as the block arrives.
+func PopulateFromBid(block blocks.ROBlock) *BidReconstructionSource {
+	return &BidReconstructionSource{ROBlock: block}
+}
+
+// PopulateFromPartialHeader creates a PartialDataColumnHeaderReconstructionSource from a partial header.
+// It eagerly computes and validates the hash tree root of the block header.
+func PopulateFromPartialHeader(header *ethpb.PartialDataColumnHeader) (*PartialDataColumnHeaderReconstructionSource, error) {
+	if header.SignedBlockHeader == nil || header.SignedBlockHeader.Header == nil {
+		return nil, errors.New("nil signed block header or header")
+	}
+	root, err := header.SignedBlockHeader.Header.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "hash tree root")
+	}
+	return &PartialDataColumnHeaderReconstructionSource{PartialDataColumnHeader: header, root: root}, nil
+}
+
 // ValidatorsCustodyRequirement returns the number of custody groups regarding the validator indices attached to the beacon node.
 // https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/validator.md#validator-custody
-func ValidatorsCustodyRequirement(state beaconState.ReadOnlyBeaconState, validatorsIndex map[primitives.ValidatorIndex]bool) (uint64, error) {
-	totalNodeBalance := uint64(0)
+func ValidatorsCustodyRequirement(st beaconState.ReadOnlyBalances, validatorsIndex map[primitives.ValidatorIndex]bool) (uint64, error) {
+	cfg := params.BeaconConfig()
+	idxs := make([]primitives.ValidatorIndex, 0, len(validatorsIndex))
 	for index := range validatorsIndex {
-		validator, err := state.ValidatorAtIndexReadOnly(index)
-		if err != nil {
-			return 0, errors.Wrapf(err, "validator at index %v", index)
-		}
-
-		totalNodeBalance += validator.EffectiveBalance()
+		idxs = append(idxs, index)
+	}
+	totalBalance, err := st.EffectiveBalanceSum(idxs)
+	if err != nil {
+		return 0, errors.Wrap(err, "effective balances")
 	}
 
-	beaconConfig := params.BeaconConfig()
-	numberOfCustodyGroups := beaconConfig.NumberOfCustodyGroups
-	validatorCustodyRequirement := beaconConfig.ValidatorCustodyRequirement
-	balancePerAdditionalCustodyGroup := beaconConfig.BalancePerAdditionalCustodyGroup
+	numberOfCustodyGroups := cfg.NumberOfCustodyGroups
+	validatorCustodyRequirement := cfg.ValidatorCustodyRequirement
+	balancePerAdditionalCustodyGroup := cfg.BalancePerAdditionalCustodyGroup
 
-	count := totalNodeBalance / balancePerAdditionalCustodyGroup
+	count := totalBalance / balancePerAdditionalCustodyGroup
 	return min(max(count, validatorCustodyRequirement), numberOfCustodyGroups), nil
 }
 
-// DataColumnSidecars, given ConstructionPopulator and the cells/proofs associated with each blob in the
+// DataColumnSidecars given ConstructionPopulator and the cells/proofs associated with each blob in the
 // block, assembles sidecars which can be distributed to peers.
+// cellsPerBlob and proofsPerBlob are parallel slices where each index represents a blob sidecar.
 // This is an adapted version of
 // https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/validator.md#get_data_column_sidecars,
 // which is designed to be used both when constructing sidecars from a block and from a sidecar, replacing
 // https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/validator.md#get_data_column_sidecars_from_block and
 // https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
-func DataColumnSidecars(rows []kzg.CellsAndProofs, src ConstructionPopulator) ([]blocks.RODataColumn, error) {
-	if len(rows) == 0 {
+func DataColumnSidecars(cellsPerBlob [][]kzg.Cell, proofsPerBlob [][]kzg.Proof, src ConstructionPopulator) ([]blocks.RODataColumn, error) {
+	const numberOfColumns = uint64(fieldparams.NumberOfColumns)
+
+	if len(cellsPerBlob) == 0 {
 		return nil, nil
 	}
 	start := time.Now()
-	cells, proofs, err := rotateRowsToCols(rows, params.BeaconConfig().NumberOfColumns)
+	cells, proofs, err := rotateRowsToCols(cellsPerBlob, proofsPerBlob, numberOfColumns)
 	if err != nil {
 		return nil, errors.Wrap(err, "rotate cells and proofs")
 	}
+
+	isGloas := slots.ToEpoch(src.Slot()) >= params.BeaconConfig().GloasForkEpoch
+	root := src.Root()
+
+	roSidecars := make([]blocks.RODataColumn, 0, numberOfColumns)
+	if isGloas {
+		for idx := range numberOfColumns {
+			sidecar := &ethpb.DataColumnSidecarGloas{
+				Index:           idx,
+				Column:          cells[idx],
+				KzgProofs:       proofs[idx],
+				Slot:            src.Slot(),
+				BeaconBlockRoot: root[:],
+			}
+			if len(sidecar.Column) != len(sidecar.KzgProofs) {
+				return nil, ErrSizeMismatch
+			}
+			roSidecar, err := blocks.NewRODataColumnGloasWithRoot(sidecar, root)
+			if err != nil {
+				return nil, errors.Wrap(err, "new ro data column gloas")
+			}
+			roSidecars = append(roSidecars, roSidecar)
+		}
+	} else {
+		info, err := src.extract()
+		if err != nil {
+			return nil, errors.Wrap(err, "extract block info")
+		}
+		for idx := range numberOfColumns {
+			sidecar := &ethpb.DataColumnSidecar{
+				Index:                        idx,
+				Column:                       cells[idx],
+				KzgCommitments:               info.kzgCommitments,
+				KzgProofs:                    proofs[idx],
+				SignedBlockHeader:            info.signedBlockHeader,
+				KzgCommitmentsInclusionProof: info.kzgInclusionProof,
+			}
+			if len(sidecar.KzgCommitments) != len(sidecar.Column) || len(sidecar.KzgCommitments) != len(sidecar.KzgProofs) {
+				return nil, ErrSizeMismatch
+			}
+			roSidecar, err := blocks.NewRODataColumnWithRoot(sidecar, root)
+			if err != nil {
+				return nil, errors.Wrap(err, "new ro data column")
+			}
+			roSidecars = append(roSidecars, roSidecar)
+		}
+	}
+
+	dataColumnComputationTime.Observe(float64(time.Since(start).Milliseconds()))
+	return roSidecars, nil
+}
+
+// DataColumnSidecarsGloas constructs Gloas-format data column sidecars directly from cells, proofs,
+// slot, and block root. Used by the proposer when building sidecars outside the ConstructionPopulator flow.
+func DataColumnSidecarsGloas(
+	cellsPerBlob [][]kzg.Cell,
+	proofsPerBlob [][]kzg.Proof,
+	slot primitives.Slot,
+	beaconBlockRoot [32]byte,
+) ([]blocks.RODataColumn, error) {
+	const numberOfColumns = uint64(fieldparams.NumberOfColumns)
+	if len(cellsPerBlob) == 0 {
+		return nil, nil
+	}
+	start := time.Now()
+	cells, proofs, err := rotateRowsToCols(cellsPerBlob, proofsPerBlob, numberOfColumns)
+	if err != nil {
+		return nil, errors.Wrap(err, "rotate cells and proofs")
+	}
+	roSidecars := make([]blocks.RODataColumn, 0, numberOfColumns)
+	for idx := range numberOfColumns {
+		sidecar := &ethpb.DataColumnSidecarGloas{
+			Index:           idx,
+			Column:          cells[idx],
+			KzgProofs:       proofs[idx],
+			Slot:            slot,
+			BeaconBlockRoot: beaconBlockRoot[:],
+		}
+		if len(sidecar.Column) != len(sidecar.KzgProofs) {
+			return nil, ErrSizeMismatch
+		}
+		roSidecar, err := blocks.NewRODataColumnGloasWithRoot(sidecar, beaconBlockRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "new ro data column gloas")
+		}
+		roSidecars = append(roSidecars, roSidecar)
+	}
+	dataColumnComputationTime.Observe(float64(time.Since(start).Milliseconds()))
+	return roSidecars, nil
+}
+
+// PartialColumns builds partial data columns from the cells and proofs of the included blobs,
+// where the included bitlist marks which blob commitments are present in the partial.
+func PartialColumns(included bitfield.Bitlist, cellsPerBlob [][]kzg.Cell, proofsPerBlob [][]kzg.Proof, src ConstructionPopulator) ([]blocks.PartialDataColumn, error) {
+	start := time.Now()
+	const numberOfColumns = uint64(fieldparams.NumberOfColumns)
+	cells, proofs, err := rotateRowsToCols(cellsPerBlob, proofsPerBlob, numberOfColumns)
+	if err != nil {
+		return nil, errors.Wrap(err, "rotate cells and proofs")
+	}
+	if included.Count() > 0 && (uint64(len(cells)) != numberOfColumns || uint64(len(proofs)) != numberOfColumns) {
+		return nil, errors.Errorf("included blobs present but rotated cells/proofs do not cover all columns: got cells=%d proofs=%d, want %d", len(cells), len(proofs), numberOfColumns)
+	}
+
+	if slots.ToEpoch(src.Slot()) >= params.BeaconConfig().GloasForkEpoch {
+		dataColumns, err := partialColumnsGloas(included, cells, proofs, src)
+		if err != nil {
+			return nil, errors.Wrap(err, "build partial columns gloas")
+		}
+		if len(dataColumns) != 0 {
+			partialDataColumnComputationTime.Observe(float64(time.Since(start).Milliseconds()))
+		}
+		return dataColumns, nil
+	}
+
 	info, err := src.extract()
 	if err != nil {
 		return nil, errors.Wrap(err, "extract block info")
 	}
 
-	maxIdx := params.BeaconConfig().NumberOfColumns
-	roSidecars := make([]blocks.RODataColumn, 0, maxIdx)
-	for idx := range maxIdx {
-		sidecar := &ethpb.DataColumnSidecar{
-			Index:                        idx,
-			Column:                       cells[idx],
-			KzgCommitments:               info.kzgCommitments,
-			KzgProofs:                    proofs[idx],
-			SignedBlockHeader:            info.signedBlockHeader,
-			KzgCommitmentsInclusionProof: info.kzgInclusionProof,
-		}
+	if len(info.kzgCommitments) == 0 {
+		return nil, nil
+	}
 
-		if len(sidecar.KzgCommitments) != len(sidecar.Column) || len(sidecar.KzgCommitments) != len(sidecar.KzgProofs) {
-			return nil, ErrSizeMismatch
-		}
-
-		roSidecar, err := blocks.NewRODataColumnWithRoot(sidecar, src.Root())
+	dataColumns := make([]blocks.PartialDataColumn, 0, numberOfColumns)
+	for idx := range numberOfColumns {
+		dc, err := blocks.NewPartialDataColumn(src.Root(), info.signedBlockHeader, idx, info.kzgCommitments, info.kzgInclusionProof)
 		if err != nil {
 			return nil, errors.Wrap(err, "new ro data column")
 		}
-		roSidecars = append(roSidecars, roSidecar)
+
+		for i := range len(info.kzgCommitments) {
+			if !included.BitAt(uint64(i)) {
+				continue
+			}
+			dc.ExtendFromVerifiedCell(uint64(i), cells[idx][0], proofs[idx][0])
+			cells[idx] = cells[idx][1:]
+			proofs[idx] = proofs[idx][1:]
+		}
+		dataColumns = append(dataColumns, dc)
 	}
 
-	dataColumnComputationTime.Observe(float64(time.Since(start).Milliseconds()))
-	return roSidecars, nil
+	partialDataColumnComputationTime.Observe(float64(time.Since(start).Milliseconds()))
+	return dataColumns, nil
+}
+
+func partialColumnsGloas(included bitfield.Bitlist, cells, proofs [][][]byte, src ConstructionPopulator) ([]blocks.PartialDataColumn, error) {
+	commitments, err := src.Commitments()
+	if err != nil {
+		return nil, errors.Wrap(err, "commitments")
+	}
+	if len(commitments) == 0 {
+		return nil, nil
+	}
+
+	const numberOfColumns = uint64(fieldparams.NumberOfColumns)
+	root := src.Root()
+	slot := src.Slot()
+	dataColumns := make([]blocks.PartialDataColumn, 0, numberOfColumns)
+	for idx := range numberOfColumns {
+		dc, err := blocks.NewPartialDataColumnGloas(root, slot, idx, commitments)
+		if err != nil {
+			return nil, errors.Wrap(err, "new gloas partial data column")
+		}
+
+		for i := range len(commitments) {
+			if !included.BitAt(uint64(i)) {
+				continue
+			}
+			if len(cells[idx]) == 0 || len(proofs[idx]) == 0 {
+				return nil, errors.Errorf("insufficient cells or proofs for column %d", idx)
+			}
+			dc.ExtendFromVerifiedCell(uint64(i), cells[idx][0], proofs[idx][0])
+			cells[idx] = cells[idx][1:]
+			proofs[idx] = proofs[idx][1:]
+		}
+		dataColumns = append(dataColumns, dc)
+	}
+	return dataColumns, nil
 }
 
 // Slot returns the slot of the source
@@ -147,8 +336,8 @@ func (s *BlockReconstructionSource) Slot() primitives.Slot {
 }
 
 // ProposerIndex returns the proposer index of the source
-func (s *BlockReconstructionSource) ProposerIndex() primitives.ValidatorIndex {
-	return s.Block().ProposerIndex()
+func (s *BlockReconstructionSource) ProposerIndex() (primitives.ValidatorIndex, error) {
+	return s.Block().ProposerIndex(), nil
 }
 
 // Commitments returns the blob KZG commitments of the source
@@ -167,56 +356,53 @@ func (s *BlockReconstructionSource) Type() string {
 	return BlockType
 }
 
-// extract extracts the block information from the source
 func (b *BlockReconstructionSource) extract() (*blockInfo, error) {
-	block := b.Block()
-
 	header, err := b.Header()
 	if err != nil {
 		return nil, errors.Wrap(err, "header")
 	}
-
-	commitments, err := block.Body().BlobKzgCommitments()
+	commitments, err := b.Block().Body().BlobKzgCommitments()
 	if err != nil {
 		return nil, errors.Wrap(err, "commitments")
 	}
-
-	inclusionProof, err := blocks.MerkleProofKZGCommitments(block.Body())
+	inclusionProof, err := blocks.MerkleProofKZGCommitments(b.Block().Body())
 	if err != nil {
 		return nil, errors.Wrap(err, "merkle proof kzg commitments")
 	}
-
-	info := &blockInfo{
+	return &blockInfo{
 		signedBlockHeader: header,
 		kzgCommitments:    commitments,
 		kzgInclusionProof: inclusionProof,
-	}
-
-	return info, nil
+	}, nil
 }
 
 // rotateRowsToCols takes a 2D slice of cells and proofs, where the x is rows (blobs) and y is columns,
 // and returns a 2D slice where x is columns and y is rows.
-func rotateRowsToCols(rows []kzg.CellsAndProofs, numCols uint64) ([][][]byte, [][][]byte, error) {
-	if len(rows) == 0 {
+func rotateRowsToCols(cellsPerBlob [][]kzg.Cell, proofsPerBlob [][]kzg.Proof, numCols uint64) ([][][]byte, [][][]byte, error) {
+	if len(cellsPerBlob) == 0 {
 		return nil, nil, nil
+	}
+	if len(cellsPerBlob) != len(proofsPerBlob) {
+		return nil, nil, errors.New("cells and proofs length mismatch")
 	}
 	cellCols := make([][][]byte, numCols)
 	proofCols := make([][][]byte, numCols)
-	for i, cp := range rows {
-		if uint64(len(cp.Cells)) != numCols {
+	for i := range cellsPerBlob {
+		cells := cellsPerBlob[i]
+		proofs := proofsPerBlob[i]
+		if uint64(len(cells)) != numCols {
 			return nil, nil, errors.Wrap(ErrNotEnoughDataColumnSidecars, "not enough cells")
 		}
-		if len(cp.Cells) != len(cp.Proofs) {
+		if len(cells) != len(proofs) {
 			return nil, nil, errors.Wrap(ErrNotEnoughDataColumnSidecars, "not enough proofs")
 		}
-		for j := uint64(0); j < numCols; j++ {
+		for j := range numCols {
 			if i == 0 {
-				cellCols[j] = make([][]byte, len(rows))
-				proofCols[j] = make([][]byte, len(rows))
+				cellCols[j] = make([][]byte, len(cellsPerBlob))
+				proofCols[j] = make([][]byte, len(cellsPerBlob))
 			}
-			cellCols[j][i] = cp.Cells[j][:]
-			proofCols[j][i] = cp.Proofs[j][:]
+			cellCols[j][i] = cells[j][:]
+			proofCols[j][i] = proofs[j][:]
 		}
 	}
 	return cellCols, proofCols, nil
@@ -229,7 +415,7 @@ func (s *SidecarReconstructionSource) Root() [fieldparams.RootLength]byte {
 
 // Commmitments returns the blob KZG commitments of the source
 func (s *SidecarReconstructionSource) Commitments() ([][]byte, error) {
-	return s.KzgCommitments, nil
+	return s.KzgCommitments()
 }
 
 // Type returns the type of the source
@@ -237,12 +423,96 @@ func (s *SidecarReconstructionSource) Type() string {
 	return SidecarType
 }
 
-// extract extracts the block information from the source
 func (s *SidecarReconstructionSource) extract() (*blockInfo, error) {
+	sbh, err := s.SignedBlockHeader()
+	if err != nil {
+		return nil, err
+	}
+	comms, err := s.KzgCommitments()
+	if err != nil {
+		return nil, err
+	}
+	incProof, err := s.KzgCommitmentsInclusionProof()
+	if err != nil {
+		return nil, err
+	}
+	return &blockInfo{
+		signedBlockHeader: sbh,
+		kzgCommitments:    comms,
+		kzgInclusionProof: incProof,
+	}, nil
+}
+
+// Slot returns the slot of the source
+func (s *BidReconstructionSource) Slot() primitives.Slot {
+	return s.Block().Slot()
+}
+
+// ProposerIndex returns the proposer index of the source
+func (s *BidReconstructionSource) ProposerIndex() (primitives.ValidatorIndex, error) {
+	return s.Block().ProposerIndex(), nil
+}
+
+// Commitments returns the blob KZG commitments from the execution payload bid
+func (s *BidReconstructionSource) Commitments() ([][]byte, error) {
+	bid, err := s.Block().Body().ExecutionPayloadBid()
+	if err != nil {
+		return nil, errors.Wrap(err, "execution payload bid")
+	}
+	return bid.BlobKzgCommitments(), nil
+}
+
+// Type returns the type of the source
+func (s *BidReconstructionSource) Type() string {
+	return BidType
+}
+
+func (s *BidReconstructionSource) extract() (*blockInfo, error) {
+	commitments, err := s.Commitments()
+	if err != nil {
+		return nil, err
+	}
+	header, err := s.Header()
+	if err != nil {
+		return nil, errors.Wrap(err, "header")
+	}
+	return &blockInfo{
+		signedBlockHeader: header,
+		kzgCommitments:    commitments,
+	}, nil
+}
+
+// Slot returns the slot from the partial data column header
+func (p *PartialDataColumnHeaderReconstructionSource) Slot() primitives.Slot {
+	return p.SignedBlockHeader.Header.Slot
+}
+
+// Root returns the block root computed from the header
+func (p *PartialDataColumnHeaderReconstructionSource) Root() [fieldparams.RootLength]byte {
+	return p.root
+}
+
+// ProposerIndex returns the proposer index from the header
+func (p *PartialDataColumnHeaderReconstructionSource) ProposerIndex() (primitives.ValidatorIndex, error) {
+	return p.SignedBlockHeader.Header.ProposerIndex, nil
+}
+
+// Commitments returns the KZG commitments from the header
+func (p *PartialDataColumnHeaderReconstructionSource) Commitments() ([][]byte, error) {
+	return p.KzgCommitments, nil
+}
+
+// Type returns the type of the source
+func (p *PartialDataColumnHeaderReconstructionSource) Type() string {
+	return PartialDataColumnHeaderType
+}
+
+// extract extracts the block information from the partial header
+func (p *PartialDataColumnHeaderReconstructionSource) extract() (*blockInfo, error) {
 	info := &blockInfo{
-		signedBlockHeader: s.SignedBlockHeader,
-		kzgCommitments:    s.KzgCommitments,
-		kzgInclusionProof: s.KzgCommitmentsInclusionProof,
+		signedBlockHeader: p.SignedBlockHeader,
+		kzgCommitments:    p.KzgCommitments,
+		kzgInclusionProof: p.KzgCommitmentsInclusionProof,
 	}
 
 	return info, nil

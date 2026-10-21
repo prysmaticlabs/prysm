@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/OffchainLabs/prysm/v6/math"
+	"github.com/OffchainLabs/prysm/v7/math"
 )
 
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
@@ -15,10 +15,7 @@ func ToBytes(x uint64, length int) []byte {
 	if length < 0 {
 		length = 0
 	}
-	makeLength := length
-	if length < 8 {
-		makeLength = 8
-	}
+	makeLength := max(length, 8)
 	bytes := make([]byte, makeLength)
 	binary.LittleEndian.PutUint64(bytes, x)
 	return bytes[:length]
@@ -165,4 +162,19 @@ func Uint256ToSSZBytes(num string) ([]byte, error) {
 		return nil, fmt.Errorf("%s is not a valid Uint256", num)
 	}
 	return PadTo(ReverseByteOrder(uint256.Bytes()), 32), nil
+}
+
+// PutLittleEndian writes an unsigned integer value in little-endian format.
+// Supports sizes 1, 2, 4, or 8 bytes for uint8/16/32/64 respectively.
+func PutLittleEndian(dst []byte, val uint64, size int) {
+	switch size {
+	case 1:
+		dst[0] = byte(val)
+	case 2:
+		binary.LittleEndian.PutUint16(dst, uint16(val))
+	case 4:
+		binary.LittleEndian.PutUint32(dst, uint32(val))
+	case 8:
+		binary.LittleEndian.PutUint64(dst, val)
+	}
 }

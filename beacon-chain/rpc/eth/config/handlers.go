@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	log "github.com/sirupsen/logrus"
 )
@@ -40,6 +41,7 @@ func GetForkSchedule(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteJson(w, &structs.GetForkScheduleResponse{
 			Data: data,
 		})
+		return
 	}
 	previous := schedule[0]
 	for _, entry := range schedule {
@@ -72,9 +74,9 @@ func GetSpec(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJson(w, &structs.GetSpecResponse{Data: data})
 }
 
-func convertValueForJSON(v reflect.Value, tag string) interface{} {
+func convertValueForJSON(v reflect.Value, tag string) any {
 	// Unwrap pointers / interfaces
-	for v.Kind() == reflect.Interface || v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Interface || v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil
 		}
@@ -109,8 +111,8 @@ func convertValueForJSON(v reflect.Value, tag string) interface{} {
 		}
 		// Generic slice/array handling
 		n := v.Len()
-		out := make([]interface{}, n)
-		for i := 0; i < n; i++ {
+		out := make([]any, n)
+		for i := range n {
 			out[i] = convertValueForJSON(v.Index(i), tag)
 		}
 		return out
@@ -118,7 +120,7 @@ func convertValueForJSON(v reflect.Value, tag string) interface{} {
 	// ===== Struct =====
 	case reflect.Struct:
 		t := v.Type()
-		m := make(map[string]interface{}, v.NumField())
+		m := make(map[string]any, v.NumField())
 		for i := 0; i < v.NumField(); i++ {
 			f := t.Field(i)
 			if !v.Field(i).CanInterface() {
@@ -158,11 +160,11 @@ func convertValueForJSON(v reflect.Value, tag string) interface{} {
 	}
 }
 
-func prepareConfigSpec() (map[string]interface{}, error) {
-	data := make(map[string]interface{})
+func prepareConfigSpec() (map[string]any, error) {
+	data := make(map[string]any)
 	config := *params.BeaconConfig()
 
-	t := reflect.TypeOf(config)
+	t := reflect.TypeFor[params.BeaconChainConfig]()
 	v := reflect.ValueOf(config)
 
 	for i := 0; i < t.NumField(); i++ {
@@ -180,6 +182,25 @@ func prepareConfigSpec() (map[string]interface{}, error) {
 		data[tag] = convertValueForJSON(val, tag)
 	}
 
+	// Add Fulu preset values. These are compile-time constants from fieldparams,
+	// not runtime configs, but are required by the /eth/v1/config/spec API.
+	data["NUMBER_OF_COLUMNS"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.NumberOfColumns)), "NUMBER_OF_COLUMNS")
+	data["CELLS_PER_EXT_BLOB"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.NumberOfColumns)), "CELLS_PER_EXT_BLOB")
+	data["FIELD_ELEMENTS_PER_CELL"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.CellsPerBlob)), "FIELD_ELEMENTS_PER_CELL")
+	data["FIELD_ELEMENTS_PER_EXT_BLOB"] = convertValueForJSON(reflect.ValueOf(config.FieldElementsPerBlob*2), "FIELD_ELEMENTS_PER_EXT_BLOB")
+	data["KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH"] = convertValueForJSON(reflect.ValueOf(uint64(4)), "KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH")
+	// UPDATE_TIMEOUT is derived from SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD
+	data["UPDATE_TIMEOUT"] = convertValueForJSON(reflect.ValueOf(uint64(config.SlotsPerEpoch)*uint64(config.EpochsPerSyncCommitteePeriod)), "UPDATE_TIMEOUT")
+	// Add Gloas config values from fieldparams required by the /eth/v1/config/spec API.
+	data["PTC_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.PTCSize)), "PTC_SIZE")
+	data["MAX_PAYLOAD_ATTESTATIONS"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxPayloadAttestations)), "MAX_PAYLOAD_ATTESTATIONS")
+	data["BUILDER_REGISTRY_LIMIT"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.BuilderRegistryLimit)), "BUILDER_REGISTRY_LIMIT")
+	data["BUILDER_PENDING_WITHDRAWALS_LIMIT"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.BuilderPendingWithdrawalsLimit)), "BUILDER_PENDING_WITHDRAWALS_LIMIT")
+	// Gloas type-specific SSZ bounds.
+	data["MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxSignedAggregateAndProofSize)), "MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE")
+	data["MAX_ATTESTER_SLASHING_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxAttesterSlashingSize)), "MAX_ATTESTER_SLASHING_SIZE")
+	data["MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE"] = convertValueForJSON(reflect.ValueOf(uint64(fieldparams.MaxSignedExecutionPayloadBidSize)), "MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE")
+
 	return data, nil
 }
 
@@ -187,6 +208,10 @@ func shouldSkip(tField reflect.StructField) bool {
 	// Dynamically skip blob schedule if Fulu is not yet scheduled.
 	if params.BeaconConfig().FuluForkEpoch == math.MaxUint64 &&
 		tField.Type == reflect.TypeOf(params.BeaconConfig().BlobSchedule) {
+		return true
+	}
+	if params.BeaconConfig().GloasForkEpoch == math.MaxUint64 &&
+		tField.Type == reflect.TypeOf(params.BeaconConfig().GasLimitSchedule) {
 		return true
 	}
 	return false

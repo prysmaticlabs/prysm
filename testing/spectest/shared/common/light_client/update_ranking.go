@@ -5,16 +5,16 @@ import (
 	"path"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	lightclient "github.com/OffchainLabs/prysm/v6/beacon-chain/light-client"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	lightclienttypes "github.com/OffchainLabs/prysm/v6/consensus-types/light-client"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/utils"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	lightclient "github.com/OffchainLabs/prysm/v7/beacon-chain/light-client"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	lightclienttypes "github.com/OffchainLabs/prysm/v7/consensus-types/light-client"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/golang/snappy"
 )
 
@@ -111,7 +111,7 @@ func createUpdate(t *testing.T, ssz []byte, v int) interfaces.LightClientUpdate 
 		update, err := lightclienttypes.NewWrappedUpdateDeneb(updateBase)
 		require.NoError(t, err)
 		return update
-	case version.Electra:
+	case version.Electra, version.Fulu:
 		updateBase := &ethpb.LightClientUpdateElectra{}
 		require.NoError(t, updateBase.UnmarshalSSZ(ssz), "Failed to unmarshal")
 		update, err := lightclienttypes.NewWrappedUpdateElectra(updateBase)

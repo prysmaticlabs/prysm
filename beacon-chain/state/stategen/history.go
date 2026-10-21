@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/pkg/errors"
 )
 
@@ -39,6 +40,19 @@ type CanonicalHistory struct {
 	cc    CanonicalChecker
 	cs    CurrentSlotter
 	cache CachedGetter
+}
+
+func (c *CanonicalHistory) executionPayloadEnvelope(
+	ctx context.Context,
+	blockRoot [32]byte,
+) (*ethpb.SignedBlindedExecutionPayloadEnvelope, error) {
+	reader, ok := c.h.(interface {
+		ExecutionPayloadEnvelope(ctx context.Context, blockRoot [32]byte) (*ethpb.SignedBlindedExecutionPayloadEnvelope, error)
+	})
+	if !ok {
+		return nil, nil
+	}
+	return reader.ExecutionPayloadEnvelope(ctx, blockRoot)
 }
 
 func (c *CanonicalHistory) ReplayerForSlot(target primitives.Slot) Replayer {
@@ -188,7 +202,7 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.Re
 func reverseChain(c []interfaces.ReadOnlySignedBeaconBlock) {
 	last := len(c) - 1
 	swaps := (last + 1) / 2
-	for i := 0; i < swaps; i++ {
+	for i := range swaps {
 		c[i], c[last-i] = c[last-i], c[i]
 	}
 }

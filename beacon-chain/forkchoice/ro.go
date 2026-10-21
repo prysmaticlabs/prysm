@@ -1,9 +1,9 @@
 package forkchoice
 
 import (
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 )
 
 // ROForkChoice is an implementation of forkchoice.Getter which calls `Rlock`/`RUnlock`
@@ -28,6 +28,34 @@ type ROWrappable interface {
 // given value after first using its Locker methods to make sure it is correctly locked.
 func NewROForkChoice(w ROWrappable) *ROForkChoice {
 	return &ROForkChoice{getter: w, l: w}
+}
+
+// HasFullNode delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) HasFullNode(root [32]byte) bool {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.HasFullNode(root)
+}
+
+// FullBeatsEmpty delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) FullBeatsEmpty(root [32]byte) bool {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.FullBeatsEmpty(root)
+}
+
+// PTCVotedEarlyAndAvailable delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) PTCVotedEarlyAndAvailable(root [32]byte) bool {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.PTCVotedEarlyAndAvailable(root)
+}
+
+// PTCVotedLate delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) PTCVotedLate(root [32]byte) bool {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.PTCVotedLate(root)
 }
 
 // HasNode delegates to the underlying forkchoice call, under a lock.
@@ -100,6 +128,13 @@ func (ro *ROForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	return ro.getter.UnrealizedJustifiedPayloadBlockHash()
 }
 
+// UnrealizedJustifiedCheckpoint delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) UnrealizedJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.UnrealizedJustifiedCheckpoint()
+}
+
 // NodeCount delegates to the underlying forkchoice call, under a lock.
 func (ro *ROForkChoice) NodeCount() int {
 	ro.l.RLock()
@@ -121,13 +156,6 @@ func (ro *ROForkChoice) HighestReceivedBlockRoot() [32]byte {
 	return ro.getter.HighestReceivedBlockRoot()
 }
 
-// HighestReceivedBlockDelay delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) HighestReceivedBlockDelay() primitives.Slot {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.HighestReceivedBlockDelay()
-}
-
 // ReceivedBlocksLastEpoch delegates to the underlying forkchoice call, under a lock.
 func (ro *ROForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	ro.l.RLock()
@@ -140,6 +168,48 @@ func (ro *ROForkChoice) Weight(root [32]byte) (uint64, error) {
 	ro.l.RLock()
 	defer ro.l.RUnlock()
 	return ro.getter.Weight(root)
+}
+
+// ConsensusNodeWeight delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) ConsensusNodeWeight(root [32]byte) (uint64, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.ConsensusNodeWeight(root)
+}
+
+// CouldBuilderWithhold delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) CouldBuilderWithhold(root [32]byte) bool {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.CouldBuilderWithhold(root)
+}
+
+// BuilderIndex delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) BuilderIndex(root [32]byte) (primitives.BuilderIndex, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.BuilderIndex(root)
+}
+
+// BuilderPubkey delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) BuilderPubkey(root [32]byte) (*[fieldparams.BLSPubkeyLength]byte, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.BuilderPubkey(root)
+}
+
+// PayloadWeights delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) PayloadWeights(root [32]byte) (uint64, uint64, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.PayloadWeights(root)
+}
+
+// HasPayloadBlockHash delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) HasPayloadBlockHash(root, blockHash [32]byte) bool {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.HasPayloadBlockHash(root, blockHash)
 }
 
 // IsOptimistic delegates to the underlying forkchoice call, under a lock.
@@ -163,18 +233,18 @@ func (ro *ROForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
 	return ro.getter.Slot(root)
 }
 
-// LastRoot delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) LastRoot(e primitives.Epoch) [32]byte {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.LastRoot(e)
-}
-
 // DependentRoot delegates to the underlying forkchoice call, under a lock.
 func (ro *ROForkChoice) DependentRoot(epoch primitives.Epoch) ([32]byte, error) {
 	ro.l.RLock()
 	defer ro.l.RUnlock()
 	return ro.getter.DependentRoot(epoch)
+}
+
+// DependentRootForEpoch delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) DependentRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.DependentRootForEpoch(root, epoch)
 }
 
 // TargetRootForEpoch delegates to the underlying forkchoice call, under a lock.
@@ -189,4 +259,39 @@ func (ro *ROForkChoice) ParentRoot(root [32]byte) ([32]byte, error) {
 	ro.l.RLock()
 	defer ro.l.RUnlock()
 	return ro.getter.ParentRoot(root)
+}
+
+// ParentHash delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) ParentHash(root [32]byte) [32]byte {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.ParentHash(root)
+}
+
+// BlockHash delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) BlockHash(root [32]byte) ([32]byte, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.BlockHash(root)
+}
+
+// GasLimit delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) GasLimit(root, blockHash [32]byte) (uint64, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.GasLimit(root, blockHash)
+}
+
+// ConfirmedPayloadBlockHash delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) ConfirmedPayloadBlockHash(root [32]byte) [32]byte {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.ConfirmedPayloadBlockHash(root)
+}
+
+// CanonicalNodeAtSlot delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) CanonicalNodeAtSlot(slot primitives.Slot) ([32]byte, bool) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.CanonicalNodeAtSlot(slot)
 }

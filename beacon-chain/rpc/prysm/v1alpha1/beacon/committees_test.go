@@ -6,23 +6,22 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	dbTest "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	doublylinkedtree "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	mockstategen "github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen/mock"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	blocktest "github.com/OffchainLabs/prysm/v6/consensus-types/blocks/testing"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	prysmTime "github.com/OffchainLabs/prysm/v6/time"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	dbTest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	mockstategen "github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen/mock"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	blocktest "github.com/OffchainLabs/prysm/v7/consensus-types/blocks/testing"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	prysmTime "github.com/OffchainLabs/prysm/v7/time"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"google.golang.org/protobuf/proto"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -95,7 +94,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	headState := setupActiveValidators(t, numValidators)
 
 	mixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(mixes); i++ {
+	for i := range mixes {
 		mixes[i] = make([]byte, fieldparams.RootLength)
 	}
 	require.NoError(t, headState.SetRandaoMixes(mixes))
@@ -157,66 +156,10 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	}
 }
 
-func TestRetrieveCommitteesForRoot(t *testing.T) {
-
-	db := dbTest.SetupDB(t)
-	helpers.ClearCache()
-	ctx := t.Context()
-
-	numValidators := 128
-	headState := setupActiveValidators(t, numValidators)
-
-	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
-	m := &mock.ChainService{
-		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
-	}
-	bs := &Server{
-		HeadFetcher:        m,
-		GenesisTimeFetcher: m,
-		StateGen:           stategen.New(db, doublylinkedtree.New()),
-	}
-	b := util.NewBeaconBlock()
-	util.SaveBlock(t, ctx, db, b)
-	gRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, headState, gRoot))
-	stateSummary := &ethpb.StateSummary{
-		Slot: 0,
-		Root: gRoot[:],
-	}
-	require.NoError(t, db.SaveStateSummary(ctx, stateSummary))
-
-	// Store the genesis seed.
-	seed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch*10))
-
-	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
-	require.NoError(t, err)
-
-	wanted, err := computeCommittees(t.Context(), 0, activeIndices, seed)
-	require.NoError(t, err)
-	committees, activeIndices, err := bs.retrieveCommitteesForRoot(t.Context(), gRoot[:])
-	require.NoError(t, err)
-
-	wantedRes := &ethpb.BeaconCommittees{
-		Epoch:                0,
-		Committees:           wanted.SlotToUint64(),
-		ActiveValidatorCount: uint64(numValidators),
-	}
-	receivedRes := &ethpb.BeaconCommittees{
-		Epoch:                0,
-		Committees:           committees.SlotToUint64(),
-		ActiveValidatorCount: uint64(len(activeIndices)),
-	}
-	assert.DeepEqual(t, wantedRes, receivedRes)
-}
-
 func setupActiveValidators(t *testing.T, count int) state.BeaconState {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		balances[i] = uint64(i)

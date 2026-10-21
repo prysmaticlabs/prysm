@@ -9,14 +9,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/io/prompt"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/wallet"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/io/prompt"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/wallet"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
 	"github.com/pkg/errors"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
@@ -143,13 +143,14 @@ func (s *Server) WalletConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.wallet == nil || s.validatorService == nil {
+	kind, ok := s.keymanagerKind()
+	if !ok || s.validatorService == nil {
 		// If no wallet is found, we simply return an empty response.
 		httputil.WriteJson(w, &WalletResponse{})
 		return
 	}
 	var keymanagerKind KeymanagerKind
-	switch s.wallet.KeymanagerKind() {
+	switch kind {
 	case keymanager.Derived:
 		keymanagerKind = derivedKeymanagerKind
 	case keymanager.Local:

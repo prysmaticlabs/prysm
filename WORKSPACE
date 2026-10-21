@@ -205,10 +205,39 @@ prysm_image_deps()
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
+# Override golang.org/x/tools to use v0.44.0 instead of v0.30.0
+# This is necessary as this dependency is required by rules_go and they do not accept dependency
+# update PRs. Instead, they ask downstream projects to override the dependency. To generate the
+# patches or update this dependency again, check out the rules_go repo then run the releaser tool.
+# bazel run //go/tools/releaser -- upgrade-dep -mirror=false org_golang_x_tools
+# Copy the patches and http_archive updates from rules_go here.
+#
+# How to generate the patch:
+# 1. Check out the rules_go repo.
+# 2. Build gazelle: bazel build @bazel_gazelle//cmd/gazelle
+# 3. Set the PATH to include the built gazelle binary:
+#    PATH="$(dirname "$(bazel info bazel-bin)/external/bazel_gazelle/cmd/gazelle/gazelle_/gazelle"):$PATH"
+# 4. bazel run //go/tools/releaser -- upgrade-dep -mirror=false org_golang_x_tools@v0.44.0
+# 5. Copy-paste org_golang_x_tools-gazelle.patch from rules_go into third_party/org_golang_x_tools-gazelle.patch
+http_archive(
+    name = "org_golang_x_tools",
+    patch_args = ["-p1"],
+    patch_cmds = ["rm -rf gopls"],
+    patch_cmds_win = ["Remove-Item -Recurse -Force gopls"],
+    patches = [
+        "//third_party:org_golang_x_tools-gazelle.patch",
+    ],
+    sha256 = "5bbb5095f55570d9a0cb19c28143d7eadd7c65d2ab2a70dc89f37ee51660969c",
+    strip_prefix = "tools-0.44.0",
+    urls = [
+        "https://github.com/golang/tools/archive/refs/tags/v0.44.0.zip",
+    ],
+)
+
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.25.1",
+    go_version = "1.26.5",
     nogo = "@//:nogo",
 )
 
@@ -253,16 +282,16 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.6.0-beta.0"
+consensus_spec_version = "v1.7.0-beta.4"
 
 load("@prysm//tools:download_spectests.bzl", "consensus_spec_tests")
 
 consensus_spec_tests(
     name = "consensus_spec_tests",
     flavors = {
-        "general": "sha256-rT3jQp2+ZaDiO66gIQggetzqr+kGeexaLqEhbx4HDMY=",
-        "minimal": "sha256-wowwwyvd0KJLsE+oDOtPkrhZyJndJpJ0lbXYsLH6XBw=",
-        "mainnet": "sha256-4ZLrLNeO7NihZ4TuWH5V5fUhvW9Y3mAPBQDCqrfShps=",
+        "general": "sha256-xPOV9x9gbCgJNQDjIGeZDkMMxzoid75vO/UJCtzOP2c=",
+        "minimal": "sha256-JtCa6nDGLtI1oSCpUILVRKscLm/ja9Neob1dpi87e2g=",
+        "mainnet": "sha256-Z3YphlcjcqCNOxglNap2BDPIbhdOFOC711bzUN0ZOYw=",
     },
     version = consensus_spec_version,
 )
@@ -278,9 +307,26 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    integrity = "sha256-sBe3Rx8zGq9IrvfgIhZQpYidGjy3mE1SiCb6/+pjLdY=",
+    integrity = "sha256-0RD2Xb+NllOi2Usc9ZR/wtAMtXfjUYW0xwucSTIixKc=",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
+)
+
+cryptography_spec_tests_version = "v0.1.0"
+
+http_archive(
+    name = "cryptography_spec_tests",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    integrity = "sha256-7rSJPrVE93CBDZSZAH67C5MZQx6kEr1Uc24cJ02j0Dc=",
+    url = "https://github.com/ethereum/cryptography-specs/releases/download/%s/tests.zip" % cryptography_spec_tests_version,
 )
 
 bls_test_version = "v0.1.1"
@@ -327,9 +373,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    integrity = "sha256-NZr/gsQK9rBHRnznlPBiNzJpK8MPMrfUa3f+QYqn1+g=",
-    strip_prefix = "mainnet-978f1794eada6f85bee76e4d2d5959a5fb8e0cc5",
-    url = "https://github.com/eth-clients/mainnet/archive/978f1794eada6f85bee76e4d2d5959a5fb8e0cc5.tar.gz",
+    integrity = "sha256-+mqMXyboedVw8Yp0v+U9GDz98QoC1SZET8mjaKPX+AI=",
+    strip_prefix = "mainnet-980aee8893a2291d473c38f63797d5bc370fa381",
+    url = "https://github.com/eth-clients/mainnet/archive/980aee8893a2291d473c38f63797d5bc370fa381.tar.gz",
 )
 
 http_archive(
@@ -343,9 +389,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    integrity = "sha256-+UZgfvBcea0K0sbvAJZOz5ZNmxdWZYbohP38heUuc6w=",
-    strip_prefix = "sepolia-f9158732adb1a2a6440613ad2232eb50e7384c4f",
-    url = "https://github.com/eth-clients/sepolia/archive/f9158732adb1a2a6440613ad2232eb50e7384c4f.tar.gz",
+    integrity = "sha256-fyEgdjjBSoZFvX2h6ZngYkqFpVGSJk5dX7cFuXLGkdI=",
+    strip_prefix = "sepolia-237ad0dcfa4b93921fbfb178b2317b52d3c3e767",
+    url = "https://github.com/eth-clients/sepolia/archive/237ad0dcfa4b93921fbfb178b2317b52d3c3e767.tar.gz",
 )
 
 http_archive(
@@ -402,10 +448,6 @@ bls_dependencies()
 load("@prysm//testing/endtoend:deps.bzl", "e2e_deps")
 
 e2e_deps()
-
-load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
-
-gometalinter_dependencies()
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 

@@ -6,12 +6,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -173,7 +172,7 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 // UpdatePositionsInCommittee updates caching of validators position in sync committee in respect to
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
-func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.BeaconState) error {
+func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.ReadOnlyBeaconState) error {
 	// since we call UpdatePositionsInCommittee asynchronously, keep track of the cache value
 	// seen at the beginning of the routine and compare at the end before updating. If the underlying value has been
 	// cycled (new address), don't update it.
@@ -236,7 +235,7 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 // Given the `syncCommitteeIndexPosition` object, this returns the key of the object.
 // The key is the `currentSyncCommitteeRoot` within the field.
 // Error gets returned if input does not comply with `currentSyncCommitteeRoot` object.
-func keyFn(obj interface{}) (string, error) {
+func keyFn(obj any) (string, error) {
 	info, ok := obj.(*syncCommitteeIndexPosition)
 	if !ok {
 		return "", errNotSyncCommitteeIndexPosition

@@ -2,25 +2,27 @@ package node
 
 import (
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	dbutil "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	mockP2p "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/testutil"
-	mockSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	dbutil "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	mockP2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -187,32 +189,71 @@ func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
 	assert.Equal(t, errStr, res.CurrentConnectionError)
 }
 
+// mockServerTransportStream implements grpc.ServerTransportStream for testing
+type mockServerTransportStream struct {
+	headers map[string][]string
+}
+
+func (m *mockServerTransportStream) Method() string { return "" }
+func (m *mockServerTransportStream) SetHeader(md metadata.MD) error {
+	maps.Copy(m.headers, md)
+	return nil
+}
+func (m *mockServerTransportStream) SendHeader(metadata.MD) error { return nil }
+func (m *mockServerTransportStream) SetTrailer(metadata.MD) error { return nil }
+
 func TestNodeServer_GetHealth(t *testing.T) {
 	tests := []struct {
 		name         string
 		input        *mockSync.Sync
-		customStatus uint64
+		isOptimistic bool
 		wantedErr    string
 	}{
 		{
-			name:  "happy path",
-			input: &mockSync.Sync{IsSyncing: false, IsSynced: true},
+			name:         "happy path - synced and not optimistic",
+			input:        &mockSync.Sync{IsSyncing: false, IsSynced: true},
+			isOptimistic: false,
 		},
 		{
-			name:      "syncing",
-			input:     &mockSync.Sync{IsSyncing: false},
-			wantedErr: "service unavailable",
+			name:         "returns error when not synced and not syncing",
+			input:        &mockSync.Sync{IsSyncing: false, IsSynced: false},
+			isOptimistic: false,
+			wantedErr:    "service unavailable",
+		},
+		{
+			name:         "returns error when syncing",
+			input:        &mockSync.Sync{IsSyncing: true, IsSynced: false},
+			isOptimistic: false,
+			wantedErr:    "node is syncing",
+		},
+		{
+			name:         "returns error when synced but optimistic",
+			input:        &mockSync.Sync{IsSyncing: false, IsSynced: true},
+			isOptimistic: true,
+			wantedErr:    "node is optimistic",
+		},
+		{
+			name:         "returns error when syncing and optimistic",
+			input:        &mockSync.Sync{IsSyncing: true, IsSynced: false},
+			isOptimistic: true,
+			wantedErr:    "node is syncing",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := grpc.NewServer()
 			ns := &Server{
-				SyncChecker: tt.input,
+				SyncChecker:           tt.input,
+				OptimisticModeFetcher: &mock.ChainService{Optimistic: tt.isOptimistic},
 			}
 			ethpb.RegisterNodeServer(server, ns)
 			reflection.Register(server)
-			_, err := ns.GetHealth(t.Context(), &ethpb.HealthRequest{SyncingStatus: tt.customStatus})
+
+			// Create context with mock transport stream so grpc.SetHeader works
+			stream := &mockServerTransportStream{headers: make(map[string][]string)}
+			ctx := grpc.NewContextWithServerTransportStream(t.Context(), stream)
+
+			_, err := ns.GetHealth(ctx, &ethpb.HealthRequest{})
 			if tt.wantedErr == "" {
 				require.NoError(t, err)
 				return

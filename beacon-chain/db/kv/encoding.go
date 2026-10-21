@@ -5,11 +5,12 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/golang/snappy"
-	fastssz "github.com/prysmaticlabs/fastssz"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 func decode(ctx context.Context, data []byte, dst proto.Message) error {
@@ -25,7 +26,7 @@ func decode(ctx context.Context, data []byte, dst proto.Message) error {
 		return err
 	}
 	if isSSZStorageFormat(dst) {
-		return dst.(fastssz.Unmarshaler).UnmarshalSSZ(data)
+		return dst.(ssz.Unmarshaler).UnmarshalSSZ(data)
 	}
 	return proto.Unmarshal(data, dst)
 }
@@ -44,7 +45,7 @@ func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
 	var enc []byte
 	var err error
 	if isSSZStorageFormat(msg) {
-		enc, err = msg.(fastssz.Marshaler).MarshalSSZ()
+		enc, err = msg.(ssz.Marshaler).MarshalSSZ()
 		if err != nil {
 			return nil, err
 		}
@@ -58,17 +59,15 @@ func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
 }
 
 // isSSZStorageFormat returns true if the object type should be saved in SSZ encoded format.
-func isSSZStorageFormat(obj interface{}) bool {
+func isSSZStorageFormat(obj any) bool {
 	switch obj.(type) {
-	case *ethpb.BeaconState:
-		return true
 	case *ethpb.SignedBeaconBlock:
 		return true
 	case *ethpb.SignedAggregateAttestationAndProof:
 		return true
 	case *ethpb.BeaconBlock:
 		return true
-	case *ethpb.Attestation, *ethpb.AttestationElectra:
+	case *ethpb.Attestation, *ethpb.AttestationElectra, *ethpb.AttestationGloas:
 		return true
 	case *ethpb.Deposit:
 		return true

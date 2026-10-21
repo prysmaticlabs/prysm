@@ -5,25 +5,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	mockp2p "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	mockp2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 )
 
 func TestNewRateLimiter(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
-	assert.Equal(t, len(rlimiter.limiterMap), 20, "correct number of topics not registered")
+	expectedTopics := len(p2p.RPCTopicMappings) + 1 // +1 for rpcLimiterTopic
+	assert.Equal(t, expectedTopics, len(rlimiter.limiterMap), "correct number of topics not registered")
 }
 
 func TestNewRateLimiter_FreeCorrectly(t *testing.T) {
 	rlimiter := newRateLimiter(mockp2p.NewTestP2P(t))
 	rlimiter.free()
-	assert.Equal(t, len(rlimiter.limiterMap), 0, "rate limiter not freed correctly")
+	assert.Equal(t, 0, len(rlimiter.limiterMap), "rate limiter not freed correctly")
 }
 
 func TestRateLimiter_ExceedCapacity(t *testing.T) {
@@ -84,7 +85,7 @@ func TestRateLimiter_ExceedRawCapacity(t *testing.T) {
 	stream, err := p1.BHost.NewStream(t.Context(), p2.PeerID(), protocol.ID(topic))
 	require.NoError(t, err, "could not create stream")
 
-	for i := 0; i < 2*defaultBurstLimit; i++ {
+	for range 4 * defaultBurstLimit {
 		err = rlimiter.validateRawRpcRequest(stream, 1)
 		rlimiter.addRawStream(stream)
 		require.NoError(t, err, "could not validate incoming request")
@@ -93,7 +94,7 @@ func TestRateLimiter_ExceedRawCapacity(t *testing.T) {
 	assert.ErrorContains(t, p2ptypes.ErrRateLimited.Error(), rlimiter.validateRawRpcRequest(stream, 1))
 
 	// Make Peer bad.
-	for i := 0; i < defaultBurstLimit; i++ {
+	for range defaultBurstLimit {
 		assert.ErrorContains(t, p2ptypes.ErrRateLimited.Error(), rlimiter.validateRawRpcRequest(stream, 1))
 	}
 	assert.NotNil(t, p1.Peers().IsBad(p2.PeerID()), "peer is not marked as a bad peer")
@@ -108,4 +109,17 @@ func Test_limiter_retrieveCollector_requiresLock(t *testing.T) {
 	l := limiter{}
 	_, err := l.retrieveCollector("")
 	require.ErrorContains(t, "caller must hold read/write lock", err)
+}
+
+func TestRateLimiter_RemovePeer(t *testing.T) {
+	p1 := mockp2p.NewTestP2P(t)
+	rlimiter := newRateLimiter(p1)
+	pid := p1.PeerID()
+
+	c := rlimiter.limiterMap[rpcLimiterTopic]
+	c.Add(pid.String(), 1)
+	require.Equal(t, int64(1), c.Count(pid.String()))
+
+	rlimiter.removePeer(pid)
+	require.Equal(t, int64(0), c.Count(pid.String()))
 }

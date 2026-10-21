@@ -5,15 +5,16 @@ import (
 	"errors"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	beaconsync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	beaconsync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/sirupsen/logrus"
 )
@@ -96,9 +97,11 @@ type blocksQueue struct {
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
-	blocksFrom peer.ID
-	blobsFrom  peer.ID
-	bwb        []blocks.BlockWithROSidecars
+	blocksFrom    peer.ID
+	blobsFrom     peer.ID
+	bwb           []blocks.BlockWithROSidecars
+	envelopes     []interfaces.ROSignedExecutionPayloadEnvelope
+	columnsToSave []blocks.VerifiedRODataColumn
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -235,7 +238,11 @@ func (q *blocksQueue) loop() {
 						} else {
 							q.exitConditions.noRequiredPeersErrRetries++
 							log.Debug("Waiting for finalized peers")
-							time.Sleep(noRequiredPeersErrRefreshInterval)
+							select {
+							case <-q.ctx.Done():
+								return
+							case <-time.After(noRequiredPeersErrRefreshInterval):
+							}
 						}
 						continue
 					}
@@ -303,7 +310,7 @@ func waitHighestExpectedSlot(q *blocksQueue) bool {
 
 // onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
 func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
-	return func(m *stateMachine, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in any) (stateID, error) {
 		if m.state != stateNew {
 			return m.state, errInvalidInitialState
 		}
@@ -321,7 +328,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 
 // onDataReceivedEvent is an event called when data is received from fetcher.
 func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
-	return func(m *stateMachine, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in any) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
 		}
@@ -359,7 +366,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 
 // onReadyToSendEvent is an event called to allow epochs with available blocks to send them downstream.
 func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
-	return func(m *stateMachine, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in any) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
 		}
@@ -404,7 +411,7 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 // onProcessSkippedEvent is an event triggered on skipped machines, allowing handlers to
 // extend lookahead window, in case where progress is not possible otherwise.
 func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn {
-	return func(m *stateMachine, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in any) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
 		}
@@ -441,7 +448,7 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
-		if q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
+		if q.mode == modeStopOnFinalizedEpoch || startSlot > bestFinalizedSlot {
 			q.staleEpochs[slots.ToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
 			if q.staleEpochs[slots.ToEpoch(startSlot)] >= maxResetAttempts {
@@ -468,7 +475,7 @@ func (q *blocksQueue) downscorePeer(peerID peer.ID, reason string) {
 // onCheckStaleEvent is an event that allows to mark stale epochs,
 // so that they can be re-processed.
 func onCheckStaleEvent(ctx context.Context) eventHandlerFn {
-	return func(m *stateMachine, in interface{}) (stateID, error) {
+	return func(m *stateMachine, in any) (stateID, error) {
 		if ctx.Err() != nil {
 			return m.state, ctx.Err()
 		}

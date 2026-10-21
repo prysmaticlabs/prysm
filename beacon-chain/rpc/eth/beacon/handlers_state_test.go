@@ -8,23 +8,27 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	chainMock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	dbTest "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/testutil"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	ethpbalpha "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	dbTest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/lookup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	ethpbalpha "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 )
 
 func TestGetStateRoot(t *testing.T) {
@@ -91,7 +95,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("finalized", func(t *testing.T) {
-		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), fakeState)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -119,6 +123,71 @@ func TestGetStateRoot(t *testing.T) {
 		resp := &structs.GetStateRootResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.DeepEqual(t, true, resp.Finalized)
+	})
+
+	// A state ID that resolves to no state must be a 404, not a 500.
+	t.Run("state not found", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		stateNotFoundErr := lookup.NewStateNotFoundError(8192, []byte("test"))
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: &stateNotFoundErr},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/root", nil)
+		request.SetPathValue("state_id", "1506150")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetStateRoot(writer, request)
+		require.Equal(t, http.StatusNotFound, writer.Code)
+		e := &httputil.DefaultJsonError{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, stateNotFoundErr.Error(), e.Message)
+	})
+
+	t.Run("state root not found", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		rootNotFoundErr := lookup.NewStateRootNotFoundError(8192)
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: &rootNotFoundErr},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/root", nil)
+		request.SetPathValue("state_id", "0x"+strings.Repeat("f", 64))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetStateRoot(writer, request)
+		require.Equal(t, http.StatusNotFound, writer.Code)
+	})
+
+	t.Run("invalid state ID", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		parseErr := lookup.NewStateIdParseError(errors.New("foo"))
+		s := &Server{
+			Stater:                &testutil.MockStater{CustomError: &parseErr},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com//eth/v1/beacon/states/{state_id}/root", nil)
+		request.SetPathValue("state_id", "foo")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetStateRoot(writer, request)
+		require.Equal(t, http.StatusBadRequest, writer.Code)
 	})
 }
 
@@ -281,7 +350,7 @@ func TestGetRandao(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		headerRoot, err := headSt.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
@@ -384,7 +453,7 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 	vals := st.Validators()
 	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	wantedIndices := make([]string, len(wantedCommittee))
-	for i := 0; i < len(wantedCommittee); i++ {
+	for i := range wantedCommittee {
 		wantedIndices[i] = strconv.FormatUint(uint64(i), 10)
 		wantedCommittee[i] = vals[i].PublicKey
 	}
@@ -415,7 +484,7 @@ func Test_nextCommitteeIndicesFromState(t *testing.T) {
 	vals := st.Validators()
 	wantedCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	wantedIndices := make([]string, len(wantedCommittee))
-	for i := 0; i < len(wantedCommittee); i++ {
+	for i := range wantedCommittee {
 		wantedIndices[i] = strconv.FormatUint(uint64(i), 10)
 		wantedCommittee[i] = vals[i].PublicKey
 	}
@@ -445,7 +514,7 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
-	for i := 0; i < len(syncCommittee); i++ {
+	for i := range syncCommittee {
 		syncCommittee[i] = vals[i].PublicKey
 	}
 	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
@@ -460,10 +529,7 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 	for i := uint64(0); i < commSize; i += subCommSize {
 		sub := make([]string, 0)
 		start := i
-		end := i + subCommSize
-		if end > commSize {
-			end = commSize
-		}
+		end := min(i+subCommSize, commSize)
 		for j := start; j < end; j++ {
 			sub = append(sub, strconv.FormatUint(j, 10))
 		}
@@ -498,7 +564,7 @@ func TestGetSyncCommittees(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
-	for i := 0; i < len(syncCommittee); i++ {
+	for i := range syncCommittee {
 		syncCommittee[i] = vals[i].PublicKey
 	}
 	require.NoError(t, st.SetCurrentSyncCommittee(&ethpbalpha.SyncCommittee{
@@ -596,7 +662,7 @@ func TestGetSyncCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		headerRoot, err := helpers.BlockRootFromState(t.Context(), st)
 		require.NoError(t, err)
 		stSlot := st.Slot()
 		chainService := &chainMock.ChainService{
@@ -657,11 +723,15 @@ func (m *futureSyncMockFetcher) StateBySlot(context.Context, primitives.Slot) (s
 	return m.BeaconState, nil
 }
 
+func (m *futureSyncMockFetcher) StateByEpoch(context.Context, primitives.Epoch) (state.BeaconState, error) {
+	return m.BeaconState, nil
+}
+
 func TestGetSyncCommittees_Future(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := make([][]byte, params.BeaconConfig().SyncCommitteeSize)
 	vals := st.Validators()
-	for i := 0; i < len(syncCommittee); i++ {
+	for i := range syncCommittee {
 		syncCommittee[i] = vals[i].PublicKey
 	}
 	require.NoError(t, st.SetNextSyncCommittee(&ethpbalpha.SyncCommittee{

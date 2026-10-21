@@ -4,19 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	consensusblocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	types "github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/math"
-	v1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	types "github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/math"
+	v1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
@@ -107,21 +106,6 @@ func (s Uint256) MarshalText() ([]byte, error) {
 		return nil, errors.Wrapf(errInvalidUint256, "value=%s", s.Int)
 	}
 	return []byte(s.String()), nil
-}
-
-// Uint64String is a custom type that allows marshalling from text to uint64 and vice versa.
-type Uint64String uint64
-
-// UnmarshalText takes a byte array and unmarshals the text in Uint64String.
-func (s *Uint64String) UnmarshalText(t []byte) error {
-	u, err := strconv.ParseUint(string(t), 10, 64)
-	*s = Uint64String(u)
-	return err
-}
-
-// MarshalText returns a byte representation of the text from Uint64String.
-func (s Uint64String) MarshalText() ([]byte, error) {
-	return []byte(fmt.Sprintf("%d", s)), nil
 }
 
 // VersionResponse is a JSON representation of a field in the builder API header response.

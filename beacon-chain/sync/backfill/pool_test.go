@@ -3,17 +3,13 @@ package backfill
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	p2ptest "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/sync"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/das"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -24,7 +20,7 @@ type mockAssigner struct {
 
 // Assign satisfies the PeerAssigner interface so that mockAssigner can be used in tests
 // in place of the concrete p2p implementation of PeerAssigner.
-func (m mockAssigner) Assign(busy map[peer.ID]bool, n int) ([]peer.ID, error) {
+func (m mockAssigner) Assign(filter peers.AssignmentFilter) ([]peer.ID, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -37,32 +33,20 @@ func mockNewBlobVerifier(_ blocks.ROBlob, _ []verification.Requirement) verifica
 	return &verification.MockBlobVerifier{}
 }
 
-func TestPoolDetectAllEnded(t *testing.T) {
-	nw := 5
+func TestPoolReturnsExpiredBatch(t *testing.T) {
+	nw := 2
 	p2p := p2ptest.NewTestP2P(t)
-	ctx := t.Context()
-	ma := &mockAssigner{}
-	pool := newP2PBatchWorkerPool(p2p, nw)
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	keys, err := st.PublicKeys()
-	require.NoError(t, err)
-	v, err := newBackfillVerifier(st.GenesisValidatorsRoot(), keys)
-	require.NoError(t, err)
-
-	ctxMap, err := sync.ContextByteVersionsForValRoot(bytesutil.ToBytes32(st.GenesisValidatorsRoot()))
-	require.NoError(t, err)
-	bfs := filesystem.NewEphemeralBlobStorage(t)
-	pool.spawn(ctx, nw, startup.NewClock(time.Now(), [32]byte{}), ma, v, ctxMap, mockNewBlobVerifier, bfs)
-	br := batcher{min: 10, size: 10}
-	endSeq := br.before(0)
-	require.Equal(t, batchEndSequence, endSeq.state)
-	for i := 0; i < nw; i++ {
-		pool.todo(endSeq)
-	}
+	needs := func() das.CurrentNeeds { return das.CurrentNeeds{Block: das.NeedSpan{Begin: 100, End: 200}} }
+	pool := newP2PBatchWorkerPool(p2p, nw, needs)
+	ma := &mockAssigner{assign: []peer.ID{"peer"}}
+	pool.spawn(t.Context(), nw, ma, &workerCfg{})
+	expired := batch{begin: 10, end: 20, state: batchSequenced}
+	pool.todo(expired)
 	b, err := pool.complete()
-	require.ErrorIs(t, err, errEndSequence)
-	require.Equal(t, b.end, endSeq.end)
+	require.NoError(t, err)
+	require.Equal(t, batchEndSequence, b.state)
+	require.Equal(t, expired.begin, b.begin)
+	require.Equal(t, expired.end, b.end)
 }
 
 type mockPool struct {
@@ -72,7 +56,7 @@ type mockPool struct {
 	todoChan     chan batch
 }
 
-func (m *mockPool) spawn(_ context.Context, _ int, _ *startup.Clock, _ PeerAssigner, _ *verifier, _ sync.ContextByteVersions, _ verification.NewBlobVerifier, _ *filesystem.BlobStorage) {
+func (m *mockPool) spawn(_ context.Context, _ int, _ PeerAssigner, _ *workerCfg) {
 }
 
 func (m *mockPool) todo(b batch) {
@@ -89,3 +73,56 @@ func (m *mockPool) complete() (batch, error) {
 }
 
 var _ batchWorkerPool = &mockPool{}
+
+// TestTodoInterceptsBatchEndSequence tests that todo() drops batchEndSequence batches instead of routing them to workers
+func TestTodoInterceptsBatchEndSequence(t *testing.T) {
+	testCases := []struct {
+		name             string
+		batches          []batch
+		expectedToRouter int
+	}{
+		{
+			name: "AllRegularBatches",
+			batches: []batch{
+				{state: batchInit},
+				{state: batchInit},
+				{state: batchErrRetryable},
+			},
+			expectedToRouter: 3,
+		},
+		{
+			name: "MixedBatches",
+			batches: []batch{
+				{state: batchInit},
+				{state: batchEndSequence},
+				{state: batchInit},
+				{state: batchEndSequence},
+			},
+			expectedToRouter: 2,
+		},
+		{
+			name: "AllEndSequence",
+			batches: []batch{
+				{state: batchEndSequence},
+				{state: batchEndSequence},
+				{state: batchEndSequence},
+			},
+			expectedToRouter: 0,
+		},
+		{
+			name:             "EmptyBatches",
+			batches:          []batch{},
+			expectedToRouter: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pool := &p2pBatchWorkerPool{toRouter: make(chan batch, len(tc.batches))}
+			for _, b := range tc.batches {
+				pool.todo(b)
+			}
+			require.Equal(t, tc.expectedToRouter, len(pool.toRouter))
+		})
+	}
+}

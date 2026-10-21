@@ -3,12 +3,12 @@ package light_client
 import (
 	"fmt"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	consensustypes "github.com/OffchainLabs/prysm/v6/consensus-types"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	consensustypes "github.com/OffchainLabs/prysm/v7/consensus-types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,6 +25,8 @@ func NewWrappedFinalityUpdate(m proto.Message) (interfaces.LightClientFinalityUp
 		return NewWrappedFinalityUpdateDeneb(t)
 	case *pb.LightClientFinalityUpdateElectra:
 		return NewWrappedFinalityUpdateElectra(t)
+	case *pb.LightClientFinalityUpdateGloas:
+		return NewWrappedFinalityUpdateGloas(t)
 	default:
 		return nil, fmt.Errorf("cannot construct light client finality update from type %T", t)
 	}
@@ -74,6 +76,19 @@ func NewFinalityUpdateFromUpdate(update interfaces.LightClientUpdate) (interface
 	case *updateElectra:
 		return &finalityUpdateElectra{
 			p: &pb.LightClientFinalityUpdateElectra{
+				AttestedHeader:  t.p.AttestedHeader,
+				FinalizedHeader: t.p.FinalizedHeader,
+				FinalityBranch:  t.p.FinalityBranch,
+				SyncAggregate:   t.p.SyncAggregate,
+				SignatureSlot:   t.p.SignatureSlot,
+			},
+			attestedHeader:  t.attestedHeader,
+			finalizedHeader: t.finalizedHeader,
+			finalityBranch:  t.finalityBranch,
+		}, nil
+	case *updateGloas:
+		return &finalityUpdateGloas{
+			p: &pb.LightClientFinalityUpdateGloas{
 				AttestedHeader:  t.p.AttestedHeader,
 				FinalizedHeader: t.p.FinalizedHeader,
 				FinalityBranch:  t.p.FinalityBranch,
@@ -536,4 +551,20 @@ func (u *finalityUpdateElectra) SyncAggregate() *pb.SyncAggregate {
 
 func (u *finalityUpdateElectra) SignatureSlot() primitives.Slot {
 	return u.p.SignatureSlot
+}
+
+func (u *finalityUpdateAltair) FinalityBranchGloas() (interfaces.LightClientFinalityBranchGloas, error) {
+	return interfaces.LightClientFinalityBranchGloas{}, consensustypes.ErrNotSupported("FinalityBranchGloas", u.Version())
+}
+
+func (u *finalityUpdateCapella) FinalityBranchGloas() (interfaces.LightClientFinalityBranchGloas, error) {
+	return interfaces.LightClientFinalityBranchGloas{}, consensustypes.ErrNotSupported("FinalityBranchGloas", u.Version())
+}
+
+func (u *finalityUpdateDeneb) FinalityBranchGloas() (interfaces.LightClientFinalityBranchGloas, error) {
+	return interfaces.LightClientFinalityBranchGloas{}, consensustypes.ErrNotSupported("FinalityBranchGloas", u.Version())
+}
+
+func (u *finalityUpdateElectra) FinalityBranchGloas() (interfaces.LightClientFinalityBranchGloas, error) {
+	return interfaces.LightClientFinalityBranchGloas{}, consensustypes.ErrNotSupported("FinalityBranchGloas", u.Version())
 }

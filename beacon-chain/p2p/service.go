@@ -9,20 +9,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/encoder"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers/scorers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	leakybucket "github.com/OffchainLabs/prysm/v6/container/leaky-bucket"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	prysmnetwork "github.com/OffchainLabs/prysm/v6/network"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/metadata"
-	"github.com/OffchainLabs/prysm/v6/runtime"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/async"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/encoder"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/partialdatacolumnbroadcaster"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/scorers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	prysmnetwork "github.com/OffchainLabs/prysm/v7/network"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/metadata"
+	"github.com/OffchainLabs/prysm/v7/runtime"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p"
@@ -64,35 +66,38 @@ var (
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	started               bool
-	isPreGenesis          bool
-	pingMethod            func(ctx context.Context, id peer.ID) error
-	pingMethodLock        sync.RWMutex
-	cancel                context.CancelFunc
-	cfg                   *Config
-	peers                 *peers.Status
-	addrFilter            *multiaddr.Filters
-	ipLimiter             *leakybucket.Collector
-	privKey               *ecdsa.PrivateKey
-	metaData              metadata.Metadata
-	pubsub                *pubsub.PubSub
-	joinedTopics          map[string]*pubsub.Topic
-	joinedTopicsLock      sync.RWMutex
-	subnetsLock           map[uint64]*sync.RWMutex
-	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
-	initializationLock    sync.Mutex
-	dv5Listener           ListenerRebooter
-	startupErr            error
-	ctx                   context.Context
-	host                  host.Host
-	genesisTime           time.Time
-	genesisValidatorsRoot []byte
-	activeValidatorCount  uint64
-	peerDisconnectionTime *cache.Cache
-	custodyInfo           *custodyInfo
-	custodyInfoLock       sync.RWMutex // Lock access to custodyInfo
-	custodyInfoSet        chan struct{}
-	allForkDigests        map[[4]byte]struct{}
+	started                  bool
+	isPreGenesis             bool
+	pingMethod               func(ctx context.Context, id peer.ID) error
+	pingMethodLock           sync.RWMutex
+	cancel                   context.CancelFunc
+	cfg                      *Config
+	peers                    *peers.Status
+	addrFilter               *multiaddr.Filters
+	ipLimiter                *leakybucket.Collector
+	privKey                  *ecdsa.PrivateKey
+	metaData                 metadata.Metadata
+	pubsub                   *pubsub.PubSub
+	partialColumnBroadcaster partialdatacolumnbroadcaster.Broadcaster
+	joinedTopics             map[string]*pubsub.Topic
+	joinedTopicsLock         sync.RWMutex
+	subnetsLock              map[uint64]*sync.RWMutex
+	subnetsLockLock          sync.Mutex // Lock access to subnetsLock
+	initializationLock       sync.Mutex
+	dv5Listener              ListenerRebooter
+	startupErr               error
+	ctx                      context.Context
+	host                     host.Host
+	genesisTime              time.Time
+	genesisValidatorsRoot    []byte
+	activeValidatorCount     uint64
+	activeValidatorCountLock sync.Mutex
+	peerDisconnectionTime    *cache.Cache
+	custodyInfo              *custodyInfo
+	custodyInfoLock          sync.RWMutex // Lock access to custodyInfo
+	custodyInfoSet           chan struct{}
+	allForkDigests           map[[4]byte]struct{}
+	dataColumnBroadcastLog   dataColumnBroadcastLogger
 }
 
 type custodyInfo struct {
@@ -106,11 +111,15 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop().
 
-	cfg = validateConfig(cfg)
+	validateConfig(cfg)
+
 	privKey, err := privKey(cfg)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate p2p private key")
 	}
+
+	p2pMaxPeers.Set(float64(cfg.MaxPeers))
+	minimumPeersPerSubnet.Set(float64(flags.Get().MinimumPeersPerSubnet))
 
 	metaData, err := metaDataFromDB(ctx, cfg.DB)
 	if err != nil {
@@ -139,6 +148,10 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		subnetsLock:           make(map[uint64]*sync.RWMutex),
 		peerDisconnectionTime: cache.New(1*time.Second, 1*time.Minute),
 		custodyInfoSet:        make(chan struct{}),
+	}
+
+	if cfg.PartialDataColumns {
+		s.partialColumnBroadcaster = partialdatacolumnbroadcaster.NewBroadcaster(ctx, log.Logger)
 	}
 
 	ipAddr := prysmnetwork.IPAddr()
@@ -308,6 +321,7 @@ func (s *Service) Stop() error {
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()
 	}
+
 	return nil
 }
 
@@ -342,6 +356,10 @@ func (*Service) Encoding() encoder.NetworkEncoding {
 // PubSub returns the p2p pubsub framework.
 func (s *Service) PubSub() *pubsub.PubSub {
 	return s.pubsub
+}
+
+func (s *Service) PartialColumnBroadcaster() partialdatacolumnbroadcaster.Broadcaster {
+	return s.partialColumnBroadcaster
 }
 
 // Host returns the currently running libp2p
@@ -471,6 +489,10 @@ func (s *Service) connectWithAllTrustedPeers(multiAddrs []multiaddr.Multiaddr) {
 		return
 	}
 	for _, info := range addrInfos {
+		if len(info.Addrs) == 0 {
+			log.WithField("peerID", info.ID).Warn("Skipping trusted peer with no transport address")
+			continue
+		}
 		// add peer into peer status
 		s.peers.Add(nil, info.ID, info.Addrs[0], network.DirUnknown)
 		// make each dial non-blocking

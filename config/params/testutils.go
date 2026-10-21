@@ -3,7 +3,7 @@ package params
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 )
 
 const (
@@ -17,6 +17,12 @@ func SetGenesisFork(t *testing.T, cfg *BeaconChainConfig, fork int) {
 
 func setGenesisUpdateEpochs(b *BeaconChainConfig, fork int) {
 	switch fork {
+	case version.Heze:
+		b.HezeForkEpoch = 0
+		setGenesisUpdateEpochs(b, version.Gloas)
+	case version.Gloas:
+		b.GloasForkEpoch = 0
+		setGenesisUpdateEpochs(b, version.Fulu)
 	case version.Fulu:
 		b.FuluForkEpoch = 0
 		setGenesisUpdateEpochs(b, version.Electra)

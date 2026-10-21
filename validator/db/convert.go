@@ -4,14 +4,13 @@ import (
 	"context"
 	"path/filepath"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/validator/db/common"
-	"github.com/OffchainLabs/prysm/v6/validator/db/filesystem"
-	"github.com/OffchainLabs/prysm/v6/validator/db/iface"
-	"github.com/OffchainLabs/prysm/v6/validator/db/kv"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/validator/db/common"
+	"github.com/OffchainLabs/prysm/v7/validator/db/filesystem"
+	"github.com/OffchainLabs/prysm/v7/validator/db/iface"
+	"github.com/OffchainLabs/prysm/v7/validator/db/kv"
 	"github.com/pkg/errors"
 )
 
@@ -197,7 +196,8 @@ func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir st
 			},
 		}
 
-		if err := targetDatabase.SaveAttestationForPubKey(ctx, pubkey, [fieldparams.RootLength]byte{}, indexedAttestation); err != nil {
+		// Save the attestation with an unknown signing root, since the minimal database does not store signing roots.
+		if err := targetDatabase.SaveAttestationForPubKey(ctx, pubkey, nil, indexedAttestation); err != nil {
 			return errors.Wrap(err, "could not save attestation for public key")
 		}
 	}
@@ -212,7 +212,7 @@ func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir st
 
 	// Initialize the progress bar.
 	bar = common.InitializeProgressBar(
-		len(attestedPublicKeys),
+		len(proposedPublicKeys),
 		"Processing proposals:",
 	)
 

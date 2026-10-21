@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/validator/client/beacon-api/mock"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/validator/client/beacon-api/mock"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"go.uber.org/mock/gomock"
@@ -45,8 +45,8 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 	marshalledJsonRecipients, err := json.Marshal(jsonRecipients)
 	require.NoError(t, err)
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().Post(
+	handler := mock.NewMockHandler(ctrl)
+	handler.EXPECT().Post(
 		gomock.Any(),
 		prepareBeaconProposerTestEndpoint,
 		nil,
@@ -78,7 +78,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 		},
 	}
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{handler: handler}
 	err = validatorClient.prepareBeaconProposer(ctx, protoRecipients)
 	require.NoError(t, err)
 }
@@ -89,8 +89,8 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 
 	ctx := t.Context()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().Post(
+	handler := mock.NewMockHandler(ctrl)
+	handler.EXPECT().Post(
 		gomock.Any(),
 		prepareBeaconProposerTestEndpoint,
 		nil,
@@ -100,7 +100,7 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{handler: handler}
 	err := validatorClient.prepareBeaconProposer(ctx, nil)
 	assert.ErrorContains(t, "foo error", err)
 }

@@ -6,10 +6,10 @@ import (
 	"runtime"
 	"sync"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/crypto/hash/htr"
-	"github.com/OffchainLabs/prysm/v6/encoding/ssz"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash/htr"
+	"github.com/OffchainLabs/prysm/v7/encoding/ssz"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -26,13 +26,28 @@ const (
 )
 
 // ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
-// a list of validator structs according to the Ethereum
+// a list of compact validator structs according to the Ethereum
 // Simple Serialize specification.
-func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
+func ValidatorRegistryRoot(stateVersion int, vals []CompactValidator) ([32]byte, error) {
+	if stateVersion >= version.Gloas {
+		return validatorRegistryRootProgressive(vals)
+	}
 	return validatorRegistryRoot(vals)
 }
 
-func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+func validatorRegistryRootProgressive(vals []CompactValidator) ([32]byte, error) {
+	roots, err := OptimizedValidatorRoots(vals)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	body := ssz.MerkleizeProgressiveChunks(roots)
+	var length [32]byte
+	binary.LittleEndian.PutUint64(length[:8], uint64(len(vals)))
+	return ssz.MixInLength(body, length[:]), nil
+}
+
+func validatorRegistryRoot(validators []CompactValidator) ([32]byte, error) {
 	roots, err := OptimizedValidatorRoots(validators)
 	if err != nil {
 		return [32]byte{}, err
@@ -54,10 +69,10 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	return res, nil
 }
 
-func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int, groupSize int, wg *sync.WaitGroup) {
+func hashValidatorHelper(validators []CompactValidator, roots [][32]byte, j int, groupSize int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for i := 0; i < groupSize; i++ {
-		fRoots, err := ValidatorFieldRoots(validators[j*groupSize+i])
+	for i := range groupSize {
+		fRoots, err := validators[j*groupSize+i].fieldRoots()
 		if err != nil {
 			logrus.WithError(err).Error("Could not get validator field roots")
 			return
@@ -69,8 +84,8 @@ func hashValidatorHelper(validators []*ethpb.Validator, roots [][32]byte, j int,
 }
 
 // OptimizedValidatorRoots uses an optimized routine with gohashtree in order to
-// derive a list of validator roots from a list of validator objects.
-func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) {
+// derive a list of validator roots from a list of compact validator objects.
+func OptimizedValidatorRoots(validators []CompactValidator) ([][32]byte, error) {
 	// Exit early if no validators are provided.
 	if len(validators) == 0 {
 		return [][32]byte{}, nil
@@ -85,7 +100,7 @@ func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) 
 		go hashValidatorHelper(validators, roots, j, groupSize, &wg)
 	}
 	for i := (n - 1) * groupSize; i < len(validators); i++ {
-		fRoots, err := ValidatorFieldRoots(validators[i])
+		fRoots, err := validators[i].fieldRoots()
 		if err != nil {
 			return [][32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
@@ -98,7 +113,7 @@ func OptimizedValidatorRoots(validators []*ethpb.Validator) ([][32]byte, error) 
 	// A validator's tree can represented with a depth of 3. As log2(8) = 3
 	// Using this property we can lay out all the individual fields of a
 	// validator and hash them in single level using our vectorized routine.
-	for i := 0; i < validatorTreeDepth; i++ {
+	for range validatorTreeDepth {
 		// Overwrite input lists as we are hashing by level
 		// and only need the highest level to proceed.
 		roots = htr.VectorizedSha256(roots)

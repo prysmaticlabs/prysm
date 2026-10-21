@@ -2,16 +2,18 @@ package blockchain
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // OnAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
@@ -70,8 +72,13 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 		return errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
-	// Note that LMD GHOST and FFG consistency check is ignored because it was performed in sync's validation pipeline:
-	// validate_aggregate_proof.go and validate_beacon_attestation.go
+	tr, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(bytesutil.ToBytes32(a.GetData().BeaconBlockRoot), tgt.Epoch)
+	if err != nil {
+		return err
+	}
+	if tr != bytesutil.ToBytes32(tgt.Root) {
+		return fmt.Errorf("FFG and LMD votes are not consistent, target root: %#x, canonical target root: %#x", tgt.Root, tr)
+	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := slots.VerifyTime(s.genesisTime, a.GetData().Slot+1, disparity); err != nil {
@@ -96,7 +103,21 @@ func (s *Service) OnAttestation(ctx context.Context, a ethpb.Att, disparity time
 	// We assume trusted attestation in this function has verified signature.
 
 	// Update forkchoice store with the new attestation for updating weight.
-	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.GetAttestingIndices(), bytesutil.ToBytes32(a.GetData().BeaconBlockRoot), a.GetData().Target.Epoch)
-
+	attData := a.GetData()
+	blockRoot := bytesutil.ToBytes32(attData.BeaconBlockRoot)
+	payloadStatus := true
+	if attData.Target.Epoch >= params.BeaconConfig().GloasForkEpoch {
+		payloadStatus = attData.CommitteeIndex == 1
+		if payloadStatus {
+			if blockSlot, err := s.cfg.ForkChoiceStore.Slot(blockRoot); err == nil && blockSlot == attData.Slot {
+				log.WithFields(logrus.Fields{
+					"slot":            attData.Slot,
+					"beaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:])),
+				}).Debug("Skipping same-slot payload-present attestation")
+				return nil
+			}
+		}
+	}
+	s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indexedAtt.GetAttestingIndices(), blockRoot, attData.Slot, payloadStatus)
 	return nil
 }

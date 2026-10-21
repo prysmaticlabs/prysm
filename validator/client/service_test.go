@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/runtime"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/runtime"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc/metadata"
 )
@@ -33,7 +33,10 @@ func TestStop_CancelsContext(t *testing.T) {
 
 func TestNew_Insecure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	_, err := NewValidatorService(t.Context(), &Config{})
+	_, err := NewValidatorService(t.Context(), &Config{
+		BeaconNodeGRPCEndpoint: "localhost:4000",
+		BeaconApiEndpoint:      "http://localhost:3500",
+	})
 	require.NoError(t, err)
 	require.LogsContain(t, hook, "You are using an insecure gRPC connection")
 }
@@ -58,7 +61,11 @@ func TestStart_GrpcHeaders(t *testing.T) {
 			"Authorization", "this is a valid value",
 		},
 	} {
-		cfg := &Config{GRPCHeaders: strings.Split(input, ",")}
+		cfg := &Config{
+			BeaconNodeGRPCEndpoint: "localhost:4000",
+			BeaconApiEndpoint:      "http://localhost:3500",
+			GRPCHeaders:            strings.Split(input, ","),
+		}
 		validatorService, err := NewValidatorService(ctx, cfg)
 		require.NoError(t, err)
 		md, _ := metadata.FromOutgoingContext(validatorService.ctx)

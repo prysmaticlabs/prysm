@@ -1,10 +1,11 @@
 package depositsnapshot
 
 import (
-	"github.com/OffchainLabs/prysm/v6/container/slice"
-	"github.com/OffchainLabs/prysm/v6/container/trie"
-	"github.com/OffchainLabs/prysm/v6/crypto/hash"
-	"github.com/OffchainLabs/prysm/v6/math"
+	"slices"
+
+	"github.com/OffchainLabs/prysm/v7/container/trie"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash"
+	"github.com/OffchainLabs/prysm/v7/math"
 	"github.com/pkg/errors"
 )
 
@@ -110,7 +111,7 @@ func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [
 		}
 		depth--
 	}
-	proof = slice.Reverse(proof)
+	slices.Reverse(proof)
 	return node.GetRoot(), proof
 }
 

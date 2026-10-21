@@ -3,17 +3,20 @@ package blocks
 import (
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	pb "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	validatorpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/validator-client"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	ssz "github.com/prysmaticlabs/fastssz"
+	bitfield "github.com/OffchainLabs/go-bitfield"
+	ssz "github.com/OffchainLabs/methodical-ssz/ssz"
+
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	consensus_types "github.com/OffchainLabs/prysm/v7/consensus-types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	pb "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func Test_BeaconBlockIsNil(t *testing.T) {
@@ -73,14 +76,54 @@ func Test_SignedBeaconBlock_IsNil(t *testing.T) {
 }
 
 func Test_SignedBeaconBlock_Copy(t *testing.T) {
-	bb := &BeaconBlockBody{}
-	b := &BeaconBlock{body: bb}
-	sb := &SignedBeaconBlock{block: b}
-	cp, err := sb.Copy()
-	require.NoError(t, err)
-	assert.NotEqual(t, cp, sb)
-	assert.NotEqual(t, cp.Block(), sb.block)
-	assert.NotEqual(t, cp.Block().Body(), sb.block.body)
+	t.Run("basic", func(t *testing.T) {
+		bb := &BeaconBlockBody{}
+		b := &BeaconBlock{body: bb}
+		sb := &SignedBeaconBlock{block: b}
+		cp, err := sb.Copy()
+		require.NoError(t, err)
+		assert.NotEqual(t, cp, sb)
+		assert.NotEqual(t, cp.Block(), sb.block)
+		assert.NotEqual(t, cp.Block().Body(), sb.block.body)
+	})
+
+	t.Run("gloas deep copy", func(t *testing.T) {
+		payload := []*eth.PayloadAttestation{{Signature: []byte{0x01}}}
+		payloadBid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+		sb := &SignedBeaconBlock{
+			version: version.Gloas,
+			block: &BeaconBlock{
+				version: version.Gloas,
+				body: &BeaconBlockBody{
+					version:                   version.Gloas,
+					payloadAttestations:       payload,
+					signedExecutionPayloadBid: payloadBid,
+				},
+			},
+		}
+
+		cpIntf, err := sb.Copy()
+		require.NoError(t, err)
+
+		cp, ok := cpIntf.(*SignedBeaconBlock)
+		require.Equal(t, true, ok)
+		assert.NotEqual(t, sb, cp)
+		require.Equal(t, version.Gloas, cp.version)
+
+		att, err := cp.Block().Body().PayloadAttestations()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, att)
+		origAttSig := att[0].Signature[0]
+		payload[0].Signature[0] ^= 0xFF
+		require.Equal(t, origAttSig, att[0].Signature[0])
+
+		bid, err := cp.Block().Body().SignedExecutionPayloadBid()
+		require.NoError(t, err)
+		require.DeepEqual(t, payloadBid, cp.block.body.signedExecutionPayloadBid)
+		origBidSig := bid.Signature()[0]
+		payloadBid.Signature[0] ^= 0xFF
+		require.Equal(t, origBidSig, bid.Signature()[0])
+	})
 }
 
 func Test_SignedBeaconBlock_Version(t *testing.T) {
@@ -120,6 +163,28 @@ func Test_SignedBeaconBlock_Header(t *testing.T) {
 	expectedHTR, err := bb.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR[:], h.Header.BodyRoot)
+}
+
+func Test_SignedBeaconBlock_PbGenericBlockGloas(t *testing.T) {
+	blk := &eth.SignedBeaconBlockGloas{
+		Block: &eth.BeaconBlockGloas{
+			ParentRoot: make([]byte, fieldparams.RootLength),
+			StateRoot:  make([]byte, fieldparams.RootLength),
+			Body: &eth.BeaconBlockBodyGloas{
+				RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+				Graffiti:     make([]byte, fieldparams.RootLength),
+			},
+		},
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
+	}
+	sb, err := NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	generic, err := sb.PbGenericBlock()
+	require.NoError(t, err)
+	require.NotNil(t, generic)
+	_, ok := generic.Block.(*eth.GenericSignedBeaconBlock_Gloas)
+	require.Equal(t, true, ok)
 }
 
 func Test_SignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
@@ -190,6 +255,17 @@ func Test_BeaconBlock_IsBlinded(t *testing.T) {
 
 	b1 := &SignedBeaconBlock{version: version.Bellatrix, block: &BeaconBlock{body: &BeaconBlockBody{executionPayloadHeader: executionPayloadHeader{}}}}
 	assert.Equal(t, true, b1.IsBlinded())
+
+	t.Run("gloas never blinded", func(t *testing.T) {
+		sb := &SignedBeaconBlock{version: version.Gloas, block: &BeaconBlock{body: &BeaconBlockBody{version: version.Gloas}}}
+		assert.Equal(t, false, sb.IsBlinded())
+	})
+}
+
+func Test_SignedBeaconBlock_ToBlinded_GloasUnsupported(t *testing.T) {
+	sb := &SignedBeaconBlock{version: version.Gloas, block: &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}}}
+	_, err := sb.ToBlinded()
+	require.ErrorIs(t, err, ErrUnsupportedVersion)
 }
 
 func Test_BeaconBlock_Version(t *testing.T) {
@@ -317,11 +393,143 @@ func Test_BeaconBlockBody_ElectraAttestations(t *testing.T) {
 	require.DeepEqual(t, a[0].GetSignature(), []byte("electra"))
 }
 
+func Test_BeaconBlockBody_GloasAttestations(t *testing.T) {
+	bb := &SignedBeaconBlock{
+		block: &BeaconBlock{body: &BeaconBlockBody{
+			version: version.Gloas,
+			attestationsGloas: []*eth.AttestationGloas{{
+				Signature: []byte("gloas"),
+			}},
+		}}}
+	a := bb.Block().Body().Attestations()
+	require.Equal(t, 1, len(a))
+	require.DeepEqual(t, a[0].GetSignature(), []byte("gloas"))
+}
+
 func Test_BeaconBlockBody_Deposits(t *testing.T) {
 	d := make([]*eth.Deposit, 0)
 	bb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 	bb.SetDeposits(d)
 	assert.DeepSSZEqual(t, d, bb.Block().Body().Deposits())
+}
+
+func Test_BeaconBlockBody_PayloadAttestations(t *testing.T) {
+	t.Run("unsupported before gloas", func(t *testing.T) {
+		bb := &BeaconBlockBody{version: version.Fulu}
+		_, err := bb.PayloadAttestations()
+		require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
+	})
+
+	t.Run("gloas returns payload", func(t *testing.T) {
+		payload := []*eth.PayloadAttestation{{Signature: []byte{0x01}}}
+		sb := &SignedBeaconBlock{
+			version: version.Gloas,
+			block:   &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}},
+		}
+		require.NoError(t, sb.SetPayloadAttestations(payload))
+		got, err := sb.Block().Body().PayloadAttestations()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got)
+	})
+}
+
+func Test_BeaconBlockBody_SignedExecutionPayloadBid(t *testing.T) {
+	t.Run("unsupported before gloas", func(t *testing.T) {
+		bb := &BeaconBlockBody{version: version.Fulu}
+		_, err := bb.SignedExecutionPayloadBid()
+		require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
+	})
+
+	t.Run("gloas returns bid", func(t *testing.T) {
+		bid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+		ro, err := WrappedROSignedExecutionPayloadBid(bid)
+		require.NoError(t, err)
+		sb := &SignedBeaconBlock{
+			version: version.Gloas,
+			block:   &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}},
+		}
+		require.NoError(t, sb.SetSignedExecutionPayloadBid(ro))
+		got, err := sb.Block().Body().SignedExecutionPayloadBid()
+		require.NoError(t, err)
+		wantRoot, err := bid.HashTreeRoot()
+		require.NoError(t, err)
+		gotRoot, err := got.HashTreeRoot()
+		require.NoError(t, err)
+		require.Equal(t, wantRoot, gotRoot)
+	})
+}
+
+func Test_BeaconBlockBody_BlobKzgCommitments(t *testing.T) {
+	commitments := [][]byte{bytesutil.PadTo([]byte{0x01}, fieldparams.BLSPubkeyLength)}
+
+	tests := []struct {
+		name       string
+		body       *BeaconBlockBody
+		want       [][]byte
+		wantErr    error
+		wantErrMsg string
+	}{
+		{
+			name: "gloas returns commitments from bid",
+			body: &BeaconBlockBody{
+				version: version.Gloas,
+				signedExecutionPayloadBid: func() *eth.SignedExecutionPayloadBid {
+					bid := hydrateBeaconBlockBodyGloas().SignedExecutionPayloadBid
+					bid.Message.BlobKzgCommitments = commitments
+					return bid
+				}(),
+			},
+			want: commitments,
+		},
+		{
+			name:    "gloas nil signed bid",
+			body:    &BeaconBlockBody{version: version.Gloas, signedExecutionPayloadBid: nil},
+			wantErr: consensus_types.ErrNilObjectWrapped,
+		},
+		{
+			name: "gloas nil bid message",
+			body: &BeaconBlockBody{
+				version:                   version.Gloas,
+				signedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{Message: nil},
+			},
+			wantErr: consensus_types.ErrNilObjectWrapped,
+		},
+		{
+			name: "deneb returns commitments",
+			body: &BeaconBlockBody{version: version.Deneb, blobKzgCommitments: commitments},
+			want: commitments,
+		},
+		{
+			name: "fulu returns commitments",
+			body: &BeaconBlockBody{version: version.Fulu, blobKzgCommitments: commitments},
+			want: commitments,
+		},
+		{
+			name:    "unsupported before deneb",
+			body:    &BeaconBlockBody{version: version.Capella},
+			wantErr: consensus_types.ErrUnsupportedField,
+		},
+		{
+			name:    "incorrect block version below phase0",
+			body:    &BeaconBlockBody{version: version.Phase0 - 1},
+			wantErr: errIncorrectBlockVersion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.body.BlobKzgCommitments()
+			switch {
+			case tt.wantErr != nil:
+				require.ErrorIs(t, err, tt.wantErr)
+			case tt.wantErrMsg != "":
+				require.ErrorContains(t, tt.wantErrMsg, err)
+			default:
+				require.NoError(t, err)
+				require.DeepEqual(t, tt.want, got)
+			}
+		})
+	}
 }
 
 func Test_BeaconBlockBody_VoluntaryExits(t *testing.T) {
@@ -400,6 +608,32 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	gas, err = eDenebHeader.ExcessBlobGas()
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(223))
+
+	bb = &SignedBeaconBlock{version: version.Gloas, block: &BeaconBlock{version: version.Gloas, body: &BeaconBlockBody{version: version.Gloas}}}
+	_, err = bb.Block().Body().Execution()
+	require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
+}
+
+func Test_BeaconBlockBody_ExecutionRequests(t *testing.T) {
+	t.Run("unsupported before Electra", func(t *testing.T) {
+		bb := &BeaconBlockBody{version: version.Deneb}
+		_, err := bb.ExecutionRequests()
+		require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
+	})
+
+	t.Run("electra returns requests", func(t *testing.T) {
+		reqs := &pb.ExecutionRequests{}
+		bb := &BeaconBlockBody{version: version.Electra, executionRequests: reqs}
+		result, err := bb.ExecutionRequests()
+		require.NoError(t, err)
+		require.Equal(t, reqs, result)
+	})
+
+	t.Run("unsupported for Gloas", func(t *testing.T) {
+		bb := &BeaconBlockBody{version: version.Gloas}
+		_, err := bb.ExecutionRequests()
+		require.ErrorIs(t, err, consensus_types.ErrUnsupportedField)
+	})
 }
 
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {
@@ -407,6 +641,17 @@ func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {
 	expectedHTR, err := pb.HashTreeRoot()
 	require.NoError(t, err)
 	b, err := initBlockBodyFromProtoPhase0(pb)
+	require.NoError(t, err)
+	actualHTR, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, actualHTR)
+}
+
+func Test_BeaconBlockBody_HashTreeRootGloas(t *testing.T) {
+	pb := hydrateBeaconBlockBodyGloas()
+	expectedHTR, err := pb.HashTreeRoot()
+	require.NoError(t, err)
+	b, err := initBlockBodyFromProtoGloas(pb)
 	require.NoError(t, err)
 	actualHTR, err := b.HashTreeRoot()
 	require.NoError(t, err)
@@ -505,6 +750,59 @@ func hydrateBeaconBlockBodyCapella() *eth.BeaconBlockBodyCapella {
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
+		},
+	}
+}
+
+func hydrateBeaconBlockBodyHeze() *eth.BeaconBlockBodyHeze {
+	g := hydrateBeaconBlockBodyGloas()
+	return &eth.BeaconBlockBodyHeze{
+		RandaoReveal:              g.RandaoReveal,
+		Eth1Data:                  g.Eth1Data,
+		Graffiti:                  g.Graffiti,
+		SyncAggregate:             g.SyncAggregate,
+		SignedExecutionPayloadBid: g.SignedExecutionPayloadBid,
+		ParentExecutionRequests:   g.ParentExecutionRequests,
+		PayloadAttestations:       g.PayloadAttestations,
+	}
+}
+
+func hydrateBeaconBlockBodyGloas() *eth.BeaconBlockBodyGloas {
+	bits := bitfield.NewBitvector512()
+	bits.SetBitAt(0, true)
+
+	return &eth.BeaconBlockBodyGloas{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		SyncAggregate: &eth.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		SignedExecutionPayloadBid: &eth.SignedExecutionPayloadBid{
+			Message: &eth.ExecutionPayloadBid{
+				ParentBlockHash:       make([]byte, fieldparams.RootLength),
+				ParentBlockRoot:       make([]byte, fieldparams.RootLength),
+				BlockHash:             make([]byte, fieldparams.RootLength),
+				PrevRandao:            make([]byte, fieldparams.RootLength),
+				FeeRecipient:          make([]byte, 20),
+				BlobKzgCommitments:    [][]byte{make([]byte, fieldparams.BLSPubkeyLength)},
+				ExecutionRequestsRoot: make([]byte, fieldparams.RootLength),
+			},
+			Signature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ParentExecutionRequests: &pb.ExecutionRequestsGloas{},
+		PayloadAttestations: []*eth.PayloadAttestation{
+			{
+				AggregationBits: bits,
+				Data: &eth.PayloadAttestationData{
+					BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+				},
+				Signature: make([]byte, fieldparams.BLSSignatureLength),
+			},
 		},
 	}
 }

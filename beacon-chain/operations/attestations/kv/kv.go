@@ -5,12 +5,11 @@ package kv
 
 import (
 	"sync"
-	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/attestations/attmap"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations/attmap"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -18,27 +17,30 @@ import (
 // These caches are KV store for various attestations
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
-	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt      map[attestation.Id][]ethpb.Att
-	unAggregateAttLock sync.RWMutex
-	unAggregatedAtt    map[attestation.Id]ethpb.Att
-	forkchoiceAtt      *attmap.Attestations
-	blockAttLock       sync.RWMutex
-	blockAtt           map[attestation.Id][]ethpb.Att
-	seenAtt            *cache.Cache
+	aggregatedAttLock     sync.RWMutex
+	aggregatedAtt         map[attestation.Id][]ethpb.Att
+	unAggregateAttLock    sync.RWMutex
+	unAggregatedAtt       map[attestation.Id]ethpb.Att
+	forkchoiceAtt         *attmap.Attestations
+	blockAttLock          sync.RWMutex
+	blockAtt              map[attestation.Id][]ethpb.Att
+	seenAtt               *cache.Cache
+	seenAggregatedAttLock sync.RWMutex
+	seenAggregatedAtt     map[attestation.Id][]ethpb.Att
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of attestations.
 func NewAttCaches() *AttCaches {
-	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	c := cache.New(2*secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
+	epochDuration := params.EpochsDuration(1, params.BeaconConfig())
+	c := cache.New(2*epochDuration, 2*epochDuration)
 	pool := &AttCaches{
-		unAggregatedAtt: make(map[attestation.Id]ethpb.Att),
-		aggregatedAtt:   make(map[attestation.Id][]ethpb.Att),
-		forkchoiceAtt:   attmap.New(),
-		blockAtt:        make(map[attestation.Id][]ethpb.Att),
-		seenAtt:         c,
+		unAggregatedAtt:   make(map[attestation.Id]ethpb.Att),
+		aggregatedAtt:     make(map[attestation.Id][]ethpb.Att),
+		forkchoiceAtt:     attmap.New(),
+		blockAtt:          make(map[attestation.Id][]ethpb.Att),
+		seenAtt:           c,
+		seenAggregatedAtt: make(map[attestation.Id][]ethpb.Att),
 	}
 
 	return pool

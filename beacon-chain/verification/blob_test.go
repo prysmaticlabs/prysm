@@ -4,20 +4,22 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"iter"
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -451,33 +453,17 @@ func TestSidecarProposerExpected(t *testing.T) {
 	ctx := t.Context()
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
 	b := blobs[0]
-	t.Run("cached, matches", func(t *testing.T) {
-		ini := Initializer{shared: &sharedResources{pc: &mockProposerCache{ProposerCB: pcReturnsIdx(b.ProposerIndex())}, fc: &mockForkchoicer{TargetRootForEpochCB: fcReturnsTargetRoot([32]byte{})}}}
-		v := ini.NewBlobVerifier(b, GossipBlobSidecarRequirements)
-		require.NoError(t, v.SidecarProposerExpected(ctx))
-		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
-		require.NoError(t, v.results.result(RequireSidecarProposerExpected))
-	})
-	t.Run("cached, does not match", func(t *testing.T) {
-		ini := Initializer{shared: &sharedResources{pc: &mockProposerCache{ProposerCB: pcReturnsIdx(b.ProposerIndex() + 1)}, fc: &mockForkchoicer{TargetRootForEpochCB: fcReturnsTargetRoot([32]byte{})}}}
-		v := ini.NewBlobVerifier(b, GossipBlobSidecarRequirements)
-		require.ErrorIs(t, v.SidecarProposerExpected(ctx), errSidecarUnexpectedProposer)
-		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
-		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
-	})
-	t.Run("not cached, state lookup failure", func(t *testing.T) {
-		ini := Initializer{shared: &sharedResources{sr: sbrNotFound(t, b.ParentRoot()), pc: &mockProposerCache{ProposerCB: pcReturnsNotFound()}, fc: &mockForkchoicer{TargetRootForEpochCB: fcReturnsTargetRoot([32]byte{})}}}
+	t.Run("state lookup failure", func(t *testing.T) {
+		ini := Initializer{shared: &sharedResources{sr: sbrNotFound(t, b.ParentRoot()), pc: &mockProposerCache{}, fc: &mockForkchoicer{TargetRootForEpochCB: fcReturnsTargetRoot([32]byte{})}}}
 		v := ini.NewBlobVerifier(b, GossipBlobSidecarRequirements)
 		require.ErrorIs(t, v.SidecarProposerExpected(ctx), errSidecarUnexpectedProposer)
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
 	})
 
-	t.Run("not cached, proposer matches", func(t *testing.T) {
+	t.Run("proposer matches", func(t *testing.T) {
 		pc := &mockProposerCache{
-			ProposerCB: pcReturnsNotFound(),
-			ComputeProposerCB: func(_ context.Context, root [32]byte, slot primitives.Slot, _ state.BeaconState) (primitives.ValidatorIndex, error) {
-				require.Equal(t, b.ParentRoot(), root)
+			ComputeProposerCB: func(_ context.Context, slot primitives.Slot, _ state.BeaconState) (primitives.ValidatorIndex, error) {
 				require.Equal(t, b.Slot(), slot)
 				return b.ProposerIndex(), nil
 			},
@@ -488,11 +474,9 @@ func TestSidecarProposerExpected(t *testing.T) {
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NoError(t, v.results.result(RequireSidecarProposerExpected))
 	})
-	t.Run("not cached, proposer does not match", func(t *testing.T) {
+	t.Run("proposer does not match", func(t *testing.T) {
 		pc := &mockProposerCache{
-			ProposerCB: pcReturnsNotFound(),
-			ComputeProposerCB: func(_ context.Context, root [32]byte, slot primitives.Slot, _ state.BeaconState) (primitives.ValidatorIndex, error) {
-				require.Equal(t, b.ParentRoot(), root)
+			ComputeProposerCB: func(_ context.Context, slot primitives.Slot, _ state.BeaconState) (primitives.ValidatorIndex, error) {
 				require.Equal(t, b.Slot(), slot)
 				return b.ProposerIndex() + 1, nil
 			},
@@ -503,11 +487,9 @@ func TestSidecarProposerExpected(t *testing.T) {
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
 	})
-	t.Run("not cached, ComputeProposer fails", func(t *testing.T) {
+	t.Run("ComputeProposer fails", func(t *testing.T) {
 		pc := &mockProposerCache{
-			ProposerCB: pcReturnsNotFound(),
-			ComputeProposerCB: func(_ context.Context, root [32]byte, slot primitives.Slot, _ state.BeaconState) (primitives.ValidatorIndex, error) {
-				require.Equal(t, b.ParentRoot(), root)
+			ComputeProposerCB: func(_ context.Context, slot primitives.Slot, _ state.BeaconState) (primitives.ValidatorIndex, error) {
 				require.Equal(t, b.Slot(), slot)
 				return 0, errors.New("ComputeProposer failed")
 			},
@@ -547,11 +529,12 @@ func TestRequirementSatisfaction(t *testing.T) {
 }
 
 type mockForkchoicer struct {
-	FinalizedCheckpointCB func() *forkchoicetypes.Checkpoint
-	HasNodeCB             func([32]byte) bool
-	IsCanonicalCB         func(root [32]byte) bool
-	SlotCB                func([32]byte) (primitives.Slot, error)
-	TargetRootForEpochCB  func([32]byte, primitives.Epoch) ([32]byte, error)
+	FinalizedCheckpointCB   func() *forkchoicetypes.Checkpoint
+	HasNodeCB               func([32]byte) bool
+	IsCanonicalCB           func(root [32]byte) bool
+	SlotCB                  func([32]byte) (primitives.Slot, error)
+	DependentRootForEpochCB func([32]byte, primitives.Epoch) ([32]byte, error)
+	TargetRootForEpochCB    func([32]byte, primitives.Epoch) ([32]byte, error)
 }
 
 var _ Forkchoicer = &mockForkchoicer{}
@@ -572,12 +555,22 @@ func (m *mockForkchoicer) Slot(root [32]byte) (primitives.Slot, error) {
 	return m.SlotCB(root)
 }
 
+func (m *mockForkchoicer) DependentRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	return m.DependentRootForEpochCB(root, epoch)
+}
+
 func (m *mockForkchoicer) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
 	return m.TargetRootForEpochCB(root, epoch)
 }
 
 func fcReturnsTargetRoot(root [32]byte) func([32]byte, primitives.Epoch) ([32]byte, error) {
 	return func([32]byte, primitives.Epoch) ([32]byte, error) {
+		return root, nil
+	}
+}
+
+func fcReturnsDependentRoot() func([32]byte, primitives.Epoch) ([32]byte, error) {
+	return func(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
 		return root, nil
 	}
 }
@@ -616,6 +609,10 @@ type mockStateByRooter struct {
 	calledForRoot map[[32]byte]bool
 }
 
+func (sbr *mockStateByRooter) StateByRootIfCachedNoCopy(_ [32]byte) state.ReadOnlyBeaconState {
+	return nil
+}
+
 func (sbr *mockStateByRooter) StateByRoot(ctx context.Context, root [32]byte) (state.BeaconState, error) {
 	if sbr.calledForRoot == nil {
 		sbr.calledForRoot = make(map[[32]byte]bool)
@@ -625,6 +622,45 @@ func (sbr *mockStateByRooter) StateByRoot(ctx context.Context, root [32]byte) (s
 }
 
 var _ StateByRooter = &mockStateByRooter{}
+
+type mockHeadStateProvider struct {
+	headRoot          []byte
+	headSlot          primitives.Slot
+	headState         state.BeaconState
+	headStateReadOnly state.ReadOnlyBeaconState
+}
+
+func (m *mockHeadStateProvider) HeadRoot(_ context.Context) ([]byte, error) {
+	if m.headRoot != nil {
+		return m.headRoot, nil
+	}
+	root := make([]byte, 32)
+	root[0] = 0xff
+	return root, nil
+}
+
+func (m *mockHeadStateProvider) HeadSlot() primitives.Slot {
+	if m.headSlot == 0 {
+		return 1000
+	}
+	return m.headSlot
+}
+
+func (m *mockHeadStateProvider) HeadState(_ context.Context) (state.BeaconState, error) {
+	if m.headState == nil {
+		return nil, errors.New("head state not available")
+	}
+	return m.headState, nil
+}
+
+func (m *mockHeadStateProvider) HeadStateReadOnly(_ context.Context) (state.ReadOnlyBeaconState, error) {
+	if m.headStateReadOnly == nil {
+		return nil, errors.New("head state read only not available")
+	}
+	return m.headStateReadOnly, nil
+}
+
+var _ HeadStateProvider = &mockHeadStateProvider{}
 
 func sbrErrorIfCalled(t *testing.T) sbrfunc {
 	return func(_ context.Context, _ [32]byte) (state.BeaconState, error) {
@@ -642,16 +678,60 @@ func sbrNotFound(t *testing.T, expectedRoot [32]byte) *mockStateByRooter {
 	}}
 }
 
+func sbrReturnsState(st state.BeaconState) *mockStateByRooter {
+	return &mockStateByRooter{sbr: func(_ context.Context, _ [32]byte) (state.BeaconState, error) {
+		return st, nil
+	}}
+}
+
 func sbrForValOverride(idx primitives.ValidatorIndex, val *ethpb.Validator) *mockStateByRooter {
+	return sbrForValOverrideWithT(nil, idx, val)
+}
+
+func sbrForValOverrideWithT(t testing.TB, idx primitives.ValidatorIndex, val *ethpb.Validator) *mockStateByRooter {
 	return &mockStateByRooter{sbr: func(_ context.Context, root [32]byte) (state.BeaconState, error) {
-		return &validxStateOverride{vals: map[primitives.ValidatorIndex]*ethpb.Validator{
-			idx: val,
-		}}, nil
+		// Use a real deterministic state so that helpers.BeaconProposerIndexAtSlot works correctly
+		numValidators := max(uint64(idx+1), 64)
+
+		var st state.BeaconState
+		var err error
+		if t != nil {
+			st, _ = util.DeterministicGenesisStateFulu(t, numValidators)
+		} else {
+			// Fallback for blob tests that don't need the full state
+			return &validxStateOverride{
+				slot: 0,
+				vals: map[primitives.ValidatorIndex]*ethpb.Validator{
+					idx: val,
+				},
+			}, nil
+		}
+
+		// Override the specific validator if provided
+		if val != nil {
+			vals := st.Validators()
+			if idx < primitives.ValidatorIndex(len(vals)) {
+				vals[idx] = val
+				// Ensure the validator is active
+				if vals[idx].ActivationEpoch > 0 {
+					vals[idx].ActivationEpoch = 0
+				}
+				if vals[idx].ExitEpoch == 0 || vals[idx].ExitEpoch < params.BeaconConfig().FarFutureEpoch {
+					vals[idx].ExitEpoch = params.BeaconConfig().FarFutureEpoch
+				}
+				if vals[idx].EffectiveBalance == 0 {
+					vals[idx].EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+				}
+				_ = st.SetValidators(vals)
+			}
+		}
+		return st, err
 	}}
 }
 
 type validxStateOverride struct {
 	state.BeaconState
+	slot primitives.Slot
 	vals map[primitives.ValidatorIndex]*ethpb.Validator
 }
 
@@ -665,29 +745,108 @@ func (v *validxStateOverride) ValidatorAtIndex(idx primitives.ValidatorIndex) (*
 	return val, nil
 }
 
+func (v *validxStateOverride) Slot() primitives.Slot {
+	return v.slot
+}
+
+func (v *validxStateOverride) Version() int {
+	// Return Fulu version (6) as default for tests
+	return 6
+}
+
+func (v *validxStateOverride) Validators() []*ethpb.Validator {
+	// Return all validators in the map as a slice
+	maxIdx := primitives.ValidatorIndex(0)
+	for idx := range v.vals {
+		if idx > maxIdx {
+			maxIdx = idx
+		}
+	}
+	// Ensure we have at least 64 validators for a valid beacon state
+	numValidators := max(maxIdx+1, 64)
+	validators := make([]*ethpb.Validator, numValidators)
+	for i := range validators {
+		if val, ok := v.vals[primitives.ValidatorIndex(i)]; ok {
+			validators[i] = val
+		} else {
+			// Default validator for indices we don't care about
+			validators[i] = &ethpb.Validator{
+				ActivationEpoch:  0,
+				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+			}
+		}
+	}
+	return validators
+}
+
+func (v *validxStateOverride) RandaoMixAtIndex(idx uint64) ([]byte, error) {
+	// Return a zero mix for simplicity in tests
+	return make([]byte, 32), nil
+}
+
+func (v *validxStateOverride) NumValidators() int {
+	return len(v.Validators())
+}
+
+func (v *validxStateOverride) ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (state.ReadOnlyValidator, error) {
+	validators := v.Validators()
+	if idx >= primitives.ValidatorIndex(len(validators)) {
+		return nil, fmt.Errorf("validator index %d out of range", idx)
+	}
+	return state_native.NewValidator(validators[idx])
+}
+
+func (v *validxStateOverride) IsNil() bool {
+	return false
+}
+
+func (v *validxStateOverride) LatestBlockHeader() *ethpb.BeaconBlockHeader {
+	// Return a minimal block header for tests
+	return &ethpb.BeaconBlockHeader{
+		Slot:          v.slot,
+		ProposerIndex: 0,
+		ParentRoot:    make([]byte, 32),
+		StateRoot:     make([]byte, 32),
+		BodyRoot:      make([]byte, 32),
+	}
+}
+
+func (v *validxStateOverride) HashTreeRoot(ctx context.Context) ([32]byte, error) {
+	// Return a zero hash for tests
+	return [32]byte{}, nil
+}
+
+func (v *validxStateOverride) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
+	// No-op for mock - we don't track state roots
+	return nil
+}
+
+func (v *validxStateOverride) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
+	// No-op for mock - we don't track block headers
+	return nil
+}
+
+func (v *validxStateOverride) ValidatorsReadOnlySeq() iter.Seq2[primitives.ValidatorIndex, state.ReadOnlyValidator] {
+	return func(yield func(primitives.ValidatorIndex, state.ReadOnlyValidator) bool) {
+		for i, val := range v.Validators() {
+			rov, err := state_native.NewValidator(val)
+			if err != nil {
+				return
+			}
+			if !yield(primitives.ValidatorIndex(i), rov) {
+				return
+			}
+		}
+	}
+}
+
 type mockProposerCache struct {
-	ComputeProposerCB func(ctx context.Context, root [32]byte, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error)
-	ProposerCB        func(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, bool)
+	ComputeProposerCB func(ctx context.Context, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error)
 }
 
-func (p *mockProposerCache) ComputeProposer(ctx context.Context, root [32]byte, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error) {
-	return p.ComputeProposerCB(ctx, root, slot, pst)
-}
-
-func (p *mockProposerCache) Proposer(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, bool) {
-	return p.ProposerCB(c, slot)
+func (p *mockProposerCache) ComputeProposer(ctx context.Context, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error) {
+	return p.ComputeProposerCB(ctx, slot, pst)
 }
 
 var _ proposerCache = &mockProposerCache{}
-
-func pcReturnsIdx(idx primitives.ValidatorIndex) func(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, bool) {
-	return func(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, bool) {
-		return idx, true
-	}
-}
-
-func pcReturnsNotFound() func(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, bool) {
-	return func(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, bool) {
-		return 0, false
-	}
-}

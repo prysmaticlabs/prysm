@@ -4,16 +4,17 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 var errNilPubsubMessage = errors.New("nil pubsub message")
@@ -35,15 +36,15 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	// Specially handle subnet messages.
 	switch {
 	case strings.Contains(topic, p2p.GossipAttestationMessage):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
+		topic = p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.Attestation]()]
 		// Given that both sync message related subnets have the same message name, we have to
 		// differentiate them below.
 	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
+		topic = p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.SyncCommitteeMessage]()]
 	case strings.Contains(topic, p2p.GossipBlobSidecarMessage):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.BlobSidecar{})]
+		topic = p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.BlobSidecar]()]
 	case strings.Contains(topic, p2p.GossipDataColumnSidecarMessage):
-		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.DataColumnSidecar{})]
+		topic = p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.DataColumnSidecar]()]
 	}
 
 	base := p2p.GossipTopicMappings(topic, 0)
@@ -92,6 +93,8 @@ func extractValidDataTypeFromTopic(topic string, digest []byte, clock *startup.C
 		return extractDataTypeFromTypeMap(types.LightClientOptimisticUpdateMap, digest, clock)
 	case p2p.LightClientFinalityUpdateTopicFormat:
 		return extractDataTypeFromTypeMap(types.LightClientFinalityUpdateMap, digest, clock)
+	case p2p.DataColumnSubnetTopicFormat:
+		return extractDataTypeFromTypeMap(types.DataColumnSidecarMap, digest, clock)
 	}
 	return nil, nil
 }

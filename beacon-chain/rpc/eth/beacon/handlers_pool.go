@@ -6,86 +6,36 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/api/server"
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	corehelpers "github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/core"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/shared"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	mvslice "github.com/OffchainLabs/prysm/v6/container/multi-value-slice"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
+	corehelpers "github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	mvslice "github.com/OffchainLabs/prysm/v7/container/multi-value-slice"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const broadcastBLSChangesRateLimit = 128
-
-// Deprecated: use ListAttestationsV2 instead
-// ListAttestations retrieves attestations known by the node but
-// not necessarily incorporated into any block. Allows filtering by committee index or slot.
-func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "beacon.ListAttestations")
-	defer span.End()
-
-	rawSlot, slot, ok := shared.UintFromQuery(w, r, "slot", false)
-	if !ok {
-		return
-	}
-	rawCommitteeIndex, committeeIndex, ok := shared.UintFromQuery(w, r, "committee_index", false)
-	if !ok {
-		return
-	}
-
-	var attestations []eth.Att
-	if features.Get().EnableExperimentalAttestationPool {
-		attestations = s.AttestationCache.GetAll()
-	} else {
-		attestations = s.AttestationsPool.AggregatedAttestations()
-		unaggAtts := s.AttestationsPool.UnaggregatedAttestations()
-		attestations = append(attestations, unaggAtts...)
-	}
-
-	filteredAtts := make([]*structs.Attestation, 0, len(attestations))
-	for _, a := range attestations {
-		var includeAttestation bool
-		att, ok := a.(*eth.Attestation)
-		if !ok {
-			httputil.HandleError(w, fmt.Sprintf("Unable to convert attestation of type %T", a), http.StatusInternalServerError)
-			return
-		}
-
-		includeAttestation = shouldIncludeAttestation(att, rawSlot, slot, rawCommitteeIndex, committeeIndex)
-		if includeAttestation {
-			attStruct := structs.AttFromConsensus(att)
-			filteredAtts = append(filteredAtts, attStruct)
-		}
-	}
-
-	attsData, err := json.Marshal(filteredAtts)
-	if err != nil {
-		httputil.HandleError(w, "Could not marshal attestations: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	httputil.WriteJson(w, &structs.ListAttestationsResponse{
-		Data: attsData,
-	})
-}
 
 // ListAttestationsV2 retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -115,20 +65,20 @@ func (s *Server) ListAttestationsV2(w http.ResponseWriter, r *http.Request) {
 		attestations = append(attestations, unaggAtts...)
 	}
 
-	filteredAtts := make([]interface{}, 0, len(attestations))
+	filteredAtts := make([]any, 0, len(attestations))
 	for _, att := range attestations {
-		var includeAttestation bool
 		if v >= version.Electra && att.Version() >= version.Electra {
-			attElectra, ok := att.(*eth.AttestationElectra)
-			if !ok {
+			if !shouldIncludeAttestation(att, rawSlot, slot, rawCommitteeIndex, committeeIndex) {
+				continue
+			}
+			switch a := att.(type) {
+			case *eth.AttestationGloas:
+				filteredAtts = append(filteredAtts, structs.AttGloasFromConsensus(a))
+			case *eth.AttestationElectra:
+				filteredAtts = append(filteredAtts, structs.AttElectraFromConsensus(a))
+			default:
 				httputil.HandleError(w, fmt.Sprintf("Unable to convert attestation of type %T", att), http.StatusInternalServerError)
 				return
-			}
-
-			includeAttestation = shouldIncludeAttestation(attElectra, rawSlot, slot, rawCommitteeIndex, committeeIndex)
-			if includeAttestation {
-				attStruct := structs.AttElectraFromConsensus(attElectra)
-				filteredAtts = append(filteredAtts, attStruct)
 			}
 		} else if v < version.Electra && att.Version() < version.Electra {
 			attPhase0, ok := att.(*eth.Attestation)
@@ -137,8 +87,7 @@ func (s *Server) ListAttestationsV2(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			includeAttestation = shouldIncludeAttestation(attPhase0, rawSlot, slot, rawCommitteeIndex, committeeIndex)
-			if includeAttestation {
+			if shouldIncludeAttestation(attPhase0, rawSlot, slot, rawCommitteeIndex, committeeIndex) {
 				attStruct := structs.AttFromConsensus(attPhase0)
 				filteredAtts = append(filteredAtts, attStruct)
 			}
@@ -177,53 +126,15 @@ func shouldIncludeAttestation(
 	return committeeIndexMatch && slotMatch
 }
 
-// SubmitAttestations submits an attestation object to node. If the attestation passes all validation
-// constraints, node MUST publish the attestation on an appropriate subnet.
-func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttestations")
-	defer span.End()
-
-	var req structs.SubmitAttestationsRequest
-	err := json.NewDecoder(r.Body).Decode(&req.Data)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	attFailures, failedBroadcasts, err := s.handleAttestations(ctx, req.Data)
-	if err != nil {
-		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if len(failedBroadcasts) > 0 {
-		httputil.HandleError(
-			w,
-			fmt.Sprintf("Attestations at index %s could not be broadcasted", strings.Join(failedBroadcasts, ", ")),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	if len(attFailures) > 0 {
-		failuresErr := &server.IndexedVerificationFailureError{
-			Code:     http.StatusBadRequest,
-			Message:  "One or more attestations failed validation",
-			Failures: attFailures,
-		}
-		httputil.WriteError(w, failuresErr)
-	}
-}
-
 // SubmitAttestationsV2 submits an attestation object to node. If the attestation passes all validation
 // constraints, node MUST publish the attestation on an appropriate subnet.
 func (s *Server) SubmitAttestationsV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttestationsV2")
 	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
 
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionHeader == "" {
@@ -236,88 +147,138 @@ func (s *Server) SubmitAttestationsV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req structs.SubmitAttestationsRequest
-	err = json.NewDecoder(r.Body).Decode(&req.Data)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var attFailures []*server.IndexedVerificationFailure
-	var failedBroadcasts []string
-
+	var attFailures, failedBroadcasts, decodeFailures []*server.IndexedError
 	if v >= version.Electra {
-		attFailures, failedBroadcasts, err = s.handleAttestationsElectra(ctx, req.Data)
+		currentEpoch := slots.ToEpoch(s.TimeFetcher.CurrentSlot())
+		if currentEpoch < params.BeaconConfig().ElectraForkEpoch {
+			httputil.HandleError(w, fmt.Sprintf("electra attestations have not been enabled, current epoch %d enabled epoch %d", currentEpoch, params.BeaconConfig().ElectraForkEpoch), http.StatusBadRequest)
+			return
+		}
+		var atts []*eth.SingleAttestation
+		if httputil.IsRequestSsz(r) {
+			atts, decodeFailures, err = server.DecodeSSZList[eth.SingleAttestation](r.Body)
+		} else {
+			atts, decodeFailures, err = server.DecodeJSONList(r.Body, (*structs.SingleAttestation).ToConsensus)
+		}
+		if err != nil {
+			writeDecodeError(w, err)
+			return
+		}
+		if len(atts) == 0 && len(decodeFailures) == 0 {
+			httputil.HandleError(w, "no data submitted", http.StatusBadRequest)
+			return
+		}
+		attFailures, failedBroadcasts, err = s.handleAttestationsPostElectra(ctx, atts)
 	} else {
-		attFailures, failedBroadcasts, err = s.handleAttestations(ctx, req.Data)
+		if slots.ToEpoch(s.TimeFetcher.CurrentSlot()) >= params.BeaconConfig().ElectraForkEpoch {
+			httputil.HandleError(w, "old attestation format, only electra attestations should be sent", http.StatusBadRequest)
+			return
+		}
+		var atts []*eth.Attestation
+		atts, decodeFailures, err = server.DecodeJSONList(r.Body, (*structs.Attestation).ToConsensus)
+		if err != nil {
+			writeDecodeError(w, err)
+			return
+		}
+		if len(atts) == 0 && len(decodeFailures) == 0 {
+			httputil.HandleError(w, "no data submitted", http.StatusBadRequest)
+			return
+		}
+		attFailures, failedBroadcasts, err = s.handleAttestations(ctx, atts)
 	}
 	if err != nil {
 		httputil.HandleError(w, fmt.Sprintf("Failed to handle attestations: %v", err), http.StatusBadRequest)
 		return
 	}
-
-	if len(failedBroadcasts) > 0 {
-		httputil.HandleError(
-			w,
-			fmt.Sprintf("Attestations at index %s could not be broadcasted", strings.Join(failedBroadcasts, ", ")),
-			http.StatusInternalServerError,
-		)
-		return
-	}
+	attFailures = append(decodeFailures, attFailures...)
 
 	if len(attFailures) > 0 {
-		failuresErr := &server.IndexedVerificationFailureError{
+		failuresErr := &server.IndexedErrorContainer{
 			Code:     http.StatusBadRequest,
-			Message:  "One or more attestations failed validation",
+			Message:  server.ErrIndexedValidationFail,
 			Failures: attFailures,
 		}
 		httputil.WriteError(w, failuresErr)
+		return
+	}
+	if len(failedBroadcasts) > 0 {
+		failuresErr := &server.IndexedErrorContainer{
+			Code:     http.StatusInternalServerError,
+			Message:  server.ErrIndexedBroadcastFail,
+			Failures: failedBroadcasts,
+		}
+		httputil.WriteError(w, failuresErr)
+		return
 	}
 }
 
-func (s *Server) handleAttestationsElectra(
+func (s *Server) handleAttestationsPostElectra(
 	ctx context.Context,
-	data json.RawMessage,
-) (attFailures []*server.IndexedVerificationFailure, failedBroadcasts []string, err error) {
-	var sourceAttestations []*structs.SingleAttestation
-	currentEpoch := slots.ToEpoch(s.TimeFetcher.CurrentSlot())
-	if currentEpoch < params.BeaconConfig().ElectraForkEpoch {
-		return nil, nil, errors.Errorf("electra attestations have not been enabled, current epoch %d enabled epoch %d", currentEpoch, params.BeaconConfig().ElectraForkEpoch)
-	}
-
-	if err = json.Unmarshal(data, &sourceAttestations); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to unmarshal attestation")
-	}
-
-	if len(sourceAttestations) == 0 {
-		return nil, nil, errors.New("no data submitted")
-	}
-
-	var validAttestations []*eth.SingleAttestation
-	for i, sourceAtt := range sourceAttestations {
-		att, err := sourceAtt.ToConsensus()
-		if err != nil {
-			attFailures = append(attFailures, &server.IndexedVerificationFailure{
-				Index:   i,
-				Message: "Could not convert request attestation to consensus attestation: " + err.Error(),
-			})
+	atts []*eth.SingleAttestation,
+) (attFailures []*server.IndexedError, failedBroadcasts []*server.IndexedError, err error) {
+	validAttestations := make([]*eth.SingleAttestation, len(atts))
+	validCount := 0
+	for i, att := range atts {
+		if att == nil {
 			continue
 		}
 		if _, err = bls.SignatureFromBytes(att.Signature); err != nil {
-			attFailures = append(attFailures, &server.IndexedVerificationFailure{
+			attFailures = append(attFailures, &server.IndexedError{
 				Index:   i,
 				Message: "Incorrect attestation signature: " + err.Error(),
 			})
 			continue
 		}
-		validAttestations = append(validAttestations, att)
+		attEpoch := slots.ToEpoch(att.Data.Slot)
+		if attEpoch >= params.BeaconConfig().ElectraForkEpoch && attEpoch < params.BeaconConfig().GloasForkEpoch {
+			if att.Data.CommitteeIndex != 0 {
+				attFailures = append(attFailures, &server.IndexedError{
+					Index:   i,
+					Message: "Committee index must be 0 in Electra and Fulu",
+				})
+				continue
+			}
+		} else if attEpoch >= params.BeaconConfig().GloasForkEpoch {
+			if att.Data.CommitteeIndex >= 2 {
+				attFailures = append(attFailures, &server.IndexedError{
+					Index:   i,
+					Message: "Index must be < 2 post-Gloas",
+				})
+				continue
+			}
+			if att.Data.CommitteeIndex != 0 {
+				blockSlot, err := s.ForkchoiceFetcher.RecentBlockSlot(bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+				if err != nil {
+					attFailures = append(attFailures, &server.IndexedError{
+						Index:   i,
+						Message: "Could not determine block slot: " + err.Error(),
+					})
+					continue
+				}
+				if blockSlot == att.Data.Slot {
+					attFailures = append(attFailures, &server.IndexedError{
+						Index:   i,
+						Message: "Same slot attestations must use index 0 post-Gloas",
+					})
+					continue
+				}
+			}
+		}
+		validAttestations[i] = att
+		validCount++
 	}
 
+	// We store the error for the first failed broadcast and use it in the log message in case
+	// there are broadcast issues. Having a single log at the end instead of logging
+	// for every failed broadcast prevents log noise in case there are many failures.
+	// Even though we only retain the first error, there is a very good chance that all
+	// broadcasts fail for the same reason, so this should be sufficient in most cases.
+	var broadcastErr error
+
 	for i, singleAtt := range validAttestations {
+		if singleAtt == nil {
+			continue
+		}
 		s.OperationNotifier.OperationFeed().Send(&feed.Event{
 			Type: operation.SingleAttReceived,
 			Data: &operation.SingleAttReceivedData{
@@ -325,79 +286,109 @@ func (s *Server) handleAttestationsElectra(
 			},
 		})
 
-		targetState, err := s.AttestationStateFetcher.AttestationTargetState(ctx, singleAtt.Data.Target)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not get target state for attestation")
-		}
-		committee, err := corehelpers.BeaconCommitteeFromState(ctx, targetState, singleAtt.Data.Slot, singleAtt.CommitteeId)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not get committee for attestation")
-		}
-		att := singleAtt.ToAttestationElectra(committee)
-
-		wantedEpoch := slots.ToEpoch(att.Data.Slot)
+		// Broadcast first using CommitteeId directly (fast path)
+		// This matches gRPC behavior and avoids blocking on state fetching
+		wantedEpoch := slots.ToEpoch(singleAtt.Data.Slot)
 		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
-			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
-			continue
+			return nil, nil, errors.Wrap(err, "could not get head validator indices")
 		}
-		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.GetCommitteeIndex(), att.Data.Slot)
+		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), singleAtt.CommitteeId, singleAtt.Data.Slot)
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, singleAtt); err != nil {
-			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
-			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
+			failedBroadcasts = append(failedBroadcasts, &server.IndexedError{
+				Index:   i,
+				Message: server.NewBroadcastFailedError("SingleAttestation", err).Error(),
+			})
+			if broadcastErr == nil {
+				broadcastErr = err
+			}
 			continue
 		}
+	}
 
-		if features.Get().EnableExperimentalAttestationPool {
-			if err = s.AttestationCache.Add(att); err != nil {
-				log.WithError(err).Error("could not save attestation")
+	// Save to pool after broadcast (slow path - requires state fetching)
+	// Run in goroutine to avoid blocking the HTTP response
+	go func() {
+		for _, singleAtt := range validAttestations {
+			if singleAtt == nil {
+				continue
 			}
-		} else {
-			if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save attestation")
+			targetState, err := s.AttestationStateFetcher.AttestationTargetState(context.Background(), singleAtt.Data.Target)
+			if err != nil {
+				log.WithError(err).Error("Could not get target state for attestation")
+				continue
+			}
+			committee, err := corehelpers.BeaconCommitteeFromState(context.Background(), targetState, singleAtt.Data.Slot, singleAtt.CommitteeId)
+			if err != nil {
+				log.WithError(err).Error("Could not get committee for attestation")
+				continue
+			}
+			att := singleAtt.ToAttestationElectra(committee)
+
+			set, err := blocks.AttestationSignatureBatch(context.Background(), targetState, []eth.Att{att})
+			if err != nil {
+				log.WithError(err).Error("Could not create attestation signature set")
+				continue
+			}
+			if verified, err := set.Verify(); err != nil || !verified {
+				log.WithError(err).Error("Attestation signature verification failed")
+				continue
+			}
+
+			if features.Get().EnableExperimentalAttestationPool {
+				if err = s.AttestationCache.Add(att); err != nil {
+					log.WithError(err).Error("Could not save attestation")
+				}
+			} else {
+				if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
+					log.WithError(err).Error("Could not save attestation")
+				}
 			}
 		}
+	}()
+
+	if len(failedBroadcasts) > 0 {
+		log.WithFields(logrus.Fields{
+			"failedCount": len(failedBroadcasts),
+			"totalCount":  validCount,
+		}).WithError(broadcastErr).Error("Some attestations failed to be broadcast")
 	}
 
 	return attFailures, failedBroadcasts, nil
 }
 
-func (s *Server) handleAttestations(ctx context.Context, data json.RawMessage) (attFailures []*server.IndexedVerificationFailure, failedBroadcasts []string, err error) {
-	var sourceAttestations []*structs.Attestation
-
-	if slots.ToEpoch(s.TimeFetcher.CurrentSlot()) >= params.BeaconConfig().ElectraForkEpoch {
-		return nil, nil, errors.New("old attestation format, only electra attestations should be sent")
-	}
-
-	if err = json.Unmarshal(data, &sourceAttestations); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to unmarshal attestation")
-	}
-
-	if len(sourceAttestations) == 0 {
-		return nil, nil, errors.New("no data submitted")
-	}
-
-	var validAttestations []*eth.Attestation
-	for i, sourceAtt := range sourceAttestations {
-		att, err := sourceAtt.ToConsensus()
-		if err != nil {
-			attFailures = append(attFailures, &server.IndexedVerificationFailure{
-				Index:   i,
-				Message: "Could not convert request attestation to consensus attestation: " + err.Error(),
-			})
+func (s *Server) handleAttestations(
+	ctx context.Context,
+	atts []*eth.Attestation,
+) (attFailures []*server.IndexedError, failedBroadcasts []*server.IndexedError, err error) {
+	validAttestations := make([]*eth.Attestation, len(atts))
+	validCount := 0
+	for i, att := range atts {
+		if att == nil {
 			continue
 		}
 		if _, err = bls.SignatureFromBytes(att.Signature); err != nil {
-			attFailures = append(attFailures, &server.IndexedVerificationFailure{
+			attFailures = append(attFailures, &server.IndexedError{
 				Index:   i,
 				Message: "Incorrect attestation signature: " + err.Error(),
 			})
 			continue
 		}
-		validAttestations = append(validAttestations, att)
+		validAttestations[i] = att
+		validCount++
 	}
 
+	// We store the error for the first failed broadcast and use it in the log message in case
+	// there are broadcast issues. Having a single log at the end instead of logging
+	// for every failed broadcast prevents log noise in case there are many failures.
+	// Even though we only retain the first error, there is a very good chance that all
+	// broadcasts fail for the same reason, so this should be sufficient in most cases.
+	var broadcastErr error
+
 	for i, att := range validAttestations {
+		if att == nil {
+			continue
+		}
 		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 		// of a received unaggregated attestation.
 		// Note we can't send for aggregated att because we don't have selection proof.
@@ -413,30 +404,41 @@ func (s *Server) handleAttestations(ctx context.Context, data json.RawMessage) (
 		wantedEpoch := slots.ToEpoch(att.Data.Slot)
 		vals, err := s.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
 		if err != nil {
-			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
-			continue
+			return nil, nil, errors.Wrap(err, "could not get head validator indices")
 		}
 
 		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
-			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
-			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
+			failedBroadcasts = append(failedBroadcasts, &server.IndexedError{
+				Index:   i,
+				Message: server.NewBroadcastFailedError("Attestation", err).Error(),
+			})
+			if broadcastErr == nil {
+				broadcastErr = err
+			}
 			continue
 		}
 
 		if features.Get().EnableExperimentalAttestationPool {
 			if err = s.AttestationCache.Add(att); err != nil {
-				log.WithError(err).Error("could not save attestation")
+				log.WithError(err).Error("Could not save attestation")
 			}
 		} else if att.IsAggregated() {
 			if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save aggregated attestation")
+				log.WithError(err).Error("Could not save aggregated attestation")
 			}
 		} else {
 			if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save unaggregated attestation")
+				log.WithError(err).Error("Could not save unaggregated attestation")
 			}
 		}
+	}
+
+	if len(failedBroadcasts) > 0 {
+		log.WithFields(logrus.Fields{
+			"failedCount": len(failedBroadcasts),
+			"totalCount":  validCount,
+		}).WithError(broadcastErr).Error("Some attestations failed to be broadcast")
 	}
 
 	return attFailures, failedBroadcasts, nil
@@ -499,6 +501,13 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// [Modified in Gloas:EIP8282] Builder exits are no longer carried as voluntary
+	// exits; builders exit via BuilderExitRequest on the execution layer.
+	if exit.Exit.ValidatorIndex.IsBuilderIndex() {
+		httputil.HandleError(w, "Builder voluntary exits are not supported", http.StatusBadRequest)
+		return
+	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
 		if errors.Is(err, mvslice.ErrOutOfBounds) {
@@ -514,6 +523,14 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.VoluntaryExitsPool.InsertVoluntaryExit(exit)
+
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.ExitReceived,
+		Data: &operation.ExitReceivedData{
+			Exit: exit,
+		},
+	})
+
 	if err = s.Broadcaster.Broadcast(ctx, exit); err != nil {
 		httputil.HandleError(w, "Could not broadcast exit: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -524,6 +541,10 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitPoolSyncCommitteeSignatures")
 	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
 
 	var req structs.SubmitSyncCommitteeSignaturesRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
@@ -541,11 +562,11 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	var validMessages []*eth.SyncCommitteeMessage
-	var msgFailures []*server.IndexedVerificationFailure
+	var msgFailures []*server.IndexedError
 	for i, sourceMsg := range req.Data {
 		msg, err := sourceMsg.ToConsensus()
 		if err != nil {
-			msgFailures = append(msgFailures, &server.IndexedVerificationFailure{
+			msgFailures = append(msgFailures, &server.IndexedError{
 				Index:   i,
 				Message: "Could not convert request message to consensus message: " + err.Error(),
 			})
@@ -562,7 +583,7 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	if len(msgFailures) > 0 {
-		failuresErr := &server.IndexedVerificationFailureError{
+		failuresErr := &server.IndexedErrorContainer{
 			Code:     http.StatusBadRequest,
 			Message:  "One or more messages failed validation",
 			Failures: msgFailures,
@@ -581,7 +602,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 		httputil.HandleError(w, fmt.Sprintf("Could not get head state: %v", err), http.StatusInternalServerError)
 		return
 	}
-	var failures []*server.IndexedVerificationFailure
+	var failures []*server.IndexedError
 	var toBroadcast []*eth.SignedBLSToExecutionChange
 
 	var req []*structs.SignedBLSToExecutionChange
@@ -602,7 +623,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 	for i, change := range req {
 		sbls, err := change.ToConsensus()
 		if err != nil {
-			failures = append(failures, &server.IndexedVerificationFailure{
+			failures = append(failures, &server.IndexedError{
 				Index:   i,
 				Message: "Unable to decode SignedBLSToExecutionChange: " + err.Error(),
 			})
@@ -610,14 +631,14 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 		}
 		_, err = blocks.ValidateBLSToExecutionChange(st, sbls)
 		if err != nil {
-			failures = append(failures, &server.IndexedVerificationFailure{
+			failures = append(failures, &server.IndexedError{
 				Index:   i,
 				Message: "Could not validate SignedBLSToExecutionChange: " + err.Error(),
 			})
 			continue
 		}
 		if err := blocks.VerifyBLSChangeSignature(st, sbls); err != nil {
-			failures = append(failures, &server.IndexedVerificationFailure{
+			failures = append(failures, &server.IndexedError{
 				Index:   i,
 				Message: "Could not validate signature: " + err.Error(),
 			})
@@ -636,9 +657,9 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 	}
 	go s.broadcastBLSChanges(context.Background(), toBroadcast)
 	if len(failures) > 0 {
-		failuresErr := &server.IndexedVerificationFailureError{
+		failuresErr := &server.IndexedErrorContainer{
 			Code:     http.StatusBadRequest,
-			Message:  "One or more BLSToExecutionChange failed validation",
+			Message:  server.ErrIndexedValidationFail,
 			Failures: failures,
 		}
 		httputil.WriteError(w, failuresErr)
@@ -649,24 +670,21 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 // It validates the messages again because they could have been invalidated by being included in blocks since the last validation.
 // It removes the messages from the slice and modifies it in place.
 func (s *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*eth.SignedBLSToExecutionChange) {
-	limit := broadcastBLSChangesRateLimit
-	if len(*ptr) < broadcastBLSChangesRateLimit {
-		limit = len(*ptr)
-	}
+	limit := min(len(*ptr), broadcastBLSChangesRateLimit)
 	st, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
-		log.WithError(err).Error("could not get head state")
+		log.WithError(err).Error("Could not get head state")
 		return
 	}
 	for _, ch := range (*ptr)[:limit] {
 		if ch != nil {
 			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
 			if err != nil {
-				log.WithError(err).Error("could not validate BLS to execution change")
+				log.WithError(err).Error("Could not validate BLS to execution change")
 				continue
 			}
 			if err := s.Broadcaster.Broadcast(ctx, ch); err != nil {
-				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+				log.WithError(err).Error("Could not broadcast BLS to execution changes.")
 			}
 		}
 	}
@@ -709,36 +727,6 @@ func (s *Server) ListBLSToExecutionChanges(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// Deprecated: use GetAttesterSlashingsV2 instead
-// GetAttesterSlashings retrieves attester slashings known by the node but
-// not necessarily incorporated into any block.
-func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.GetAttesterSlashings")
-	defer span.End()
-
-	headState, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
-	if err != nil {
-		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	slashings := make([]*structs.AttesterSlashing, len(sourceSlashings))
-	for i, slashing := range sourceSlashings {
-		as, ok := slashing.(*eth.AttesterSlashing)
-		if !ok {
-			httputil.HandleError(w, fmt.Sprintf("Unable to convert slashing of type %T", slashing), http.StatusInternalServerError)
-			return
-		}
-		slashings[i] = structs.AttesterSlashingFromConsensus(as)
-	}
-	attBytes, err := json.Marshal(slashings)
-	if err != nil {
-		httputil.HandleError(w, fmt.Sprintf("Failed to marshal slashings: %v", err), http.StatusInternalServerError)
-		return
-	}
-	httputil.WriteJson(w, &structs.GetAttesterSlashingsResponse{Data: attBytes})
-}
-
 // GetAttesterSlashingsV2 retrieves attester slashings known by the node but
 // not necessarily incorporated into any block, supporting both AttesterSlashing and AttesterSlashingElectra.
 func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) {
@@ -753,9 +741,9 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 	}
 
 	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
-	attStructs := make([]interface{}, 0, len(sourceSlashings))
+	attStructs := make([]any, 0, len(sourceSlashings))
 	for _, slashing := range sourceSlashings {
-		var attStruct interface{}
+		var attStruct any
 		if v >= version.Electra && slashing.Version() >= version.Electra {
 			a, ok := slashing.(*eth.AttesterSlashingElectra)
 			if !ok {
@@ -790,31 +778,6 @@ func (s *Server) GetAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) 
 	httputil.WriteJson(w, resp)
 }
 
-// SubmitAttesterSlashings submits an attester slashing object to node's pool and
-// if passes validation node MUST broadcast it to network.
-func (s *Server) SubmitAttesterSlashings(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashings")
-	defer span.End()
-
-	var req structs.AttesterSlashing
-	err := json.NewDecoder(r.Body).Decode(&req)
-	switch {
-	case errors.Is(err, io.EOF):
-		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	case err != nil:
-		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	slashing, err := req.ToConsensus()
-	if err != nil {
-		httputil.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	s.submitAttesterSlashing(w, ctx, slashing)
-}
-
 // SubmitAttesterSlashingsV2 submits an attester slashing object to node's pool and
 // if passes validation node MUST broadcast it to network.
 func (s *Server) SubmitAttesterSlashingsV2(w http.ResponseWriter, r *http.Request) {
@@ -824,6 +787,7 @@ func (s *Server) SubmitAttesterSlashingsV2(w http.ResponseWriter, r *http.Reques
 	versionHeader := r.Header.Get(api.VersionHeader)
 	if versionHeader == "" {
 		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+		return
 	}
 	v, err := version.FromString(versionHeader)
 	if err != nil {
@@ -986,4 +950,192 @@ func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
+}
+
+// SubmitPayloadAttestations submits payload attestation messages to the node's pool.
+func (s *Server) SubmitPayloadAttestations(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitPayloadAttestations")
+	defer span.End()
+
+	currentEpoch := slots.ToEpoch(s.TimeFetcher.CurrentSlot())
+	if currentEpoch < params.BeaconConfig().GloasForkEpoch {
+		httputil.HandleError(w, fmt.Sprintf("payload attestations require the Gloas fork, current epoch %d, Gloas epoch %d", currentEpoch, params.BeaconConfig().GloasForkEpoch), http.StatusBadRequest)
+		return
+	}
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	versionHeader := r.Header.Get(api.VersionHeader)
+	if versionHeader == "" {
+		httputil.HandleError(w, api.VersionHeader+" header is required", http.StatusBadRequest)
+		return
+	}
+
+	var consensusMsgs []*eth.PayloadAttestationMessage
+	var failures []*server.IndexedError
+	var decodeErr error
+	if httputil.IsRequestSsz(r) {
+		consensusMsgs, failures, decodeErr = server.DecodeSSZList[eth.PayloadAttestationMessage](r.Body)
+	} else {
+		consensusMsgs, failures, decodeErr = server.DecodeJSONList(r.Body, (*structs.PayloadAttestationMessage).ToConsensus)
+	}
+	if decodeErr != nil {
+		writeDecodeError(w, decodeErr)
+		return
+	}
+	if len(consensusMsgs) == 0 && len(failures) == 0 {
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+
+	currentSlot := s.TimeFetcher.CurrentSlot()
+	for i, consensusMsg := range consensusMsgs {
+		if consensusMsg == nil {
+			continue
+		}
+		if consensusMsg.Data.Slot != currentSlot {
+			failures = append(failures, &server.IndexedError{
+				Index:   i,
+				Message: fmt.Sprintf("Payload attestation slot %d does not match current slot %d", consensusMsg.Data.Slot, currentSlot),
+			})
+			continue
+		}
+
+		st, err := s.PayloadAttestationReceiver.PtcLookupState(ctx, bytesutil.ToBytes32(consensusMsg.Data.BeaconBlockRoot), consensusMsg.Data.Slot)
+		if err != nil || st == nil {
+			msg := "Could not find state for payload attestation"
+			if err != nil {
+				msg += ": " + err.Error()
+			}
+			failures = append(failures, &server.IndexedError{Index: i, Message: msg})
+			continue
+		}
+		indices, err := gloas.PayloadCommitteeIndices(ctx, st, consensusMsg.Data.Slot, consensusMsg.ValidatorIndex)
+		if err != nil {
+			failures = append(failures, &server.IndexedError{
+				Index:   i,
+				Message: "Could not determine PTC committee index: " + err.Error(),
+			})
+			continue
+		}
+		if err := verification.VerifyPayloadAttestationMessageSignature(st, consensusMsg); err != nil {
+			failures = append(failures, &server.IndexedError{
+				Index:   i,
+				Message: "Incorrect payload attestation signature: " + err.Error(),
+			})
+			continue
+		}
+		if err := s.Broadcaster.Broadcast(ctx, consensusMsg); err != nil {
+			log.WithError(err).Error("Could not broadcast payload attestation message")
+			failures = append(failures, &server.IndexedError{
+				Index:   i,
+				Message: server.NewBroadcastFailedError("PayloadAttestation", err).Error(),
+			})
+			continue
+		}
+
+		// Self-published gossip is not looped back, so apply the PTC vote to fork choice here.
+		if err := s.PayloadAttestationReceiver.ReceivePayloadAttestationMessage(ctx, consensusMsg); err != nil {
+			failures = append(failures, &server.IndexedError{
+				Index:   i,
+				Message: "Could not process payload attestation: " + err.Error(),
+			})
+			continue
+		}
+
+		if err := s.PayloadAttestationPool.InsertPayloadAttestation(consensusMsg, indices); err != nil {
+			failures = append(failures, &server.IndexedError{
+				Index:   i,
+				Message: "Could not insert payload attestation: " + err.Error(),
+			})
+			continue
+		}
+
+		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.PayloadAttestationMessageReceived,
+			Data: &operation.PayloadAttestationMessageReceivedData{
+				Message: consensusMsg,
+			},
+		})
+	}
+
+	if len(failures) > 0 {
+		failuresErr := &server.IndexedErrorContainer{
+			Code:     http.StatusBadRequest,
+			Message:  server.ErrIndexedValidationFail,
+			Failures: failures,
+		}
+		httputil.WriteError(w, failuresErr)
+		return
+	}
+}
+
+// ListPayloadAttestations retrieves payload attestations from the pool.
+func (s *Server) ListPayloadAttestations(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.ListPayloadAttestations")
+	defer span.End()
+
+	currentSlot := s.TimeFetcher.CurrentSlot()
+	if slots.ToEpoch(currentSlot) < params.BeaconConfig().GloasForkEpoch {
+		httputil.HandleError(w, fmt.Sprintf("payload attestations require the Gloas fork, current epoch %d, Gloas epoch %d", slots.ToEpoch(currentSlot), params.BeaconConfig().GloasForkEpoch), http.StatusBadRequest)
+		return
+	}
+
+	_, slot, ok := shared.UintFromQuery(w, r, "slot", true)
+	if !ok {
+		return
+	}
+
+	if primitives.Slot(slot) > currentSlot {
+		httputil.HandleError(w, fmt.Sprintf("requested slot %d is in the future, current slot is %d", slot, currentSlot), http.StatusBadRequest)
+		return
+	}
+
+	atts := s.PayloadAttestationPool.PendingPayloadAttestations(primitives.Slot(slot))
+
+	w.Header().Set(api.VersionHeader, version.String(version.Gloas))
+	if httputil.RespondWithSsz(r) {
+		body, err := marshalPayloadAttestationsSSZ(atts)
+		if err != nil {
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		httputil.WriteSsz(w, body)
+		return
+	}
+
+	data := make([]*structs.PayloadAttestation, len(atts))
+	for i, att := range atts {
+		data[i] = structs.PayloadAttestationFromConsensus(att)
+	}
+	httputil.WriteJson(w, &structs.GetPoolPayloadAttestationsResponse{
+		Version: version.String(version.Gloas),
+		Data:    data,
+	})
+}
+
+// marshalPayloadAttestationsSSZ serializes atts as the SSZ encoding of
+// List[PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS].
+func marshalPayloadAttestationsSSZ(atts []*eth.PayloadAttestation) ([]byte, error) {
+	sszSize := (&eth.PayloadAttestation{}).SizeSSZ()
+	body := make([]byte, sszSize*len(atts))
+	for i, att := range atts {
+		b, err := att.MarshalSSZ()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not marshal payload attestation")
+		}
+		copy(body[i*sszSize:(i+1)*sszSize], b)
+	}
+	return body, nil
+}
+
+// writeDecodeError maps a request-body decode error to an HTTP response.
+func writeDecodeError(w http.ResponseWriter, err error) {
+	if errors.Is(err, io.EOF) {
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 }

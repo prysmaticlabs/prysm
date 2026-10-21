@@ -3,12 +3,12 @@ package testing
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/api/client/builder"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	v1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/api/client/builder"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	v1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 // MockClient is a mock implementation of BuilderClient.
@@ -47,6 +47,21 @@ func (MockClient) SubmitBlindedBlock(_ context.Context, _ interfaces.ReadOnlySig
 
 // SubmitBlindedBlockPostFulu --
 func (MockClient) SubmitBlindedBlockPostFulu(_ context.Context, _ interfaces.ReadOnlySignedBeaconBlock) error {
+	return nil
+}
+
+// GetExecutionPayloadBid --
+func (MockClient) GetExecutionPayloadBid(_ context.Context, _ primitives.Slot, _, _ [32]byte, _ [48]byte, _ *ethpb.SignedBuilderRequestAuth) (*ethpb.SignedExecutionPayloadBid, error) {
+	return nil, nil
+}
+
+// SubmitSignedBeaconBlock --
+func (MockClient) SubmitSignedBeaconBlock(_ context.Context, _ interfaces.ReadOnlySignedBeaconBlock) error {
+	return nil
+}
+
+// SubmitBuilderPreferences --
+func (MockClient) SubmitBuilderPreferences(_ context.Context, _ [48]byte, _ *ethpb.BuilderPreferencesRequest) error {
 	return nil
 }
 

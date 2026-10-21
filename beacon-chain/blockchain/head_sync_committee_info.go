@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/async"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/async"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -132,9 +132,7 @@ func (s *Service) domainWithHeadState(ctx context.Context, slot primitives.Slot,
 
 // returns the head state that is advanced up to `slot`. It utilizes the cache `syncCommitteeHeadState` by retrieving using `slot` as key.
 // For the cache miss, it processes head state up to slot and fill the cache with `slot` as key.
-func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives.Slot) (state.BeaconState, error) {
-	var headState state.BeaconState
-	var err error
+func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives.Slot) (state.ReadOnlyBeaconState, error) {
 	mLock := async.NewMultilock(fmt.Sprintf("%s-%d", "syncHeadState", slot))
 	mLock.Lock()
 	defer mLock.Unlock()
@@ -144,21 +142,23 @@ func (s *Service) getSyncCommitteeHeadState(ctx context.Context, slot primitives
 	switch {
 	case err == nil:
 		syncHeadStateHit.Inc()
-		headState = cachedState
-		return headState, nil
+		return cachedState, nil
 	case errors.Is(err, cache.ErrNotFound):
-		headState, err = s.HeadState(ctx)
+		headState, err := s.HeadStateReadOnly(ctx)
 		if err != nil {
 			return nil, err
 		}
 		if headState == nil || headState.IsNil() {
 			return nil, errors.New("nil state")
 		}
+		if headState.Slot() > slot {
+			return nil, fmt.Errorf("expected head state slot %d <= slot %d", headState.Slot(), slot)
+		}
 		headRoot, err := s.HeadRoot(ctx)
 		if err != nil {
 			return nil, err
 		}
-		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, slot)
+		headState, err = transition.ProcessSlotsIfNeeded(ctx, headState, headRoot, slot)
 		if err != nil {
 			return nil, err
 		}

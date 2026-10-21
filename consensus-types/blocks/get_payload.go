@@ -1,10 +1,10 @@
 package blocks
 
 import (
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	pb "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	pb "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
@@ -16,8 +16,9 @@ type GetPayloadResponse struct {
 	BlobsBundler    pb.BlobsBundler
 	OverrideBuilder bool
 	// todo: should we convert this to Gwei up front?
-	Bid               primitives.Wei
-	ExecutionRequests *pb.ExecutionRequests
+	Bid                    primitives.Wei
+	ExecutionRequests      *pb.ExecutionRequests
+	ExecutionRequestsGloas *pb.ExecutionRequestsGloas
 }
 
 // bundleGetter is an interface satisfied by get payload responses that have a blobs bundle.
@@ -40,6 +41,10 @@ type shouldOverrideBuilderGetter interface {
 
 type executionRequestsGetter interface {
 	GetDecodedExecutionRequests(pb.ExecutionRequestLimits) (*pb.ExecutionRequests, error)
+}
+
+type executionRequestsGloasGetter interface {
+	GetDecodedExecutionRequests(pb.ExecutionRequestLimits) (*pb.ExecutionRequestsGloas, error)
 }
 
 func NewGetPayloadResponse(msg proto.Message) (*GetPayloadResponse, error) {
@@ -72,9 +77,15 @@ func NewGetPayloadResponse(msg proto.Message) (*GetPayloadResponse, error) {
 	}
 	r.ExecutionData = ed
 
-	executionRequestsGetter, hasExecutionRequests := msg.(executionRequestsGetter)
-	if hasExecutionRequests {
-		requests, err := executionRequestsGetter.GetDecodedExecutionRequests(params.BeaconConfig().ExecutionRequestLimits())
+	switch g := msg.(type) {
+	case executionRequestsGloasGetter:
+		requests, err := g.GetDecodedExecutionRequests(params.BeaconConfig().ExecutionRequestLimits())
+		if err != nil {
+			return nil, errors.Wrap(err, "get decoded execution requests")
+		}
+		r.ExecutionRequestsGloas = requests
+	case executionRequestsGetter:
+		requests, err := g.GetDecodedExecutionRequests(params.BeaconConfig().ExecutionRequestLimits())
 		if err != nil {
 			return nil, errors.Wrap(err, "get decoded execution requests")
 		}

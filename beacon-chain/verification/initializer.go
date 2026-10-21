@@ -4,16 +4,19 @@ import (
 	"context"
 	"sync"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/kzg"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/peerdas"
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	payloadattestation "github.com/OffchainLabs/prysm/v7/consensus-types/payload-attestation"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"golang.org/x/sync/singleflight"
 )
 
 // Forkchoicer represents the forkchoice methods that the verifiers need.
@@ -24,12 +27,24 @@ type Forkchoicer interface {
 	HasNode([32]byte) bool
 	IsCanonical(root [32]byte) bool
 	Slot([32]byte) (primitives.Slot, error)
+	DependentRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 	TargetRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 }
 
 // StateByRooter describes a stategen-ish type that can produce arbitrary states by their root
 type StateByRooter interface {
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
+	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.ReadOnlyBeaconState
+}
+
+// HeadStateProvider describes a type that can provide access to the current head state and related methods.
+// This interface matches blockchain.HeadFetcher but is defined here to avoid import cycles
+// (blockchain package imports verification package).
+type HeadStateProvider interface {
+	HeadRoot(ctx context.Context) ([]byte, error)
+	HeadSlot() primitives.Slot
+	HeadState(ctx context.Context) (state.BeaconState, error)
+	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 }
 
 // sharedResources provides access to resources that are required by different verification types.
@@ -40,7 +55,24 @@ type sharedResources struct {
 	sc    signatureCache
 	pc    proposerCache
 	sr    StateByRooter
+	hsp   HeadStateProvider
 	ic    *inclusionProofCache
+	sg    singleflight.Group
+}
+
+// Mirrors the spec's is_within_slot_range, allowing MAXIMUM_GOSSIP_CLOCK_DISPARITY on both ends.
+func (r *sharedResources) withinSlotRange(first, last primitives.Slot) (bool, error) {
+	start, err := r.clock.SlotStart(first)
+	if err != nil {
+		return false, err
+	}
+	end, err := r.clock.SlotStart(last + 1)
+	if err != nil {
+		return false, err
+	}
+	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
+	now := r.clock.Now()
+	return !now.Before(start.Add(-disparity)) && !now.After(end.Add(disparity)), nil
 }
 
 // Initializer is used to create different Verifiers.
@@ -64,11 +96,58 @@ func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs []Requirement) *RO
 // WARNING: The returned verifier is not thread-safe, and should not be used concurrently.
 func (ini *Initializer) NewDataColumnsVerifier(roDataColumns []blocks.RODataColumn, reqs []Requirement) *RODataColumnsVerifier {
 	return &RODataColumnsVerifier{
-		sharedResources:             ini.shared,
-		dataColumns:                 roDataColumns,
-		results:                     newResults(reqs...),
-		verifyDataColumnsCommitment: peerdas.VerifyDataColumnsSidecarKZGProofs,
-		stateByRoot:                 make(map[[fieldparams.RootLength]byte]state.BeaconState),
+		sharedResources: ini.shared,
+		dataColumns:     roDataColumns,
+		results:         newResults(reqs...),
+		verifyDataColumnsCommitment: func(rc []blocks.RODataColumn) error {
+			if len(rc) == 0 {
+				return nil
+			}
+			bundles, err := blocks.RODataColumnsToCellProofBundles(rc)
+			if err != nil {
+				return err
+			}
+			return peerdas.VerifyDataColumnsCellsKZGProofs(bundles)
+		},
+		stateByRoot: make(map[[fieldparams.RootLength]byte]state.BeaconState),
+	}
+}
+
+// NewPayloadAttestationMsgVerifier creates a PayloadAttestationMsgVerifier for a single payload attestation message,
+// with the given set of requirements.
+func (ini *Initializer) NewPayloadAttestationMsgVerifier(pa payloadattestation.ROMessage, reqs []Requirement) *PayloadAttMsgVerifier {
+	return &PayloadAttMsgVerifier{
+		sharedResources: ini.shared,
+		results:         newResults(reqs...),
+		pa:              pa,
+	}
+}
+
+// NewSignedProposerPreferencesVerifier creates a SignedProposerPreferencesVerifier for a single signed proposer preferences
+// message, with the given set of requirements.
+func (ini *Initializer) NewSignedProposerPreferencesVerifier(p *ethpb.SignedProposerPreferences, reqs []Requirement) *ProposerPreferencesVerifier {
+	return &ProposerPreferencesVerifier{
+		sharedResources: ini.shared,
+		results:         newResults(reqs...),
+		p:               p,
+	}
+}
+
+// NewExecutionPayloadBidVerifier creates an ExecutionPayloadBidVerifier for a single signed execution payload bid
+// with the given set of requirements.
+func (ini *Initializer) NewExecutionPayloadBidVerifier(b interfaces.ROSignedExecutionPayloadBid, reqs []Requirement) *BidVerifier {
+	return &BidVerifier{
+		sharedResources: ini.shared,
+		results:         newResults(reqs...),
+		b:               b,
+	}
+}
+
+// NewPayloadEnvelopeVerifier creates a SignedExecutionPayloadEnvelopeVerifier for a single signed execution payload envelope with the given set of requirements.
+func (ini *Initializer) NewPayloadEnvelopeVerifier(ee interfaces.ROSignedExecutionPayloadEnvelope, reqs []Requirement) *EnvelopeVerifier {
+	return &EnvelopeVerifier{
+		results: newResults(reqs...),
+		e:       ee,
 	}
 }
 
@@ -94,14 +173,15 @@ func WithForkLookup(fl forkLookup) InitializerOption {
 }
 
 // NewInitializerWaiter creates an InitializerWaiter which can be used to obtain an Initializer once async dependencies are ready.
-func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sr StateByRooter, opts ...InitializerOption) *InitializerWaiter {
+func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sr StateByRooter, hsp HeadStateProvider, opts ...InitializerOption) *InitializerWaiter {
 	pc := newPropCache()
 	// signature cache is initialized in WaitForInitializer, since we need the genesis validators root, which can be obtained from startup.Clock.
 	shared := &sharedResources{
-		fc: fc,
-		pc: pc,
-		sr: sr,
-		ic: newInclusionProofCache(defaultInclusionProofCacheSize),
+		fc:  fc,
+		pc:  pc,
+		sr:  sr,
+		hsp: hsp,
+		ic:  newInclusionProofCache(defaultInclusionProofCacheSize),
 	}
 	iw := &InitializerWaiter{cw: cw, ini: &Initializer{shared: shared}}
 	for _, o := range opts {

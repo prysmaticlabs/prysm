@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	mvslice "github.com/OffchainLabs/prysm/v7/container/multi-value-slice"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -110,31 +111,20 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 	}
 	proposer, err := beaconState.ValidatorAtIndex(blk.Block().ProposerIndex())
 	if err != nil {
+		// Only an invalid index can cause an error here
+		if errors.Is(err, mvslice.ErrOutOfBounds) {
+			return errors.Wrap(ErrInvalidProposerIndex, err.Error())
+		}
 		return err
 	}
 	proposerPubKey := proposer.PublicKey
 	sig := blk.Signature()
-	return signing.VerifyBlockSigningRoot(proposerPubKey, sig[:], domain, func() ([32]byte, error) {
+	if err := signing.VerifyBlockSigningRoot(proposerPubKey, sig[:], domain, func() ([32]byte, error) {
 		return blkRoot, nil
-	})
-}
-
-// BlockSignatureBatch retrieves the block signature batch from the provided block and its corresponding state.
-func BlockSignatureBatch(beaconState state.ReadOnlyBeaconState,
-	proposerIndex primitives.ValidatorIndex,
-	sig []byte,
-	rootFunc func() ([32]byte, error)) (*bls.SignatureBatch, error) {
-	currentEpoch := slots.ToEpoch(beaconState.Slot())
-	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer, beaconState.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, err
+	}); err != nil {
+		return ErrInvalidSignature
 	}
-	proposer, err := beaconState.ValidatorAtIndex(proposerIndex)
-	if err != nil {
-		return nil, err
-	}
-	proposerPubKey := proposer.PublicKey
-	return signing.BlockSignatureBatch(proposerPubKey, sig, domain, rootFunc)
+	return nil
 }
 
 // RandaoSignatureBatch retrieves the relevant randao specific signature batch object

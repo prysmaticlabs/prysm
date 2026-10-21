@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestCommitteeKeyFn_OK(t *testing.T) {
@@ -80,13 +80,13 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 	cache := NewCommitteesCache()
 
 	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
-	count, err := cache.ActiveIndicesCount(t.Context(), item.Seed)
+	count, err := cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
 
 	require.NoError(t, cache.AddCommitteeShuffledList(t.Context(), item))
 
-	count, err = cache.ActiveIndicesCount(t.Context(), item.Seed)
+	count, err = cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
 	assert.Equal(t, len(item.SortedIndices), count)
 }
@@ -138,7 +138,7 @@ func TestCommitteeCache_DoesNothingWhenCancelledContext(t *testing.T) {
 	cache := NewCommitteesCache()
 
 	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6}}
-	count, err := cache.ActiveIndicesCount(t.Context(), item.Seed)
+	count, err := cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
 
@@ -146,7 +146,7 @@ func TestCommitteeCache_DoesNothingWhenCancelledContext(t *testing.T) {
 	cancel()
 	require.ErrorIs(t, cache.AddCommitteeShuffledList(cancelled, item), context.Canceled)
 
-	count, err = cache.ActiveIndicesCount(t.Context(), item.Seed)
+	count, err = cache.ActiveIndicesCount(item.Seed)
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)
 }

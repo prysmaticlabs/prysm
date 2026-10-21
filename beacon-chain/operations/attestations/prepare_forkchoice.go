@@ -5,22 +5,22 @@ import (
 	"context"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
 	intervals := features.Get().AggregateIntervals
-	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	slotDuration := params.BeaconConfig().SlotDuration()
 	// Adjust intervals for networks with a lower slot duration (Hive, e2e, etc)
 	for {
 		if intervals[len(intervals)-1] >= slotDuration {
@@ -49,6 +49,7 @@ func (s *Service) prepareForkChoiceAtts() {
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
+			ticker.Done()
 			return
 		}
 	}

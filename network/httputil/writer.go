@@ -3,13 +3,13 @@ package httputil
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	log "github.com/sirupsen/logrus"
+	"github.com/OffchainLabs/prysm/v7/api"
 )
 
 type HasStatusCode interface {
@@ -30,6 +30,12 @@ func (e *DefaultJsonError) Error() string {
 	return fmt.Sprintf("HTTP request unsuccessful (%d: %s)", e.Code, e.Message)
 }
 
+// Is allows comparison of DefaultJsonError values by their Code field.
+func (e *DefaultJsonError) Is(target error) bool {
+	var t *DefaultJsonError
+	return errors.As(target, &t) && t.Code == e.Code
+}
+
 // WriteJson writes the response message in JSON format.
 func WriteJson(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", api.JsonMediaType)
@@ -43,6 +49,7 @@ func WriteJson(w http.ResponseWriter, v any) {
 func WriteSsz(w http.ResponseWriter, respSsz []byte) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
 	w.Header().Set("Content-Type", api.OctetStreamMediaType)
+	w.WriteHeader(http.StatusOK)
 	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(respSsz))); err != nil {
 		log.WithError(err).Error("Could not write response message")
 	}

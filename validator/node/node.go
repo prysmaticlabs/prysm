@@ -17,30 +17,28 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/middleware"
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	"github.com/OffchainLabs/prysm/v6/cmd/validator/flags"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/config/proposer"
-	"github.com/OffchainLabs/prysm/v6/config/proposer/loader"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/monitoring/prometheus"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/runtime"
-	"github.com/OffchainLabs/prysm/v6/runtime/prereqs"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/wallet"
-	"github.com/OffchainLabs/prysm/v6/validator/client"
-	"github.com/OffchainLabs/prysm/v6/validator/db"
-	"github.com/OffchainLabs/prysm/v6/validator/db/filesystem"
-	"github.com/OffchainLabs/prysm/v6/validator/db/iface"
-	"github.com/OffchainLabs/prysm/v6/validator/db/kv"
-	g "github.com/OffchainLabs/prysm/v6/validator/graffiti"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager/local"
-	remoteweb3signer "github.com/OffchainLabs/prysm/v6/validator/keymanager/remote-web3signer"
-	"github.com/OffchainLabs/prysm/v6/validator/rpc"
+	"github.com/OffchainLabs/prysm/v7/api/server/middleware"
+	"github.com/OffchainLabs/prysm/v7/async/event"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/config/proposer"
+	"github.com/OffchainLabs/prysm/v7/config/proposer/loader"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/monitoring/prometheus"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/runtime"
+	"github.com/OffchainLabs/prysm/v7/runtime/prereqs"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/wallet"
+	"github.com/OffchainLabs/prysm/v7/validator/client"
+	"github.com/OffchainLabs/prysm/v7/validator/db"
+	"github.com/OffchainLabs/prysm/v7/validator/db/filesystem"
+	"github.com/OffchainLabs/prysm/v7/validator/db/iface"
+	"github.com/OffchainLabs/prysm/v7/validator/db/kv"
+	g "github.com/OffchainLabs/prysm/v7/validator/graffiti"
+	remoteweb3signer "github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer"
+	"github.com/OffchainLabs/prysm/v7/validator/rpc"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -74,13 +72,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	); err != nil {
 		return nil, err
 	}
-
-	verbosity := cliCtx.String(cmd.VerbosityFlag.Name)
-	level, err := logrus.ParseLevel(verbosity)
-	if err != nil {
-		return nil, err
-	}
-	logrus.SetLevel(level)
 
 	// Warn if user's platform is not supported
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
@@ -131,10 +122,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 func (c *ValidatorClient) Start() {
 	c.lock.Lock()
 
-	log.WithFields(logrus.Fields{
-		"version": version.Version(),
-	}).Info("Starting validator node")
-
 	c.services.StartAll()
 
 	stop := c.stop
@@ -145,8 +132,10 @@ func (c *ValidatorClient) Start() {
 		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 		defer signal.Stop(sigc)
 		<-sigc
+
 		log.Info("Got interrupt, shutting down...")
-		go c.Close()
+		c.shutdown(sigc)
+
 		for i := 10; i > 0; i-- {
 			<-sigc
 			if i > 1 {
@@ -158,6 +147,39 @@ func (c *ValidatorClient) Start() {
 
 	// Wait for stop channel to be closed.
 	<-stop
+}
+
+// shutdown closes the validator client. Unless disabled, it first waits for the moment in the slot
+// where a restart would not miss any rewarded duty. It returns early on another interrupt, which
+// closes the validator client immediately.
+func (c *ValidatorClient) shutdown(sigc <-chan os.Signal) {
+	if features.Get().DisableDutyAwareShutdown {
+		go c.Close()
+		return
+	}
+
+	ctx, cancel := context.WithCancel(c.ctx)
+
+	go func() {
+		c.waitForDutyAwareShutdown(ctx)
+		c.Close()
+	}()
+
+	<-sigc
+	log.Info("Got interrupt, shutting down immediately...")
+	cancel()
+}
+
+// waitForDutyAwareShutdown blocks until the validator client can be stopped and restarted
+// without missing any rewarded duty, or until the context is done.
+func (c *ValidatorClient) waitForDutyAwareShutdown(ctx context.Context) {
+	var vs *client.ValidatorService
+	if err := c.services.FetchService(&vs); err != nil {
+		log.WithError(err).Debug("Could not fetch validator service, stopping immediately")
+		return
+	}
+
+	vs.WaitForDutyAwareShutdown(ctx)
 }
 
 // Close handles graceful shutdown of the system.
@@ -177,7 +199,6 @@ func (c *ValidatorClient) Close() {
 // If it does not, it checks if a database exists in the legacy location.
 // If it does, it returns the legacy location.
 func (c *ValidatorClient) getLegacyDatabaseLocation(
-	isInteropNumValidatorsSet bool,
 	isWeb3SignerURLFlagSet bool,
 	dataDir string,
 	dataFile string,
@@ -188,15 +209,15 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 		return "", "", errors.Wrapf(err, "could not check if file exists: %s", dataFile)
 	}
 
-	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || exists || c.wallet == nil {
+	if dataDir != cmd.DefaultDataDir() || exists || (c.wallet == nil && !isWeb3SignerURLFlagSet) {
 		return dataDir, dataFile, nil
 	}
 
 	// We look in the previous, legacy directories.
 	// See https://github.com/prysmaticlabs/prysm/issues/13391
-	legacyDataDir := c.wallet.AccountsDir()
-	if isWeb3SignerURLFlagSet {
-		legacyDataDir = walletDir
+	legacyDataDir := walletDir
+	if !isWeb3SignerURLFlagSet {
+		legacyDataDir = c.wallet.AccountsDir()
 	}
 
 	legacyDataFile := filepath.Join(legacyDataDir, kv.ProtectionDbFileName)
@@ -224,13 +245,11 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 }
 
 func getWallet(cliCtx *cli.Context) (*wallet.Wallet, error) {
-	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		log.Info("No wallet required for interop validation")
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		log.Info("No Prysm wallet required for web3signer validation")
 		return nil, nil
 	}
-	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
-		return wallet.NewWalletForWeb3Signer(cliCtx), nil
-	}
+
 	if err := setWalletPasswordFilePath(cliCtx); err != nil {
 		return nil, errors.Wrap(err, "could not read wallet password file")
 	}
@@ -265,14 +284,12 @@ func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
 	kvDataDir := cliCtx.String(cmd.DataDirFlag.Name)
 	kvDataFile := filepath.Join(kvDataDir, kv.ProtectionDbFileName)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
 	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
 	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
 	kvDataDir, _, err := c.getLegacyDatabaseLocation(
-		isInteropNumValidatorsSet,
 		isWeb3SignerURLFlagSet,
 		kvDataDir,
 		kvDataFile,
@@ -388,18 +405,12 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-	var (
-		interopKmConfig *local.InteropKeymanagerConfig
-		err             error
-	)
-
-	// Configure interop.
-	if cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		interopKmConfig = &local.InteropKeymanagerConfig{
-			Offset:           cliCtx.Uint64(flags.InteropStartIndex.Name),
-			NumValidatorKeys: cliCtx.Uint64(flags.InteropNumValidators.Name),
-		}
+	distributed := cliCtx.Bool(flags.EnableDistributed.Name)
+	if distributed && !features.Get().EnableBeaconRESTApi {
+		return errors.New("--distributed requires --enable-beacon-rest-api")
 	}
+
+	var err error
 
 	// Configure graffiti.
 	graffitiStruct := &g.Graffiti{}
@@ -422,6 +433,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
+	stateless := statelessMode(cliCtx)
+
 	validatorService, err := client.NewValidatorService(cliCtx.Context, &client.Config{
 		DB:                      c.db,
 		Wallet:                  c.wallet,
@@ -433,17 +446,18 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		BeaconNodeGRPCEndpoint:  cliCtx.String(flags.BeaconRPCProviderFlag.Name),
 		BeaconNodeCert:          cliCtx.String(flags.CertFlag.Name),
 		BeaconApiEndpoint:       cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
+		BeaconApiHeaders:        parseBeaconApiHeaders(cliCtx.String(flags.BeaconRESTApiHeaders.Name)),
 		BeaconApiTimeout:        time.Second * 30,
 		Graffiti:                g.ParseHexGraffiti(cliCtx.String(flags.GraffitiFlag.Name)),
 		GraffitiStruct:          graffitiStruct,
-		InteropKmConfig:         interopKmConfig,
 		Web3SignerConfig:        web3signerConfig,
 		ProposerSettings:        ps,
 		ValidatorsRegBatchSize:  cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
 		EnableAPI:               features.Get().EnableWeb || cliCtx.Bool(flags.EnableRPCFlag.Name),
 		LogValidatorPerformance: !cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name),
 		EmitAccountMetrics:      !cliCtx.Bool(flags.DisableAccountMetricsFlag.Name),
-		Distributed:             cliCtx.Bool(flags.EnableDistributed.Name),
+		Distributed:             distributed,
+		Stateless:               stateless,
 		CloseClientFunc:         c.Close,
 		MaxHealthChecks:         cliCtx.Int(flags.MaxHealthChecksFlag.Name),
 	})
@@ -454,42 +468,118 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(validatorService)
 }
 
-func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
-	var web3signerConfig *remoteweb3signer.SetupConfig
-	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
-		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
-		u, err := url.ParseRequestURI(urlStr)
-		if err != nil {
-			return nil, errors.Wrapf(err, "web3signer url %s is invalid", urlStr)
-		}
-		if u.Scheme == "" || u.Host == "" {
-			return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", urlStr)
-		}
-		web3signerConfig = &remoteweb3signer.SetupConfig{
-			BaseEndpoint:          u.String(),
-			GenesisValidatorsRoot: nil,
-		}
-		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
-			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
-		}
-		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
-			if len(publicKeysSlice) == 1 {
-				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
-				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
-					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
-				} else {
-					web3signerConfig.ProvidedPublicKeys = strings.Split(publicKeysSlice[0], ",")
-				}
-			} else {
-				web3signerConfig.ProvidedPublicKeys = publicKeysSlice
-			}
-		}
-		if cliCtx.IsSet(flags.Web3SignerKeyFileFlag.Name) {
-			web3signerConfig.KeyFilePath = cliCtx.String(flags.Web3SignerKeyFileFlag.Name)
+// statelessMode resolves the stateless setting for Gloas and later forks. Only the beacon node that
+// built a block can serve and reveal its execution payload, so with several beacon nodes stateless is forced on.
+func statelessMode(cliCtx *cli.Context) bool {
+	if cliCtx.Bool(flags.EnableStatelessFlag.Name) {
+		return true
+	}
+	if !params.GloasEnabled() {
+		return false
+	}
+
+	// Setting the REST provider flag implicitly enables the REST API, mirroring ConfigureValidator.
+	endpointFlag := flags.BeaconRPCProviderFlag.Name
+	if features.Get().EnableBeaconRESTApi || cliCtx.IsSet(flags.BeaconRESTApiProviderFlag.Name) {
+		endpointFlag = flags.BeaconRESTApiProviderFlag.Name
+	}
+	hosts := 0
+	for h := range strings.SplitSeq(cliCtx.String(endpointFlag), ",") {
+		if strings.TrimSpace(h) != "" {
+			hosts++
 		}
 	}
-	return web3signerConfig, nil
+	if hosts < 2 {
+		return false
+	}
+
+	if cliCtx.IsSet(flags.EnableStatelessFlag.Name) {
+		log.Warnf("Ignoring --%s=false: only the beacon node that built a block can reveal its "+
+			"execution payload, so multiple beacon nodes require stateless block production", flags.EnableStatelessFlag.Name)
+	} else {
+		log.Infof("Multiple beacon nodes configured: enabling --%s so block production works on every node",
+			flags.EnableStatelessFlag.Name)
+	}
+	return true
+}
+
+// Web3SignerConfig returns a SetupConfig for the remote web3signer key manager
+// after validating the provided CLI flags.
+func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+	// Return early if Web3Signer URL is not set.
+	if !cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		return nil, nil
+	}
+
+	// Warn if the user has provided password file as it is no-op.
+	if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
+		log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
+	}
+
+	cfg := &remoteweb3signer.SetupConfig{}
+
+	urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
+	baseEndpoint, err := validateURL(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("web3signer url %s is invalid: %w", urlStr, err)
+	}
+
+	cfg.BaseEndpoint = baseEndpoint
+	cfg.GenesisValidatorsRoot = nil // will be populated after the validator service is started and the beacon node is connected.
+
+	// NOTE: Public keys can be seeded at start up in three ways.
+	// 1. --validators-external-signer-public-keys with static list of keys (comma separated)
+	// 2. --validators-external-signer-public-keys with a single URL (mostly /api/v1/eth2/publicKeys) to fetch keys from
+	// 3. --validators-external-signer-keys-file with a file containing a list of keys (one per line)
+	// Building the SetupConfig here only checks whether each flag is set and valid.
+
+	if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+		keys := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
+		switch {
+		case len(keys) == 1:
+			key := keys[0]
+			url, err := validateURL(key)
+			if err == nil {
+				cfg.PublicKeysURL = url
+			} else {
+				cfg.ProvidedPublicKeys = strings.Split(key, ",")
+			}
+		default:
+			cfg.ProvidedPublicKeys = keys
+		}
+
+		if cliCtx.IsSet(flags.Web3SignerKeyPollIntervalFlag.Name) {
+			cfg.PollInterval = cliCtx.Duration(flags.Web3SignerKeyPollIntervalFlag.Name)
+
+			// Warn users that poll interval flag is a no-op when no public keys URL is provided.
+			if cfg.PublicKeysURL == "" {
+				log.Warnf("%s was provided but no %s was provided, so the poll interval will be ignored", flags.Web3SignerKeyPollIntervalFlag.Name, flags.Web3SignerPublicValidatorKeysFlag.Name)
+			}
+		}
+	}
+
+	if cliCtx.IsSet(flags.Web3SignerKeyFileFlag.Name) {
+		keyFilePath := cliCtx.String(flags.Web3SignerKeyFileFlag.Name)
+		if keyFilePath == "" {
+			return nil, errors.New("web3signer key file path is empty")
+		}
+		exists, err := file.Exists(keyFilePath, file.Regular)
+		if err != nil {
+			return nil, fmt.Errorf("could not check if remote signer persistent keys exist in %s: %v", keyFilePath, err)
+		}
+		if !exists {
+			return nil, fmt.Errorf("no file exists in remote signer key file path %s", keyFilePath)
+		}
+
+		cfg.KeyFilePath = cliCtx.String(flags.Web3SignerKeyFileFlag.Name)
+	}
+
+	// If none of the three ways are provided, return an error.
+	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 && cfg.KeyFilePath == "" {
+		return nil, errors.New("no web3signer public keys or key file path provided")
+	}
+
+	return cfg, nil
 }
 
 func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*proposer.Settings, error) {
@@ -552,6 +642,7 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		GRPCHeaders:            strings.Split(cliCtx.String(flags.GRPCHeadersFlag.Name), ","),
 		BeaconNodeGRPCEndpoint: cliCtx.String(flags.BeaconRPCProviderFlag.Name),
 		BeaconApiEndpoint:      cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
+		BeaconAPIHeaders:       parseBeaconApiHeaders(cliCtx.String(flags.BeaconRESTApiHeaders.Name)),
 		BeaconApiTimeout:       time.Second * 30,
 		BeaconNodeCert:         cliCtx.String(flags.CertFlag.Name),
 		DB:                     c.db,
@@ -635,4 +726,37 @@ func clearDB(ctx context.Context, dataDir string, force bool, isDatabaseMinimal 
 	}
 
 	return nil
+}
+
+func parseBeaconApiHeaders(rawHeaders string) map[string][]string {
+	result := make(map[string][]string)
+	pairs := strings.SplitSeq(rawHeaders, ",")
+	for pair := range pairs {
+		key, value, found := strings.Cut(pair, "=")
+		if !found {
+			// Skip malformed pairs
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" || value == "" {
+			// Skip malformed pairs
+			continue
+		}
+		result[key] = append(result[key], value)
+	}
+	return result
+}
+
+func validateURL(s string) (string, error) {
+	u, err := url.ParseRequestURI(s)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL: %v", err)
+	}
+
+	if u.Scheme == "" || u.Host == "" {
+		return "", errors.New("missing scheme or host")
+	}
+
+	return u.String(), nil
 }

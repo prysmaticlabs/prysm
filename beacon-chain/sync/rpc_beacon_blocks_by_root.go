@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/peerdas"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/execution"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/sync/verify"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/sync/verify"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/container/slice"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -46,6 +46,11 @@ func (s *Service) sendBeaconBlocksRequest(ctx context.Context, requests *types.B
 
 		if ok := requestedRoots[blkRoot]; !ok {
 			return fmt.Errorf("received unexpected block with root %x", blkRoot)
+		}
+
+		// Verify the signature before queueing, matching the gossip path, since a matched root does not cover it.
+		if _, err := s.verifyPendingBlockSignature(ctx, id, blk, blkRoot); err != nil {
+			return errors.Wrapf(err, "verify block signature for block with root %x", blkRoot)
 		}
 
 		s.pendingQueueLock.Lock()
@@ -97,6 +102,28 @@ func (s *Service) requestAndSaveMissingDataColumnSidecars(blks []blocks.ROBlock)
 		return nil
 	}
 
+	// Process any gossip columns queued before the block arrived.
+	for _, blk := range blks {
+		s.processPendingGloasColumns(s.ctx, blk.Root(), blk)
+	}
+
+	preGloasBlocks := make([]blocks.ROBlock, 0, len(blks))
+	for _, blk := range blks {
+		if blk.Version() < version.Gloas {
+			preGloasBlocks = append(preGloasBlocks, blk)
+		}
+	}
+
+	return s.fetchAndSaveDataColumnSidecars(preGloasBlocks)
+}
+
+// fetchAndSaveDataColumnSidecars fetches the missing custody columns for the given blocks
+// and saves them to the storage, failing if any remain missing.
+func (s *Service) fetchAndSaveDataColumnSidecars(blks []blocks.ROBlock) error {
+	if len(blks) == 0 {
+		return nil
+	}
+
 	samplesPerSlot := params.BeaconConfig().SamplesPerSlot
 
 	custodyGroupCount, err := s.cfg.p2p.CustodyGroupCount(s.ctx)
@@ -112,12 +139,13 @@ func (s *Service) requestAndSaveMissingDataColumnSidecars(blks []blocks.ROBlock)
 
 	// Fetch missing data column sidecars.
 	params := DataColumnSidecarsParams{
-		Ctx:         s.ctx,
-		Tor:         s.cfg.clock,
-		P2P:         s.cfg.p2p,
-		CtxMap:      s.ctxMap,
-		Storage:     s.cfg.dataColumnStorage,
-		NewVerifier: s.newColumnsVerifier,
+		Ctx:           s.ctx,
+		Tor:           s.cfg.clock,
+		P2P:           s.cfg.p2p,
+		CtxMap:        s.ctxMap,
+		Storage:       s.cfg.dataColumnStorage,
+		NewVerifier:   s.newColumnsVerifier,
+		RequestByRoot: true,
 	}
 
 	sidecarsByRoot, missingIndicesByRoot, err := FetchDataColumnSidecars(params, blks, info.CustodyColumns)
@@ -128,7 +156,7 @@ func (s *Service) requestAndSaveMissingDataColumnSidecars(blks []blocks.ROBlock)
 	if len(missingIndicesByRoot) > 0 {
 		prettyMissingIndicesByRoot := make(map[string]string, len(missingIndicesByRoot))
 		for root, indices := range missingIndicesByRoot {
-			prettyMissingIndicesByRoot[fmt.Sprintf("%#x", root)] = helpers.SortedPrettySliceFromMap(indices)
+			prettyMissingIndicesByRoot[fmt.Sprintf("%#x", root)] = slice.SortedPrettySliceFromMap(indices)
 		}
 		return errors.Errorf("some sidecars are still missing after fetch: %v", prettyMissingIndicesByRoot)
 	}
@@ -174,7 +202,7 @@ func (s *Service) requestAndSaveMissingBlobSidecars(block interfaces.ReadOnlySig
 }
 
 // beaconBlocksRootRPCHandler looks up the request blocks from the database from the given block roots.
-func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg any, stream libp2pcore.Stream) error {
 	ctx, cancel := context.WithTimeout(ctx, ttfbTimeout)
 	defer cancel()
 	SetRPCStreamDeadlines(stream)

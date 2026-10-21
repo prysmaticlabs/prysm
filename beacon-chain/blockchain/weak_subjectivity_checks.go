@@ -3,18 +3,20 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"slices"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filters"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filters"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
 type weakSubjectivityDB interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
+	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
 }
 
@@ -65,7 +67,7 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	// IF epoch_number <= store.finalized_checkpoint.epoch,
 	// then ASSERT that the block in the canonical chain at epoch epoch_number has root block_root.
 	// Emit descriptive critical error if this assert fails, then exit client process.
-	if v.epoch > finalizedEpoch {
+	if v.epoch >= finalizedEpoch {
 		return nil
 	}
 	log.Infof("Performing weak subjectivity check for root %#x in epoch %d", v.root, v.epoch)
@@ -73,7 +75,10 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	if !v.db.HasBlock(ctx, v.root) {
 		return errors.Wrap(errWSBlockNotFound, fmt.Sprintf("missing root %#x", v.root))
 	}
-	endSlot := v.slot + params.BeaconConfig().SlotsPerEpoch
+	if !v.db.IsFinalizedBlock(ctx, v.root) {
+		return errors.Wrap(errWSBlockNotCanonical, fmt.Sprintf("root=%#x, epoch=%d", v.root, v.epoch))
+	}
+	endSlot := v.slot + params.BeaconConfig().SlotsPerEpoch - 1
 	filter := filters.NewFilter().SetStartSlot(v.slot).SetEndSlot(endSlot)
 	// A node should have the weak subjectivity block corresponds to the correct epoch in the DB.
 	log.Infof("Searching block roots for weak subjectivity root=%#x, between slots %d-%d", v.root, v.slot, endSlot)
@@ -81,12 +86,10 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	if err != nil {
 		return errors.Wrap(err, "error while retrieving block roots to verify weak subjectivity")
 	}
-	for _, root := range roots {
-		if v.root == root {
-			log.Info("Weak subjectivity check has passed!!")
-			v.verified = true
-			return nil
-		}
+	if slices.Contains(roots, v.root) {
+		log.Info("Weak subjectivity check has passed!!")
+		v.verified = true
+		return nil
 	}
 	return errors.Wrap(errWSBlockNotFoundInEpoch, fmt.Sprintf("root=%#x, epoch=%d", v.root, v.epoch))
 }

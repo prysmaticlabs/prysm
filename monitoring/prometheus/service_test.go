@@ -4,16 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/runtime"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/runtime"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,11 +23,28 @@ func init() {
 }
 
 func TestLifecycle(t *testing.T) {
-	port := 1000 + rand.Intn(1000)
+	// Reserve a free, unprivileged port from the OS, then release it for the service.
+	l, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	port := l.Addr().(*net.TCPAddr).Port
+	require.NoError(t, l.Close())
 	prometheusService := NewService(t.Context(), fmt.Sprintf(":%d", port), nil)
 	prometheusService.Start()
-	// Give service time to start.
-	time.Sleep(time.Second)
+	// Actively wait until the service responds on /metrics (faster and less flaky than a fixed sleep)
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		if time.Now().After(deadline) {
+			t.Fatalf("metrics endpoint not ready within timeout")
+		}
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", port))
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				break
+			}
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 
 	// Query the service to ensure it really started.
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", port))
@@ -36,8 +53,18 @@ func TestLifecycle(t *testing.T) {
 
 	err = prometheusService.Stop()
 	require.NoError(t, err)
-	// Give service time to stop.
-	time.Sleep(time.Second)
+	// Actively wait until the service stops responding on /metrics
+	deadline = time.Now().Add(3 * time.Second)
+	for {
+		if time.Now().After(deadline) {
+			t.Fatalf("metrics endpoint still reachable after timeout")
+		}
+		_, err = http.Get(fmt.Sprintf("http://localhost:%d/metrics", port))
+		if err != nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 
 	// Query the service to ensure it really stopped.
 	_, err = http.Get(fmt.Sprintf("http://localhost:%d/metrics", port))

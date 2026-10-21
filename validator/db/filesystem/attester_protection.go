@@ -4,11 +4,11 @@ import (
 	"context"
 	"strings"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/validator/db/common"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/validator/db/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -110,7 +110,7 @@ func (s *Store) SlashableAttestationCheck(
 
 	// Check if the attestation is potentially slashable regarding EIP-3076 minimal conditions.
 	// If not, save the new attestation into the database.
-	if err := s.SaveAttestationForPubKey(ctx, pubKey, signingRoot32, indexedAtt); err != nil {
+	if err := s.SaveAttestationForPubKey(ctx, pubKey, signingRoot32[:], indexedAtt); err != nil {
 		if strings.Contains(err.Error(), "could not sign attestation") {
 			return errors.Wrap(err, failedAttLocalProtectionErr)
 		}
@@ -127,7 +127,7 @@ func (s *Store) SlashableAttestationCheck(
 func (s *Store) SaveAttestationForPubKey(
 	_ context.Context,
 	pubkey [fieldparams.BLSPubkeyLength]byte,
-	_ [32]byte,
+	_ []byte,
 	att ethpb.IndexedAtt,
 ) error {
 	// If there is no attestation, return on error.

@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
-	"github.com/OffchainLabs/prysm/v6/validator/db/common"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
+	"github.com/OffchainLabs/prysm/v7/validator/db/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	bolt "go.etcd.io/bbolt"
@@ -87,17 +87,21 @@ func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldpa
 		if valBucket == nil {
 			return nil
 		}
+
 		return valBucket.ForEach(func(slotKey, signingRootBytes []byte) error {
 			slot := bytesutil.BytesToSlotBigEndian(slotKey)
-			sr := make([]byte, fieldparams.RootLength)
-			copy(sr, signingRootBytes)
-			proposals = append(proposals, &common.Proposal{
-				Slot:        slot,
-				SigningRoot: sr,
-			})
+			proposal := &common.Proposal{Slot: slot}
+
+			if len(signingRootBytes) != 0 {
+				proposal.SigningRoot = make([]byte, fieldparams.RootLength)
+				copy(proposal.SigningRoot, signingRootBytes)
+			}
+
+			proposals = append(proposals, proposal)
 			return nil
 		})
 	})
+
 	return proposals, err
 }
 

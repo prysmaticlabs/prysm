@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/validator/db/common"
-	"github.com/OffchainLabs/prysm/v6/validator/slashing-protection-history/format"
-	valtest "github.com/OffchainLabs/prysm/v6/validator/testing"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/validator/db/common"
+	"github.com/OffchainLabs/prysm/v7/validator/slashing-protection-history/format"
+	valtest "github.com/OffchainLabs/prysm/v7/validator/testing"
 )
 
 func TestStore_ImportInterchangeData_BadJSON(t *testing.T) {
@@ -80,7 +79,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
 	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
 	// data to our DB, or it does not.
-	for i := 0; i < len(publicKeys); i++ {
+	for i := range publicKeys {
 		receivedHistory, err := s.ProposalHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
 		require.DeepEqual(
@@ -122,7 +121,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
 	// verify those indeed match the originally generated mock histories.
-	for i := 0; i < len(publicKeys); i++ {
+	for i := range publicKeys {
 		for _, att := range attestingHistory[i] {
 			indexedAtt := &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
@@ -137,7 +136,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 			// We expect we have an attesting history for the attestation and when
 			// attempting to verify the same att is slashable with a different signing root,
 			// we expect to receive a double vote slashing kind.
-			err := s.SaveAttestationForPubKey(ctx, publicKeys[i], [fieldparams.RootLength]byte{}, indexedAtt)
+			err := s.SaveAttestationForPubKey(ctx, publicKeys[i], []byte{}, indexedAtt)
 			require.ErrorContains(t, "could not sign attestation", err)
 		}
 	}

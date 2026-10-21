@@ -1,17 +1,18 @@
 package attestations
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	attaggregation "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	attaggregation "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -228,9 +229,23 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	wanted = append(wanted, att3...)
 
 	received := s.cfg.Pool.ForkchoiceAttestations()
-	sort.Slice(received, func(i, j int) bool {
-		return received[i].GetData().Slot < received[j].GetData().Slot
-	})
+
+	// Several attestations share a slot (atts2 aggregates into more than one), and the pool returns
+	// them in random order: sort both lists by slot, then aggregation bits.
+	bySlotAndBits := func(atts []ethpb.Att) func(i, j int) bool {
+		return func(i, j int) bool {
+			if atts[i].GetData().Slot != atts[j].GetData().Slot {
+				return atts[i].GetData().Slot < atts[j].GetData().Slot
+			}
+
+			return bytes.Compare(atts[i].GetAggregationBits(), atts[j].GetAggregationBits()) < 0
+		}
+	}
+
+	sort.Slice(wanted, bySlotAndBits(wanted))
+	sort.Slice(received, bySlotAndBits(received))
+	require.Equal(t, len(wanted), len(received))
+
 	for i, a := range wanted {
 		assert.Equal(t, true, proto.Equal(a, received[i]))
 	}

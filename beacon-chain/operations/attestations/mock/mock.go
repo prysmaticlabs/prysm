@@ -4,9 +4,9 @@ package mock
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/attestations"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 var _ attestations.Pool = &PoolMock{}
@@ -65,6 +65,16 @@ func (*PoolMock) HasAggregatedAttestation(_ ethpb.Att) (bool, error) {
 
 // AggregatedAttestationCount --
 func (*PoolMock) AggregatedAttestationCount() int {
+	panic("implement me")
+}
+
+// DeleteSeenAggregatedAttestationsBefore --
+func (*PoolMock) DeleteSeenAggregatedAttestationsBefore(_ primitives.Slot) {
+	panic("implement me")
+}
+
+// SeenAggregatedAttestationCount --
+func (*PoolMock) SeenAggregatedAttestationCount() int {
 	panic("implement me")
 }
 

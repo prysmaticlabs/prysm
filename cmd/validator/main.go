@@ -5,34 +5,34 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	runtimeDebug "runtime/debug"
+	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	accountcommands "github.com/OffchainLabs/prysm/v6/cmd/validator/accounts"
-	dbcommands "github.com/OffchainLabs/prysm/v6/cmd/validator/db"
-	"github.com/OffchainLabs/prysm/v6/cmd/validator/flags"
-	slashingprotectioncommands "github.com/OffchainLabs/prysm/v6/cmd/validator/slashing-protection"
-	walletcommands "github.com/OffchainLabs/prysm/v6/cmd/validator/wallet"
-	"github.com/OffchainLabs/prysm/v6/cmd/validator/web"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/io/logs"
-	"github.com/OffchainLabs/prysm/v6/monitoring/journald"
-	"github.com/OffchainLabs/prysm/v6/runtime/debug"
-	prefixed "github.com/OffchainLabs/prysm/v6/runtime/logging/logrus-prefixed-formatter"
-	_ "github.com/OffchainLabs/prysm/v6/runtime/maxprocs"
-	"github.com/OffchainLabs/prysm/v6/runtime/tos"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/validator/node"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	accountcommands "github.com/OffchainLabs/prysm/v7/cmd/validator/accounts"
+	dbcommands "github.com/OffchainLabs/prysm/v7/cmd/validator/db"
+	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
+	slashingprotectioncommands "github.com/OffchainLabs/prysm/v7/cmd/validator/slashing-protection"
+	walletcommands "github.com/OffchainLabs/prysm/v7/cmd/validator/wallet"
+	"github.com/OffchainLabs/prysm/v7/cmd/validator/web"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/io/logs"
+	"github.com/OffchainLabs/prysm/v7/monitoring/journald"
+	"github.com/OffchainLabs/prysm/v7/runtime/debug"
+	prefixed "github.com/OffchainLabs/prysm/v7/runtime/logging/logrus-prefixed-formatter"
+	_ "github.com/OffchainLabs/prysm/v7/runtime/maxprocs"
+	"github.com/OffchainLabs/prysm/v7/runtime/tos"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/validator/node"
 	joonix "github.com/joonix/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
 	// Verify if ToS is accepted.
@@ -51,11 +51,10 @@ func startNode(ctx *cli.Context) error {
 var appFlags = []cli.Flag{
 	flags.BeaconRPCProviderFlag,
 	flags.BeaconRESTApiProviderFlag,
+	flags.BeaconRESTApiHeaders,
 	flags.CertFlag,
 	flags.GraffitiFlag,
 	flags.DisablePenaltyRewardLogFlag,
-	flags.InteropStartIndex,
-	flags.InteropNumValidators,
 	flags.EnableRPCFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -67,8 +66,6 @@ var appFlags = []cli.Flag{
 	flags.HTTPServerCorsDomain,
 	flags.DisableAccountMetricsFlag,
 	flags.MonitoringPortFlag,
-	flags.SlasherRPCProviderFlag,
-	flags.SlasherCertFlag,
 	flags.WalletPasswordFileFlag,
 	flags.WalletDirFlag,
 	flags.GraffitiFileFlag,
@@ -80,19 +77,25 @@ var appFlags = []cli.Flag{
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
 	flags.Web3SignerKeyFileFlag,
+	flags.Web3SignerKeyPollIntervalFlag,
 	flags.SuggestedFeeRecipientFlag,
 	flags.ProposerSettingsURLFlag,
 	flags.ProposerSettingsFlag,
 	flags.EnableBuilderFlag,
 	flags.BuilderGasLimitFlag,
+	flags.BuilderURLsFlag,
+	flags.BuilderMinBidFlag,
+	flags.BuilderBoostFactorFlag,
+	flags.BuilderMaxExecutionPaymentFlag,
 	flags.ValidatorsRegistrationBatchSizeFlag,
+	flags.EnableStatelessFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,
-	cmd.EnableBackupWebhookFlag,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.VerbosityFlag,
+	cmd.LogVModuleFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
 	cmd.ForceClearDB,
@@ -101,6 +104,7 @@ var appFlags = []cli.Flag{
 	cmd.TracingEndpointFlag,
 	cmd.TraceSampleFractionFlag,
 	cmd.LogFormat,
+	cmd.DisableLogColor,
 	cmd.LogFileName,
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
@@ -113,6 +117,7 @@ var appFlags = []cli.Flag{
 	debug.BlockProfileRateFlag,
 	debug.MutexProfileFractionFlag,
 	cmd.AcceptTosFlag,
+	flags.DisableEphemeralLogFile,
 }
 
 func init() {
@@ -122,8 +127,9 @@ func init() {
 func main() {
 	app := cli.App{
 		Name:    "validator",
-		Usage:   "Launches an Ethereum validator client that interacts with a beacon chain, starts proposer and attester services, p2p connections, and more.",
+		Usage:   "Ethereum validator client",
 		Version: version.Version(),
+		Authors: cmd.Authors,
 		Action: func(ctx *cli.Context) error {
 			if err := startNode(ctx); err != nil {
 				log.Fatal(err.Error())
@@ -137,38 +143,85 @@ func main() {
 			slashingprotectioncommands.Commands,
 			dbcommands.Commands,
 			web.Commands,
+			cmd.CompletionCommand("validator"),
 		},
-		Flags: appFlags,
+		Flags:                appFlags,
+		EnableBashCompletion: true,
 		Before: func(ctx *cli.Context) error {
 			// Load flags from config file, if specified.
 			if err := cmd.LoadFlagsFromConfig(ctx, appFlags); err != nil {
 				return err
 			}
 
+			// determine default log verbosity
+			verbosity := ctx.String(cmd.VerbosityFlag.Name)
+			verbosityLevel, err := logrus.ParseLevel(verbosity)
+			if err != nil {
+				return errors.Wrap(err, "failed to parse log verbosity")
+			}
+
+			// determine per package verbosity. if not set, maxLevel will be 0.
+			vmoduleInput := strings.Join(ctx.StringSlice(cmd.LogVModuleFlag.Name), ",")
+			vmodule, maxLevel, err := cmd.ParseVModule(vmoduleInput)
+			if err != nil {
+				return errors.Wrap(err, "failed to parse log vmodule")
+			}
+
+			// set the global logging level and data
+			logs.SetLoggingLevelAndData(verbosityLevel, vmodule, maxLevel, ctx.Bool(flags.DisableEphemeralLogFile.Name))
+
 			logFileName := ctx.String(cmd.LogFileName.Name)
 
 			format := ctx.String(cmd.LogFormat.Name)
 			switch format {
 			case "text":
+				// disabling logrus default output so we can control it via different hooks
+				logrus.SetOutput(io.Discard)
+
+				// create a custom formatter and hook for terminal output
 				formatter := new(prefixed.TextFormatter)
 				formatter.TimestampFormat = "2006-01-02 15:04:05.00"
 				formatter.FullTimestamp = true
-				// If persistent log files are written - we disable the log messages coloring because
-				// the colors are ANSI codes and seen as gibberish in the log files.
-				formatter.DisableColors = logFileName != ""
-				logrus.SetFormatter(formatter)
+				formatter.ForceFormatting = true
+				formatter.ForceColors = true
+				formatter.DisableColors = ctx.Bool(cmd.DisableLogColor.Name)
+				formatter.VModule = vmodule
+				formatter.BaseVerbosity = verbosityLevel
+
+				logrus.AddHook(&logs.WriterHook{
+					Formatter:     formatter,
+					Writer:        os.Stderr,
+					AllowedLevels: logrus.AllLevels[:max(verbosityLevel, maxLevel)+1],
+					Identifier:    logs.LogTargetUser,
+				})
 			case "fluentd":
+				// disabling logrus default output so we can control it via hooks
+				logrus.SetOutput(io.Discard)
+
 				f := joonix.NewFormatter()
 				if err := joonix.DisableTimestampFormat(f); err != nil {
 					panic(err) // lint:nopanic -- This shouldn't happen, but crashing immediately at startup is OK.
 				}
-				logrus.SetFormatter(f)
+
+				logrus.AddHook(&logs.WriterHook{
+					Formatter:     f,
+					Writer:        os.Stderr,
+					AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+					Identifier:    logs.LogTargetUser,
+				})
 			case "json":
-				logrus.SetFormatter(&logrus.JSONFormatter{
-					TimestampFormat: "2006-01-02 15:04:05.00",
+				// disabling logrus default output so we can control it via hooks
+				logrus.SetOutput(io.Discard)
+				logrus.AddHook(&logs.WriterHook{
+					Formatter: &logrus.JSONFormatter{
+						TimestampFormat: "2006-01-02 15:04:05.00",
+					},
+					Writer:        os.Stderr,
+					AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+					Identifier:    logs.LogTargetUser,
 				})
 			case "journald":
-				if err := journald.Enable(); err != nil {
+				if err := journald.Enable(verbosityLevel); err != nil {
 					return err
 				}
 			default:
@@ -176,10 +229,21 @@ func main() {
 			}
 
 			if logFileName != "" {
-				if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
+				if err := logs.ConfigurePersistentLogging(logFileName, format, verbosityLevel, vmodule); err != nil {
 					log.WithError(err).Error("Failed to configuring logging to disk.")
 				}
 			}
+
+			if !ctx.Bool(flags.DisableEphemeralLogFile.Name) {
+				if err := logs.ConfigureEphemeralLogFile(ctx.String(cmd.DataDirFlag.Name), ctx.App.Name); err != nil {
+					log.WithError(err).Error("Failed to configure debug log file")
+				}
+			}
+
+			// Log Prysm version on startup. After initializing log-file and ephemeral log-file.
+			log.WithFields(logrus.Fields{
+				"version": version.Version(),
+			}).Info("Prysm Validator started")
 
 			// Fix data dir for Windows users.
 			outdatedDataDir := filepath.Join(file.HomeDir(), "AppData", "Roaming", "Eth2Validators")

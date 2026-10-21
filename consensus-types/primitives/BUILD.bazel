@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "basis_points.go",
+        "builder_index.go",
         "committee_bits_mainnet.go",
         "committee_bits_minimal.go",  # keep
         "committee_index.go",
@@ -18,12 +19,12 @@ go_library(
         "validator.go",
         "wei.go",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/consensus-types/primitives",
+    importpath = "github.com/OffchainLabs/prysm/v7/consensus-types/primitives",
     visibility = ["//visibility:public"],
     deps = [
         "//math:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
-        "@com_github_prysmaticlabs_fastssz//:go_default_library",
+        "@com_github_offchainlabs_methodical_ssz//ssz:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
@@ -31,6 +32,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "builder_index_test.go",
         "committee_index_test.go",
         "domain_test.go",
         "epoch_test.go",

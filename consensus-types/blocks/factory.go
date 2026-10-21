@@ -3,10 +3,10 @@ package blocks
 import (
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -30,7 +30,7 @@ var (
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
-func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
+func NewSignedBeaconBlock(i any) (interfaces.SignedBeaconBlock, error) {
 	switch b := i.(type) {
 	case nil:
 		return nil, ErrNilObject
@@ -82,13 +82,21 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initBlindedSignedBlockFromProtoFulu(b)
 	case *eth.GenericSignedBeaconBlock_BlindedFulu:
 		return initBlindedSignedBlockFromProtoFulu(b.BlindedFulu)
+	case *eth.GenericSignedBeaconBlock_Gloas:
+		return initSignedBlockFromProtoGloas(b.Gloas)
+	case *eth.SignedBeaconBlockGloas:
+		return initSignedBlockFromProtoGloas(b)
+	case *eth.GenericSignedBeaconBlock_Heze:
+		return initSignedBlockFromProtoHeze(b.Heze)
+	case *eth.SignedBeaconBlockHeze:
+		return initSignedBlockFromProtoHeze(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
 }
 
 // NewBeaconBlock creates a beacon block from a protobuf beacon block.
-func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
+func NewBeaconBlock(i any) (interfaces.ReadOnlyBeaconBlock, error) {
 	switch b := i.(type) {
 	case nil:
 		return nil, ErrNilObject
@@ -138,13 +146,21 @@ func NewBeaconBlock(i interface{}) (interfaces.ReadOnlyBeaconBlock, error) {
 		return initBlindedBlockFromProtoFulu(b)
 	case *eth.GenericBeaconBlock_BlindedFulu:
 		return initBlindedBlockFromProtoFulu(b.BlindedFulu)
+	case *eth.GenericBeaconBlock_Gloas:
+		return initBlockFromProtoGloas(b.Gloas)
+	case *eth.BeaconBlockGloas:
+		return initBlockFromProtoGloas(b)
+	case *eth.GenericBeaconBlock_Heze:
+		return initBlockFromProtoHeze(b.Heze)
+	case *eth.BeaconBlockHeze:
+		return initBlockFromProtoHeze(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
 }
 
 // NewBeaconBlockBody creates a beacon block body from a protobuf beacon block body.
-func NewBeaconBlockBody(i interface{}) (interfaces.ReadOnlyBeaconBlockBody, error) {
+func NewBeaconBlockBody(i any) (interfaces.ReadOnlyBeaconBlockBody, error) {
 	switch b := i.(type) {
 	case nil:
 		return nil, ErrNilObject
@@ -168,6 +184,10 @@ func NewBeaconBlockBody(i interface{}) (interfaces.ReadOnlyBeaconBlockBody, erro
 		return initBlockBodyFromProtoElectra(b)
 	case *eth.BlindedBeaconBlockBodyElectra:
 		return initBlindedBlockBodyFromProtoElectra(b)
+	case *eth.BeaconBlockBodyGloas:
+		return initBlockBodyFromProtoGloas(b)
+	case *eth.BeaconBlockBodyHeze:
+		return initBlockBodyFromProtoHeze(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -260,12 +280,24 @@ func BuildSignedBeaconBlock(blk interfaces.ReadOnlyBeaconBlock, signature []byte
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockFulu{Block: pb, Signature: signature})
+	case version.Gloas:
+		pb, ok := pb.(*eth.BeaconBlockGloas)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockGloas{Block: pb, Signature: signature})
+	case version.Heze:
+		pb, ok := pb.(*eth.BeaconBlockHeze)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockHeze{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
 }
 
-func getWrappedPayload(payload interface{}) (wrappedPayload interfaces.ExecutionData, wrapErr error) {
+func getWrappedPayload(payload any) (wrappedPayload interfaces.ExecutionData, wrapErr error) {
 	switch p := payload.(type) {
 	case *enginev1.ExecutionPayload:
 		wrappedPayload, wrapErr = WrappedExecutionPayload(p)
@@ -308,7 +340,7 @@ func checkPayloadAgainstHeader(wrappedPayload, payloadHeader interfaces.Executio
 // BuildSignedBeaconBlockFromExecutionPayload takes a signed, blinded beacon block and converts into
 // a full, signed beacon block by specifying an execution payload.
 // nolint:gocognit
-func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBeaconBlock, payload interface{}) (interfaces.SignedBeaconBlock, error) {
+func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBeaconBlock, payload any) (interfaces.SignedBeaconBlock, error) {
 	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
@@ -338,7 +370,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 	graffiti := b.Body().Graffiti()
 	sig := blk.Signature()
 
-	var fullBlock interface{}
+	var fullBlock any
 	switch blk.Version() {
 	case version.Bellatrix:
 		p, ok := payload.(*enginev1.ExecutionPayload)
@@ -629,6 +661,8 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 			},
 			Signature: sig[:],
 		}
+	case version.Gloas, version.Heze:
+		return nil, errors.Wrap(errUnsupportedBeaconBlock, "post-gloas blocks are not supported in this function")
 	default:
 		return nil, errors.New("Block not of known type")
 	}
@@ -640,6 +674,10 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 // This is particularly useful for using the values from API calls.
 func BeaconBlockContainerToSignedBeaconBlock(obj *eth.BeaconBlockContainer) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	switch obj.Block.(type) {
+	case *eth.BeaconBlockContainer_BlindedFuluBlock:
+		return NewSignedBeaconBlock(obj.GetBlindedFuluBlock())
+	case *eth.BeaconBlockContainer_FuluBlock:
+		return NewSignedBeaconBlock(obj.GetFuluBlock())
 	case *eth.BeaconBlockContainer_BlindedElectraBlock:
 		return NewSignedBeaconBlock(obj.GetBlindedElectraBlock())
 	case *eth.BeaconBlockContainer_ElectraBlock:

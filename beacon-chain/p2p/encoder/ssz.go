@@ -5,12 +5,13 @@ import (
 	"io"
 	"sync"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/math"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	fastssz "github.com/prysmaticlabs/fastssz"
+
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/math"
 )
 
 var _ NetworkEncoding = (*SszNetworkEncoder)(nil)
@@ -34,7 +35,7 @@ type SszNetworkEncoder struct{}
 const ProtocolSuffixSSZSnappy = "ssz_snappy"
 
 // EncodeGossip the proto gossip message to the io.Writer.
-func (_ SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int, error) {
+func (_ SszNetworkEncoder) EncodeGossip(w io.Writer, msg ssz.Marshaler) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -51,7 +52,7 @@ func (_ SszNetworkEncoder) EncodeGossip(w io.Writer, msg fastssz.Marshaler) (int
 
 // EncodeWithMaxLength the proto message to the io.Writer. This encoding prefixes the byte slice with a protobuf varint
 // to indicate the size of the message. This checks that the encoded message isn't larger than the provided max limit.
-func (_ SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshaler) (int, error) {
+func (_ SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg ssz.Marshaler) (int, error) {
 	if msg == nil {
 		return 0, nil
 	}
@@ -74,12 +75,12 @@ func (_ SszNetworkEncoder) EncodeWithMaxLength(w io.Writer, msg fastssz.Marshale
 	return writeSnappyBuffer(w, b)
 }
 
-func doDecode(b []byte, to fastssz.Unmarshaler) error {
+func doDecode(b []byte, to ssz.Unmarshaler) error {
 	return to.UnmarshalSSZ(b)
 }
 
 // DecodeGossip decodes the bytes to the protobuf gossip message provided.
-func (_ SszNetworkEncoder) DecodeGossip(b []byte, to fastssz.Unmarshaler) error {
+func (_ SszNetworkEncoder) DecodeGossip(b []byte, to ssz.Unmarshaler) error {
 	if uint64(len(b)) > MaxCompressedLen(MaxPayloadSize) {
 		return fmt.Errorf("gossip message exceeds maximum compressed limit: %d", MaxCompressedLen(MaxPayloadSize))
 	}
@@ -106,18 +107,28 @@ func DecodeSnappy(msg []byte, maxSize uint64) ([]byte, error) {
 	return msg, nil
 }
 
-// DecodeWithMaxLength the bytes from io.Reader to the protobuf message provided.
-// This checks that the decoded message isn't larger than the provided max limit.
-func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to fastssz.Unmarshaler) error {
+// MaxSizer reports the maximum SSZ-encoded size of a message.
+type MaxSizer interface {
+	MaxSizeSSZ() int
+}
+
+// DecodeWithMaxLength decodes an RPC message within its SSZ type and global size limits.
+func (e SszNetworkEncoder) DecodeWithMaxLength(r io.Reader, to ssz.Unmarshaler) error {
 	msgLen, err := readVarint(r)
 	if err != nil {
 		return err
 	}
-	if msgLen > MaxPayloadSize {
+	maxLen := MaxPayloadSize
+	if sizer, ok := to.(MaxSizer); ok {
+		if typeMax := sizer.MaxSizeSSZ(); typeMax >= 0 && uint64(typeMax) < maxLen {
+			maxLen = uint64(typeMax)
+		}
+	}
+	if msgLen > maxLen {
 		return fmt.Errorf(
 			"remaining bytes %d goes over the provided max limit of %d",
 			msgLen,
-			MaxPayloadSize,
+			maxLen,
 		)
 	}
 	msgMax, err := e.MaxLength(msgLen)

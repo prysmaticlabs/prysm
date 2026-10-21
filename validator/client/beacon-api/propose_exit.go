@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 )
@@ -34,7 +34,7 @@ func (c *beaconApiValidatorClient) proposeExit(ctx context.Context, signedVolunt
 		return nil, errors.Wrap(err, "failed to marshal signed voluntary exit")
 	}
 
-	if err = c.jsonRestHandler.Post(
+	if err = c.handler.Post(
 		ctx,
 		"/eth/v1/beacon/pool/voluntary_exits",
 		nil,

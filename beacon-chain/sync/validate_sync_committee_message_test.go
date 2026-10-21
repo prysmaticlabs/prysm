@@ -7,25 +7,25 @@ import (
 	"testing"
 	"time"
 
-	mockChain "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	testingdb "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	doublylinkedtree "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/encoder"
-	mockp2p "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	mockSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	mockChain "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	testingdb "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/encoder"
+	mockp2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/golang/snappy"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
@@ -411,7 +411,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			svc, tt.args.topic, clock = tt.setupSvc(svc, tt.args.msg, tt.args.topic)
 			markInitSyncComplete(t, svc)
 			require.NoError(t, cw.SetClock(clock))
-			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen)
+			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen, chainService)
 			go svc.Start()
 
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
@@ -425,7 +425,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 				ReceivedFrom:  "",
 				ValidatorData: nil,
 			}
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				if !svc.chainIsStarted() {
 					time.Sleep(100 * time.Millisecond)
 				}
@@ -507,6 +507,7 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			cfg: &config{
 				chain: &mockChain.ChainService{},
 				clock: startup.NewClock(time.Now(), [32]byte{1}),
+				p2p:   mockp2p.NewTestP2P(t),
 			},
 			committeeIndices: []primitives.CommitteeIndex{0},
 			setupTopic: func(_ *Service) string {
@@ -519,16 +520,15 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			cfg: &config{
 				chain: &mockChain.ChainService{},
 				clock: startup.NewClock(time.Now(), [32]byte{1}),
+				p2p:   mockp2p.NewTestP2P(t),
 			},
 			committeeIndices: []primitives.CommitteeIndex{0},
 			setupTopic: func(s *Service) string {
-				format := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
+				format := p2p.GossipTypeMapping[reflect.TypeFor[*ethpb.SyncCommitteeMessage]()]
 
-				digest, err := s.currentForkDigest()
-				require.NoError(t, err)
+				digest := s.currentForkDigest()
 				prefix := fmt.Sprintf(format, digest, 0 /* validator index 0 */)
-				topic := prefix + "foobar"
-				return topic
+				return prefix + s.cfg.p2p.Encoding().ProtocolSuffix()
 			},
 			want: pubsub.ValidationAccept,
 		},

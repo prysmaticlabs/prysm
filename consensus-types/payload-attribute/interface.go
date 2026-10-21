@@ -1,7 +1,7 @@
 package payloadattribute
 
 import (
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 )
 
 type Attributer interface {
@@ -14,5 +14,6 @@ type Attributer interface {
 	PbV1() (*enginev1.PayloadAttributes, error)
 	PbV2() (*enginev1.PayloadAttributesV2, error)
 	PbV3() (*enginev1.PayloadAttributesV3, error)
+	PbV4() (*enginev1.PayloadAttributesV4, error)
 	IsEmpty() bool
 }

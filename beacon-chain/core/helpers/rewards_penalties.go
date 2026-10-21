@@ -1,14 +1,17 @@
 package helpers
 
 import (
+	"context"
 	"errors"
+	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	mathutil "github.com/OffchainLabs/prysm/v6/math"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	mathutil "github.com/OffchainLabs/prysm/v7/math"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 var balanceCache = cache.NewEffectiveBalanceCache()
@@ -55,32 +58,38 @@ func TotalBalance(state state.ReadOnlyValidators, indices []primitives.Validator
 //	 Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
 //	 """
 //	 return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
-func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
-	bal, err := balanceCache.Get(s)
-	switch {
-	case err == nil:
+func TotalActiveBalance(ctx context.Context, s state.ReadOnlyBeaconState) (uint64, error) {
+	_, span := trace.StartSpan(ctx, "helpers.TotalActiveBalance")
+	defer span.End()
+
+	bc := balanceCacheFrom(ctx)
+	bal, err := bc.Get(s)
+	if err == nil {
+		span.SetAttributes(trace.BoolAttribute("cacheHit", true))
 		return bal, nil
-	case errors.Is(err, cache.ErrNotFound):
-		// Do nothing if we receive a not found error.
-	default:
-		// In the event, we encounter another error we return it.
-		return 0, err
 	}
+
+	if !errors.Is(err, cache.ErrNotFound) {
+		return 0, fmt.Errorf("balance cache get: %w", err)
+	}
+
+	span.SetAttributes(trace.BoolAttribute("cacheHit", false))
 
 	total := uint64(0)
 	epoch := slots.ToEpoch(s.Slot())
-	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+	for _, val := range s.ValidatorsReadOnlySeq() {
+		if ctx.Err() != nil {
+			return 0, ctx.Err()
+		}
+
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			total += val.EffectiveBalance()
 		}
-		return nil
-	}); err != nil {
-		return 0, err
 	}
 
 	// Spec defines `EffectiveBalanceIncrement` as min to avoid divisions by zero.
 	total = max(params.BeaconConfig().EffectiveBalanceIncrement, total)
-	if err := balanceCache.AddTotalEffectiveBalance(s, total); err != nil {
+	if err := bc.AddTotalEffectiveBalance(s, total); err != nil {
 		return 0, err
 	}
 
@@ -88,8 +97,8 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 }
 
 // UpdateTotalActiveBalanceCache updates the cache with the given total active balance.
-func UpdateTotalActiveBalanceCache(s state.BeaconState, total uint64) error {
-	return balanceCache.AddTotalEffectiveBalance(s, total)
+func UpdateTotalActiveBalanceCache(ctx context.Context, s state.BeaconState, total uint64) error {
+	return balanceCacheFrom(ctx).AddTotalEffectiveBalance(s, total)
 }
 
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.

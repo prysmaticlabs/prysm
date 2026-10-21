@@ -3,12 +3,11 @@ package validator
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/kv"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -35,14 +34,14 @@ func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx p
 	return vs.validatorRegistered(ctx, idx)
 }
 
-// validatorRegistered returns true if validator with index `id` was previously registered in the database.
+// validatorRegistered returns true if validator with index `id` was previously registered with the builder.
 func (vs *Server) validatorRegistered(ctx context.Context, id primitives.ValidatorIndex) (bool, error) {
 	if vs.BlockBuilder == nil {
 		return false, nil
 	}
 	_, err := vs.BlockBuilder.RegistrationByValidatorID(ctx, id)
 	switch {
-	case errors.Is(err, kv.ErrNotFoundFeeRecipient), errors.Is(err, cache.ErrNotFoundRegistration):
+	case errors.Is(err, cache.ErrNotFoundRegistration):
 		return false, nil
 	case err != nil:
 		return false, err

@@ -5,16 +5,14 @@ import (
 	"strconv"
 	"testing"
 
-	statenative "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/interop"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/proto"
+	statenative "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/interop"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
@@ -23,8 +21,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	genesis := setupGenesisState(t, 64)
 	customState, err := statenative.InitializeFromProtoPhase0(genesis)
 	require.NoError(t, err)
-	cloned, ok := proto.Clone(genesis).(*ethpb.BeaconState)
-	assert.Equal(t, true, ok, "Object is not of type *ethpb.BeaconState")
+	cloned := genesis.Copy()
 	custom := customState.ToProto()
 	assert.DeepSSZEqual(t, cloned, custom)
 
@@ -73,12 +70,12 @@ func setupGenesisState(t testing.TB, count uint64) *ethpb.BeaconState {
 	return genesisState
 }
 
-func BenchmarkCloneValidators_Proto(b *testing.B) {
-	b.StopTimer()
+func BenchmarkCloneValidators_Copy(b *testing.B) {
+
 	validators := make([]*ethpb.Validator, 16384)
 	somePubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			PublicKey:                  somePubKey[:],
 			WithdrawalCredentials:      someRoot[:],
@@ -90,18 +87,18 @@ func BenchmarkCloneValidators_Proto(b *testing.B) {
 			WithdrawableEpoch:          5,
 		}
 	}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		cloneValidatorsWithProto(validators)
+
+	for b.Loop() {
+		cloneValidatorsWithCopy(validators)
 	}
 }
 
 func BenchmarkCloneValidators_Manual(b *testing.B) {
-	b.StopTimer()
+
 	validators := make([]*ethpb.Validator, 16384)
 	somePubKey := [fieldparams.BLSPubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			PublicKey:                  somePubKey[:],
 			WithdrawalCredentials:      someRoot[:],
@@ -113,52 +110,47 @@ func BenchmarkCloneValidators_Manual(b *testing.B) {
 			WithdrawableEpoch:          5,
 		}
 	}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		cloneValidatorsManually(validators)
 	}
 }
 
-func BenchmarkStateClone_Proto(b *testing.B) {
-	b.StopTimer()
+func BenchmarkStateClone_Copy(b *testing.B) {
+
 	params.SetupTestConfigCleanup(b)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		_, ok := proto.Clone(genesis).(*ethpb.BeaconState)
-		assert.Equal(b, true, ok, "Entity is not of type *ethpb.BeaconState")
+
+	for b.Loop() {
+		_ = genesis.Copy()
 	}
 }
 
 func BenchmarkStateClone_Manual(b *testing.B) {
-	b.StopTimer()
+
 	params.SetupTestConfigCleanup(b)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
 	st, err := statenative.InitializeFromProtoPhase0(genesis)
 	require.NoError(b, err)
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_ = st.ToProto()
 	}
 }
 
-func cloneValidatorsWithProto(vals []*ethpb.Validator) []*ethpb.Validator {
-	var ok bool
+func cloneValidatorsWithCopy(vals []*ethpb.Validator) []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(vals))
-	for i := 0; i < len(res); i++ {
-		res[i], ok = proto.Clone(vals[i]).(*ethpb.Validator)
-		if !ok {
-			log.Debug("Entity is not of type *ethpb.Validator")
-		}
+	for i := range res {
+		res[i] = vals[i].Copy()
 	}
 	return res
 }
 
 func cloneValidatorsManually(vals []*ethpb.Validator) []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(vals))
-	for i := 0; i < len(res); i++ {
+	for i := range res {
 		val := vals[i]
 		res[i] = &ethpb.Validator{
 			PublicKey:                  val.PublicKey,

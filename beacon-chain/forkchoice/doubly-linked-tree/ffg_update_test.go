@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestFFGUpdates_OneBranch(t *testing.T) {
@@ -161,7 +161,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//               7   8
 	//               |   |
 	//               9  10
-	f.ProcessAttestation(t.Context(), []uint64{0}, indexToHash(1), 0)
+	f.ProcessAttestation(t.Context(), []uint64{0}, indexToHash(1), 1, true)
 
 	// With the additional vote to the left branch, the head should be 9:
 	//           0  <-- start
@@ -191,7 +191,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//               7   8
 	//               |   |
 	//               9  10
-	f.ProcessAttestation(t.Context(), []uint64{1}, indexToHash(2), 0)
+	f.ProcessAttestation(t.Context(), []uint64{1}, indexToHash(2), 1, true)
 
 	// With the additional vote to the right branch, the head should be 10:
 	//           0  <-- start

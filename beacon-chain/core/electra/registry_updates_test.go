@@ -3,16 +3,16 @@ package electra_test
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/electra"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/electra"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func TestProcessRegistryUpdates(t *testing.T) {
@@ -55,7 +55,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 					FinalizedCheckpoint: &eth.Checkpoint{Epoch: finalizedEpoch, Root: make([]byte, fieldparams.RootLength)},
 				}
-				for i := uint64(0); i < 10; i++ {
+				for range uint64(10) {
 					base.Validators = append(base.Validators, &eth.Validator{
 						ActivationEligibilityEpoch: finalizedEpoch,
 						EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
@@ -81,7 +81,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 					FinalizedCheckpoint: &eth.Checkpoint{Epoch: finalizedEpoch, Root: make([]byte, fieldparams.RootLength)},
 				}
-				for i := uint64(0); i < 10; i++ {
+				for range uint64(10) {
 					base.Validators = append(base.Validators, &eth.Validator{
 						EffectiveBalance:  params.BeaconConfig().EjectionBalance - 1,
 						ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -107,7 +107,7 @@ func TestProcessRegistryUpdates(t *testing.T) {
 					Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
 					FinalizedCheckpoint: &eth.Checkpoint{Epoch: finalizedEpoch, Root: make([]byte, fieldparams.RootLength)},
 				}
-				for i := uint64(0); i < 10; i++ {
+				for range uint64(10) {
 					base.Validators = append(base.Validators, &eth.Validator{
 						EffectiveBalance:  params.BeaconConfig().EjectionBalance - 1,
 						ExitEpoch:         10,
@@ -156,7 +156,7 @@ func Benchmark_ProcessRegistryUpdates_MassEjection(b *testing.B) {
 	st, err := util.NewBeaconStateElectra()
 	require.NoError(b, err)
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.StopTimer()
 		if err := st.SetValidators(genValidators(100000)); err != nil {
 			panic(err)

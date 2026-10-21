@@ -8,10 +8,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/blst"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/common"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/blst"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/common"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestPublicKeyFromBytes(t *testing.T) {
@@ -95,7 +95,7 @@ func TestPublicKey_Aggregate(t *testing.T) {
 
 func TestPublicKey_Aggregation_NoCorruption(t *testing.T) {
 	var pubkeys []common.PublicKey
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		priv, err := blst.RandKey()
 		require.NoError(t, err)
 		pubkey := priv.PublicKey()
@@ -113,54 +113,40 @@ func TestPublicKey_Aggregation_NoCorruption(t *testing.T) {
 	wg := new(sync.WaitGroup)
 
 	// Aggregate different sets of keys.
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys)
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys[:10])
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys[:40])
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys[20:60])
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys[80:])
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys[60:90])
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		_, err := blst.AggregatePublicKeys(compressedKeys[40:99])
 		require.NoError(t, err)
-		wg.Done()
-	}()
+	})
 
 	wg.Wait()
 
@@ -175,28 +161,4 @@ func TestPublicKeysEmpty(t *testing.T) {
 	var pubs [][]byte
 	_, err := blst.AggregatePublicKeys(pubs)
 	require.ErrorContains(t, "nil or empty public keys", err)
-}
-
-func BenchmarkPublicKeyFromBytes(b *testing.B) {
-	priv, err := blst.RandKey()
-	require.NoError(b, err)
-	pubkey := priv.PublicKey()
-	pubkeyBytes := pubkey.Marshal()
-
-	b.Run("cache on", func(b *testing.B) {
-		blst.EnableCaches()
-		for i := 0; i < b.N; i++ {
-			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
-			require.NoError(b, err)
-		}
-	})
-
-	b.Run("cache off", func(b *testing.B) {
-		blst.DisableCaches()
-		for i := 0; i < b.N; i++ {
-			_, err := blst.PublicKeyFromBytes(pubkeyBytes)
-			require.NoError(b, err)
-		}
-	})
-
 }

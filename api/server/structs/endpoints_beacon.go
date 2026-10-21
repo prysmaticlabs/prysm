@@ -124,6 +124,23 @@ type ValidatorIdentity struct {
 	ActivationEpoch string `json:"activation_epoch"`
 }
 
+type GetStateBuildersRequest struct {
+	Ids      []string `json:"ids,omitempty"`
+	Statuses []string `json:"statuses,omitempty"`
+}
+
+type GetStateBuildersResponse struct {
+	ExecutionOptimistic bool               `json:"execution_optimistic"`
+	Finalized           bool               `json:"finalized"`
+	Data                []*BuilderResponse `json:"data"`
+}
+
+type BuilderResponse struct {
+	Index   string   `json:"index"`
+	Status  string   `json:"status"`
+	Builder *Builder `json:"builder"`
+}
+
 type GetBlockResponse struct {
 	Data *SignedBlock `json:"data"`
 }
@@ -188,6 +205,11 @@ type BLSToExecutionChangesPoolResponse struct {
 	Data []*SignedBLSToExecutionChange `json:"data"`
 }
 
+type GetPoolPayloadAttestationsResponse struct {
+	Version string                `json:"version"`
+	Data    []*PayloadAttestation `json:"data"`
+}
+
 type GetAttesterSlashingsResponse struct {
 	Version string          `json:"version,omitempty"`
 	Data    json.RawMessage `json:"data"` // Accepts both `[]*AttesterSlashing` and `[]*AttesterSlashingElectra` types
@@ -204,18 +226,6 @@ type GetWeakSubjectivityResponse struct {
 type WeakSubjectivityData struct {
 	WsCheckpoint *Checkpoint `json:"ws_checkpoint"`
 	StateRoot    string      `json:"state_root"`
-}
-
-type GetDepositSnapshotResponse struct {
-	Data *DepositSnapshot `json:"data"`
-}
-
-type DepositSnapshot struct {
-	Finalized            []string `json:"finalized"`
-	DepositRoot          string   `json:"deposit_root"`
-	DepositCount         string   `json:"deposit_count"`
-	ExecutionBlockHash   string   `json:"execution_block_hash"`
-	ExecutionBlockHeight string   `json:"execution_block_height"`
 }
 
 type GetIndividualVotesRequest struct {
@@ -291,8 +301,50 @@ type GetProposerLookaheadResponse struct {
 	Data                []string `json:"data"` // validator indexes
 }
 
+type GetStatePTCResponse struct {
+	ExecutionOptimistic bool      `json:"execution_optimistic"`
+	Finalized           bool      `json:"finalized"`
+	Data                *StatePTC `json:"data"`
+}
+
+type StatePTC struct {
+	Slot       string   `json:"slot"`
+	Validators []string `json:"validators"` // validator indexes in committee order, duplicates preserved
+}
+
+type GetBuilderPendingWithdrawalsResponse struct {
+	Version             string                      `json:"version"`
+	ExecutionOptimistic bool                        `json:"execution_optimistic"`
+	Finalized           bool                        `json:"finalized"`
+	Data                []*BuilderPendingWithdrawal `json:"data"`
+}
+
+type GetBuilderPendingPaymentsResponse struct {
+	Version             string                   `json:"version"`
+	ExecutionOptimistic bool                     `json:"execution_optimistic"`
+	Finalized           bool                     `json:"finalized"`
+	Data                []*BuilderPendingPayment `json:"data"`
+}
+
+type GetProposerPreferencesResponse struct {
+	Version string                       `json:"version"`
+	Data    []*SignedProposerPreferences `json:"data"`
+}
+
 type GetBlobsResponse struct {
 	ExecutionOptimistic bool     `json:"execution_optimistic"`
 	Finalized           bool     `json:"finalized"`
 	Data                []string `json:"data"` //blobs
+}
+
+type GetExecutionPayloadEnvelopeResponse struct {
+	Version             string                          `json:"version"`
+	ExecutionOptimistic bool                            `json:"execution_optimistic"`
+	Finalized           bool                            `json:"finalized"`
+	Data                *SignedExecutionPayloadEnvelope `json:"data"`
+}
+
+type SSZQueryRequest struct {
+	Query        string `json:"query"`
+	IncludeProof bool   `json:"include_proof,omitempty"`
 }

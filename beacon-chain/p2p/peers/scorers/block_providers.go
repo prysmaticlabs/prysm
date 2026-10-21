@@ -6,10 +6,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers/peerdata"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/crypto/rand"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/peerdata"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/crypto/rand"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -217,6 +217,8 @@ func (s *BlockProviderScorer) WeightSorted(
 	s.store.Lock()
 	defer s.store.Unlock()
 
+	scores, candidates := s.mapScoresAndPeers(pids, scoreFn)
+
 	// See http://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/ for details.
 	nextPID := func(weights map[peer.ID]float64) peer.ID {
 		totalWeight := 0
@@ -228,7 +230,11 @@ func (s *BlockProviderScorer) WeightSorted(
 			return ""
 		}
 		rnd := r.Intn(totalWeight)
-		for pid, w := range weights {
+		for _, pid := range candidates {
+			w, ok := weights[pid]
+			if !ok {
+				continue
+			}
 			rnd -= int(w * 100)
 			if rnd < 0 {
 				return pid
@@ -237,17 +243,19 @@ func (s *BlockProviderScorer) WeightSorted(
 		return ""
 	}
 
-	scores, _ := s.mapScoresAndPeers(pids, scoreFn)
 	peers := make([]peer.ID, 0)
-	for i := 0; i < len(pids); i++ {
+	for range pids {
 		if pid := nextPID(scores); pid != "" {
 			peers = append(peers, pid)
 			delete(scores, pid)
 		}
 	}
 	// Left over peers (like peers having zero weight), are added at the end of the list.
-	for pid := range scores {
-		peers = append(peers, pid)
+	for _, pid := range candidates {
+		if _, ok := scores[pid]; ok {
+			peers = append(peers, pid)
+			delete(scores, pid)
+		}
 	}
 
 	return peers

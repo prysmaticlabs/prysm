@@ -4,21 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	validatorpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/validator-client"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	prysmTime "github.com/OffchainLabs/prysm/v6/time"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,49 +41,27 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		return
 	}
 
-	var slotSig []byte
-	if !v.distributed {
-		// Avoid sending beacon node duplicated aggregation requests.
-		k := validatorSubnetSubscriptionKey(slot, duty.CommitteeIndex)
-		v.aggregatedSlotCommitteeIDCacheLock.Lock()
-		if v.aggregatedSlotCommitteeIDCache.Contains(k) {
-			v.aggregatedSlotCommitteeIDCacheLock.Unlock()
-			return
-		}
-		v.aggregatedSlotCommitteeIDCache.Add(k, true)
-		v.aggregatedSlotCommitteeIDCacheLock.Unlock()
-
-		slotSig, err = v.signSlotWithSelectionProof(ctx, pubKey, slot)
-		if err != nil {
-			log.WithError(err).Error("Could not sign slot")
-			if v.emitAccountMetrics {
-				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
+	if !v.aggSelector.ClaimAggregateSlot(slot, duty.CommitteeIndex) {
+		return
 	}
 
 	// As specified in spec, an aggregator should wait until two thirds of the way through slot
 	// to broadcast the best aggregate to the global aggregate channel.
 	// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
-	v.waitToSlotTwoThirds(ctx, slot)
+	v.waitUntilAggregateDue(ctx, slot)
 
-	// In a DV setup, selection proofs need to be agreed upon by the DV.
-	// Checking for selection proofs at slot 0 of the epoch will result in an error, as the call to the DV executes slower than the start of this function.
-	// Checking for selection proofs after 2/3 of slot in a DV setup is much faster than non-DV as it's quickly fetched from memory,
-	// hence it does not slow down the aggregation as a non-DV would.
-	if v.distributed {
-		slotSig, err = v.attSelection(attSelectionKey{slot: slot, index: duty.ValidatorIndex})
-		if err != nil {
-			log.WithError(err).Error("Could not find aggregated selection proof")
-			if v.emitAccountMetrics {
-				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
+	slotSig, err := v.aggSelector.AttestationSelectionProof(ctx, slot, pubKey)
+	if err != nil {
+		log.WithError(err).Error("Could not get selection proof")
+		if v.emitAccountMetrics {
+			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
+		return
 	}
 
-	postElectra := slots.ToEpoch(slot) >= params.BeaconConfig().ElectraForkEpoch
+	epoch := slots.ToEpoch(slot)
+	postElectra := epoch >= params.BeaconConfig().ElectraForkEpoch
+	postGloas := epoch >= params.BeaconConfig().GloasForkEpoch
 
 	aggSelectionRequest := &ethpb.AggregateSelectionRequest{
 		Slot:           slot,
@@ -102,7 +77,11 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 			v.handleSubmitAggSelectionProofError(err, slot, fmtKey)
 			return
 		}
-		agg = res.AggregateAndProof
+		if postGloas {
+			agg = ethpb.AggregateAttestationAndProofElectraToGloas(res.AggregateAndProof)
+		} else {
+			agg = res.AggregateAndProof
+		}
 	} else {
 		res, err := v.validatorClient.SubmitAggregateSelectionProof(ctx, aggSelectionRequest, duty.ValidatorIndex, duty.CommitteeLength)
 		if err != nil {
@@ -119,13 +98,27 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	}
 
 	if postElectra {
-		msg, ok := agg.(*ethpb.AggregateAttestationAndProofElectra)
-		if !ok {
-			log.Errorf("Message is not %T", &ethpb.AggregateAttestationAndProofElectra{})
-			if v.emitAccountMetrics {
-				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+		var msg *ethpb.AggregateAttestationAndProofElectra
+		if postGloas {
+			gloasMsg, ok := agg.(*ethpb.AggregateAttestationAndProofGloas)
+			if !ok {
+				log.Errorf("Message is not %T", &ethpb.AggregateAttestationAndProofGloas{})
+				if v.emitAccountMetrics {
+					ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+				}
+				return
 			}
-			return
+			msg = ethpb.AggregateAttestationAndProofGloasToElectra(gloasMsg)
+		} else {
+			electraMsg, ok := agg.(*ethpb.AggregateAttestationAndProofElectra)
+			if !ok {
+				log.Errorf("Message is not %T", &ethpb.AggregateAttestationAndProofElectra{})
+				if v.emitAccountMetrics {
+					ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+				}
+				return
+			}
+			msg = electraMsg
 		}
 		_, err = v.validatorClient.SubmitSignedAggregateSelectionProofElectra(ctx, &ethpb.SignedAggregateSubmitElectraRequest{
 			SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProofElectra{
@@ -206,36 +199,18 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 	return sig.Marshal(), nil
 }
 
-// waitToSlotTwoThirds waits until two third through the current slot period
-// such that any attestations from this slot have time to reach the beacon node
-// before creating the aggregated attestation.
-func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot primitives.Slot) {
-	ctx, span := trace.StartSpan(ctx, "validator.waitToSlotTwoThirds")
-	defer span.End()
-
-	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
-	twoThird := oneThird + oneThird
-	delay := twoThird
-
-	startTime, err := slots.StartTime(v.genesisTime, slot)
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("Slot overflows, unable to wait for slot two thirds!")
-		return
+// waitUntilAggregateDue waits until the configured aggregation due time within the current slot
+// such that any attestations from this slot have time to reach the beacon node before creating
+// the aggregated attestation.
+//
+// Note: Historically this was ~2/3 of the slot, but may differ across forks (e.g. Gloas).
+func (v *validator) waitUntilAggregateDue(ctx context.Context, slot primitives.Slot) {
+	cfg := params.BeaconConfig()
+	component := cfg.AggregateDueBPS
+	if slots.ToEpoch(slot) >= cfg.GloasForkEpoch {
+		component = cfg.AggregateDueBPSGloas
 	}
-	finalTime := startTime.Add(delay)
-	wait := prysmTime.Until(finalTime)
-	if wait <= 0 {
-		return
-	}
-	t := time.NewTimer(wait)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		tracing.AnnotateError(span, ctx.Err())
-		return
-	case <-t.C:
-		return
-	}
+	v.waitUntilSlotComponent(ctx, slot, component)
 }
 
 // This returns the signature of validator signing over aggregate and
@@ -259,13 +234,22 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 		SignatureDomain: d.SignatureDomain,
 		SigningSlot:     slot,
 	}
-	if agg.Version() >= version.Electra {
+	switch {
+	case agg.Version() >= version.Gloas:
+		aggregate, ok := agg.(*ethpb.AggregateAttestationAndProofGloas)
+		if !ok {
+			return nil, fmt.Errorf("wrong aggregate type (expected %T, got %T)", &ethpb.AggregateAttestationAndProofGloas{}, agg)
+		}
+		signRequest.Object = &validatorpb.SignRequest_AggregateAttestationAndProofElectra{
+			AggregateAttestationAndProofElectra: ethpb.AggregateAttestationAndProofGloasToElectra(aggregate),
+		}
+	case agg.Version() >= version.Electra:
 		aggregate, ok := agg.(*ethpb.AggregateAttestationAndProofElectra)
 		if !ok {
 			return nil, fmt.Errorf("wrong aggregate type (expected %T, got %T)", &ethpb.AggregateAttestationAndProofElectra{}, agg)
 		}
 		signRequest.Object = &validatorpb.SignRequest_AggregateAttestationAndProofElectra{AggregateAttestationAndProofElectra: aggregate}
-	} else {
+	default:
 		aggregate, ok := agg.(*ethpb.AggregateAttestationAndProof)
 		if !ok {
 			return nil, fmt.Errorf("wrong aggregate type (expected %T, got %T)", &ethpb.AggregateAttestationAndProof{}, agg)

@@ -7,18 +7,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/sirupsen/logrus"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 )
 
 var (
@@ -34,10 +35,28 @@ var (
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
 // not be relayed to the peer.
-type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
+type rpcHandler func(context.Context, any, libp2pcore.Stream) error
 
 // rpcHandlerByTopicFromFork returns the RPC handlers for a given fork index.
 func (s *Service) rpcHandlerByTopicFromFork(forkIndex int) (map[string]rpcHandler, error) {
+	// Gloas: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#messages
+	if forkIndex >= version.Gloas {
+		return map[string]rpcHandler{
+			p2p.RPCStatusTopicV2:                           s.statusRPCHandler,
+			p2p.RPCGoodByeTopicV1:                          s.goodbyeRPCHandler,
+			p2p.RPCBlocksByRangeTopicV2:                    s.beaconBlocksByRangeRPCHandler,
+			p2p.RPCBlocksByRootTopicV2:                     s.beaconBlocksRootRPCHandler,
+			p2p.RPCPingTopicV1:                             s.pingHandler,
+			p2p.RPCMetaDataTopicV3:                         s.metaDataHandler,
+			p2p.RPCBlobSidecarsByRootTopicV1:               s.blobSidecarByRootRPCHandler,
+			p2p.RPCBlobSidecarsByRangeTopicV1:              s.blobSidecarsByRangeRPCHandler,
+			p2p.RPCDataColumnSidecarsByRootTopicV1:         s.dataColumnSidecarByRootRPCHandler,
+			p2p.RPCDataColumnSidecarsByRangeTopicV1:        s.dataColumnSidecarsByRangeRPCHandler,
+			p2p.RPCExecutionPayloadEnvelopesByRootTopicV1:  s.executionPayloadEnvelopesByRootRPCHandler,  // Added in Gloas
+			p2p.RPCExecutionPayloadEnvelopesByRangeTopicV1: s.executionPayloadEnvelopesByRangeRPCHandler, // Added in Gloas
+		}, nil
+	}
+
 	// Fulu: https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#messages
 	if forkIndex >= version.Fulu {
 		return map[string]rpcHandler{
@@ -262,7 +281,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// Given we have an input argument that can be pointer or the actual object, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
-		if t.Kind() == reflect.Ptr {
+		if t.Kind() == reflect.Pointer {
 			msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
 			if !ok {
 				log.Errorf("message of %T does not support marshaller interface", msg)

@@ -1,11 +1,13 @@
 package p2p
 
 import (
+	"maps"
 	"reflect"
+	"slices"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,6 +27,10 @@ var gossipTopicMappings = map[string]func() proto.Message{
 	LightClientOptimisticUpdateTopicFormat:    func() proto.Message { return &ethpb.LightClientOptimisticUpdateAltair{} },
 	LightClientFinalityUpdateTopicFormat:      func() proto.Message { return &ethpb.LightClientFinalityUpdateAltair{} },
 	DataColumnSubnetTopicFormat:               func() proto.Message { return &ethpb.DataColumnSidecar{} },
+	PayloadAttestationMessageTopicFormat:      func() proto.Message { return &ethpb.PayloadAttestationMessage{} },
+	ExecutionPayloadEnvelopeTopicFormat:       func() proto.Message { return &ethpb.SignedExecutionPayloadEnvelope{} },
+	ExecutionPayloadBidTopicFormat:            func() proto.Message { return &ethpb.SignedExecutionPayloadBid{} },
+	SignedProposerPreferencesTopicFormat:      func() proto.Message { return &ethpb.SignedProposerPreferences{} },
 }
 
 // GossipTopicMappings is a function to return the assigned data type
@@ -32,6 +38,12 @@ var gossipTopicMappings = map[string]func() proto.Message{
 func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 	switch topic {
 	case BlockSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().HezeForkEpoch {
+			return &ethpb.SignedBeaconBlockHeze{}
+		}
+		if epoch >= params.BeaconConfig().GloasForkEpoch {
+			return &ethpb.SignedBeaconBlockGloas{}
+		}
 		if epoch >= params.BeaconConfig().FuluForkEpoch {
 			return &ethpb.SignedBeaconBlockFulu{}
 		}
@@ -62,6 +74,9 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 		}
 		return gossipMessage(topic)
 	case AggregateAndProofSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().GloasForkEpoch {
+			return &ethpb.SignedAggregateAttestationAndProofGloas{}
+		}
 		if epoch >= params.BeaconConfig().ElectraForkEpoch {
 			return &ethpb.SignedAggregateAttestationAndProofElectra{}
 		}
@@ -85,6 +100,11 @@ func GossipTopicMappings(topic string, epoch primitives.Epoch) proto.Message {
 			return &ethpb.LightClientFinalityUpdateCapella{}
 		}
 		return gossipMessage(topic)
+	case DataColumnSubnetTopicFormat:
+		if epoch >= params.BeaconConfig().GloasForkEpoch {
+			return &ethpb.DataColumnSidecarGloas{}
+		}
+		return gossipMessage(topic)
 	default:
 		return gossipMessage(topic)
 	}
@@ -101,11 +121,7 @@ func gossipMessage(topic string) proto.Message {
 // AllTopics returns all topics stored in our
 // gossip mapping.
 func AllTopics() []string {
-	var topics []string
-	for k := range gossipTopicMappings {
-		topics = append(topics, k)
-	}
-	return topics
+	return slices.Collect(maps.Keys(gossipTopicMappings))
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
@@ -118,30 +134,42 @@ func init() {
 	}
 
 	// Specially handle Altair objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientFinalityUpdateAltair{})] = LightClientFinalityUpdateTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientOptimisticUpdateAltair{})] = LightClientOptimisticUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockAltair]()] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientFinalityUpdateAltair]()] = LightClientFinalityUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientOptimisticUpdateAltair]()] = LightClientOptimisticUpdateTopicFormat
 
 	// Specially handle Bellatrix objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockBellatrix]()] = BlockSubnetTopicFormat
 
 	// Specially handle Capella objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockCapella{})] = BlockSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientOptimisticUpdateCapella{})] = LightClientOptimisticUpdateTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientFinalityUpdateCapella{})] = LightClientFinalityUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockCapella]()] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientOptimisticUpdateCapella]()] = LightClientOptimisticUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientFinalityUpdateCapella]()] = LightClientFinalityUpdateTopicFormat
 
 	// Specially handle Deneb objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockDeneb{})] = BlockSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientOptimisticUpdateDeneb{})] = LightClientOptimisticUpdateTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientFinalityUpdateDeneb{})] = LightClientFinalityUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockDeneb]()] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientOptimisticUpdateDeneb]()] = LightClientOptimisticUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientFinalityUpdateDeneb]()] = LightClientFinalityUpdateTopicFormat
 
 	// Specially handle Electra objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockElectra{})] = BlockSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SingleAttestation{})] = AttestationSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.AttesterSlashingElectra{})] = AttesterSlashingSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedAggregateAttestationAndProofElectra{})] = AggregateAndProofSubnetTopicFormat
-	GossipTypeMapping[reflect.TypeOf(&ethpb.LightClientFinalityUpdateElectra{})] = LightClientFinalityUpdateTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockElectra]()] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SingleAttestation]()] = AttestationSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.AttesterSlashingElectra]()] = AttesterSlashingSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedAggregateAttestationAndProofElectra]()] = AggregateAndProofSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.LightClientFinalityUpdateElectra]()] = LightClientFinalityUpdateTopicFormat
 
 	// Specially handle Fulu objects.
-	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockFulu{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockFulu]()] = BlockSubnetTopicFormat
+	// Specially handle Gloas objects.
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockGloas]()] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.DataColumnSidecarGloas]()] = DataColumnSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedAggregateAttestationAndProofGloas]()] = AggregateAndProofSubnetTopicFormat
+
+	// Specially handle Heze objects.
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedBeaconBlockHeze]()] = BlockSubnetTopicFormat
+
+	// Payload attestation messages.
+	GossipTypeMapping[reflect.TypeFor[*ethpb.PayloadAttestationMessage]()] = PayloadAttestationMessageTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedExecutionPayloadBid]()] = ExecutionPayloadBidTopicFormat
+	GossipTypeMapping[reflect.TypeFor[*ethpb.SignedProposerPreferences]()] = SignedProposerPreferencesTopicFormat
 }

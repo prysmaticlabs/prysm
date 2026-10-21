@@ -3,11 +3,11 @@ package light_client
 import (
 	"fmt"
 
-	consensustypes "github.com/OffchainLabs/prysm/v6/consensus-types"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	consensustypes "github.com/OffchainLabs/prysm/v7/consensus-types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -22,6 +22,8 @@ func NewWrappedOptimisticUpdate(m proto.Message) (interfaces.LightClientOptimist
 		return NewWrappedOptimisticUpdateCapella(t)
 	case *pb.LightClientOptimisticUpdateDeneb:
 		return NewWrappedOptimisticUpdateDeneb(t)
+	case *pb.LightClientOptimisticUpdateGloas:
+		return NewWrappedOptimisticUpdateGloas(t)
 	default:
 		return nil, fmt.Errorf("cannot construct light client optimistic update from type %T", t)
 	}
@@ -59,6 +61,15 @@ func NewOptimisticUpdateFromUpdate(update interfaces.LightClientUpdate) (interfa
 	case *updateElectra:
 		return &optimisticUpdateDeneb{
 			p: &pb.LightClientOptimisticUpdateDeneb{
+				AttestedHeader: t.p.AttestedHeader,
+				SyncAggregate:  t.p.SyncAggregate,
+				SignatureSlot:  t.p.SignatureSlot,
+			},
+			attestedHeader: t.attestedHeader,
+		}, nil
+	case *updateGloas:
+		return &optimisticUpdateGloas{
+			p: &pb.LightClientOptimisticUpdateGloas{
 				AttestedHeader: t.p.AttestedHeader,
 				SyncAggregate:  t.p.SyncAggregate,
 				SignatureSlot:  t.p.SignatureSlot,

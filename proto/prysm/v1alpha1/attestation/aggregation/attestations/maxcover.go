@@ -3,12 +3,12 @@ package attestations
 import (
 	"sort"
 
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation/aggregation"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 // MaxCoverAttestationAggregation relies on Maximum Coverage greedy algorithm for aggregation.
@@ -27,7 +27,7 @@ func MaxCoverAttestationAggregation(atts []ethpb.Att) ([]ethpb.Att, error) {
 	// In the future this conversion will be redundant, as attestation bitlist will be of a Bitlist64
 	// type, so incoming `atts` parameters can be used as candidates list directly.
 	candidates := make([]*bitfield.Bitlist64, len(atts))
-	for i := 0; i < len(atts); i++ {
+	for i := range atts {
 		var err error
 		candidates[i], err = atts[i].GetAggregationBits().ToBitlist64()
 		if err != nil {
@@ -114,7 +114,7 @@ func MaxCoverAttestationAggregation(atts []ethpb.Att) ([]ethpb.Att, error) {
 // NewMaxCover returns initialized Maximum Coverage problem for attestations aggregation.
 func NewMaxCover(atts []*ethpb.Attestation) *aggregation.MaxCoverProblem {
 	candidates := make([]*aggregation.MaxCoverCandidate, len(atts))
-	for i := 0; i < len(atts); i++ {
+	for i := range atts {
 		candidates[i] = aggregation.NewMaxCoverCandidate(i, &atts[i].AggregationBits)
 	}
 	return &aggregation.MaxCoverProblem{Candidates: candidates}
@@ -126,7 +126,7 @@ func (al attList) aggregate(coverage bitfield.Bitlist) (*ethpb.Attestation, erro
 		return nil, errors.Wrap(ErrInvalidAttestationCount, "cannot aggregate")
 	}
 	signs := make([]bls.Signature, len(al))
-	for i := 0; i < len(al); i++ {
+	for i := range al {
 		sig, err := signatureFromBytes(al[i].GetSignature())
 		if err != nil {
 			return nil, err
@@ -172,14 +172,23 @@ func aggregateAttestations(atts []ethpb.Att, keys []int, coverage *bitfield.Bitl
 		}
 	}
 	// Put aggregated attestation at a position of the first selected attestation.
-	if atts[0].Version() == version.Phase0 {
+	switch {
+	case atts[0].Version() == version.Phase0:
 		atts[targetIdx] = &ethpb.Attestation{
 			// Append size byte, which will be unnecessary on switch to Bitlist64.
 			AggregationBits: coverage.ToBitlist(),
 			Data:            data,
 			Signature:       aggregateSignatures(signs).Marshal(),
 		}
-	} else {
+	case atts[0].Version() >= version.Gloas:
+		atts[targetIdx] = &ethpb.AttestationGloas{
+			// Append size byte, which will be unnecessary on switch to Bitlist64.
+			AggregationBits: coverage.ToBitlist(),
+			CommitteeBits:   atts[0].CommitteeBitsVal().Bytes(),
+			Data:            data,
+			Signature:       aggregateSignatures(signs).Marshal(),
+		}
+	default:
 		atts[targetIdx] = &ethpb.AttestationElectra{
 			// Append size byte, which will be unnecessary on switch to Bitlist64.
 			AggregationBits: coverage.ToBitlist(),

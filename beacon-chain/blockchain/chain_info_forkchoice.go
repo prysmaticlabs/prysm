@@ -4,12 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	consensus_blocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/forkchoice"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/confirmation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	consensus_blocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/forkchoice"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -41,6 +44,63 @@ func (s *Service) HighestReceivedBlockSlot() primitives.Slot {
 	return s.cfg.ForkChoiceStore.HighestReceivedBlockSlot()
 }
 
+// HighestReceivedBlockRoot returns the corresponding value from forkchoice
+func (s *Service) HighestReceivedBlockRoot() [32]byte {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HighestReceivedBlockRoot()
+}
+
+// BlockHash returns the execution payload block hash for the given beacon block root from forkchoice.
+func (s *Service) BlockHash(root [32]byte) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.BlockHash(root)
+}
+
+// BuilderPubkey returns the pubkey of the builder committed in the given block's bid, nil for self-built blocks.
+func (s *Service) BuilderPubkey(root [32]byte) (*[fieldparams.BLSPubkeyLength]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.BuilderPubkey(root)
+}
+
+// HasPayloadBlockHash reports whether blockHash is an available payload parent at root.
+func (s *Service) HasPayloadBlockHash(root, blockHash [32]byte) bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HasPayloadBlockHash(root, blockHash)
+}
+
+// GasLimit returns the gas limit of the payload with the given block hash as seen from the given beacon block root:
+// the block's own payload or the parent payload it builds on.
+func (s *Service) GasLimit(root, blockHash [32]byte) (uint64, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.GasLimit(root, blockHash)
+}
+
+// HasNode returns the corresponding value from forkchoice
+func (s *Service) HasNode(root [32]byte) bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HasNode(root)
+}
+
+// HasFullNode returns the corresponding value from forkchoice
+func (s *Service) HasFullNode(root [32]byte) bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HasFullNode(root)
+}
+
+// FullBeatsEmpty returns whether forkchoice would select the full payload variant for the given root.
+func (s *Service) FullBeatsEmpty(root [32]byte) bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.FullBeatsEmpty(root)
+}
+
 // ReceivedBlocksLastEpoch returns the corresponding value from forkchoice
 func (s *Service) ReceivedBlocksLastEpoch() (uint64, error) {
 	s.cfg.ForkChoiceStore.RLock()
@@ -55,11 +115,25 @@ func (s *Service) InsertNode(ctx context.Context, st state.BeaconState, block co
 	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, block)
 }
 
+// InsertPayload is a wrapper for payload insertion which is self locked
+func (s *Service) InsertPayload(pe interfaces.ROExecutionPayloadEnvelope) error {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	return s.cfg.ForkChoiceStore.InsertPayload(pe)
+}
+
 // ForkChoiceDump returns the corresponding value from forkchoice
 func (s *Service) ForkChoiceDump(ctx context.Context) (*forkchoice.Dump, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.ForkChoiceDump(ctx)
+}
+
+// ForkChoiceDumpV2 returns the corresponding value from forkchoice
+func (s *Service) ForkChoiceDumpV2(ctx context.Context) (*forkchoice.DumpV2, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ForkChoiceDumpV2(ctx)
 }
 
 // NewSlot returns the corresponding value from forkchoice
@@ -74,6 +148,11 @@ func (s *Service) ProposerBoost() [32]byte {
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	return s.cfg.ForkChoiceStore.ProposerBoost()
+}
+
+// FCR returns the fast confirmation rule instance, or nil if FCR is not enabled.
+func (s *Service) FCR() *confirmation.FastConfirmationRule {
+	return s.fcr
 }
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
@@ -121,11 +200,25 @@ func (s *Service) hashForGenesisBlock(ctx context.Context, root [32]byte) ([]byt
 	if st.Version() < version.Bellatrix {
 		return nil, nil
 	}
+	if st.Version() >= version.Gloas {
+		h, err := st.LatestBlockHash()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get latest block hash")
+		}
+		return bytesutil.SafeCopyBytes(h[:]), nil
+	}
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get latest execution payload header")
 	}
 	return bytesutil.SafeCopyBytes(header.BlockHash()), nil
+}
+
+// CanonicalNodeAtSlot wraps the corresponding method in forkchoice
+func (s *Service) CanonicalNodeAtSlot(slot primitives.Slot) ([32]byte, bool) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.CanonicalNodeAtSlot(slot)
 }
 
 // DependentRoot wraps the corresponding method in forkchoice

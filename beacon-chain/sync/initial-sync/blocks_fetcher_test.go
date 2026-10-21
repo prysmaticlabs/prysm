@@ -9,28 +9,29 @@ import (
 	"testing"
 	"time"
 
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	dbtest "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers/peerdata"
-	p2ptest "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	beaconsync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	leakybucket "github.com/OffchainLabs/prysm/v6/container/leaky-bucket"
-	"github.com/OffchainLabs/prysm/v6/container/slice"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	dbtest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers/peerdata"
+	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	beaconsync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
+	"github.com/OffchainLabs/prysm/v7/container/slice"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -388,7 +389,7 @@ func TestBlocksFetcher_scheduleRequest(t *testing.T) {
 
 	t.Run("unblock on context cancellation", func(t *testing.T) {
 		fetcher := newBlocksFetcher(t.Context(), &blocksFetcherConfig{})
-		for i := 0; i < maxPendingRequests; i++ {
+		for range maxPendingRequests {
 			assert.NoError(t, fetcher.scheduleRequest(t.Context(), 1, blockBatchLimit))
 		}
 
@@ -516,7 +517,10 @@ func TestBlocksFetcher_requestBeaconBlocksByRange(t *testing.T) {
 			p2p:   p2p,
 		})
 
-	_, peerIDs := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, slots.ToEpoch(mc.HeadSlot()))
+	_, peerIDs := p2p.Peers().BestFinalized(slots.ToEpoch(mc.HeadSlot()))
+	if len(peerIDs) > params.BeaconConfig().MaxPeersToSync {
+		peerIDs = peerIDs[:params.BeaconConfig().MaxPeersToSync]
+	}
 	req := &ethpb.BeaconBlocksByRangeRequest{
 		StartSlot: 1,
 		Step:      1,
@@ -601,7 +605,7 @@ func TestBlocksFetcher_RequestBlocksRateLimitingLocks(t *testing.T) {
 		// p3 responded w/o waiting for rate limiter's lock (on which p2 spins).
 	}
 	// Make sure that p2 has been rate limited.
-	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" peer=%s", p2.PeerID()))
+	require.LogsContain(t, hook, fmt.Sprintf("msg=\"Slowing down for rate limit\" package=beacon-chain/sync/initial-sync peer=%s", p2.PeerID()))
 }
 
 func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
@@ -674,7 +678,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 			},
 		},
 		{
-			name: "too many blocks",
+			name: "more blocks than requested",
 			req: &ethpb.BeaconBlocksByRangeRequest{
 				StartSlot: 100,
 				Step:      1,
@@ -694,9 +698,9 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 				}
 			},
 			validate: func(req *ethpb.BeaconBlocksByRangeRequest, blocks []interfaces.ReadOnlySignedBeaconBlock) {
-				assert.Equal(t, 0, len(blocks))
+				assert.Equal(t, 64, len(blocks))
+				assert.Equal(t, primitives.Slot(163), blocks[len(blocks)-1].Block().Slot())
 			},
-			wantedErr: beaconsync.ErrInvalidFetchedData.Error(),
 		},
 		{
 			name: "not in a consecutive order",
@@ -951,8 +955,9 @@ func TestBlocksFetcher_requestBlocksDownscoreOnInvalidData(t *testing.T) {
 	assert.Equal(t, -1, scoreBeforeRequest)
 
 	// Use fetchBlocksFromPeer which includes the downscoring logic
-	_, _, err = fetcher.fetchBlocksFromPeer(ctx, 100, 64, []peer.ID{p2.PeerID()})
-	assert.ErrorContains(t, errNoPeersAvailable.Error(), err)
+	r := &fetchRequestResponse{start: 100, count: 64}
+	fetcher.fetchBlocksFromPeer(ctx, r, []peer.ID{p2.PeerID()})
+	assert.ErrorContains(t, errNoPeersAvailable.Error(), r.err)
 
 	// Verify the peer was downscored
 	scoreAfterRequest, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.PeerID())
@@ -1357,25 +1362,26 @@ func TestBlockFetcher_HasSufficientBandwidth(t *testing.T) {
 
 func TestFetchSidecars(t *testing.T) {
 	ctx := t.Context()
-	t.Run("No blocks", func(t *testing.T) {
+	t.Run("empty batch returns without fetching sidecars", func(t *testing.T) {
 		fetcher := new(blocksFetcher)
 
-		pid, err := fetcher.fetchSidecars(ctx, "", nil, []blocks.BlockWithROSidecars{})
-		assert.NoError(t, err)
-		assert.Equal(t, peer.ID(""), pid)
+		r := &fetchRequestResponse{bwb: []blocks.BlockWithROSidecars{}}
+		fetcher.fetchSidecars(ctx, r, nil)
+		assert.NoError(t, r.err)
+		assert.Equal(t, peer.ID(""), r.blobsFrom)
 	})
 
-	t.Run("Nominal", func(t *testing.T) {
-		beaconConfig := params.BeaconConfig()
-		numberOfColumns := beaconConfig.NumberOfColumns
-		samplesPerSlot := beaconConfig.SamplesPerSlot
+	t.Run("route columns for blocks within retention", func(t *testing.T) {
+		const numberOfColumns = uint64(fieldparams.NumberOfColumns)
+		cfg := params.BeaconConfig()
+		samplesPerSlot := cfg.SamplesPerSlot
 
 		// Define "now" to be one epoch after genesis time + retention period.
 		genesisTime := time.Date(2025, time.August, 10, 0, 0, 0, 0, time.UTC)
-		secondsPerSlot := beaconConfig.SecondsPerSlot
-		slotsPerEpoch := beaconConfig.SlotsPerEpoch
+		secondsPerSlot := cfg.SecondsPerSlot
+		slotsPerEpoch := cfg.SlotsPerEpoch
 		secondsPerEpoch := uint64(slotsPerEpoch.Mul(secondsPerSlot))
-		retentionEpochs := beaconConfig.MinEpochsForDataColumnSidecarsRequest
+		retentionEpochs := cfg.MinEpochsForDataColumnSidecarsRequest
 		nowWrtGenesisSecs := retentionEpochs.Add(1).Mul(secondsPerEpoch)
 		now := genesisTime.Add(time.Duration(nowWrtGenesisSecs) * time.Second)
 
@@ -1444,33 +1450,41 @@ func TestFetchSidecars(t *testing.T) {
 		err = dataColumnStorage.Save(verifiedRoDataColumnSidecarsFulu2)
 		require.NoError(t, err)
 
-		// Create a blocks fetcher.
-		fetcher := &blocksFetcher{
-			clock: clock,
-			p2p:   p2ptest.NewTestP2P(t),
-			dcs:   dataColumnStorage,
+		for _, test := range []struct {
+			name        string
+			headSlot    primitives.Slot
+			wantColumns uint64
+			wantCarried uint64
+		}{
+			{name: "block after head keeps columns attached", wantColumns: samplesPerSlot},
+			{name: "block at head carries columns separately", headSlot: roFuluBlock2.Block().Slot(), wantCarried: samplesPerSlot},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				fetcher := &blocksFetcher{
+					clock: clock,
+					chain: &mock.ChainService{MockHeadSlot: &test.headSlot},
+					p2p:   p2ptest.NewTestP2P(t),
+					dcs:   dataColumnStorage,
+				}
+				blocksWithSidecars := []blocks.BlockWithROSidecars{
+					{Block: roDebebBlock},
+					{Block: roFuluBlock1},
+					{Block: roFuluBlock2},
+				}
+				r := &fetchRequestResponse{bwb: blocksWithSidecars}
+				fetcher.fetchSidecars(t.Context(), r, nil)
+				require.NoError(t, r.err)
+				require.Equal(t, peer.ID(""), r.blobsFrom)
+
+				require.Equal(t, 0, len(blocksWithSidecars[0].Blobs))
+				require.Equal(t, 0, len(blocksWithSidecars[0].Columns))
+				require.Equal(t, 0, len(blocksWithSidecars[1].Blobs))
+				require.Equal(t, 0, len(blocksWithSidecars[1].Columns))
+				require.Equal(t, 0, len(blocksWithSidecars[2].Blobs))
+				require.Equal(t, test.wantColumns, uint64(len(blocksWithSidecars[2].Columns)))
+				require.Equal(t, test.wantCarried, uint64(len(r.columnsToSave)))
+			})
 		}
-
-		// Fetch sidecars.
-		blocksWithSidecars := []blocks.BlockWithROSidecars{
-			{Block: roDebebBlock},
-			{Block: roFuluBlock1},
-			{Block: roFuluBlock2},
-		}
-		pid, err := fetcher.fetchSidecars(ctx, "", nil, blocksWithSidecars)
-		require.NoError(t, err)
-		require.Equal(t, peer.ID(""), pid)
-
-		// Verify that block with sidecars were modified correctly.
-		require.Equal(t, 0, len(blocksWithSidecars[0].Blobs))
-		require.Equal(t, 0, len(blocksWithSidecars[0].Columns))
-		require.Equal(t, 0, len(blocksWithSidecars[1].Blobs))
-		require.Equal(t, 0, len(blocksWithSidecars[1].Columns))
-		require.Equal(t, 0, len(blocksWithSidecars[2].Blobs))
-
-		// We don't check the content of the columns here. The extensive test is done
-		// in TestFetchDataColumnsSidecars.
-		require.Equal(t, samplesPerSlot, uint64(len(blocksWithSidecars[2].Columns)))
 	})
 }
 
@@ -1562,7 +1576,7 @@ func TestFirstFuluIndex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			blocks := tt.setupBlocks(t)
-			index, err := findFirstFuluIndex(blocks)
+			index, err := findFirstForkIndex(blocks, version.Fulu)
 
 			if tt.expectError {
 				require.NotNil(t, err)

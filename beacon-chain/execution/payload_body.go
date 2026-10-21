@@ -4,11 +4,11 @@ import (
 	"context"
 	"sort"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	pb "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	pb "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ type reconstructionBatch map[[32]byte]uint64
 
 type blindedBlockReconstructor struct {
 	orderedBlocks []*blockWithHeader
-	bodies        map[[32]byte]*pb.ExecutionPayloadBody
+	bodies        map[[32]byte]*pb.ExecutionPayloadBodyV1
 	batches       map[string]reconstructionBatch
 }
 
@@ -45,7 +45,7 @@ func reconstructBlindedBlockBatch(ctx context.Context, client RPCClient, sbb []i
 func newBlindedBlockReconstructor(sbb []interfaces.ReadOnlySignedBeaconBlock) (*blindedBlockReconstructor, error) {
 	r := &blindedBlockReconstructor{
 		orderedBlocks: make([]*blockWithHeader, 0, len(sbb)),
-		bodies:        make(map[[32]byte]*pb.ExecutionPayloadBody),
+		bodies:        make(map[[32]byte]*pb.ExecutionPayloadBodyV1),
 	}
 	for i := range sbb {
 		if err := r.addToBatch(sbb[i]); err != nil {
@@ -142,7 +142,7 @@ func computeRanges(hbns []hashBlockNumber) []byRangeReq {
 	ranges := make([]byRangeReq, 0)
 	start := hbns[0].n
 	count := uint64(0)
-	for i := 0; i < len(hbns); i++ {
+	for i := range hbns {
 		if hbns[i].n == start+count {
 			count++
 			continue
@@ -156,7 +156,7 @@ func computeRanges(hbns []hashBlockNumber) []byRangeReq {
 }
 
 func (r *blindedBlockReconstructor) requestBodiesByRange(ctx context.Context, client RPCClient, method string, req byRangeReq) error {
-	result := make([]*pb.ExecutionPayloadBody, 0)
+	result := make([]*pb.ExecutionPayloadBodyV1, 0)
 	if err := client.CallContext(ctx, &result, method, hexutil.EncodeUint64(req.start), hexutil.EncodeUint64(req.count)); err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (r *blindedBlockReconstructor) requestBodiesByHash(ctx context.Context, cli
 		}
 		hashes = append(hashes, h)
 	}
-	result := make([]*pb.ExecutionPayloadBody, 0)
+	result := make([]*pb.ExecutionPayloadBodyV1, 0)
 	if err := client.CallContext(ctx, &result, method, hashes); err != nil {
 		return nil, err
 	}

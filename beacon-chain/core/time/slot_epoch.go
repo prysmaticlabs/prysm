@@ -1,11 +1,11 @@
 package time
 
 import (
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 // CurrentEpoch returns the current epoch number calculated from
@@ -49,63 +49,15 @@ func NextEpoch(state state.ReadOnlyBeaconState) primitives.Epoch {
 }
 
 // HigherEqualThanAltairVersionAndEpoch returns if the input state `s` has a higher version number than Altair state and input epoch `e` is higher equal than fork epoch.
-func HigherEqualThanAltairVersionAndEpoch(s state.BeaconState, e primitives.Epoch) bool {
+func HigherEqualThanAltairVersionAndEpoch(s state.ReadOnlyBeaconState, e primitives.Epoch) bool {
 	return s.Version() >= version.Altair && e >= params.BeaconConfig().AltairForkEpoch
 }
 
-// CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.
+// CanUpgradeTo returns true if the input `slot` can upgrade to the fork at `forkEpoch`.
 // Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ALTAIR_FORK_EPOCH
-func CanUpgradeToAltair(slot primitives.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	altairEpoch := slots.ToEpoch(slot) == params.BeaconConfig().AltairForkEpoch
-	return epochStart && altairEpoch
-}
-
-// CanUpgradeToBellatrix returns true if the input `slot` can upgrade to Bellatrix fork.
-//
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == BELLATRIX_FORK_EPOCH
-func CanUpgradeToBellatrix(slot primitives.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	bellatrixEpoch := slots.ToEpoch(slot) == params.BeaconConfig().BellatrixForkEpoch
-	return epochStart && bellatrixEpoch
-}
-
-// CanUpgradeToCapella returns true if the input `slot` can upgrade to Capella.
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == CAPELLA_FORK_EPOCH
-func CanUpgradeToCapella(slot primitives.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	capellaEpoch := slots.ToEpoch(slot) == params.BeaconConfig().CapellaForkEpoch
-	return epochStart && capellaEpoch
-}
-
-// CanUpgradeToDeneb returns true if the input `slot` can upgrade to Deneb.
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == DENEB_FORK_EPOCH
-func CanUpgradeToDeneb(slot primitives.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	DenebEpoch := slots.ToEpoch(slot) == params.BeaconConfig().DenebForkEpoch
-	return epochStart && DenebEpoch
-}
-
-// CanUpgradeToElectra returns true if the input `slot` can upgrade to Electra.
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == ELECTRA_FORK_EPOCH
-func CanUpgradeToElectra(slot primitives.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	electraEpoch := slots.ToEpoch(slot) == params.BeaconConfig().ElectraForkEpoch
-	return epochStart && electraEpoch
-}
-
-// CanUpgradeToFulu returns true if the input `slot` can upgrade to Fulu.
-// Spec code:
-// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == FULU_FORK_EPOCH
-func CanUpgradeToFulu(slot primitives.Slot) bool {
-	epochStart := slots.IsEpochStart(slot)
-	fuluEpoch := slots.ToEpoch(slot) == params.BeaconConfig().FuluForkEpoch
-	return epochStart && fuluEpoch
+// If state.slot % SLOTS_PER_EPOCH == 0 and compute_epoch_at_slot(state.slot) == <FORK>_FORK_EPOCH
+func CanUpgradeTo(slot primitives.Slot, forkEpoch primitives.Epoch) bool {
+	return slots.IsEpochStart(slot) && slots.ToEpoch(slot) == forkEpoch
 }
 
 // CanProcessEpoch checks the eligibility to process epoch.

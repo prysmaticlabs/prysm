@@ -4,33 +4,37 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	runtimeDebug "runtime/debug"
+	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/builder"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/node"
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	blockchaincmd "github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/blockchain"
-	dbcommands "github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/execution"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/genesis"
-	jwtcommands "github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/jwt"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/storage"
-	backfill "github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/sync/backfill"
-	bflags "github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/sync/backfill/flags"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/sync/checkpoint"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/io/logs"
-	"github.com/OffchainLabs/prysm/v6/monitoring/journald"
-	"github.com/OffchainLabs/prysm/v6/runtime/debug"
-	"github.com/OffchainLabs/prysm/v6/runtime/fdlimits"
-	prefixed "github.com/OffchainLabs/prysm/v6/runtime/logging/logrus-prefixed-formatter"
-	_ "github.com/OffchainLabs/prysm/v6/runtime/maxprocs"
-	"github.com/OffchainLabs/prysm/v6/runtime/tos"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/builder"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/node"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	blockchaincmd "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/blockchain"
+	das "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/das"
+	dasFlags "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/das/flags"
+	dbcommands "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/execution"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/genesis"
+	jwtcommands "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/jwt"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/storage"
+	backfill "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/sync/backfill"
+	bflags "github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/sync/backfill/flags"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/sync/checkpoint"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/io/logs"
+	"github.com/OffchainLabs/prysm/v7/monitoring/journald"
+	"github.com/OffchainLabs/prysm/v7/runtime/debug"
+	"github.com/OffchainLabs/prysm/v7/runtime/fdlimits"
+	prefixed "github.com/OffchainLabs/prysm/v7/runtime/logging/logrus-prefixed-formatter"
+	_ "github.com/OffchainLabs/prysm/v7/runtime/maxprocs"
+	"github.com/OffchainLabs/prysm/v7/runtime/tos"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
@@ -48,7 +52,6 @@ var appFlags = []cli.Flag{
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
-	flags.HTTPModules,
 	flags.HTTPServerHost,
 	flags.HTTPServerPort,
 	flags.HTTPServerCorsDomain,
@@ -61,11 +64,11 @@ var appFlags = []cli.Flag{
 	flags.BlobBatchLimitBurstFactor,
 	flags.DataColumnBatchLimit,
 	flags.DataColumnBatchLimitBurstFactor,
-	flags.InteropMockEth1DataVotesFlag,
 	flags.SlotsPerArchivedPoint,
 	flags.DisableDebugRPCEndpoints,
 	flags.SubscribeToAllSubnets,
-	flags.SubscribeAllDataSubnets,
+	flags.Supernode,
+	flags.SemiSupernode,
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
@@ -84,9 +87,18 @@ var appFlags = []cli.Flag{
 	flags.LocalBlockValueBoost,
 	flags.MinBuilderBid,
 	flags.MinBuilderDiff,
+	flags.BuilderHeaderTimeout,
+	flags.BuilderAllowedFailures,
+	flags.BuilderCriticalFailures,
+	flags.BuilderBlacklistPeriod,
+	flags.BuilderCriticalBlacklistPeriod,
+	flags.BuilderRelayBlacklistPeriod,
+	flags.BuilderFailureBackOffPeriod,
+	flags.BuilderCriticalFailedBuilders,
+	flags.BuilderBidTimeout,
 	flags.BeaconDBPruning,
 	flags.PrunerRetentionEpochs,
-	flags.EnableBuilderSSZ,
+	flags.DisableBuilderSSZ,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
 	cmd.RPCMaxPageSizeFlag,
@@ -109,6 +121,7 @@ var appFlags = []cli.Flag{
 	cmd.PubsubQueueSize,
 	cmd.DataDirFlag,
 	cmd.VerbosityFlag,
+	cmd.LogVModuleFlag,
 	cmd.EnableTracingFlag,
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
@@ -119,6 +132,7 @@ var appFlags = []cli.Flag{
 	cmd.ClearDB,
 	cmd.ForceClearDB,
 	cmd.LogFormat,
+	cmd.DisableLogColor,
 	cmd.MaxGoroutines,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
@@ -144,15 +158,22 @@ var appFlags = []cli.Flag{
 	flags.SlasherDirFlag,
 	flags.SlasherFlag,
 	flags.JwtId,
+	flags.DisableGetBlobsV2,
+	flags.PostponeShutdownForProposals,
 	storage.BlobStoragePathFlag,
 	storage.DataColumnStoragePathFlag,
-	storage.BlobRetentionEpochFlag,
 	storage.BlobStorageLayout,
 	bflags.EnableExperimentalBackfill,
 	bflags.BackfillBatchSize,
 	bflags.BackfillWorkerCount,
-	bflags.BackfillOldestSlot,
+	dasFlags.BackfillOldestSlot,
+	dasFlags.BlobRetentionEpochFlag,
 	flags.BatchVerifierLimit,
+	flags.StateDiffExponents,
+	flags.ArchiveOriginState,
+	flags.DisableEphemeralLogFile,
+	flags.DisablePartialDataColumns,
+	flags.DisableGraffitiClientAppend,
 }
 
 func init() {
@@ -165,32 +186,73 @@ func before(ctx *cli.Context) error {
 		return errors.Wrap(err, "failed to load flags from config file")
 	}
 
-	format := ctx.String(cmd.LogFormat.Name)
+	// determine default log verbosity
+	verbosity := ctx.String(cmd.VerbosityFlag.Name)
+	verbosityLevel, err := logrus.ParseLevel(verbosity)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse log verbosity")
+	}
 
+	// determine per package verbosity. if not set, maxLevel will be 0.
+	vmoduleInput := strings.Join(ctx.StringSlice(cmd.LogVModuleFlag.Name), ",")
+	vmodule, maxLevel, err := cmd.ParseVModule(vmoduleInput)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse log vmodule")
+	}
+
+	// set the global logging level and data
+	logs.SetLoggingLevelAndData(verbosityLevel, vmodule, maxLevel, ctx.Bool(flags.DisableEphemeralLogFile.Name))
+
+	format := ctx.String(cmd.LogFormat.Name)
 	switch format {
 	case "text":
+		// disabling logrus default output so we can control it via different hooks
+		logrus.SetOutput(io.Discard)
+
+		// create a custom formatter and hook for terminal output
 		formatter := new(prefixed.TextFormatter)
 		formatter.TimestampFormat = "2006-01-02 15:04:05.00"
 		formatter.FullTimestamp = true
+		formatter.ForceFormatting = true
+		formatter.ForceColors = true
+		formatter.DisableColors = ctx.Bool(cmd.DisableLogColor.Name)
+		formatter.VModule = vmodule
+		formatter.BaseVerbosity = verbosityLevel
 
-		// If persistent log files are written - we disable the log messages coloring because
-		// the colors are ANSI codes and seen as gibberish in the log files.
-		formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
-		logrus.SetFormatter(formatter)
+		logrus.AddHook(&logs.WriterHook{
+			Formatter:     formatter,
+			Writer:        os.Stderr,
+			AllowedLevels: logrus.AllLevels[:max(verbosityLevel, maxLevel)+1],
+			Identifier:    logs.LogTargetUser,
+		})
 	case "fluentd":
-		f := joonix.NewFormatter()
+		// disabling logrus default output so we can control it via hooks
+		logrus.SetOutput(io.Discard)
 
+		f := joonix.NewFormatter()
 		if err := joonix.DisableTimestampFormat(f); err != nil {
 			panic(err) // lint:nopanic -- This shouldn't happen, but crashing immediately at startup is OK.
 		}
 
-		logrus.SetFormatter(f)
+		logrus.AddHook(&logs.WriterHook{
+			Formatter:     f,
+			Writer:        os.Stderr,
+			AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+			Identifier:    logs.LogTargetUser,
+		})
 	case "json":
-		logrus.SetFormatter(&logrus.JSONFormatter{
-			TimestampFormat: "2006-01-02 15:04:05.00",
+		// disabling logrus default output so we can control it via hooks
+		logrus.SetOutput(io.Discard)
+		logrus.AddHook(&logs.WriterHook{
+			Formatter: &logrus.JSONFormatter{
+				TimestampFormat: "2006-01-02 15:04:05.00",
+			},
+			Writer:        os.Stderr,
+			AllowedLevels: logrus.AllLevels[:verbosityLevel+1],
+			Identifier:    logs.LogTargetUser,
 		})
 	case "journald":
-		if err := journald.Enable(); err != nil {
+		if err := journald.Enable(verbosityLevel); err != nil {
 			return err
 		}
 	default:
@@ -199,10 +261,21 @@ func before(ctx *cli.Context) error {
 
 	logFileName := ctx.String(cmd.LogFileName.Name)
 	if logFileName != "" {
-		if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
+		if err := logs.ConfigurePersistentLogging(logFileName, format, verbosityLevel, vmodule); err != nil {
 			log.WithError(err).Error("Failed to configuring logging to disk.")
 		}
 	}
+
+	if !ctx.Bool(flags.DisableEphemeralLogFile.Name) {
+		if err := logs.ConfigureEphemeralLogFile(ctx.String(cmd.DataDirFlag.Name), ctx.App.Name); err != nil {
+			log.WithError(err).Error("Failed to configure debug log file")
+		}
+	}
+
+	// Log Prysm version on startup. After initializing log-file and ephemeral log-file.
+	log.WithFields(logrus.Fields{
+		"version": version.Version(),
+	}).Info("Prysm Beacon Chain started")
 
 	if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 		return errors.Wrap(err, "failed to expand single endpoint")
@@ -232,8 +305,9 @@ func main() {
 	// note other instances of ctx in this func are *cli.Context.
 	rctx, cancel := context.WithCancel(context.Background())
 	app := cli.App{
-		Name:  "beacon-chain",
-		Usage: "this is a beacon chain implementation for Ethereum",
+		Name:    "beacon-chain",
+		Usage:   "Ethereum beacon node",
+		Authors: cmd.Authors,
 		Action: func(ctx *cli.Context) error {
 			if err := startNode(ctx, cancel); err != nil {
 				log.Fatal(err.Error())
@@ -245,9 +319,11 @@ func main() {
 		Commands: []*cli.Command{
 			dbcommands.Commands,
 			jwtcommands.Commands,
+			cmd.CompletionCommand("beacon-chain"),
 		},
-		Flags:  appFlags,
-		Before: before,
+		Flags:                appFlags,
+		Before:               before,
+		EnableBashCompletion: true,
 	}
 
 	defer func() {
@@ -280,7 +356,7 @@ func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 	if err != nil {
 		return err
 	}
-	logrus.SetLevel(level)
+
 	// Set libp2p logger to only panic logs for the info level.
 	golog.SetAllLoggers(golog.LevelPanic)
 
@@ -318,18 +394,10 @@ func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 		checkpoint.BeaconNodeOptions,
 		storage.BeaconNodeOptions,
 		backfill.BeaconNodeOptions,
-	}
-	for _, of := range optFuncs {
-		ofo, err := of(ctx)
-		if err != nil {
-			return err
-		}
-		if ofo != nil {
-			opts = append(opts, ofo...)
-		}
+		das.BeaconNodeOptions,
 	}
 
-	beacon, err := node.New(ctx, cancel, opts...)
+	beacon, err := node.New(ctx, cancel, optFuncs, opts...)
 	if err != nil {
 		return fmt.Errorf("unable to start beacon node: %w", err)
 	}

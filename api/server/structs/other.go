@@ -262,3 +262,78 @@ type PendingConsolidation struct {
 	SourceIndex string `json:"source_index"`
 	TargetIndex string `json:"target_index"`
 }
+
+type Builder struct {
+	Pubkey            string `json:"pubkey"`
+	Version           string `json:"version"`
+	ExecutionAddress  string `json:"execution_address"`
+	Balance           string `json:"balance"`
+	DepositEpoch      string `json:"deposit_epoch"`
+	WithdrawableEpoch string `json:"withdrawable_epoch"`
+}
+
+type BuilderPendingPayment struct {
+	Weight        string                    `json:"weight"`
+	Withdrawal    *BuilderPendingWithdrawal `json:"withdrawal"`
+	ProposerIndex string                    `json:"proposer_index"`
+}
+
+type BuilderPendingWithdrawal struct {
+	FeeRecipient string `json:"fee_recipient"`
+	Amount       string `json:"amount"`
+	BuilderIndex string `json:"builder_index"`
+}
+
+type ProposerPreferences struct {
+	DependentRoot  string `json:"dependent_root"`
+	ProposalSlot   string `json:"proposal_slot"`
+	ValidatorIndex string `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient"`
+	TargetGasLimit string `json:"target_gas_limit"`
+}
+
+type SignedProposerPreferences struct {
+	Message   *ProposerPreferences `json:"message"`
+	Signature string               `json:"signature"`
+}
+
+type BuilderRequestAuth struct {
+	Data string `json:"data"`
+	Slot string `json:"slot"`
+}
+
+type SignedBuilderRequestAuth struct {
+	Message   *BuilderRequestAuth `json:"message"`
+	Signature string              `json:"signature"`
+}
+
+type BuilderPreferences struct {
+	MaxExecutionPayment string `json:"max_execution_payment"`
+}
+
+type BuilderPreferencesRequest struct {
+	Preferences *BuilderPreferences       `json:"preferences"`
+	Auth        *SignedBuilderRequestAuth `json:"auth"`
+}
+
+type BuilderPreferencesEntry struct {
+	ProposerPubkey      string                    `json:"proposer_pubkey"`
+	Url                 string                    `json:"url"`
+	Auth                *SignedBuilderRequestAuth `json:"auth"`
+	MaxExecutionPayment string                    `json:"max_execution_payment"`
+}
+
+type BuilderEntry struct {
+	Url                 string                    `json:"url"`
+	Auth                *SignedBuilderRequestAuth `json:"auth"`
+	BuilderPubkeys      []string                  `json:"builder_pubkeys"`
+	MaxExecutionPayment string                    `json:"max_execution_payment"`
+	MinBid              string                    `json:"min_bid"`
+	BuilderBoostFactor  string                    `json:"builder_boost_factor"`
+}
+
+type BuilderConfig struct {
+	MinBid             string          `json:"min_bid"`
+	BuilderBoostFactor string          `json:"builder_boost_factor"`
+	Builders           []*BuilderEntry `json:"builders"`
+}

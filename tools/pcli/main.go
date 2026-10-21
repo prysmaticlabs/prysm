@@ -10,23 +10,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/epoch/precompute"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/encoding/ssz/detect"
-	"github.com/OffchainLabs/prysm/v6/encoding/ssz/equality"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	prefixed "github.com/OffchainLabs/prysm/v6/runtime/logging/logrus-prefixed-formatter"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/kr/pretty"
 	"github.com/pkg/errors"
-	fssz "github.com/prysmaticlabs/fastssz"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/d4l3k/messagediff.v1"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch/precompute"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/encoding/ssz/detect"
+	"github.com/OffchainLabs/prysm/v7/encoding/ssz/equality"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	prefixed "github.com/OffchainLabs/prysm/v7/runtime/logging/logrus-prefixed-formatter"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 )
 
 var blockPath string
@@ -65,7 +66,7 @@ var prettyCommand = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
-		var data fssz.Unmarshaler
+		var data ssz.Unmarshaler
 		switch sszType {
 		case "block":
 			data = &ethpb.BeaconBlock{}
@@ -323,7 +324,7 @@ func main() {
 }
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
-func dataFetcher(fPath string, data fssz.Unmarshaler) error {
+func dataFetcher(fPath string, data ssz.Unmarshaler) error {
 	rawFile, err := os.ReadFile(fPath) // #nosec G304
 	if err != nil {
 		return err
@@ -359,7 +360,7 @@ func detectBlock(fPath string) (interfaces.SignedBeaconBlock, error) {
 	return vu.UnmarshalBeaconBlock(rawFile)
 }
 
-func prettyPrint(sszPath string, data fssz.Unmarshaler) {
+func prettyPrint(sszPath string, data ssz.Unmarshaler) {
 	if err := dataFetcher(sszPath, data); err != nil {
 		log.Fatal(err)
 	}
@@ -384,7 +385,7 @@ func benchmarkHash(sszPath string, sszType string) {
 		}
 		deserializeDuration := time.Since(startDeserialize)
 
-		stateTrieState, err := state_native.InitializeFromProtoCapella(st)
+		stateTrieState, err := state_native.InitializeFromProtoUnsafeCapella(st)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -424,7 +425,8 @@ func debugStateTransition(
 		return st, errors.Wrap(err, "could not process block")
 	}
 	var valid bool
-	valid, err = set.VerifyVerbosely()
+	sigSet := set.Batch()
+	valid, err = sigSet.VerifyVerbosely()
 	if err != nil {
 		return st, errors.Wrap(err, "could not batch verify signature")
 	}

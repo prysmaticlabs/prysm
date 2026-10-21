@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestResultList(t *testing.T) {
@@ -59,5 +59,18 @@ func TestAllBlobRequirementsHaveStrings(t *testing.T) {
 	require.Equal(t, unknownRequirementName, derp.String())
 	for i := range allBlobSidecarRequirements {
 		require.NotEqual(t, unknownRequirementName, allBlobSidecarRequirements[i].String())
+	}
+}
+
+func TestPayloadAttestationRequirementsHaveStrings(t *testing.T) {
+	blobReqs := make(map[Requirement]struct{}, len(allBlobSidecarRequirements))
+	for i := range allBlobSidecarRequirements {
+		blobReqs[allBlobSidecarRequirements[i]] = struct{}{}
+	}
+	for i := range PayloadAttGossipRequirements {
+		req := PayloadAttGossipRequirements[i]
+		require.NotEqual(t, unknownRequirementName, req.String())
+		_, overlaps := blobReqs[req]
+		require.Equal(t, false, overlaps)
 	}
 }

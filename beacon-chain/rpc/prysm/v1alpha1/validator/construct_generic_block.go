@@ -3,11 +3,11 @@ package validator
 import (
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
@@ -57,6 +57,17 @@ func (vs *Server) constructGenericBeaconBlock(
 			return nil, fmt.Errorf("expected *BlobsBundleV2, got %T", blobsBundler)
 		}
 		return vs.constructFuluBlock(blockProto, isBlinded, bidStr, bundle), nil
+	case version.Gloas:
+		// Stateless self-build bundling into GloasContents happens in buildBlockGloas.
+		return &ethpb.GenericBeaconBlock{
+			Block:        &ethpb.GenericBeaconBlock_Gloas{Gloas: blockProto.(*ethpb.BeaconBlockGloas)},
+			PayloadValue: bidStr,
+		}, nil
+	case version.Heze:
+		return &ethpb.GenericBeaconBlock{
+			Block:        &ethpb.GenericBeaconBlock_Heze{Heze: blockProto.(*ethpb.BeaconBlockHeze)},
+			PayloadValue: bidStr,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unknown block version: %d", sBlk.Version())
 	}

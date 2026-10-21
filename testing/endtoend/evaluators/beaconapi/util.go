@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/params"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +25,7 @@ const (
 	msgSSZUnmarshalFailed = "failed to unmarshal SSZ"
 )
 
-func doJSONGETRequest(template, requestPath string, beaconNodeIdx int, resp interface{}, bnType ...string) error {
+func doJSONGETRequest(template, requestPath string, beaconNodeIdx int, resp any, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"Prysm"}
 	}
@@ -45,15 +45,15 @@ func doJSONGETRequest(template, requestPath string, beaconNodeIdx int, resp inte
 	if err != nil {
 		return errors.Wrap(err, "request failed")
 	}
+	defer closeBody(httpResp.Body)
 
-	var body interface{}
+	var body any
 	if httpResp.StatusCode != http.StatusOK {
 		if httpResp.Header.Get("Content-Type") == api.JsonMediaType {
 			if err = json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
 				return errors.Wrap(err, "failed to decode response body")
 			}
 		} else {
-			defer closeBody(httpResp.Body)
 			body, err = io.ReadAll(httpResp.Body)
 			if err != nil {
 				return errors.Wrap(err, "failed to read response body")
@@ -94,14 +94,14 @@ func doSSZGETRequest(template, requestPath string, beaconNodeIdx int, bnType ...
 	if err != nil {
 		return nil, errors.Wrap(err, "request failed")
 	}
+	defer closeBody(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		var body interface{}
+		var body any
 		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 			return nil, errors.Wrap(err, "failed to decode response body")
 		}
 		return nil, fmt.Errorf(msgRequestFailed, bnType[0], resp.StatusCode, body)
 	}
-	defer closeBody(resp.Body)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read response body")
@@ -110,7 +110,7 @@ func doSSZGETRequest(template, requestPath string, beaconNodeIdx int, bnType ...
 	return body, nil
 }
 
-func doJSONPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj, resp interface{}, bnType ...string) error {
+func doJSONPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj, resp any, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"Prysm"}
 	}
@@ -138,15 +138,15 @@ func doJSONPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj,
 	if err != nil {
 		return errors.Wrap(err, "request failed")
 	}
+	defer closeBody(httpResp.Body)
 
-	var body interface{}
+	var body any
 	if httpResp.StatusCode != http.StatusOK {
 		if httpResp.Header.Get("Content-Type") == api.JsonMediaType {
 			if err = json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
 				return errors.Wrap(err, "failed to decode response body")
 			}
 		} else {
-			defer closeBody(httpResp.Body)
 			body, err = io.ReadAll(httpResp.Body)
 			if err != nil {
 				return errors.Wrap(err, "failed to read response body")
@@ -161,7 +161,7 @@ func doJSONPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj,
 	return nil
 }
 
-func doSSZPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj interface{}, bnType ...string) ([]byte, error) {
+func doSSZPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj any, bnType ...string) ([]byte, error) {
 	if len(bnType) == 0 {
 		bnType = []string{"Prysm"}
 	}
@@ -192,14 +192,14 @@ func doSSZPOSTRequest(template, requestPath string, beaconNodeIdx int, postObj i
 	if err != nil {
 		return nil, errors.Wrap(err, "request failed")
 	}
+	defer closeBody(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		var body interface{}
+		var body any
 		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 			return nil, errors.Wrap(err, "failed to decode response body")
 		}
 		return nil, fmt.Errorf(msgRequestFailed, bnType[0], resp.StatusCode, body)
 	}
-	defer closeBody(resp.Body)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read response body")

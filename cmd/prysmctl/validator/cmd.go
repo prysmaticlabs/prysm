@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	"github.com/OffchainLabs/prysm/v6/cmd/validator/accounts"
-	"github.com/OffchainLabs/prysm/v6/cmd/validator/flags"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/runtime/tos"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/cmd/validator/accounts"
+	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/runtime/tos"
 	"github.com/logrusorgru/aurora"
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -56,7 +55,8 @@ var (
 	WithBuilderFlag = &cli.BoolFlag{
 		Name:    "with-builder",
 		Aliases: []string{"wb"},
-		Usage:   "adds default builder options to proposer settings output, used for enabling mev-boost and relays",
+		Usage: "adds legacy (pre-gloas) mev-boost builder options to the proposer settings output; " +
+			"these are discontinued at the gloas fork, where builder participation requires v2 settings with a builders list",
 	}
 
 	DefaultFeeRecipientFlag = &cli.StringFlag{
@@ -156,8 +156,6 @@ var Commands = []*cli.Command{
 					flags.BeaconRPCProviderFlag,
 					flags.Web3SignerURLFlag,
 					flags.Web3SignerPublicValidatorKeysFlag,
-					flags.InteropNumValidators,
-					flags.InteropStartIndex,
 					cmd.GrpcMaxCallRecvMsgSizeFlag,
 					flags.CertFlag,
 					flags.GRPCHeadersFlag,

@@ -2,6 +2,7 @@ package debug
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -10,18 +11,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/core"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/shared"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	forkchoice2 "github.com/OffchainLabs/prysm/v7/consensus-types/forkchoice"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 )
@@ -61,13 +63,13 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 		helpers.HandleIsOptimisticError(w, err)
 		return
 	}
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	blockRoot, err := helpers.BlockRootFromState(ctx, st)
 	if err != nil {
-		httputil.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not calculate block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
-	var respSt interface{}
+	var respSt any
 
 	switch st.Version() {
 	case version.Phase0:
@@ -112,25 +114,50 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+	case version.Gloas:
+		if strings.ToLower(string(id)) == "head" {
+			st, err = s.Stater.State(ctx, []byte(strconv.FormatUint(uint64(s.HeadFetcher.HeadSlot()), 10)))
+			if err != nil {
+				shared.WriteStateFetchError(w, err)
+				return
+			}
+		}
+		respSt, err = structs.BeaconStateGloasFromConsensus(st)
+		if err != nil {
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case version.Heze:
+		if strings.ToLower(string(id)) == "head" {
+			st, err = s.Stater.State(ctx, []byte(strconv.FormatUint(uint64(s.HeadFetcher.HeadSlot()), 10)))
+			if err != nil {
+				shared.WriteStateFetchError(w, err)
+				return
+			}
+		}
+		respSt, err = structs.BeaconStateHezeFromConsensus(st)
+		if err != nil {
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	default:
 		httputil.HandleError(w, "Unsupported state version", http.StatusInternalServerError)
 		return
 	}
 
-	jsonBytes, err := json.Marshal(respSt)
-	if err != nil {
-		httputil.HandleError(w, "Could not marshal state into JSON: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	ver := version.String(st.Version())
-	resp := &structs.GetBeaconStateV2Response{
-		Version:             ver,
-		ExecutionOptimistic: isOptimistic,
-		Finalized:           isFinalized,
-		Data:                jsonBytes,
-	}
 	w.Header().Set(api.VersionHeader, ver)
-	httputil.WriteJson(w, resp)
+
+	// NOTE: Use an anonymous struct with Data as any instead of GetBeaconStateV2Response
+	// (which has Data as json.RawMessage) to avoid a double-encode: json.Marshal(state)
+	// into []byte, then json.Encode(response) copying those bytes again. With Data as any,
+	// the encoder marshals the state directly in a single pass, halving memory usage.
+	httputil.WriteJson(w, struct {
+		Version             string `json:"version"`
+		ExecutionOptimistic bool   `json:"execution_optimistic"`
+		Finalized           bool   `json:"finalized"`
+		Data                any    `json:"data"`
+	}{ver, isOptimistic, isFinalized, respSt})
 }
 
 // getBeaconStateSSZV2 returns the SSZ-serialized version of the full beacon state object for given state ID.
@@ -221,6 +248,63 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJson(w, resp)
 }
 
+// GetForkChoiceV2 returns a Gloas-aware dump of the forkchoice store with one entry per (root, payload_status) tuple.
+func (s *Server) GetForkChoiceV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "debug.GetForkChoiceV2")
+	defer span.End()
+
+	dump, err := s.ForkchoiceFetcher.ForkChoiceDumpV2(ctx)
+	if err != nil {
+		httputil.HandleError(w, "Could not get forkchoice dump: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nodes := make([]*structs.ForkChoiceNodeV2, len(dump.ForkChoiceNodes))
+	for i, n := range dump.ForkChoiceNodes {
+		extra := &structs.ForkChoiceNodeV2ExtraData{
+			Balance:             fmt.Sprintf("%d", n.Balance),
+			ExecutionOptimistic: n.ExecutionOptimistic,
+			TimeStamp:           n.Timestamp.String(),
+		}
+		switch n.PayloadStatus {
+		case forkchoice2.PayloadStatusPending:
+			extra.Target = fmt.Sprintf("%#x", n.Target)
+			extra.JustifiedEpoch = fmt.Sprintf("%d", n.JustifiedEpoch)
+			extra.FinalizedEpoch = fmt.Sprintf("%d", n.FinalizedEpoch)
+			extra.UnrealizedJustifiedEpoch = fmt.Sprintf("%d", n.UnrealizedJustifiedEpoch)
+			extra.UnrealizedFinalizedEpoch = fmt.Sprintf("%d", n.UnrealizedFinalizedEpoch)
+			extra.PayloadAttesterCount = fmt.Sprintf("%d", n.PayloadAttesterCount)
+			extra.PayloadAvailabilityYesCount = fmt.Sprintf("%d", n.PayloadAvailabilityYesCount)
+			extra.PayloadDataAvailabilityYesCount = fmt.Sprintf("%d", n.PayloadDataAvailabilityYesCount)
+		case forkchoice2.PayloadStatusFull:
+			extra.GasLimit = fmt.Sprintf("%d", n.GasLimit)
+		}
+		nodes[i] = &structs.ForkChoiceNodeV2{
+			PayloadStatus:      n.PayloadStatus.String(),
+			Slot:               fmt.Sprintf("%d", n.Slot),
+			BlockRoot:          hexutil.Encode(n.BlockRoot),
+			ParentRoot:         hexutil.Encode(n.ParentRoot),
+			Weight:             fmt.Sprintf("%d", n.Weight),
+			Validity:           n.Validity.String(),
+			ExecutionBlockHash: hexutil.Encode(n.ExecutionBlockHash),
+			ExtraData:          extra,
+		}
+	}
+	resp := &structs.GetForkChoiceDumpV2Response{
+		JustifiedCheckpoint: structs.CheckpointFromConsensus(dump.JustifiedCheckpoint),
+		FinalizedCheckpoint: structs.CheckpointFromConsensus(dump.FinalizedCheckpoint),
+		ForkChoiceNodes:     nodes,
+		ExtraData: &structs.ForkChoiceDumpExtraData{
+			UnrealizedJustifiedCheckpoint: structs.CheckpointFromConsensus(dump.UnrealizedJustifiedCheckpoint),
+			UnrealizedFinalizedCheckpoint: structs.CheckpointFromConsensus(dump.UnrealizedFinalizedCheckpoint),
+			ProposerBoostRoot:             hexutil.Encode(dump.ProposerBoostRoot),
+			PreviousProposerBoostRoot:     hexutil.Encode(dump.PreviousProposerBoostRoot),
+			HeadRoot:                      hexutil.Encode(dump.HeadRoot),
+		},
+	}
+	httputil.WriteJson(w, resp)
+}
+
 // DataColumnSidecars retrieves data column sidecars for a given block id.
 func (s *Server) DataColumnSidecars(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "debug.DataColumnSidecars")
@@ -246,8 +330,7 @@ func (s *Server) DataColumnSidecars(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	segments := strings.Split(r.URL.Path, "/")
-	blockId := segments[len(segments)-1]
+	blockId := r.PathValue("block_id")
 
 	verifiedDataColumns, rpcErr := s.Blocker.DataColumns(ctx, blockId, indices)
 	if rpcErr != nil {
@@ -295,7 +378,22 @@ func (s *Server) DataColumnSidecars(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := buildDataColumnSidecarsJsonResponse(verifiedDataColumns)
+	var data json.RawMessage
+	if blk.Version() >= version.Gloas {
+		sidecars := buildDataColumnSidecarsGloasJsonResponse(verifiedDataColumns)
+		data, err = json.Marshal(sidecars)
+	} else {
+		sidecars, buildErr := buildDataColumnSidecarsJsonResponse(verifiedDataColumns)
+		if buildErr != nil {
+			httputil.HandleError(w, "Could not build data column sidecars response: "+buildErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		data, err = json.Marshal(sidecars)
+	}
+	if err != nil {
+		httputil.HandleError(w, "Could not marshal data column sidecars: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	resp := &structs.GetDebugDataColumnSidecarsResponse{
 		Version:             version.String(blk.Version()),
 		Data:                data,
@@ -308,7 +406,7 @@ func (s *Server) DataColumnSidecars(w http.ResponseWriter, r *http.Request) {
 
 // parseDataColumnIndices filters out invalid and duplicate data column indices
 func parseDataColumnIndices(url *url.URL) ([]int, error) {
-	numberOfColumns := params.BeaconConfig().NumberOfColumns
+	const numberOfColumns = fieldparams.NumberOfColumns
 	rawIndices := url.Query()["indices"]
 	indices := make([]int, 0, numberOfColumns)
 	invalidIndices := make([]string, 0)
@@ -337,58 +435,101 @@ loop:
 	return indices, nil
 }
 
-func buildDataColumnSidecarsJsonResponse(verifiedDataColumns []blocks.VerifiedRODataColumn) []*structs.DataColumnSidecar {
+func buildDataColumnSidecarsJsonResponse(verifiedDataColumns []blocks.VerifiedRODataColumn) ([]*structs.DataColumnSidecar, error) {
 	sidecars := make([]*structs.DataColumnSidecar, len(verifiedDataColumns))
 	for i, dc := range verifiedDataColumns {
-		column := make([]string, len(dc.Column))
-		for j, cell := range dc.Column {
+		cells := dc.Column()
+		column := make([]string, len(cells))
+		for j, cell := range cells {
 			column[j] = hexutil.Encode(cell)
 		}
 
-		kzgCommitments := make([]string, len(dc.KzgCommitments))
-		for j, commitment := range dc.KzgCommitments {
+		comms, err := dc.KzgCommitments()
+		if err != nil {
+			return nil, err
+		}
+		kzgCommitments := make([]string, len(comms))
+		for j, commitment := range comms {
 			kzgCommitments[j] = hexutil.Encode(commitment)
 		}
 
-		kzgProofs := make([]string, len(dc.KzgProofs))
-		for j, proof := range dc.KzgProofs {
+		kzgProofs := make([]string, len(dc.KzgProofs()))
+		for j, proof := range dc.KzgProofs() {
 			kzgProofs[j] = hexutil.Encode(proof)
 		}
 
-		kzgCommitmentsInclusionProof := make([]string, len(dc.KzgCommitmentsInclusionProof))
-		for j, proof := range dc.KzgCommitmentsInclusionProof {
+		incProof, err := dc.KzgCommitmentsInclusionProof()
+		if err != nil {
+			return nil, err
+		}
+		kzgCommitmentsInclusionProof := make([]string, len(incProof))
+		for j, proof := range incProof {
 			kzgCommitmentsInclusionProof[j] = hexutil.Encode(proof)
 		}
 
+		sbh, err := dc.SignedBlockHeader()
+		if err != nil {
+			return nil, err
+		}
 		sidecars[i] = &structs.DataColumnSidecar{
-			Index:                        strconv.FormatUint(dc.Index, 10),
+			Index:                        strconv.FormatUint(dc.Index(), 10),
 			Column:                       column,
 			KzgCommitments:               kzgCommitments,
 			KzgProofs:                    kzgProofs,
-			SignedBeaconBlockHeader:      structs.SignedBeaconBlockHeaderFromConsensus(dc.SignedBlockHeader),
+			SignedBeaconBlockHeader:      structs.SignedBeaconBlockHeaderFromConsensus(sbh),
 			KzgCommitmentsInclusionProof: kzgCommitmentsInclusionProof,
+		}
+	}
+	return sidecars, nil
+}
+
+func buildDataColumnSidecarsGloasJsonResponse(verifiedDataColumns []blocks.VerifiedRODataColumn) []*structs.DataColumnSidecarGloas {
+	sidecars := make([]*structs.DataColumnSidecarGloas, len(verifiedDataColumns))
+	for i, dc := range verifiedDataColumns {
+		cells := dc.Column()
+		column := make([]string, len(cells))
+		for j, cell := range cells {
+			column[j] = hexutil.Encode(cell)
+		}
+		proofs := dc.KzgProofs()
+		kzgProofs := make([]string, len(proofs))
+		for j, proof := range proofs {
+			kzgProofs[j] = hexutil.Encode(proof)
+		}
+		root := dc.BlockRoot()
+		sidecars[i] = &structs.DataColumnSidecarGloas{
+			Index:           strconv.FormatUint(dc.Index(), 10),
+			Column:          column,
+			KzgProofs:       kzgProofs,
+			Slot:            strconv.FormatUint(uint64(dc.Slot()), 10),
+			BeaconBlockRoot: hexutil.Encode(root[:]),
 		}
 	}
 	return sidecars
 }
 
-// buildDataColumnSidecarsSSZResponse builds SSZ response for data column sidecars
+// buildDataColumnSidecarsSSZResponse encodes the sidecars as an SSZ list of variable-size
+// elements: a 4-byte offset per element, followed by the elements themselves.
 func buildDataColumnSidecarsSSZResponse(verifiedDataColumns []blocks.VerifiedRODataColumn) ([]byte, error) {
-	if len(verifiedDataColumns) == 0 {
-		return []byte{}, nil
-	}
-
-	// Pre-allocate buffer for all sidecars using the known SSZ size
-	sizePerSidecar := (&ethpb.DataColumnSidecar{}).SizeSSZ()
-	ssz := make([]byte, 0, sizePerSidecar*len(verifiedDataColumns))
-
-	// Marshal and append each sidecar
+	elements := make([][]byte, len(verifiedDataColumns))
+	total := 4 * len(verifiedDataColumns)
 	for i, sidecar := range verifiedDataColumns {
 		sszrep, err := sidecar.MarshalSSZ()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to marshal data column sidecar at index %d", i)
 		}
-		ssz = append(ssz, sszrep...)
+		elements[i] = sszrep
+		total += len(sszrep)
+	}
+
+	ssz := make([]byte, 0, total)
+	offset := 4 * len(verifiedDataColumns)
+	for _, element := range elements {
+		ssz = binary.LittleEndian.AppendUint32(ssz, uint32(offset))
+		offset += len(element)
+	}
+	for _, element := range elements {
+		ssz = append(ssz, element...)
 	}
 
 	return ssz, nil

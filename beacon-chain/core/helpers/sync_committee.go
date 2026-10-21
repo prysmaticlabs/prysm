@@ -4,22 +4,34 @@ package helpers
 
 import (
 	"bytes"
+	"context"
+	"sync"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/hash"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
 	syncCommitteeCache = cache.NewSyncCommittee()
+	// pendingSyncCommitteeCacheFills tracks in-flight fillSyncCommitteeCacheOnMiss goroutines.
+	pendingSyncCommitteeCacheFills sync.WaitGroup
 )
+
+// fillSyncCommitteeCacheOnMiss asynchronously fills the sync committee cache for the given root.
+func fillSyncCommitteeCacheOnMiss(root [32]byte, st state.ReadOnlyBeaconState) {
+	pendingSyncCommitteeCacheFills.Go(func() {
+		if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
+			log.WithError(err).Error("Could not fill sync committee cache on miss")
+		}
+	})
+}
 
 // CurrentPeriodPositions returns committee indices of the current period sync committee for input validators.
 func CurrentPeriodPositions(st state.BeaconState, indices []primitives.ValidatorIndex) ([][]primitives.CommitteeIndex, error) {
@@ -34,12 +46,7 @@ func CurrentPeriodPositions(st state.BeaconState, indices []primitives.Validator
 			return nil, err
 		}
 
-		// Fill in the cache on miss.
-		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.WithError(err).Error("Could not fill sync committee cache on miss")
-			}
-		}()
+		fillSyncCommitteeCacheOnMiss(root, st)
 
 		pos = make([][]primitives.CommitteeIndex, len(indices))
 		for i, idx := range indices {
@@ -58,7 +65,7 @@ func CurrentPeriodPositions(st state.BeaconState, indices []primitives.Validator
 // along with the sync committee root.
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input current sync committee object
-func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.ValidatorIndex) (bool, error) {
+func IsCurrentPeriodSyncCommittee(st state.ReadOnlyBeaconState, valIdx primitives.ValidatorIndex) (bool, error) {
 	root, err := SyncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
@@ -74,12 +81,7 @@ func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.Valida
 			return false, err
 		}
 
-		// Fill in the cache on miss.
-		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.WithError(err).Error("Could not fill sync committee cache on miss")
-			}
-		}()
+		fillSyncCommitteeCacheOnMiss(root, st)
 
 		return len(findSubCommitteeIndices(val.PublicKey, committee.Pubkeys)) > 0, nil
 	}
@@ -94,7 +96,7 @@ func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.Valida
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input next sync committee object
 func IsNextPeriodSyncCommittee(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st state.ReadOnlyBeaconState, valIdx primitives.ValidatorIndex,
 ) (bool, error) {
 	root, err := SyncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -122,7 +124,7 @@ func IsNextPeriodSyncCommittee(
 // CurrentPeriodSyncSubcommitteeIndices returns the subcommittee indices of the
 // current period sync committee for input validator.
 func CurrentPeriodSyncSubcommitteeIndices(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st state.ReadOnlyBeaconState, valIdx primitives.ValidatorIndex,
 ) ([]primitives.CommitteeIndex, error) {
 	root, err := SyncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -140,12 +142,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 			return nil, err
 		}
 
-		// Fill in the cache on miss.
-		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.WithError(err).Error("Could not fill sync committee cache on miss")
-			}
-		}()
+		fillSyncCommitteeCacheOnMiss(root, st)
 
 		return findSubCommitteeIndices(pk[:], committee.Pubkeys), nil
 	}
@@ -157,7 +154,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 
 // NextPeriodSyncSubcommitteeIndices returns the subcommittee indices of the next period sync committee for input validator.
 func NextPeriodSyncSubcommitteeIndices(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
+	st state.ReadOnlyBeaconState, valIdx primitives.ValidatorIndex,
 ) ([]primitives.CommitteeIndex, error) {
 	root, err := SyncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -185,7 +182,7 @@ func NextPeriodSyncSubcommitteeIndices(
 // UpdateSyncCommitteeCache updates sync committee cache.
 // It uses `state`'s latest block header root as key. To avoid misuse, it disallows
 // block header with state root zeroed out.
-func UpdateSyncCommitteeCache(st state.BeaconState) error {
+func UpdateSyncCommitteeCache(ctx context.Context, st state.BeaconState) error {
 	nextSlot := st.Slot() + 1
 	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return errors.New("not at the end of the epoch to update cache")
@@ -204,7 +201,7 @@ func UpdateSyncCommitteeCache(st state.BeaconState) error {
 		return err
 	}
 
-	return syncCommitteeCache.UpdatePositionsInCommittee(combineRootAndSlot(prevBlockRoot[:], uint64(header.Slot)), st)
+	return syncCommitteeCacheFrom(ctx).UpdatePositionsInCommittee(combineRootAndSlot(prevBlockRoot[:], uint64(header.Slot)), st)
 }
 
 // Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.

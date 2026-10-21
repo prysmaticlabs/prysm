@@ -8,11 +8,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/runtime/interop"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/runtime/interop"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -33,7 +33,7 @@ func Test_genesisStateFromJSONValidators(t *testing.T) {
 func createGenesisDepositData(t *testing.T, numKeys int) []*depositDataJSON {
 	pubKeys := make([]bls.PublicKey, numKeys)
 	privKeys := make([]bls.SecretKey, numKeys)
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		randKey, err := bls.RandKey()
 		require.NoError(t, err)
 		privKeys[i] = randKey
@@ -42,7 +42,7 @@ func createGenesisDepositData(t *testing.T, numKeys int) []*depositDataJSON {
 	dataList, _, err := interop.DepositDataFromKeys(privKeys, pubKeys)
 	require.NoError(t, err)
 	jsonData := make([]*depositDataJSON, numKeys)
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		dataRoot, err := dataList[i].HashTreeRoot()
 		require.NoError(t, err)
 		jsonData[i] = &depositDataJSON{
@@ -125,6 +125,75 @@ func Test_generateGenesis_BaseFeeValidation(t *testing.T) {
 	}
 }
 
+func Test_generateGenesis_TimestampHandling(t *testing.T) {
+	tests := []struct {
+		name             string
+		inputTimestamp   uint64 // timestamp in input genesis.json (0 = no input file)
+		genesisTime      uint64 // --genesis-time (0 = not set)
+		genesisTimeDelay uint64 // --genesis-time-delay
+		wantTimestamp    uint64
+	}{
+		{
+			name:           "uses input file timestamp when no --genesis-time",
+			inputTimestamp: 1700000000,
+			wantTimestamp:  1700000000,
+		},
+		{
+			name:           "explicit --genesis-time overrides input file",
+			inputTimestamp: 1700000000,
+			genesisTime:    1600000000,
+			wantTimestamp:  1600000000,
+		},
+		{
+			name:             "delay applied to input file timestamp",
+			inputTimestamp:   1700000000,
+			genesisTimeDelay: 100,
+			wantTimestamp:    1700000100,
+		},
+		{
+			name:             "delay applied to explicit --genesis-time",
+			inputTimestamp:   1700000000,
+			genesisTime:      1600000000,
+			genesisTimeDelay: 50,
+			wantTimestamp:    1600000050,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalFlags := generateGenesisStateFlags
+			defer func() {
+				generateGenesisStateFlags = originalFlags
+			}()
+
+			generateGenesisStateFlags.NumValidators = 2
+			generateGenesisStateFlags.GenesisTime = tt.genesisTime
+			generateGenesisStateFlags.GenesisTimeDelay = tt.genesisTimeDelay
+			generateGenesisStateFlags.ForkName = version.String(version.Deneb)
+
+			if tt.inputTimestamp > 0 {
+				genesis := &core.Genesis{
+					Timestamp:  tt.inputTimestamp,
+					BaseFee:    big.NewInt(1000000000),
+					Difficulty: big.NewInt(0),
+					GasLimit:   15000000,
+					Alloc:      types.GenesisAlloc{},
+					Config:     &params.ChainConfig{ChainID: big.NewInt(32382)},
+				}
+				genesisJSON, err := json.Marshal(genesis)
+				require.NoError(t, err)
+				tmpFile := t.TempDir() + "/genesis.json"
+				require.NoError(t, writeFile(tmpFile, genesisJSON))
+				generateGenesisStateFlags.GethGenesisJsonIn = tmpFile
+			}
+
+			st, err := generateGenesis(context.Background())
+			require.NoError(t, err)
+			assert.Equal(t, int64(tt.wantTimestamp), st.GenesisTime().Unix())
+		})
+	}
+}
+
 func writeFile(path string, data []byte) error {
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0o644)
 }

@@ -1,3 +1,5 @@
+//go:build minimal
+
 package validator
 
 import (
@@ -5,24 +7,24 @@ import (
 	"testing"
 	"time"
 
-	mockChain "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache/depositsnapshot"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	mockExecution "github.com/OffchainLabs/prysm/v6/beacon-chain/execution/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	mockstategen "github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen/mock"
-	mockSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/container/trie"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	mockChain "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache/depositsnapshot"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	mockExecution "github.com/OffchainLabs/prysm/v7/beacon-chain/execution/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	mockstategen "github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen/mock"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/container/trie"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/d4l3k/messagediff"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -268,11 +270,10 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		},
 	}
 	vs := &Server{
-		ChainStartFetcher: p,
-		BlockFetcher:      p,
-		Eth1InfoFetcher:   p,
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: st, Root: genesisRoot[:]},
+		BlockFetcher:    p,
+		Eth1InfoFetcher: p,
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: st, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -330,11 +331,10 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 		},
 	}
 	vs := &Server{
-		ChainStartFetcher: p,
-		BlockFetcher:      p,
-		Eth1InfoFetcher:   p,
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		BlockFetcher:    p,
+		Eth1InfoFetcher: p,
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -389,11 +389,10 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 		},
 	}
 	vs := &Server{
-		ChainStartFetcher: p,
-		Eth1InfoFetcher:   p,
-		DepositFetcher:    depositCache,
-		BlockFetcher:      p,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		Eth1InfoFetcher: p,
+		DepositFetcher:  depositCache,
+		BlockFetcher:    p,
+		HeadFetcher:     &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -447,11 +446,10 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		},
 	}
 	vs := &Server{
-		ChainStartFetcher: p,
-		Eth1InfoFetcher:   p,
-		BlockFetcher:      p,
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: st, Root: genesisRoot[:]},
+		Eth1InfoFetcher: p,
+		BlockFetcher:    p,
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: st, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -533,12 +531,11 @@ func TestActivationStatus_OK(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(t.Context(), dep, 0, 1, root))
 
 	vs := &Server{
-		Ctx:               t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{},
-		BlockFetcher:      &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		Ctx:             t.Context(),
+		BlockFetcher:    &mockExecution.Chain{},
+		Eth1InfoFetcher: &mockExecution.Chain{},
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
 	activeExists, response, err := vs.activationStatus(t.Context(), pubKeys)
 	require.NoError(t, err)
@@ -661,7 +658,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		depData := &ethpb.Deposit_Data{
 			PublicKey:             pubKey(uint64(i)),
 			Signature:             bytesutil.PadTo([]byte("hi"), 96),
@@ -684,11 +681,10 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		},
 	}
 	vs := &Server{
-		ChainStartFetcher: p,
-		BlockFetcher:      p,
-		Eth1InfoFetcher:   p,
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: st, Root: genesisRoot[:]},
+		BlockFetcher:    p,
+		Eth1InfoFetcher: p,
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: st, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pbKey,
@@ -696,7 +692,6 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	resp, err := vs.ValidatorStatus(t.Context(), req)
 	require.NoError(t, err, "Could not get validator status")
 	assert.Equal(t, ethpb.ValidatorStatus_PENDING, resp.Status)
-	assert.Equal(t, uint64(2), resp.PositionInActivationQueue, "Unexpected position in activation queue")
 }
 
 func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
@@ -764,13 +759,12 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(t.Context(), dep, 0, 1, root))
 
 	vs := &Server{
-		Ctx:               t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{},
-		BlockFetcher:      &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		Ctx:             t.Context(),
+		BlockFetcher:    &mockExecution.Chain{},
+		Eth1InfoFetcher: &mockExecution.Chain{},
+		DepositFetcher:  depositCache,
+		HeadFetcher:     &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
@@ -859,12 +853,11 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 
 	vs := &Server{
-		Ctx:               t.Context(),
-		ChainStartFetcher: &mockExecution.Chain{},
-		BlockFetcher:      &mockExecution.Chain{},
-		Eth1InfoFetcher:   &mockExecution.Chain{},
-		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
-		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		Ctx:             t.Context(),
+		BlockFetcher:    &mockExecution.Chain{},
+		Eth1InfoFetcher: &mockExecution.Chain{},
+		HeadFetcher:     &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
 	}
 
 	want := []*ethpb.ValidatorStatusResponse{
@@ -975,7 +968,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
 						Epoch:      1,
@@ -1011,7 +1004,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
 						Epoch:      1,
@@ -1058,7 +1051,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 2; i++ {
+				for i := range 2 {
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
 						Epoch:      1,
@@ -1161,7 +1154,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 15; i++ {
+				for i := range 15 {
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
 						Epoch:      2,
@@ -1198,7 +1191,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
 				}
 				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
-				for i := 0; i < 15; i++ {
+				for i := range 15 {
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
 						Epoch:      1,

@@ -3,14 +3,15 @@ package testing
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/encoder"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/metadata"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/encoder"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/partialdatacolumnbroadcaster"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/metadata"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -99,12 +100,16 @@ func (*FakeP2P) PublishToTopic(_ context.Context, _ string, _ []byte, _ ...pubsu
 }
 
 // Send -- fake.
-func (*FakeP2P) Send(_ context.Context, _ interface{}, _ string, _ peer.ID) (network.Stream, error) {
+func (*FakeP2P) Send(_ context.Context, _ any, _ string, _ peer.ID) (network.Stream, error) {
 	return nil, nil
 }
 
 // PubSub -- fake.
 func (*FakeP2P) PubSub() *pubsub.PubSub {
+	return nil
+}
+
+func (*FakeP2P) PartialColumnBroadcaster() partialdatacolumnbroadcaster.Broadcaster {
 	return nil
 }
 
@@ -135,6 +140,11 @@ func (*FakeP2P) Host() host.Host {
 
 // Disconnect -- fake.
 func (*FakeP2P) Disconnect(_ peer.ID) error {
+	return nil
+}
+
+// BroadcastForEpoch -- fake.
+func (*FakeP2P) BroadcastForEpoch(_ context.Context, _ proto.Message, _ primitives.Epoch) error {
 	return nil
 }
 
@@ -169,7 +179,7 @@ func (*FakeP2P) BroadcastLightClientFinalityUpdate(_ context.Context, _ interfac
 }
 
 // BroadcastDataColumnSidecar -- fake.
-func (*FakeP2P) BroadcastDataColumnSidecars(_ context.Context, _ []blocks.VerifiedRODataColumn) error {
+func (*FakeP2P) BroadcastDataColumnSidecars(_ context.Context, _ []blocks.VerifiedRODataColumn, _ []blocks.PartialDataColumn) error {
 	return nil
 }
 
@@ -211,6 +221,11 @@ func (*FakeP2P) CustodyGroupCount(context.Context) (uint64, error) {
 // UpdateCustodyInfo -- fake.
 func (s *FakeP2P) UpdateCustodyInfo(earliestAvailableSlot primitives.Slot, custodyGroupCount uint64) (primitives.Slot, uint64, error) {
 	return earliestAvailableSlot, custodyGroupCount, nil
+}
+
+// UpdateEarliestAvailableSlot -- fake.
+func (*FakeP2P) UpdateEarliestAvailableSlot(earliestAvailableSlot primitives.Slot) error {
+	return nil
 }
 
 // CustodyGroupCountFromPeer -- fake.

@@ -3,14 +3,22 @@ package stateutil
 import (
 	"encoding/binary"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/encoding/ssz"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/encoding/ssz"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
 // ParticipationBitsRoot computes the HashTreeRoot merkleization of
-// participation roots.
-func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
+// participation roots for the supplied state version.
+func ParticipationBitsRoot(stateVersion int, bits []byte) ([32]byte, error) {
+	if stateVersion >= version.Gloas {
+		return participationBitsRootProgressive(bits)
+	}
+	return participationBitsRoot(bits)
+}
+
+func participationBitsRoot(bits []byte) ([32]byte, error) {
 	chunkedRoots, err := packParticipationBits(bits)
 	if err != nil {
 		return [32]byte{}, err
@@ -28,18 +36,20 @@ func ParticipationBitsRoot(bits []byte) ([32]byte, error) {
 	return ssz.MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
+func participationBitsRootProgressive(bits []byte) ([32]byte, error) {
+	return ssz.ByteSliceRootProgressive(bits)
+}
+
 // packParticipationBits into chunks. It'll pad the last chunk with zero bytes if
 // it does not have length bytes per chunk.
 func packParticipationBits(bytes []byte) ([][32]byte, error) {
 	numItems := len(bytes)
 	chunks := make([][32]byte, 0, numItems/32)
 	for i := 0; i < numItems; i += 32 {
-		j := i + 32
-		// We create our upper bound index of the chunk, if it is greater than numItems,
-		// we set it as numItems itself.
-		if j > numItems {
-			j = numItems
-		}
+		j := min(
+			// We create our upper bound index of the chunk, if it is greater than numItems,
+			// we set it as numItems itself.
+			i+32, numItems)
 		// We create chunks from the list of items based on the
 		// indices determined above.
 		var chunk [32]byte

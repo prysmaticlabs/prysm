@@ -1,20 +1,23 @@
 package types_test
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	validatorpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/validator-client"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager/remote-web3signer/types"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager/remote-web3signer/types/mock"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer/types"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager/remote-web3signer/types/mock"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 func TestGetAggregateAndProofV2SignRequest(t *testing.T) {
 	type args struct {
+		version               int
 		request               *validatorpb.SignRequest
 		genesisValidatorsRoot []byte
 	}
@@ -25,24 +28,50 @@ func TestGetAggregateAndProofV2SignRequest(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Happy Path Test",
+			name: "Happy Path Test Electra",
 			args: args{
+				version:               version.Electra,
 				request:               mock.GetMockSignRequest("AGGREGATE_AND_PROOF_V2"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
 			want:    mock.AggregateAndProofV2SignRequest(version.Electra),
 			wantErr: false,
 		},
+		{
+			name: "Happy Path Test Pre-Electra",
+			args: args{
+				version:               version.Deneb,
+				request:               mock.GetMockSignRequest("AGGREGATE_AND_PROOF"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want:    mock.AggregateAndProofV2SignRequest(version.Deneb),
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test Gloas",
+			args: args{
+				version:               version.Gloas,
+				request:               mock.GetMockSignRequest("AGGREGATE_AND_PROOF_V2"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want:    mock.AggregateAndProofV2SignRequest(version.Gloas),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := types.GetAggregateAndProofV2SignRequest(version.Electra, tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := types.GetAggregateAndProofV2SignRequest(tt.args.version, tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAggregateAndProofV2SignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAggregateAndProofV2SignRequest() got = %v, want %v", got, tt.want)
+			// Marshal to JSON for comparison since ForkInfo is generated dynamically
+			gotJSON, err := json.Marshal(got)
+			require.NoError(t, err)
+			wantJSON, err := json.Marshal(tt.want)
+			require.NoError(t, err)
+			if string(gotJSON) != string(wantJSON) {
+				t.Errorf("JSON mismatch:\ngot:  %s\nwant: %s", string(gotJSON), string(wantJSON))
 			}
 		})
 	}
@@ -362,6 +391,22 @@ func TestGetVoluntaryExitSignRequest(t *testing.T) {
 	}
 }
 
+func TestGetBlockV2BlindedSignRequest_NilBlock(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		request *validatorpb.SignRequest
+	}{
+		{name: "nil fulu wrapper", request: &validatorpb.SignRequest{Object: (*validatorpb.SignRequest_BlockFulu)(nil)}},
+		{name: "nil gloas wrapper", request: &validatorpb.SignRequest{Object: (*validatorpb.SignRequest_BlockGloas)(nil)}},
+		{name: "nil heze block", request: &validatorpb.SignRequest{Object: &validatorpb.SignRequest_BlockHeze{}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := types.GetBlockV2BlindedSignRequest(tc.request, make([]byte, fieldparams.RootLength))
+			require.NotNil(t, err)
+		})
+	}
+}
+
 func TestGetBlockV2BlindedSignRequest(t *testing.T) {
 	type args struct {
 		request               *validatorpb.SignRequest
@@ -503,6 +548,32 @@ func TestGetBlockV2BlindedSignRequest(t *testing.T) {
 			}(t), "FULU"),
 			wantErr: false,
 		},
+		{
+			name: "Happy Path Test Gloas",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_GLOAS"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want: mock.BlockV2BlindedSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0x97bb2344fda1add4bfe7382ce4700ad02dba5dfe18250215c1063f8967670966")
+				require.NoError(t, err)
+				return bytevalue
+			}(t), "GLOAS"),
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test Heze",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_HEZE"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want: mock.BlockV2BlindedSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0x97bb2344fda1add4bfe7382ce4700ad02dba5dfe18250215c1063f8967670966")
+				require.NoError(t, err)
+				return bytevalue
+			}(t), "HEZE"),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -549,4 +620,92 @@ func TestGetValidatorRegistrationSignRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+// setGloasForkEpoch schedules Gloas right after Fulu so mock signing slots resolve to the Gloas fork.
+func setGloasForkEpoch(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.GloasForkEpoch = cfg.FuluForkEpoch + 1
+	params.OverrideBeaconConfig(cfg)
+}
+
+func TestGetExecutionPayloadEnvelopeSignRequest(t *testing.T) {
+	setGloasForkEpoch(t)
+	t.Run("Happy Path Test", func(t *testing.T) {
+		got, err := types.GetExecutionPayloadEnvelopeSignRequest(
+			version.Gloas,
+			mock.GetMockSignRequest("EXECUTION_PAYLOAD_ENVELOPE"),
+			make([]byte, fieldparams.RootLength),
+		)
+		require.NoError(t, err)
+		gotJSON, err := json.Marshal(got)
+		require.NoError(t, err)
+		wantJSON, err := json.Marshal(mock.ExecutionPayloadEnvelopeSignRequest())
+		require.NoError(t, err)
+		require.Equal(t, string(wantJSON), string(gotJSON))
+	})
+	t.Run("Nil Envelope", func(t *testing.T) {
+		req := &validatorpb.SignRequest{
+			Object: &validatorpb.SignRequest_ExecutionPayloadEnvelope{},
+		}
+		_, err := types.GetExecutionPayloadEnvelopeSignRequest(version.Gloas, req, make([]byte, fieldparams.RootLength))
+		require.ErrorContains(t, "ExecutionPayloadEnvelope is nil", err)
+	})
+}
+
+func TestGetPayloadAttestationMessageSignRequest(t *testing.T) {
+	setGloasForkEpoch(t)
+	t.Run("Happy Path Test", func(t *testing.T) {
+		got, err := types.GetPayloadAttestationMessageSignRequest(
+			version.Gloas,
+			mock.GetMockSignRequest("PAYLOAD_ATTESTATION_MESSAGE"),
+			make([]byte, fieldparams.RootLength),
+		)
+		require.NoError(t, err)
+		require.DeepEqual(t, mock.PayloadAttestationMessageSignRequest(), got)
+	})
+	t.Run("Nil Data", func(t *testing.T) {
+		req := &validatorpb.SignRequest{
+			Object: &validatorpb.SignRequest_PayloadAttestationData{},
+		}
+		_, err := types.GetPayloadAttestationMessageSignRequest(version.Gloas, req, make([]byte, fieldparams.RootLength))
+		require.ErrorContains(t, "PayloadAttestationData is nil", err)
+	})
+}
+
+func TestGetProposerPreferencesSignRequest(t *testing.T) {
+	setGloasForkEpoch(t)
+	t.Run("Happy Path Test", func(t *testing.T) {
+		got, err := types.GetProposerPreferencesSignRequest(
+			version.Gloas,
+			mock.GetMockSignRequest("PROPOSER_PREFERENCES"),
+			make([]byte, fieldparams.RootLength),
+		)
+		require.NoError(t, err)
+		require.DeepEqual(t, mock.ProposerPreferencesSignRequest(), got)
+	})
+	t.Run("Nil Preferences", func(t *testing.T) {
+		req := &validatorpb.SignRequest{
+			Object: &validatorpb.SignRequest_ProposerPreference{},
+		}
+		_, err := types.GetProposerPreferencesSignRequest(version.Gloas, req, make([]byte, fieldparams.RootLength))
+		require.ErrorContains(t, "ProposerPreferences is nil", err)
+	})
+}
+
+func TestGetBuilderRequestAuthSignRequest(t *testing.T) {
+	setGloasForkEpoch(t)
+	t.Run("Happy Path Test", func(t *testing.T) {
+		got, err := types.GetBuilderRequestAuthSignRequest(version.Gloas, mock.GetMockSignRequest("BUILDER_REQUEST_AUTH"))
+		require.NoError(t, err)
+		require.DeepEqual(t, mock.BuilderRequestAuthSignRequest(), got)
+	})
+	t.Run("Nil BuilderRequestAuth", func(t *testing.T) {
+		req := &validatorpb.SignRequest{
+			Object: &validatorpb.SignRequest_BuilderRequestAuth{},
+		}
+		_, err := types.GetBuilderRequestAuthSignRequest(version.Gloas, req)
+		require.ErrorContains(t, "BuilderRequestAuth is nil", err)
+	})
 }

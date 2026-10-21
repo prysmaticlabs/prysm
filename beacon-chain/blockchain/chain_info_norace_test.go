@@ -3,11 +3,11 @@ package blockchain
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func TestHeadSlot_DataRace(t *testing.T) {
@@ -18,7 +18,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	wait := make(chan struct{})
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st))
+		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st, false))
 	}()
 	s.HeadSlot()
 	<-wait
@@ -33,7 +33,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 1)
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st))
+		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st, false))
 
 	}()
 	_, err = s.HeadRoot(t.Context())
@@ -52,7 +52,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 1)
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st))
+		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st, false))
 
 	}()
 	_, err = s.HeadBlock(t.Context())
@@ -72,7 +72,7 @@ func TestHeadState_DataRace(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(t.Context(), st, root))
 	go func() {
 		defer close(wait)
-		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st))
+		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st, false))
 
 	}()
 	_, err = s.HeadState(t.Context())

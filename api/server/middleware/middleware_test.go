@@ -8,9 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	log "github.com/sirupsen/logrus"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 // frozenHeaderRecorder allows asserting that response headers were not modified
@@ -88,6 +87,7 @@ func TestContentTypeHandler(t *testing.T) {
 	tests := []struct {
 		name               string
 		contentType        string
+		body               string
 		expectedStatusCode int
 		isGet              bool
 	}{
@@ -107,8 +107,14 @@ func TestContentTypeHandler(t *testing.T) {
 			expectedStatusCode: http.StatusUnsupportedMediaType,
 		},
 		{
-			name:               "Missing Content-Type",
+			name:               "Missing Content-Type with empty body",
 			contentType:        "",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "Missing Content-Type with non-empty body",
+			contentType:        "",
+			body:               "{}",
 			expectedStatusCode: http.StatusUnsupportedMediaType,
 		},
 		{
@@ -130,7 +136,11 @@ func TestContentTypeHandler(t *testing.T) {
 			if tt.isGet {
 				httpMethod = http.MethodGet
 			}
-			req := httptest.NewRequest(httpMethod, "/", nil)
+			var body io.Reader
+			if tt.body != "" {
+				body = bytes.NewReader([]byte(tt.body))
+			}
+			req := httptest.NewRequest(httpMethod, "/", body)
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
 			}

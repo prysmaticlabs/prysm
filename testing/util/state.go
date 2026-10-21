@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"testing"
 
-	b "github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/iface"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/go-bitfield"
+	b "github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/iface"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 // FillRootsNaturalOpt is meant to be used as an option when calling NewBeaconState.
@@ -103,16 +104,16 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafePhase0(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Phase0 state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
 }
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
@@ -158,16 +159,16 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeAltair(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Altair state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
 }
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
@@ -225,16 +226,16 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeBellatrix(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Bellatrix state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
 }
 
 // NewBeaconStateCapella creates a beacon state with minimum marshalable fields.
@@ -293,16 +294,16 @@ func NewBeaconStateCapella(options ...func(state *ethpb.BeaconStateCapella) erro
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeCapella(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Capella state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
 }
 
 // NewBeaconStateDeneb creates a beacon state with minimum marshalable fields.
@@ -361,16 +362,16 @@ func NewBeaconStateDeneb(options ...func(state *ethpb.BeaconStateDeneb) error) (
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeDeneb(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Deneb state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
 }
 
 // NewBeaconStateElectra creates a beacon state with minimum marshalable fields.
@@ -429,16 +430,16 @@ func NewBeaconStateElectra(options ...func(state *ethpb.BeaconStateElectra) erro
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeElectra(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Electra state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
 }
 
 // NewBeaconStateFulu creates a beacon state with minimum marshalable fields.
@@ -492,29 +493,117 @@ func NewBeaconStateFulu(options ...func(state *ethpb.BeaconStateFulu) error) (st
 			TransactionsRoot: make([]byte, 32),
 			WithdrawalsRoot:  make([]byte, 32),
 		},
-		ProposerLookahead: make([]uint64, 64),
+		ProposerLookahead: make([]primitives.ValidatorIndex, 64),
 	}
 
 	for _, opt := range options {
 		err := opt(seed)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("apply state option: %w", err)
 		}
 	}
 
 	var st, err = state_native.InitializeFromProtoUnsafeFulu(seed)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialize Fulu state: %w", err)
 	}
 
-	return st.Copy(), nil
+	return st, nil
+}
+
+// NewBeaconStateGloas creates a beacon state with minimum marshalable fields.
+func NewBeaconStateGloas(options ...func(state *ethpb.BeaconStateGloas) error) (state.BeaconState, error) {
+	pubkeys := make([][]byte, 512)
+	for i := range pubkeys {
+		pubkeys[i] = make([]byte, 48)
+	}
+
+	builderPendingPayments := make([]*ethpb.BuilderPendingPayment, 64)
+	for i := range builderPendingPayments {
+		builderPendingPayments[i] = &ethpb.BuilderPendingPayment{
+			Withdrawal: &ethpb.BuilderPendingWithdrawal{
+				FeeRecipient: make([]byte, 20),
+			},
+		}
+	}
+
+	ptcWindow := make([]*ethpb.PTCs, 3*params.BeaconConfig().SlotsPerEpoch)
+	for i := range ptcWindow {
+		ptcWindow[i] = &ethpb.PTCs{
+			ValidatorIndices: make([]primitives.ValidatorIndex, fieldparams.PTCSize),
+		}
+	}
+
+	seed := &ethpb.BeaconStateGloas{
+		BlockRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		StateRoots:                 filledByteSlice2D(uint64(params.BeaconConfig().SlotsPerHistoricalRoot), 32),
+		Slashings:                  make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes:                filledByteSlice2D(uint64(params.BeaconConfig().EpochsPerHistoricalVector), 32),
+		Validators:                 make([]*ethpb.Validator, 0),
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, 32),
+		},
+		Fork: &ethpb.Fork{
+			PreviousVersion: make([]byte, 4),
+			CurrentVersion:  make([]byte, 4),
+		},
+		Eth1DataVotes:               make([]*ethpb.Eth1Data, 0),
+		HistoricalRoots:             make([][]byte, 0),
+		JustificationBits:           bitfield.Bitvector4{0x0},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		LatestBlockHeader:           HydrateBeaconHeader(&ethpb.BeaconBlockHeader{}),
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, fieldparams.RootLength)},
+		PreviousEpochParticipation:  make([]byte, 0),
+		CurrentEpochParticipation:   make([]byte, 0),
+		CurrentSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys:         pubkeys,
+			AggregatePubkey: make([]byte, 48),
+		},
+		NextSyncCommittee: &ethpb.SyncCommittee{
+			Pubkeys:         pubkeys,
+			AggregatePubkey: make([]byte, 48),
+		},
+		ProposerLookahead: make([]primitives.ValidatorIndex, 64),
+		LatestExecutionPayloadBid: &ethpb.ExecutionPayloadBid{
+			ParentBlockHash:       make([]byte, 32),
+			ParentBlockRoot:       make([]byte, 32),
+			BlockHash:             make([]byte, 32),
+			PrevRandao:            make([]byte, 32),
+			FeeRecipient:          make([]byte, 20),
+			BlobKzgCommitments:    [][]byte{make([]byte, 48)},
+			ExecutionRequestsRoot: make([]byte, 32),
+		},
+		Builders:                     make([]*ethpb.Builder, 0),
+		ExecutionPayloadAvailability: make([]byte, 1024),
+		BuilderPendingPayments:       builderPendingPayments,
+		BuilderPendingWithdrawals:    make([]*ethpb.BuilderPendingWithdrawal, 0),
+		LatestBlockHash:              make([]byte, 32),
+		PayloadExpectedWithdrawals:   make([]*enginev1.Withdrawal, 0),
+		PtcWindow:                    ptcWindow,
+	}
+
+	for _, opt := range options {
+		err := opt(seed)
+		if err != nil {
+			return nil, fmt.Errorf("apply state option: %w", err)
+		}
+	}
+
+	var st, err = state_native.InitializeFromProtoUnsafeGloas(seed)
+	if err != nil {
+		return nil, fmt.Errorf("initialize Gloas state: %w", err)
+	}
+
+	return st, nil
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round
 // trip testing.
 func filledByteSlice2D(length, innerLen uint64) [][]byte {
 	b := make([][]byte, length)
-	for i := uint64(0); i < length; i++ {
+	for i := range length {
 		b[i] = make([]byte, innerLen)
 	}
 	return b
@@ -524,10 +613,10 @@ func filledByteSlice2D(length, innerLen uint64) [][]byte {
 // Example: 16 becomes 0x00...0f.
 func PrepareRoots(size int) ([][]byte, error) {
 	roots := make([][]byte, size)
-	for i := 0; i < size; i++ {
+	for i := range size {
 		roots[i] = make([]byte, fieldparams.RootLength)
 	}
-	for j := 0; j < len(roots); j++ {
+	for j := range roots {
 		// Remove '0x' prefix and left-pad '0' to have 64 chars in total.
 		s := fmt.Sprintf("%064s", hexutil.EncodeUint64(uint64(j))[2:])
 		h, err := hexutil.Decode("0x" + s)

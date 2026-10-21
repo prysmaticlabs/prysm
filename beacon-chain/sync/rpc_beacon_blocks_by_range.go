@@ -4,16 +4,16 @@ import (
 	"context"
 	"time"
 
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -21,7 +21,7 @@ import (
 )
 
 // beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
-func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg any, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
 	defer span.End()
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
@@ -76,7 +76,6 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	// Ticker to stagger out large requests.
 	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	batcher, err := newBlockRangeBatcher(rp, s.cfg.beaconDB, s.rateLimiter, s.cfg.chain.IsCanonical, ticker)
 	if err != nil {
 		log.WithError(err).Info("Error in BlocksByRange batch")
@@ -144,10 +143,7 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 		return rangeParams{}, p2ptypes.ErrInvalidRequest
 	}
 
-	limit := uint64(flags.Get().BlockBatchLimit)
-	if limit > maxRequest {
-		limit = maxRequest
-	}
+	limit := min(uint64(flags.Get().BlockBatchLimit), maxRequest)
 	if rp.size > limit {
 		rp.size = limit
 	}
@@ -160,41 +156,57 @@ func (s *Service) validateRangeAvailability(rp rangeParams) bool {
 	return s.availableBlocker.AvailableBlock(startBlock)
 }
 
+// writeBlockBatchToStream writes one canonical block batch to the RPC stream in slot order, while handling mixed blinded and full blocks safely.
+// It first scans the canonical batch and reconstructs all blinded blocks in one pass via the execution reconstructor, indexes reconstructed results by slot,
+// and then performs a second pass over the same canonical sequence to stream each block in ascending order: full blocks are written directly,
+// and blinded blocks are replaced with their reconstructed full counterpart when available.
 func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.WriteBlockRangeToStream")
 	defer span.End()
 
+	canonical := batch.canonical()
+
 	blinded := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
-	for _, b := range batch.canonical() {
+	for _, b := range canonical {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
 		if b.IsBlinded() {
 			blinded = append(blinded, b.ReadOnlySignedBeaconBlock)
-			continue
 		}
-		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
-			log.WithError(chunkErr).Debug("Could not send a chunked response")
-			return chunkErr
-		}
-	}
-	if len(blinded) == 0 {
-		return nil
 	}
 
-	reconstructed, err := s.cfg.executionReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blinded)
-	if err != nil {
-		log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
-		return err
+	reconstructedBySlot := make(map[primitives.Slot]interfaces.SignedBeaconBlock)
+	if len(blinded) > 0 {
+		reconstructed, err := s.cfg.executionReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blinded)
+		if err != nil {
+			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
+			return err
+		}
+		for _, b := range reconstructed {
+			if b.IsBlinded() {
+				continue
+			}
+			reconstructedBySlot[b.Block().Slot()] = b
+		}
 	}
-	for _, b := range reconstructed {
+
+	for _, b := range canonical {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
+
+		var toWrite interfaces.ReadOnlySignedBeaconBlock
 		if b.IsBlinded() {
-			continue
+			full, ok := reconstructedBySlot[b.Block().Slot()]
+			if !ok {
+				continue
+			}
+			toWrite = full
+		} else {
+			toWrite = b
 		}
-		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
+		if chunkErr := s.chunkBlockWriter(stream, toWrite); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			return chunkErr
 		}

@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"testing"
 
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	common "github.com/OffchainLabs/prysm/v6/testing/spectest/shared/common/ssz_static"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/pkg/errors"
-	fssz "github.com/prysmaticlabs/fastssz"
+
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	common "github.com/OffchainLabs/prysm/v7/testing/spectest/shared/common/ssz_static"
 )
 
 func ExampleRunSSZStaticTests() {
 	// Define an unmarshaller to select the correct go type based on the string
 	// name provided in spectests and then populate it with the serialized bytes.
-	unmarshaller := func(t *testing.T, serializedBytes []byte, objectName string) (interface{}, error) {
-		var obj interface{}
+	unmarshaller := func(t *testing.T, serializedBytes []byte, objectName string) (any, error) {
+		var obj any
 		switch objectName {
 		case "Attestation":
 			obj = &ethpb.Attestation{}
@@ -33,10 +34,10 @@ func ExampleRunSSZStaticTests() {
 			return nil, fmt.Errorf("unsupported type: %s", objectName)
 		}
 		var err error
-		if o, ok := obj.(fssz.Unmarshaler); ok {
+		if o, ok := obj.(ssz.Unmarshaler); ok {
 			err = o.UnmarshalSSZ(serializedBytes)
 		} else {
-			err = errors.New("could not unmarshal object, not a fastssz compatible object")
+			err = errors.New("could not unmarshal object, does not implement Unmarshaler interface")
 		}
 		return obj, err
 	}
@@ -45,10 +46,10 @@ func ExampleRunSSZStaticTests() {
 	// This argument may be nil if your test does not require custom HTR methods.
 	// Most commonly, this is used when a handwritten HTR method with specialized caching
 	// is used and you want to ensure it passes spectests.
-	customHTR := func(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
+	customHTR := func(t *testing.T, htrs []common.HTR, object any) []common.HTR {
 		switch object.(type) {
 		case *ethpb.BeaconState:
-			htrs = append(htrs, func(s interface{}) ([32]byte, error) {
+			htrs = append(htrs, func(s any) ([32]byte, error) {
 				beaconState, err := state_native.InitializeFromProtoPhase0(s.(*ethpb.BeaconState))
 				require.NoError(t, err)
 				return beaconState.HashTreeRoot(context.TODO())
@@ -60,7 +61,7 @@ func ExampleRunSSZStaticTests() {
 	var t *testing.T
 	// common.RunSSZStaticTests will run all of the tests found in the spec test folder with the
 	// given config and forkOrPhase. It will then use the unmarshaller to hydrate the types and
-	// ensure that fastssz generated methods match the expected results. It will also test custom
+	// ensure that generated methods match the expected results. It will also test custom
 	// HTR methods if provided.
 	common.RunSSZStaticTests(t,
 		"mainnet", // Network configuration

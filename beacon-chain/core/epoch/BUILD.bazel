@@ -6,7 +6,7 @@ go_library(
         "epoch_processing.go",
         "sortable_indices.go",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/beacon-chain/core/epoch",
+    importpath = "github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
@@ -53,6 +53,5 @@ go_test(
         "//testing/util:go_default_library",
         "@com_github_google_go_cmp//cmp:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
-        "@org_golang_google_protobuf//proto:go_default_library",
     ],
 )

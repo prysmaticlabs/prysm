@@ -4,11 +4,11 @@ import (
 	"path"
 	"testing"
 
-	kzgPrysm "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/kzg"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/utils"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	kzgPrysm "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ghodss/yaml"
 )
@@ -24,9 +24,9 @@ func TestComputeCells(t *testing.T) {
 	}
 
 	require.NoError(t, kzgPrysm.Start())
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "fulu", "kzg/compute_cells/kzg-mainnet")
+	testFolders, testFolderPath := utils.TestFolders(t, "kzg", "compute_cells", "")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "fulu", "kzg/compute_cells/kzg-mainnet")
+		t.Fatalf("No test folders found for kzg/compute_cells")
 	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

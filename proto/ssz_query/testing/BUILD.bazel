@@ -1,0 +1,68 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
+load("//tools:methodical.bzl", "ssz_methodical")
+
+# gazelle:ignore
+
+proto_library(
+    name = "proto",
+    srcs = ["test_containers.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/ext:proto",
+    ],
+)
+
+go_proto_library(
+    name = "go_proto",
+    compilers = [
+        "@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",
+    ],
+    importpath = "github.com/OffchainLabs/prysm/v7/proto/ssz_query/testing",
+    proto = ":proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/ext:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
+    ],
+)
+
+# SSZ generation for test proto messages (methodical)
+ssz_methodical(
+    name = "methodical_test_containers",
+    config_file = "test_containers.yaml",
+    out = "test_containers.ssz.go",
+    override_package_name = "testing",
+    deps = [":go_proto"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        ":methodical_test_containers",  # keep
+    ],
+    embed = [":go_proto"],
+    importpath = "github.com/OffchainLabs/prysm/v7/proto/ssz_query/testing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/eth/ext:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_offchainlabs_methodical_ssz//ssz:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
+
+ssz_proto_files(
+    name = "ssz_proto_files",
+    srcs = ["test_containers.proto"],
+    config = select({
+        "//conditions:default": "mainnet",
+        "//proto:ssz_mainnet": "mainnet",
+        "//proto:ssz_minimal": "minimal",
+    }),
+)

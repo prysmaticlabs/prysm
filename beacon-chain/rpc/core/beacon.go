@@ -3,11 +3,11 @@ package core
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	consensusblocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
@@ -79,6 +79,10 @@ func (s *Service) ChainHead(ctx context.Context) (*ethpb.ChainHead, *RpcError) {
 			Err:    errors.Wrap(err, "could not get current justified checkpoint"),
 			Reason: Internal,
 		}
+	}
+	// A checkpoint synced node treats its origin as finalized before the network justifies it.
+	if justifiedCheckpoint.Epoch < finalizedCheckpoint.Epoch {
+		justifiedCheckpoint = finalizedCheckpoint
 	}
 
 	prevJustifiedCheckpoint := s.FinalizedFetcher.PreviousJustifiedCheckpt()

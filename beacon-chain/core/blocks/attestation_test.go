@@ -1,26 +1,27 @@
 package blocks_test
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation/aggregation"
-	attaggregation "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation/aggregation/attestations"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation"
+	attaggregation "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
@@ -262,7 +263,7 @@ func TestVerifyAttestationNoVerifySignature_Electra(t *testing.T) {
 			CommitteeBits:   bitfield.NewBitvector64(),
 		}
 		err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
-		assert.ErrorContains(t, "committee index must be 0 post-Electra", err)
+		assert.ErrorContains(t, "committee index must be 0", err)
 	})
 	t.Run("index of committee too big", func(t *testing.T) {
 		aggBits := bitfield.NewBitlist(3)
@@ -314,10 +315,79 @@ func TestVerifyAttestationNoVerifySignature_Electra(t *testing.T) {
 	})
 }
 
+func TestVerifyAttestationNoVerifySignature_GloasCommitteeIndexLimit(t *testing.T) {
+	cfg := params.BeaconConfig()
+	stateSlot := cfg.MinAttestationInclusionDelay + 1
+
+	blockRoots := make([][]byte, cfg.SlotsPerHistoricalRoot)
+	for i := range blockRoots {
+		blockRoots[i] = make([]byte, fieldparams.RootLength)
+	}
+	stateRoots := make([][]byte, cfg.SlotsPerHistoricalRoot)
+	for i := range stateRoots {
+		stateRoots[i] = make([]byte, fieldparams.RootLength)
+	}
+	randaoMixes := make([][]byte, cfg.EpochsPerHistoricalVector)
+	for i := range randaoMixes {
+		randaoMixes[i] = make([]byte, fieldparams.RootLength)
+	}
+
+	checkpointRoot := bytes.Repeat([]byte{0xAA}, fieldparams.RootLength)
+	justified := &ethpb.Checkpoint{Epoch: 0, Root: checkpointRoot}
+
+	gloasStateProto := &ethpb.BeaconStateGloas{
+		Slot:                         stateSlot,
+		GenesisValidatorsRoot:        bytes.Repeat([]byte{0x11}, fieldparams.RootLength),
+		BlockRoots:                   blockRoots,
+		StateRoots:                   stateRoots,
+		RandaoMixes:                  randaoMixes,
+		ExecutionPayloadAvailability: make([]byte, cfg.SlotsPerHistoricalRoot/8),
+		CurrentJustifiedCheckpoint:   justified,
+		PreviousJustifiedCheckpoint:  justified,
+		Validators: []*ethpb.Validator{
+			{
+				EffectiveBalance:      cfg.MinActivationBalance,
+				WithdrawalCredentials: append([]byte{cfg.ETH1AddressWithdrawalPrefixByte}, bytes.Repeat([]byte{0x01}, 31)...),
+			},
+		},
+		Balances:               []uint64{cfg.MinActivationBalance},
+		BuilderPendingPayments: make([]*ethpb.BuilderPendingPayment, cfg.SlotsPerEpoch*2),
+		Fork: &ethpb.Fork{
+			CurrentVersion:  bytes.Repeat([]byte{0x01}, 4),
+			PreviousVersion: bytes.Repeat([]byte{0x01}, 4),
+			Epoch:           0,
+		},
+	}
+
+	beaconState, err := state_native.InitializeFromProtoGloas(gloasStateProto)
+	require.NoError(t, err)
+
+	committeeBits := bitfield.NewBitvector64()
+	committeeBits.SetBitAt(0, true)
+	aggBits := bitfield.NewBitlist(1)
+	aggBits.SetBitAt(0, true)
+
+	att := &ethpb.AttestationElectra{
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			CommitteeIndex:  2, // invalid for Gloas (must be <2)
+			BeaconBlockRoot: blockRoots[0],
+			Source:          justified,
+			Target:          justified,
+		},
+		AggregationBits: aggBits,
+		CommitteeBits:   committeeBits,
+		Signature:       bytes.Repeat([]byte{0x00}, fieldparams.BLSSignatureLength),
+	}
+
+	err = blocks.VerifyAttestationNoVerifySignature(context.TODO(), beaconState, att)
+	assert.ErrorContains(t, "incorrect committee index 2", err)
+}
+
 func TestConvertToIndexed_OK(t *testing.T) {
 	helpers.ClearCache()
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
@@ -373,7 +443,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			PublicKey:             keys[i].PublicKey().Marshal(),
@@ -481,7 +551,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
 	list := bitfield.Bitlist{0b11111}
 	var atts []ethpb.Att
-	for i := uint64(0); i < 1000; i++ {
+	for range uint64(1000) {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				CommitteeIndex: 1,
@@ -498,7 +568,7 @@ func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 
 	atts = []ethpb.Att{}
 	list = bitfield.Bitlist{0b10000}
-	for i := uint64(0); i < 1000; i++ {
+	for range uint64(1000) {
 		atts = append(atts, &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				CommitteeIndex: 1,
@@ -524,7 +594,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			PublicKey:             keys[i].PublicKey().Marshal(),
@@ -583,12 +653,13 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 }
 
 func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing.T) {
+	helpers.ClearCache()
 	ctx := t.Context()
 	numOfValidators := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(4))
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			PublicKey:             keys[i].PublicKey().Marshal(),
@@ -707,7 +778,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, err := util.DeterministicDepositsAndKeys(numOfValidators)
 	require.NoError(t, err)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			PublicKey:             keys[i].PublicKey().Marshal(),

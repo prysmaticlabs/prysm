@@ -7,15 +7,13 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/codes"
 )
 
 const noMsgData = "message contains no data"
-
-var log = logrus.WithField("prefix", "message-handler")
 
 // SafelyHandleMessage will recover and log any panic that occurs from the
 // function argument.

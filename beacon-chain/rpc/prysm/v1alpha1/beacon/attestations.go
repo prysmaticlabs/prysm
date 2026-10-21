@@ -6,19 +6,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/pagination"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filters"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/operations/attestations"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	"github.com/OffchainLabs/prysm/v6/config/features"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/api/pagination"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filters"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/operations/attestations"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -400,7 +400,7 @@ func blockAttestations[T ethpb.Att](blocks []interfaces.ReadOnlySignedBeaconBloc
 
 	atts := make([]T, 0, len(blockAtts))
 	for _, att := range blockAtts {
-		a, ok := att.(T)
+		a, ok := attestationAs[T](att)
 		if !ok {
 			var expected T
 			return nil, status.Errorf(codes.Internal, "Attestation is of the wrong type (expected %T, got %T)", expected, att)
@@ -433,7 +433,7 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 	mappedAttestations := mapAttestationsByTargetRoot(attsArray)
 	indexed := make([]T, 0, numAttestations)
 	for targetRoot, atts := range mappedAttestations {
-		attState, err := stateGen.StateByRoot(ctx, targetRoot)
+		attState, err := stateGen.StateByRootNoCopy(ctx, targetRoot)
 		if err != nil && strings.Contains(err.Error(), "unknown state summary") {
 			// We shouldn't stop the request if we encounter an attestation we don't have the state for.
 			log.Debugf("Could not get state for attestation target root %#x", targetRoot)
@@ -446,7 +446,7 @@ func blockIndexedAttestations[T ethpb.IndexedAtt](
 				err,
 			)
 		}
-		for i := 0; i < len(atts); i++ {
+		for i := range atts {
 			att := atts[i]
 			committee, err := helpers.BeaconCommitteeFromState(ctx, attState, att.GetData().Slot, att.GetData().CommitteeIndex)
 			if err != nil {
@@ -484,7 +484,7 @@ func attestationsFromPool[T ethpb.Att](pageSize int32, pool attestations.Pool) (
 	poolAtts := pool.AggregatedAttestations()
 	atts := make([]T, 0, len(poolAtts))
 	for _, att := range poolAtts {
-		a, ok := att.(T)
+		a, ok := attestationAs[T](att)
 		if !ok {
 			var expected T
 			return nil, status.Errorf(codes.Internal, "Attestation is of the wrong type (expected %T, got %T)", expected, att)
@@ -506,7 +506,7 @@ func attestationsFromCache[T ethpb.Att](pageSize int32, c *cache.AttestationCach
 	cacheAtts := c.GetAll()
 	atts := make([]T, 0, len(cacheAtts))
 	for _, att := range cacheAtts {
-		a, ok := att.(T)
+		a, ok := attestationAs[T](att)
 		if !ok {
 			var expected T
 			return nil, status.Errorf(codes.Internal, "Attestation is of the wrong type (expected %T, got %T)", expected, att)
@@ -514,4 +514,28 @@ func attestationsFromCache[T ethpb.Att](pageSize int32, c *cache.AttestationCach
 		atts = append(atts, a)
 	}
 	return atts, nil
+}
+
+func attestationAs[T ethpb.Att](att ethpb.Att) (T, bool) {
+	if a, ok := att.(T); ok {
+		return a, true
+	}
+
+	var zero T
+	switch any(zero).(type) {
+	case *ethpb.AttestationElectra:
+		a, ok := ethpb.AttestationElectraFromAtt(att)
+		if !ok {
+			return zero, false
+		}
+		return any(a).(T), true
+	case *ethpb.AttestationGloas:
+		a, ok := ethpb.AttestationGloasFromAtt(att)
+		if !ok {
+			return zero, false
+		}
+		return any(a).(T), true
+	default:
+		return zero, false
+	}
 }

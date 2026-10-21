@@ -1,8 +1,8 @@
 package eth
 
 import (
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
 )
 
 // GenericConverter defines any struct that can be converted to a generic beacon block.
@@ -653,6 +653,42 @@ func CopyExecutionRequests(e *enginev1.ExecutionRequests) *enginev1.ExecutionReq
 		Deposits:       dr,
 		Withdrawals:    wr,
 		Consolidations: cr,
+	}
+}
+
+// CopyExecutionRequestsGloas copies a gloas ExecutionRequests, including builder
+// deposit/exit requests (EIP-8282).
+func CopyExecutionRequestsGloas(e *enginev1.ExecutionRequestsGloas) *enginev1.ExecutionRequestsGloas {
+	if e == nil {
+		return nil
+	}
+	dr := make([]*enginev1.DepositRequest, len(e.Deposits))
+	for i, d := range e.Deposits {
+		dr[i] = d.Copy()
+	}
+	wr := make([]*enginev1.WithdrawalRequest, len(e.Withdrawals))
+	for i, w := range e.Withdrawals {
+		wr[i] = w.Copy()
+	}
+	cr := make([]*enginev1.ConsolidationRequest, len(e.Consolidations))
+	for i, c := range e.Consolidations {
+		cr[i] = c.Copy()
+	}
+	bd := make([]*enginev1.BuilderDepositRequest, len(e.BuilderDeposits))
+	for i, b := range e.BuilderDeposits {
+		bd[i] = b.Copy()
+	}
+	be := make([]*enginev1.BuilderExitRequest, len(e.BuilderExits))
+	for i, b := range e.BuilderExits {
+		be[i] = b.Copy()
+	}
+
+	return &enginev1.ExecutionRequestsGloas{
+		Deposits:        dr,
+		Withdrawals:     wr,
+		Consolidations:  cr,
+		BuilderDeposits: bd,
+		BuilderExits:    be,
 	}
 }
 

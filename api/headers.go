@@ -3,14 +3,17 @@ package api
 import "net/http"
 
 const (
-	VersionHeader                 = "Eth-Consensus-Version"
-	ExecutionPayloadBlindedHeader = "Eth-Execution-Payload-Blinded"
-	ExecutionPayloadValueHeader   = "Eth-Execution-Payload-Value"
-	ConsensusBlockValueHeader     = "Eth-Consensus-Block-Value"
-	JsonMediaType                 = "application/json"
-	OctetStreamMediaType          = "application/octet-stream"
-	EventStreamMediaType          = "text/event-stream"
-	KeepAlive                     = "keep-alive"
+	VersionHeader                  = "Eth-Consensus-Version"
+	ExecutionPayloadBlindedHeader  = "Eth-Execution-Payload-Blinded"
+	ExecutionPayloadValueHeader    = "Eth-Execution-Payload-Value"
+	ConsensusBlockValueHeader      = "Eth-Consensus-Block-Value"
+	ExecutionPayloadIncludedHeader = "Eth-Execution-Payload-Included"
+	BuilderUrlHeader               = "Eth-Builder-Url"
+	BlobDataIncludedHeader         = "Eth-Blob-Data-Included"
+	JsonMediaType                  = "application/json"
+	OctetStreamMediaType           = "application/octet-stream"
+	EventStreamMediaType           = "text/event-stream"
+	KeepAlive                      = "keep-alive"
 )
 
 // SetSSEHeaders sets the headers needed for a server-sent event response.

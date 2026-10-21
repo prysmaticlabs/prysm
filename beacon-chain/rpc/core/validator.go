@@ -4,55 +4,39 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
+	"strconv"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/epoch/precompute"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	opfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	coreTime "github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/validators"
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	beaconState "github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/validator"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	prysmTime "github.com/OffchainLabs/prysm/v6/time"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/api/server"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch/precompute"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	opfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	coreTime "github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
+	beaconState "github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/validator"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	prysmTime "github.com/OffchainLabs/prysm/v7/time"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
 var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
-
-// AggregateBroadcastFailedError represents an error scenario where
-// broadcasting an aggregate selection proof failed.
-type AggregateBroadcastFailedError struct {
-	err error
-}
-
-// NewAggregateBroadcastFailedError creates a new error instance.
-func NewAggregateBroadcastFailedError(err error) AggregateBroadcastFailedError {
-	return AggregateBroadcastFailedError{
-		err: err,
-	}
-}
-
-// Error returns the underlying error message.
-func (e *AggregateBroadcastFailedError) Error() string {
-	return fmt.Sprintf("could not broadcast signed aggregated attestation: %s", e.err.Error())
-}
 
 // ComputeValidatorPerformance reports the validator's latest balance along with other important metrics on
 // rewards and penalties throughout its lifecycle in the beacon chain.
@@ -82,7 +66,7 @@ func (s *Service) ComputeValidatorPerformance(
 			return nil, &RpcError{Err: errors.Wrapf(err, "could not process slots up to %d", currSlot), Reason: Internal}
 		}
 	}
-	var validatorSummary []*precompute.Validator
+	var validatorSummary []precompute.Validator
 	if headState.Version() == version.Phase0 {
 		vp, bp, err := precompute.New(ctx, headState)
 		if err != nil {
@@ -150,9 +134,7 @@ func (s *Service) ComputeValidatorPerformance(
 		}
 	}
 	// Depending on the indices and public keys given, results might not be sorted.
-	sort.Slice(validatorIndices, func(i, j int) bool {
-		return validatorIndices[i] < validatorIndices[j]
-	})
+	slices.Sort(validatorIndices)
 
 	currentEpoch := coreTime.CurrentEpoch(headState)
 	responseCap = len(validatorIndices)
@@ -256,11 +238,9 @@ func (s *Service) IndividualVotes(
 			filteredIndices = append(filteredIndices, index)
 		}
 	}
-	sort.Slice(filteredIndices, func(i, j int) bool {
-		return filteredIndices[i] < filteredIndices[j]
-	})
+	slices.Sort(filteredIndices)
 
-	var v []*precompute.Validator
+	var v []precompute.Validator
 	var bal *precompute.Balance
 	if st.Version() == version.Phase0 {
 		v, bal, err = precompute.New(ctx, st)
@@ -360,7 +340,8 @@ func (s *Service) SubmitSignedContributionAndProof(
 	// Wait for p2p broadcast to complete and return the first error (if any)
 	err := errs.Wait()
 	if err != nil {
-		return &RpcError{Err: err, Reason: Internal}
+		log.WithError(err).Debug("Could not broadcast signed contribution and proof")
+		return &RpcError{Err: server.NewBroadcastFailedError("SignedContributionAndProof", err), Reason: Internal}
 	}
 
 	s.OperationNotifier.OperationFeed().Send(&feed.Event{
@@ -411,8 +392,17 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 	}
 
 	if err := s.Broadcaster.Broadcast(ctx, agg); err != nil {
-		return &RpcError{Err: &AggregateBroadcastFailedError{err: err}, Reason: Internal}
+		log.WithError(err).Debug("Could not broadcast signed aggregate att and proof")
+		return &RpcError{Err: server.NewBroadcastFailedError("SignedAggregateAttAndProof", err), Reason: Internal}
 	}
+
+	// Gossip validation accepts self-published messages before it sends this event.
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.AggregatedAttReceived,
+		Data: &opfeed.AggregatedAttReceivedData{
+			Attestation: attAndProof,
+		},
+	})
 
 	if logrus.GetLevel() >= logrus.DebugLevel {
 		var fields logrus.Fields
@@ -494,18 +484,15 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
-	committeeIndex := primitives.CommitteeIndex(0)
-	if slots.ToEpoch(req.Slot) < params.BeaconConfig().ElectraForkEpoch {
-		committeeIndex = req.CommitteeIndex
-	}
+	currentHeadRoot, currentHeadFull := s.HeadFetcher.HeadRootAndFull()
 
 	s.AttestationCache.RLock()
 	res := s.AttestationCache.Get()
-	if res != nil && res.Slot == req.Slot {
+	if res.IsFreshFor(req.Slot, currentHeadRoot, currentHeadFull) {
 		s.AttestationCache.RUnlock()
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  committeeIndex,
+			CommitteeIndex:  attestationDataIndex(req, res.IsPayloadFull),
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -526,10 +513,10 @@ func (s *Service) GetAttestationData(
 	// the same attestation data, the cache might have been filled while we were waiting
 	// to acquire the lock.
 	res = s.AttestationCache.Get()
-	if res != nil && res.Slot == req.Slot {
+	if res.IsFreshFor(req.Slot, currentHeadRoot, currentHeadFull) {
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
-			CommitteeIndex:  committeeIndex,
+			CommitteeIndex:  attestationDataIndex(req, res.IsPayloadFull),
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
 				Epoch: res.Source.Epoch,
@@ -550,31 +537,39 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: Unavailable, Err: errOptimisticMode}
 	}
 
-	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head root")}
-	}
+	currentHeadRoot, currentHeadFull, headState, fcRoot, isPayloadFull := s.HeadFetcher.HeadAndCanonicalNodeAtSlot(req.Slot)
+	headRoot := currentHeadRoot[:]
 	targetEpoch := slots.ToEpoch(req.Slot)
-	targetRoot, err := s.HeadFetcher.TargetRootForEpoch(bytesutil.ToBytes32(headRoot), targetEpoch)
+	targetRoot, err := s.HeadFetcher.TargetRootForEpoch(currentHeadRoot, targetEpoch)
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
 
-	headState, err := s.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head state")}
+	if headState == nil {
+		headState, err = s.HeadFetcher.HeadStateReadOnly(ctx)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head state")}
+		}
 	}
 	if coreTime.CurrentEpoch(headState) < slots.ToEpoch(req.Slot) { // Ensure justified checkpoint safety by processing head state across the boundary.
-		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
+		headState, err = transition.ProcessSlotsIfNeeded(ctx, headState, headRoot, req.Slot)
 		if err != nil {
 			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not process slots up to %d: %v", req.Slot, err)}
 		}
 	}
 	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint()
+	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().GloasForkEpoch && fcRoot != currentHeadRoot {
+		log.WithFields(logrus.Fields{
+			"fcRoot":   hexutil.Encode(fcRoot[:]),
+			"headRoot": hexutil.Encode(headRoot),
+		}).Error("Forkchoice head root does not match head root")
+	}
 
 	if err = s.AttestationCache.Put(&cache.AttestationConsensusData{
-		Slot:     req.Slot,
-		HeadRoot: headRoot,
+		Slot:          req.Slot,
+		HeadRoot:      headRoot,
+		HeadFull:      currentHeadFull,
+		IsPayloadFull: isPayloadFull,
 		Target: forkchoicetypes.Checkpoint{
 			Epoch: targetEpoch,
 			Root:  targetRoot,
@@ -589,7 +584,7 @@ func (s *Service) GetAttestationData(
 
 	return &ethpb.AttestationData{
 		Slot:            req.Slot,
-		CommitteeIndex:  committeeIndex,
+		CommitteeIndex:  attestationDataIndex(req, isPayloadFull),
 		BeaconBlockRoot: headRoot,
 		Source: &ethpb.Checkpoint{
 			Epoch: justifiedCheckpoint.Epoch,
@@ -600,6 +595,25 @@ func (s *Service) GetAttestationData(
 			Root:  targetRoot[:],
 		},
 	}, nil
+}
+
+// attestationDataIndex returns the index for attestation data.
+// Pre-Electra: uses the requested committee index.
+// Electra to Gloas: always 0.
+// Post-Gloas: signals payload status of the attested head block.
+func attestationDataIndex(req *ethpb.AttestationDataRequest, isPayloadFull bool) primitives.CommitteeIndex {
+	epoch := slots.ToEpoch(req.Slot)
+	if epoch < params.BeaconConfig().ElectraForkEpoch {
+		return req.CommitteeIndex
+	}
+	if epoch < params.BeaconConfig().GloasForkEpoch {
+		// eip-7549 moves index outside
+		return 0
+	}
+	if isPayloadFull {
+		return 1
+	}
+	return 0
 }
 
 // SubmitSyncMessage submits the sync committee message to the network.
@@ -636,7 +650,7 @@ func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 }
 
 // RegisterSyncSubnetCurrentPeriod registers a persistent subnet for the current sync committee period.
-func RegisterSyncSubnetCurrentPeriod(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status validator.Status) error {
+func RegisterSyncSubnetCurrentPeriod(s beaconState.ReadOnlyBeaconState, epoch primitives.Epoch, pubKey []byte, status validator.Status) error {
 	committee, err := s.CurrentSyncCommittee()
 	if err != nil {
 		return err
@@ -647,7 +661,7 @@ func RegisterSyncSubnetCurrentPeriod(s beaconState.BeaconState, epoch primitives
 }
 
 // RegisterSyncSubnetCurrentPeriodProto registers a persistent subnet for the current sync committee period.
-func RegisterSyncSubnetCurrentPeriodProto(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
+func RegisterSyncSubnetCurrentPeriodProto(s beaconState.ReadOnlyBeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
 	committee, err := s.CurrentSyncCommittee()
 	if err != nil {
 		return err
@@ -658,7 +672,7 @@ func RegisterSyncSubnetCurrentPeriodProto(s beaconState.BeaconState, epoch primi
 }
 
 // RegisterSyncSubnetNextPeriod registers a persistent subnet for the next sync committee period.
-func RegisterSyncSubnetNextPeriod(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status validator.Status) error {
+func RegisterSyncSubnetNextPeriod(s beaconState.ReadOnlyBeaconState, epoch primitives.Epoch, pubKey []byte, status validator.Status) error {
 	committee, err := s.NextSyncCommittee()
 	if err != nil {
 		return err
@@ -669,7 +683,7 @@ func RegisterSyncSubnetNextPeriod(s beaconState.BeaconState, epoch primitives.Ep
 }
 
 // RegisterSyncSubnetNextPeriodProto registers a persistent subnet for the next sync committee period.
-func RegisterSyncSubnetNextPeriodProto(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
+func RegisterSyncSubnetNextPeriodProto(s beaconState.ReadOnlyBeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
 	committee, err := s.NextSyncCommittee()
 	if err != nil {
 		return err
@@ -738,8 +752,7 @@ func registerSyncSubnetInternal(
 	if err != nil {
 		epochsToWatch = 0
 	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	totalDuration := epochDuration * time.Duration(epochsToWatch) * time.Second
+	totalDuration := params.EpochsDuration(1, params.BeaconConfig()) * time.Duration(epochsToWatch)
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey, startEpoch, subs, totalDuration)
 }
 
@@ -792,7 +805,7 @@ func (s *Service) ValidatorParticipation(
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrapf(err, "error replaying blocks for state at slot %d", endSlot)}
 	}
-	var v []*precompute.Validator
+	var v []precompute.Validator
 	var b *precompute.Balance
 
 	if beaconSt.Version() == version.Phase0 {
@@ -869,45 +882,48 @@ func (s *Service) ValidatorActiveSetChanges(
 		}
 	}
 
-	vs := requestedState.Validators()
-	activatedIndices := validators.ActivatedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
-	exitedIndices, err := validators.ExitedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
-	if err != nil {
-		return nil, &RpcError{
-			Err:    errors.Wrap(err, "could not determine exited validator indices"),
-			Reason: Internal,
+	activatedIndices := make([]primitives.ValidatorIndex, 0)
+	exitedIndices := make([]primitives.ValidatorIndex, 0)
+	slashedIndices := make([]primitives.ValidatorIndex, 0)
+	ejectedIndices := make([]primitives.ValidatorIndex, 0)
+	activatedKeys := make([][]byte, 0)
+	exitedKeys := make([][]byte, 0)
+	slashedKeys := make([][]byte, 0)
+	ejectedKeys := make([][]byte, 0)
+
+	ejectionBalance := params.BeaconConfig().EjectionBalance
+	slashingsVector := params.BeaconConfig().EpochsPerSlashingsVector
+
+	for idx, validator := range requestedState.ValidatorsReadOnlySeq() {
+		if validator.ActivationEpoch() == requestedEpoch {
+			publicKey := validator.PublicKey()
+			activatedIndices = append(activatedIndices, idx)
+			activatedKeys = append(activatedKeys, publicKey[:])
 		}
-	}
-	slashedIndices := validators.SlashedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
-	ejectedIndices, err := validators.EjectedValidatorIndices(coreTime.CurrentEpoch(requestedState), vs)
-	if err != nil {
-		return nil, &RpcError{
-			Err:    errors.Wrap(err, "could not determine ejected validator indices"),
-			Reason: Internal,
+
+		maxWithdrawableEpoch := max(validator.WithdrawableEpoch(), requestedEpoch+slashingsVector)
+
+		if validator.Slashed() && validator.WithdrawableEpoch() == maxWithdrawableEpoch {
+			publicKey := validator.PublicKey()
+			slashedIndices = append(slashedIndices, idx)
+			slashedKeys = append(slashedKeys, publicKey[:])
 		}
+
+		if validator.ExitEpoch() != requestedEpoch {
+			continue
+		}
+
+		publicKey := validator.PublicKey()
+		if validator.EffectiveBalance() > ejectionBalance {
+			exitedIndices = append(exitedIndices, idx)
+			exitedKeys = append(exitedKeys, publicKey[:])
+			continue
+		}
+
+		ejectedIndices = append(ejectedIndices, idx)
+		ejectedKeys = append(ejectedKeys, publicKey[:])
 	}
 
-	// Retrieve public keys for the indices.
-	activatedKeys := make([][]byte, len(activatedIndices))
-	exitedKeys := make([][]byte, len(exitedIndices))
-	slashedKeys := make([][]byte, len(slashedIndices))
-	ejectedKeys := make([][]byte, len(ejectedIndices))
-	for i, idx := range activatedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		activatedKeys[i] = pubkey[:]
-	}
-	for i, idx := range exitedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		exitedKeys[i] = pubkey[:]
-	}
-	for i, idx := range slashedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		slashedKeys[i] = pubkey[:]
-	}
-	for i, idx := range ejectedIndices {
-		pubkey := requestedState.PubkeyAtIndex(idx)
-		ejectedKeys[i] = pubkey[:]
-	}
 	return &ethpb.ActiveSetChanges{
 		Epoch:               requestedEpoch,
 		ActivatedPublicKeys: activatedKeys,
@@ -918,5 +934,112 @@ func (s *Service) ValidatorActiveSetChanges(
 		SlashedIndices:      slashedIndices,
 		EjectedPublicKeys:   ejectedKeys,
 		EjectedIndices:      ejectedIndices,
+	}, nil
+}
+
+// PayloadAttestationData produces the PTC attestation data for the given slot.
+// It enforces the gloas-fork gate, slot-equality with the current slot, the PTC
+// deadline, and requires that a block for the requested slot has been received.
+func (s *Service) PayloadAttestationData(
+	ctx context.Context,
+	slot primitives.Slot,
+) (*ethpb.PayloadAttestationData, *RpcError) {
+	ctx, span := trace.StartSpan(ctx, "coreService.PayloadAttestationData")
+	defer span.End()
+
+	if slots.ToEpoch(slot) < params.BeaconConfig().GloasForkEpoch {
+		return nil, &RpcError{Reason: BadRequest, Err: fmt.Errorf("payload attestation data is not supported before Gloas fork (slot %d)", slot)}
+	}
+	currentSlot := s.GenesisTimeFetcher.CurrentSlot()
+	if slot != currentSlot {
+		return nil, &RpcError{Reason: BadRequest, Err: fmt.Errorf("payload attestation data is only available for current slot: requested %d, current %d", slot, currentSlot)}
+	}
+
+	slotStart, err := slots.StartTime(s.GenesisTimeFetcher.GenesisTime(), slot)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not compute slot start time: %w", err)}
+	}
+	cfg := params.BeaconConfig()
+	deadline := slotStart.Add(cfg.SlotComponentDuration(cfg.PayloadAttestationDueBPS))
+
+	if cached := s.payloadAttestationData.Load(); cached != nil && cached.Slot == slot {
+		return cached, nil
+	}
+
+	v, sfErr, _ := s.payloadAttestationFlight.Do(strconv.FormatUint(uint64(slot), 10), func() (any, error) {
+		if cached := s.payloadAttestationData.Load(); cached != nil && cached.Slot == slot {
+			return cached, nil
+		}
+		data, rpcErr := s.buildPayloadAttestationData(ctx, slot)
+		if rpcErr != nil {
+			return rpcErr, nil
+		}
+		// Before the deadline only the final result is safe to return: the payload
+		// arrived timely and the data is available. Otherwise both flags may still
+		// flip, so wait for the deadline.
+		if prysmTime.Now().Before(deadline) && !(data.PayloadPresent && data.BlobDataAvailable) {
+			return &RpcError{Reason: Unavailable, Err: fmt.Errorf("payload attestation data not yet final for slot %d", slot)}, nil
+		}
+		s.payloadAttestationData.Store(data)
+		return data, nil
+	})
+	if sfErr != nil {
+		return nil, &RpcError{Reason: Internal, Err: sfErr}
+	}
+	switch r := v.(type) {
+	case *ethpb.PayloadAttestationData:
+		return r, nil
+	case *RpcError:
+		return nil, r
+	default:
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("unexpected singleflight result type %T", v)}
+	}
+}
+
+// hasCanonicalShuffling returns whether the current root at the given slot is in the same shuffling as head.
+func (s *Service) hasCanonicalShuffling(root [32]byte, slot primitives.Slot) bool {
+	epoch := slots.ToEpoch(slot)
+	if epoch > 0 {
+		epoch--
+	}
+	// Both roots must be resolved the same way, or the genesis-era fallback to the origin block root only
+	// applies to one side of the comparison.
+	hdr, err := s.HeadFetcher.DependentRootForEpoch(s.ForkchoiceFetcher.CachedHeadRoot(), epoch)
+	if err != nil {
+		log.WithError(err).Error("Could not get head dependent root to check canonical shuffle")
+		return false
+	}
+	rdr, err := s.HeadFetcher.DependentRootForEpoch(root, epoch)
+	if err != nil {
+		log.WithError(err).Error("Could not get block dependent root to check canonical shuffle")
+		return false
+	}
+	return hdr == rdr
+}
+
+// buildPayloadAttestationData builds a payload attestation message for the validator to sign. It attempts first
+// to build from the highest received slot but only if it is compatible with the head view.
+func (s *Service) buildPayloadAttestationData(ctx context.Context, slot primitives.Slot) (*ethpb.PayloadAttestationData, *RpcError) {
+	highestReceivedSlot := s.ForkchoiceFetcher.HighestReceivedBlockSlot()
+	if highestReceivedSlot != slot {
+		return nil, &RpcError{Reason: NoContent, Err: fmt.Errorf("no block found at slot=%d", slot)}
+	}
+	root := s.ForkchoiceFetcher.HighestReceivedBlockRoot()
+	if root == [32]byte{} {
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not retrieve highest received block root for slot %d", slot)}
+	}
+	if !s.hasCanonicalShuffling(root, slot) {
+		return nil, &RpcError{Reason: Unavailable, Err: fmt.Errorf("no canonical shuffling block for slot %d", slot)}
+	}
+	available, err := s.ChainInfoFetcher.DataAvailable(ctx, root, slot)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: fmt.Errorf("could not check data availability for block root %#x: %w", root, err)}
+	}
+	payloadEarly, _ := s.ChainInfoFetcher.PayloadEarly(root)
+	return &ethpb.PayloadAttestationData{
+		BeaconBlockRoot:   root[:],
+		Slot:              slot,
+		PayloadPresent:    payloadEarly,
+		BlobDataAvailable: available,
 	}, nil
 }

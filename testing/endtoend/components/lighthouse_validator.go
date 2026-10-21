@@ -11,14 +11,14 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/runtime/interop"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/helpers"
-	e2e "github.com/OffchainLabs/prysm/v6/testing/endtoend/params"
-	"github.com/OffchainLabs/prysm/v6/testing/endtoend/types"
-	"github.com/OffchainLabs/prysm/v6/validator/keymanager"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/runtime/interop"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/helpers"
+	e2e "github.com/OffchainLabs/prysm/v7/testing/endtoend/params"
+	"github.com/OffchainLabs/prysm/v7/testing/endtoend/types"
+	"github.com/OffchainLabs/prysm/v7/validator/keymanager"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -59,7 +59,7 @@ func (s *LighthouseValidatorNodeSet) Start(ctx context.Context) error {
 
 	// Create validator nodes.
 	nodes := make([]types.ComponentRunner, lighthouseBeaconNum)
-	for i := 0; i < lighthouseBeaconNum; i++ {
+	for i := range lighthouseBeaconNum {
 		offsetIdx := i + prysmBeaconNum
 		nodes[i] = NewLighthouseValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*offsetIdx)
 	}
@@ -196,17 +196,17 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 
-	// Write stderr to log files.
-	stderr, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("lighthouse_validator_%d_stderr.log", index)))
+	logFile, err := os.Create(path.Join(e2e.TestParams.LogPath, fmt.Sprintf("lighthouse_validator_%d.log", index)))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := stderr.Close(); err != nil {
-			log.WithError(err).Error("Failed to close stderr file")
+		if err := logFile.Close(); err != nil {
+			log.WithError(err).Error("Failed to close lighthouse validator log file")
 		}
 	}()
-	cmd.Stderr = stderr
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
 
 	log.Infof("Starting lighthouse validator client %d with flags: %s %s", index, binaryPath, strings.Join(args, " "))
 	if err = cmd.Start(); err != nil {
@@ -237,7 +237,11 @@ func (v *LighthouseValidatorNode) Resume() error {
 
 // Stop stops the component and its underlying process.
 func (v *LighthouseValidatorNode) Stop() error {
-	return v.cmd.Process.Kill()
+	return helpers.GracefulStop(v.cmd.Process)
+}
+
+func (v *LighthouseValidatorNode) UnderlyingProcess() *os.Process {
+	return v.cmd.Process
 }
 
 var _ types.ComponentRunner = &KeystoreGenerator{}
@@ -260,7 +264,7 @@ func (k *KeystoreGenerator) Start(_ context.Context) error {
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 
-	for i := 0; i < lighthouseBeaconNum; i++ {
+	for i := range lighthouseBeaconNum {
 		offsetIdx := i + prysmBeaconNum
 		_, err := setupKeystores(i, validatorsPerNode*offsetIdx, validatorsPerNode)
 		if err != nil {

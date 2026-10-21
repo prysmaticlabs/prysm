@@ -6,12 +6,13 @@ import (
 	"math"
 	"sync"
 	"testing"
+	"time"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/genesis"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/genesis"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -45,17 +46,14 @@ func TestConfig_OverrideBeaconConfigTestTeardown(t *testing.T) {
 func TestConfig_DataRace(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	wg := new(sync.WaitGroup)
-	for i := 0; i < 10; i++ {
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			cfg := params.BeaconConfig()
 			params.OverrideBeaconConfig(cfg)
-		}()
-		go func() uint64 {
-			defer wg.Done()
-			return params.BeaconConfig().MaxDeposits
-		}()
+		})
+		wg.Go(func() {
+			_ = params.BeaconConfig().MaxDeposits
+		})
 	}
 	wg.Wait()
 }
@@ -170,6 +168,38 @@ func TestFirstBPOAtFork(t *testing.T) {
 	require.Equal(t, electraMaxBlobs+2, uint64(cfg.MaxBlobsPerBlockAtEpoch(cfg.FuluForkEpoch+2)))
 }
 
+func TestScheduledGasLimit(t *testing.T) {
+	params.SetActiveTestCleanup(t, params.MainnetBeaconConfig)
+	cfg := params.MainnetConfig()
+	cfg.GloasForkEpoch = cfg.FuluForkEpoch + 100
+	cfg.GasLimitSchedule = []params.GasLimitScheduleEntry{
+		{Epoch: cfg.GloasForkEpoch + 50, GasLimit: 90_000_000},
+		{Epoch: cfg.GloasForkEpoch, GasLimit: 60_000_000},
+	}
+	cfg.InitializeForkSchedule()
+	require.Equal(t, cfg.GloasForkEpoch, cfg.GasLimitSchedule[0].Epoch, "schedule not sorted by epoch")
+
+	_, ok := cfg.ScheduledGasLimit(cfg.GloasForkEpoch - 1)
+	require.Equal(t, false, ok)
+	gl, ok := cfg.ScheduledGasLimit(cfg.GloasForkEpoch)
+	require.Equal(t, true, ok)
+	require.Equal(t, uint64(60_000_000), gl)
+	gl, ok = cfg.ScheduledGasLimit(cfg.GloasForkEpoch + 49)
+	require.Equal(t, true, ok)
+	require.Equal(t, uint64(60_000_000), gl)
+	gl, ok = cfg.ScheduledGasLimit(cfg.GloasForkEpoch + 50)
+	require.Equal(t, true, ok)
+	require.Equal(t, uint64(90_000_000), gl)
+
+	cfg.GasLimitSchedule = []params.GasLimitScheduleEntry{{Epoch: cfg.GloasForkEpoch + 10, GasLimit: 60_000_000}}
+	_, ok = cfg.ScheduledGasLimit(cfg.GloasForkEpoch + 9)
+	require.Equal(t, false, ok)
+
+	cfg.GasLimitSchedule = nil
+	_, ok = cfg.ScheduledGasLimit(cfg.GloasForkEpoch)
+	require.Equal(t, false, ok)
+}
+
 func TestMaxBlobsNoSchedule(t *testing.T) {
 	params.SetActiveTestCleanup(t, params.MainnetBeaconConfig)
 	cfg := params.MainnetConfig()
@@ -196,10 +226,128 @@ func Test_TargetBlobCount(t *testing.T) {
 
 func fillGVR(value byte) [32]byte {
 	var gvr [32]byte
-	for i := 0; i < len(gvr); i++ {
+	for i := range len(gvr) {
 		gvr[i] = value
 	}
 	return gvr
+}
+
+func TestBeaconChainConfigSlotDuration(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		cfg  params.BeaconChainConfig
+		want time.Duration
+	}{
+		{
+			name: "explicit duration",
+			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			want: 12 * time.Second,
+		},
+		{
+			name: "fallback to seconds per slot",
+			cfg:  params.BeaconChainConfig{SecondsPerSlot: 8},
+			want: 8 * time.Second,
+		},
+		{
+			name: "milliseconds override seconds per slot",
+			cfg: params.BeaconChainConfig{
+				SlotDurationMilliseconds: 7_000,
+				SecondsPerSlot:           4,
+			},
+			want: 7 * time.Second,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.cfg.SlotDuration())
+		})
+	}
+}
+
+func TestBeaconChainConfigSlotDurationMillis(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		cfg  params.BeaconChainConfig
+		want uint64
+	}{
+		{
+			name: "uses slot duration milliseconds when set",
+			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 4_800},
+			want: 4_800,
+		},
+		{
+			name: "derives from seconds per slot when unset",
+			cfg:  params.BeaconChainConfig{SecondsPerSlot: 6},
+			want: 6_000,
+		},
+		{
+			name: "returns zero when no duration configured",
+			cfg:  params.BeaconChainConfig{},
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.cfg.SlotDurationMillis())
+		})
+	}
+}
+
+func TestBeaconChainConfigSlotComponentDuration(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		cfg  params.BeaconChainConfig
+		bp   primitives.BP
+		want time.Duration
+	}{
+		{
+			name: "zero basis points produces zero duration",
+			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			bp:   0,
+			want: 0,
+		},
+		{
+			name: "full slot basis points matches slot duration",
+			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			bp:   params.BasisPoints,
+			want: 12 * time.Second,
+		},
+		{
+			name: "quarter slot with explicit milliseconds",
+			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 12_000},
+			bp:   params.BasisPoints / 4,
+			want: 3 * time.Second,
+		},
+		{
+			name: "fractional slot rounds down",
+			cfg:  params.BeaconChainConfig{SlotDurationMilliseconds: 1_001},
+			bp:   params.BasisPoints / 3,
+			want: 333 * time.Millisecond,
+		},
+		{
+			name: "uses seconds per slot fallback",
+			cfg:  params.BeaconChainConfig{SecondsPerSlot: 9},
+			bp:   params.BasisPoints / 2,
+			want: 4500 * time.Millisecond,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.want, tt.cfg.SlotComponentDuration(tt.bp))
+		})
+	}
 }
 
 func TestEntryWithForkDigest(t *testing.T) {

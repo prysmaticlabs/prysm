@@ -8,9 +8,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/io/file"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/io/file"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,6 +23,9 @@ const (
 	DefaultMaxHealthChecks = 0
 )
 
+// perKeyPrecedenceNote closes the usage of every flag that only sets proposer defaults.
+const perKeyPrecedenceNote = "Per-key settings from a proposer settings file, URL, or the keymanager API take precedence."
+
 var (
 	// DisableAccountMetricsFlag disables the prometheus metrics for validator accounts, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
@@ -33,7 +36,8 @@ var (
 	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = &cli.StringFlag{
-		Name: "beacon-rpc-provider",
+		Name:    "beacon-rpc-provider",
+		Aliases: []string{"beacon-grpc"},
 		Usage: `WARNING: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API..
 		Beacon node RPC provider endpoint.`,
 		Value: "127.0.0.1:4000",
@@ -41,9 +45,17 @@ var (
 
 	// BeaconRESTApiProviderFlag defines a beacon node REST API endpoint.
 	BeaconRESTApiProviderFlag = &cli.StringFlag{
-		Name:  "beacon-rest-api-provider",
-		Usage: "Beacon node REST API provider endpoint.",
-		Value: "http://127.0.0.1:3500",
+		Name:    "beacon-rest-api-provider",
+		Aliases: []string{"beacon-rest"},
+		Usage:   "Beacon node REST API provider endpoint. Setting this implicitly enables the beacon REST API (no need for --enable-beacon-rest-api). Use a comma-separated list to connect to several beacon nodes: the validator client listens to the event stream of every node and queries all of them, keeping the best suited response.",
+		Value:   "http://127.0.0.1:3500",
+	}
+	// BeaconRESTApiHeaders defines a list of headers to send with all HTTP requests to the beacon node.
+	BeaconRESTApiHeaders = &cli.StringFlag{
+		Name: "beacon-rest-api-headers",
+		Usage: `Comma-separated list of key value pairs to pass as headers for all HTTP calls to the beacon node. 
+		To provide multiple values for the same key, specify the same key for each value. 
+		Example: --grpc-headers=key1=value1,key1=value2,key2=value3`,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = &cli.StringFlag{
@@ -67,17 +79,6 @@ var (
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a validator client.",
 		Value: 7000,
-	}
-	// SlasherRPCProviderFlag defines a slasher node RPC endpoint.
-	SlasherRPCProviderFlag = &cli.StringFlag{
-		Name:  "slasher-rpc-provider",
-		Usage: "Slasher node RPC provider endpoint.",
-		Value: "127.0.0.1:4002",
-	}
-	// SlasherCertFlag defines a flag for the slasher node's TLS certificate.
-	SlasherCertFlag = &cli.StringFlag{
-		Name:  "slasher-tls-cert",
-		Usage: "Certificate for secure slasher gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
 	}
 	// DisablePenaltyRewardLogFlag defines the ability to not log reward/penalty information during deployment
 	DisablePenaltyRewardLogFlag = &cli.BoolFlag{
@@ -314,6 +315,14 @@ var (
 		Value:   "",
 		Aliases: []string{"remote-signer-keys-file"},
 	}
+	Web3SignerKeyPollIntervalFlag = &cli.DurationFlag{
+		Name: "validators-external-signer-poll-interval",
+		Usage: `Interval to poll the external signer public-keys URL for added or removed validators (e.g. 30s, 5m). 
+		Zero or negative disables polling. A failed or empty response keeps the current keys, 
+		so removing every key from the URL will not stop validating.`,
+		Value:   0,
+		Aliases: []string{"remote-signer-poll-interval"},
+	}
 
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
 	KeymanagerKindFlag = &cli.StringFlag{
@@ -357,10 +366,9 @@ var (
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name: "suggested-fee-recipient",
-		Usage: `Sets ALL validators' mapping to a suggested eth address to receive gas fees when proposing a block.
-		Note that this is only a suggestion when integrating with a Builder API, which may choose to specify
-		a different fee recipient as payment for the blocks it builds.For additional setting overrides use the 
-		--` + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " flags.",
+		Usage: `Sets the default address that receives the fees of blocks proposed by all validators. A builder
+		integrated through the Builder API may pay a different address as payment for the blocks it builds.
+		` + perKeyPrecedenceNote,
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
@@ -372,11 +380,43 @@ var (
 		Value:   false,
 		Aliases: []string{"enable-validator-registration"},
 	}
-	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
+	// BuilderGasLimitFlag sets the default_config gas limit, read by registrations and Gloas preferences.
 	BuilderGasLimitFlag = &cli.StringFlag{
-		Name:  "suggested-gas-limit",
-		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators.",
+		Name: "suggested-gas-limit",
+		Usage: `Sets the default gas limit for all validators: registered with builders before Gloas and signed into
+		proposer preferences from Gloas onward, where it overrides the network gas limit schedule. Remove it to follow
+		the schedule. ` + perKeyPrecedenceNote,
 		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
+	}
+	// BuilderURLsFlag sets the default_config builders list for Gloas bid requests.
+	BuilderURLsFlag = &cli.StringSliceFlag{
+		Name: "builder-urls",
+		Usage: `Comma-separated URLs of Gloas builders to request execution payload bids from, for all validators.
+		Auth data agreed with a builder may be appended as a hex fragment (https://builder.example#0x0123); otherwise
+		the URL's UTF-8 bytes are used. Before Gloas a non-empty list also enables builder validator registration,
+		like --` + EnableBuilderFlag.Name + `; set the gas limit with --` + BuilderGasLimitFlag.Name + `. ` + perKeyPrecedenceNote,
+	}
+	// BuilderMinBidFlag sets the default_config min_bid for Gloas bids.
+	BuilderMinBidFlag = &cli.Uint64Flag{
+		Name: "builder-min-bid",
+		Usage: `Minimum total payment in Gwei a Gloas builder bid must offer to be considered, for all validators:
+		the bid value plus its execution payment up to --builder-max-execution-payment. Only used from Gloas onward.
+		` + perKeyPrecedenceNote,
+	}
+	// BuilderBoostFactorFlag sets the default_config builder_boost_factor for Gloas bids.
+	BuilderBoostFactorFlag = &cli.Uint64Flag{
+		Name: "builder-boost-factor",
+		Usage: `Percentage applied to Gloas builder bid values when comparing them with a locally built payload, for
+		all validators. 100 is neutral, below 100 favors the local payload, 0 always uses it. Only used from Gloas onward.
+		` + perKeyPrecedenceNote,
+		Value: 100,
+	}
+	// BuilderMaxExecutionPaymentFlag sets the default_config max_execution_payment for Gloas bids.
+	BuilderMaxExecutionPaymentFlag = &cli.Uint64Flag{
+		Name: "builder-max-execution-payment",
+		Usage: `Maximum execution layer payment in Gwei counted toward a Gloas builder bid, for all validators. 0 counts
+		only the collateral-backed bid value; payments above that rest on the builder's promise to pay. Only used from Gloas onward.
+		` + perKeyPrecedenceNote,
 	}
 	// ValidatorsRegistrationBatchSizeFlag sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.
 	ValidatorsRegistrationBatchSizeFlag = &cli.IntFlag{
@@ -390,6 +430,13 @@ var (
 		Usage: "To enable the use of prysm validator client in Distributed Validator Cluster",
 		Value: false,
 	}
+	// EnableStatelessFlag enables the stateless block production path from Gloas onward: the validator requests
+	// the block and execution payload envelope in a single v4 call instead of fetching them in two separate calls.
+	EnableStatelessFlag = &cli.BoolFlag{
+		Name:  "stateless",
+		Usage: "Enables stateless block production from Gloas onward: the validator requests the block and execution payload envelope together and republishes the envelope itself. Works over both the gRPC and REST validator clients. Forced on when several beacon nodes are configured, since only the node that built a block can reveal its payload.",
+		Value: false,
+	}
 	// DisableDutiesPolling disables the polling of duties on dependent root changes.
 	DisableDutiesPolling = &cli.BoolFlag{
 		Name:  "disable-duties-polling",
@@ -400,8 +447,14 @@ var (
 	// MaxHealthChecksFlag sets a maximum amount of times to check for beacon node health before validator client times out and shuts down
 	MaxHealthChecksFlag = &cli.IntFlag{
 		Name:  "max-health-checks",
-		Usage: "Maximum number of health checks to perform before exiting if not healthy. Set to 0 or a negative number for indefinite checks.",
+		Usage: "Maximum number of consecutive failed health checks before exiting. A health check fails when no connected beacon node is ready. Set to 0 or a negative number for indefinite checks.",
 		Value: DefaultMaxHealthChecks,
+	}
+	// DisableEphemeralLogFile disables the 24 hour debug log file.
+	DisableEphemeralLogFile = &cli.BoolFlag{
+		Name:  "disable-ephemeral-log-file",
+		Usage: "Disables the creation of a debug log file that keeps 24 hours of logs.",
+		Value: false,
 	}
 )
 

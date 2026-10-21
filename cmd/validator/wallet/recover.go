@@ -2,16 +2,17 @@ package wallet
 
 import (
 	"fmt"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/cmd/validator/flags"
-	"github.com/OffchainLabs/prysm/v6/io/prompt"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/userprompt"
-	"github.com/OffchainLabs/prysm/v6/validator/accounts/wallet"
+	"github.com/OffchainLabs/prysm/v7/cmd/validator/flags"
+	"github.com/OffchainLabs/prysm/v7/io/prompt"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/userprompt"
+	"github.com/OffchainLabs/prysm/v7/validator/accounts/wallet"
 	"github.com/pkg/errors"
 	"github.com/tyler-smith/go-bip39"
 	"github.com/tyler-smith/go-bip39/wordlists"
@@ -123,11 +124,7 @@ func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 		"italian":             wordlists.Italian,
 		"spanish":             wordlists.Spanish,
 	}
-	languages := make([]string, 0)
-	for k := range allowedLanguages {
-		languages = append(languages, k)
-	}
-	sort.Strings(languages)
+	languages := slices.Sorted(maps.Keys(allowedLanguages))
 	selectedLanguage, err := prompt.ValidatePrompt(
 		os.Stdin,
 		fmt.Sprintf("Enter the language of your seed phrase: %s", strings.Join(languages, ", ")),

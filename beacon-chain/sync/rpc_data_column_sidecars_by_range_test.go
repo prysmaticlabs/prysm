@@ -14,27 +14,26 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	chainMock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/filesystem"
-	testDB "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	p2ptest "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	consensusblocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	chainMock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/filesystem"
+	testDB "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	beaconConfig := params.BeaconConfig()
-	//beaconConfig.FuluForkEpoch = beaconConfig.ElectraForkEpoch + 100
-	beaconConfig.FuluForkEpoch = 0
-	params.OverrideBeaconConfig(beaconConfig)
+	cfg := params.BeaconConfig()
+	cfg.FuluForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
 	params.BeaconConfig().InitializeForkSchedule()
 	ctx := context.Background()
 	t.Run("wrong message type", func(t *testing.T) {
@@ -47,6 +46,7 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 
 	ctxMap, err := ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
 	require.NoError(t, err)
+
 	t.Run("invalid request", func(t *testing.T) {
 		slot := primitives.Slot(400)
 		mockNower.SetSlot(t, clock, slot)
@@ -72,8 +72,8 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 		remoteP2P.BHost.SetStreamHandler(protocolID, func(stream network.Stream) {
 			defer wg.Done()
 			code, _, err := readStatusCodeNoDeadline(stream, localP2P.Encoding())
-			require.NoError(t, err)
-			require.Equal(t, responseCodeInvalidRequest, code)
+			assert.NoError(t, err)
+			assert.Equal(t, responseCodeInvalidRequest, code)
 		})
 
 		localP2P.Connect(remoteP2P)
@@ -92,6 +92,48 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 		if util.WaitTimeout(&wg, 1*time.Second) {
 			t.Fatal("Did not receive stream within 1 sec")
 		}
+	})
+
+	t.Run("in the future", func(t *testing.T) {
+		slot := primitives.Slot(400)
+		mockNower.SetSlot(t, clock, slot)
+
+		localP2P, remoteP2P := p2ptest.NewTestP2P(t), p2ptest.NewTestP2P(t)
+		protocolID := protocol.ID(fmt.Sprintf("%s/ssz_snappy", p2p.RPCDataColumnSidecarsByRangeTopicV1))
+
+		service := &Service{
+			cfg: &config{
+				p2p: localP2P,
+				chain: &chainMock.ChainService{
+					Slot: &slot,
+				},
+				clock: clock,
+			},
+			rateLimiter: newRateLimiter(localP2P),
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		remoteP2P.BHost.SetStreamHandler(protocolID, func(stream network.Stream) {
+			defer wg.Done()
+
+			_, err := readChunkedDataColumnSidecar(stream, remoteP2P, ctxMap)
+			assert.Equal(t, true, errors.Is(err, io.EOF))
+		})
+
+		localP2P.Connect(remoteP2P)
+		stream, err := localP2P.BHost.NewStream(ctx, remoteP2P.BHost.ID(), protocolID)
+		require.NoError(t, err)
+
+		msg := &pb.DataColumnSidecarsByRangeRequest{
+			StartSlot: slot + 1,
+			Count:     50,
+			Columns:   []uint64{1, 2, 3, 4, 6, 7, 8, 9, 10},
+		}
+
+		err = service.dataColumnSidecarsByRangeRPCHandler(ctx, msg, stream)
+		require.NoError(t, err)
 	})
 
 	t.Run("nominal", func(t *testing.T) {
@@ -133,12 +175,12 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 				signedBeaconBlockPb.Block.ParentRoot = roots[i-1][:]
 			}
 
-			signedBeaconBlock, err := consensusblocks.NewSignedBeaconBlock(signedBeaconBlockPb)
+			signedBeaconBlock, err := blocks.NewSignedBeaconBlock(signedBeaconBlockPb)
 			require.NoError(t, err)
 
 			// There is a discrepancy between the root of the beacon block and the rodata column root,
 			// but for the sake of this test, we actually don't care.
-			roblock, err := consensusblocks.NewROBlockWithRoot(signedBeaconBlock, roots[i])
+			roblock, err := blocks.NewROBlockWithRoot(signedBeaconBlock, roots[i])
 			require.NoError(t, err)
 
 			roBlocks = append(roBlocks, roblock)
@@ -178,28 +220,28 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 					break
 				}
 
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				sidecars = append(sidecars, sidecar)
 			}
 
-			require.Equal(t, 8, len(sidecars))
-			require.Equal(t, root0, sidecars[0].BlockRoot())
-			require.Equal(t, root0, sidecars[1].BlockRoot())
-			require.Equal(t, root0, sidecars[2].BlockRoot())
-			require.Equal(t, root3, sidecars[3].BlockRoot())
-			require.Equal(t, root3, sidecars[4].BlockRoot())
-			require.Equal(t, root5, sidecars[5].BlockRoot())
-			require.Equal(t, root5, sidecars[6].BlockRoot())
-			require.Equal(t, root5, sidecars[7].BlockRoot())
+			assert.Equal(t, 8, len(sidecars))
+			assert.Equal(t, root0, sidecars[0].BlockRoot())
+			assert.Equal(t, root0, sidecars[1].BlockRoot())
+			assert.Equal(t, root0, sidecars[2].BlockRoot())
+			assert.Equal(t, root3, sidecars[3].BlockRoot())
+			assert.Equal(t, root3, sidecars[4].BlockRoot())
+			assert.Equal(t, root5, sidecars[5].BlockRoot())
+			assert.Equal(t, root5, sidecars[6].BlockRoot())
+			assert.Equal(t, root5, sidecars[7].BlockRoot())
 
-			require.Equal(t, uint64(1), sidecars[0].Index)
-			require.Equal(t, uint64(2), sidecars[1].Index)
-			require.Equal(t, uint64(3), sidecars[2].Index)
-			require.Equal(t, uint64(4), sidecars[3].Index)
-			require.Equal(t, uint64(6), sidecars[4].Index)
-			require.Equal(t, uint64(7), sidecars[5].Index)
-			require.Equal(t, uint64(8), sidecars[6].Index)
-			require.Equal(t, uint64(9), sidecars[7].Index)
+			assert.Equal(t, uint64(1), sidecars[0].Index())
+			assert.Equal(t, uint64(2), sidecars[1].Index())
+			assert.Equal(t, uint64(3), sidecars[2].Index())
+			assert.Equal(t, uint64(4), sidecars[3].Index())
+			assert.Equal(t, uint64(6), sidecars[4].Index())
+			assert.Equal(t, uint64(7), sidecars[5].Index())
+			assert.Equal(t, uint64(8), sidecars[6].Index())
+			assert.Equal(t, uint64(9), sidecars[7].Index())
 		})
 
 		localP2P.Connect(remoteP2P)
@@ -216,6 +258,120 @@ func TestDataColumnSidecarsByRangeRPCHandler(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("gloas skips columns of empty slots", func(t *testing.T) {
+		params.SetupTestConfigCleanup(t)
+		gloasCfg := params.BeaconConfig().Copy()
+		gloasCfg.GloasForkEpoch = 0
+		params.OverrideBeaconConfig(gloasCfg)
+		params.BeaconConfig().InitializeForkSchedule()
+
+		gloasCtxMap, err := ContextByteVersionsForValRoot(params.BeaconConfig().GenesisValidatorsRoot)
+		require.NoError(t, err)
+
+		beaconDB := testDB.SetupDB(t)
+		storage := filesystem.NewEphemeralDataColumnStorage(t)
+
+		// Block at slot 30 builds on slot 10's payload, so slot 20 is an empty slot.
+		blockSlots := []primitives.Slot{10, 20, 30, 40}
+		bidParentHashes := [][32]byte{{0}, {10}, {10}, {30}}
+		roots := make([][fieldparams.RootLength]byte, len(blockSlots))
+		var prevRoot [32]byte
+
+		for i, sl := range blockSlots {
+			blk := util.NewBeaconBlockGloas()
+			blk.Block.Slot = sl
+			copy(blk.Block.ParentRoot, prevRoot[:])
+			bidHash := [32]byte{byte(sl)}
+			copy(blk.Block.Body.SignedExecutionPayloadBid.Message.BlockHash, bidHash[:])
+			copy(blk.Block.Body.SignedExecutionPayloadBid.Message.ParentBlockHash, bidParentHashes[i][:])
+			wsb := util.SaveBlock(t, ctx, beaconDB, blk)
+			htr, err := wsb.Block().HashTreeRoot()
+			require.NoError(t, err)
+			roots[i] = htr
+			prevRoot = htr
+		}
+		// Production always has a saved head root, which LowestRootsAtOrAboveSlot falls back to above the tip.
+		require.NoError(t, beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: 40, Root: roots[3][:]}))
+		require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, roots[3]))
+
+		verifiedSidecars := make([]blocks.VerifiedRODataColumn, 0, len(blockSlots))
+		for i, sl := range blockSlots {
+			sidecar := &pb.DataColumnSidecarGloas{
+				Index:           1,
+				Slot:            sl,
+				BeaconBlockRoot: roots[i][:],
+			}
+			roSidecar, err := blocks.NewRODataColumnGloas(sidecar)
+			require.NoError(t, err)
+			verifiedSidecars = append(verifiedSidecars, blocks.NewVerifiedRODataColumn(roSidecar))
+		}
+		require.NoError(t, storage.Save(verifiedSidecars))
+
+		localP2P, remoteP2P := p2ptest.NewTestP2P(t), p2ptest.NewTestP2P(t)
+		protocolID := protocol.ID(fmt.Sprintf("%s/ssz_snappy", p2p.RPCDataColumnSidecarsByRangeTopicV1))
+
+		slot := primitives.Slot(400)
+		mockNower.SetSlot(t, clock, slot)
+		service := &Service{
+			cfg: &config{
+				p2p:               localP2P,
+				beaconDB:          beaconDB,
+				chain:             &chainMock.ChainService{},
+				dataColumnStorage: storage,
+				clock:             clock,
+			},
+			rateLimiter: newRateLimiter(localP2P),
+		}
+
+		localP2P.Connect(remoteP2P)
+		msg := &pb.DataColumnSidecarsByRangeRequest{
+			StartSlot: 5,
+			Count:     50,
+			Columns:   []uint64{1},
+		}
+
+		requestAndCollect := func(expectedRoots [][fieldparams.RootLength]byte) {
+			var wg sync.WaitGroup
+			wg.Add(1)
+
+			remoteP2P.BHost.SetStreamHandler(protocolID, func(stream network.Stream) {
+				defer wg.Done()
+
+				sidecars := make([]*blocks.RODataColumn, 0, len(expectedRoots))
+				for {
+					sidecar, err := readChunkedDataColumnSidecar(stream, remoteP2P, gloasCtxMap)
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					assert.NoError(t, err)
+					sidecars = append(sidecars, sidecar)
+				}
+
+				assert.Equal(t, len(expectedRoots), len(sidecars))
+				if len(sidecars) == len(expectedRoots) {
+					for i, root := range expectedRoots {
+						assert.Equal(t, root, sidecars[i].BlockRoot())
+					}
+				}
+			})
+
+			stream, err := localP2P.BHost.NewStream(ctx, remoteP2P.BHost.ID(), protocolID)
+			require.NoError(t, err)
+			require.NoError(t, service.dataColumnSidecarsByRangeRPCHandler(ctx, msg, stream))
+
+			if util.WaitTimeout(&wg, 2*time.Second) {
+				t.Fatal("timed out waiting for remote stream handler")
+			}
+		}
+
+		// Slot 20 is empty and slot 40 is the tip without a processed envelope, both are withheld.
+		requestAndCollect([][fieldparams.RootLength]byte{roots[0], roots[2]})
+
+		// Once the tip envelope is processed, its columns are served.
+		env := testSignedEnvelope(40, roots[3][:])
+		require.NoError(t, beaconDB.SaveExecutionPayloadEnvelope(ctx, env))
+		requestAndCollect([][fieldparams.RootLength]byte{roots[0], roots[2], roots[3]})
+	})
 }
 
 func TestValidateDataColumnsByRange(t *testing.T) {
@@ -279,7 +435,15 @@ func TestValidateDataColumnsByRange(t *testing.T) {
 			startSlot:   0,
 			count:       10_000,
 			currentSlot: 400,
-			expected:    &rangeParams{start: 320, end: 400, size: 81},
+			expected:    &rangeParams{start: 320, end: 400, size: 64},
+			expectErr:   false,
+		},
+		{
+			name:        "large count",
+			startSlot:   0,
+			count:       math.MaxUint64,
+			currentSlot: 400,
+			expected:    &rangeParams{start: 320, end: 400, size: 64},
 			expectErr:   false,
 		},
 	}

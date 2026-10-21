@@ -4,18 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash/htr"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/pkg/errors"
 )
-
-type Transaction []byte
-
-func (t Transaction) HashTreeRoot() ([32]byte, error) {
-	return ByteSliceRoot(t, fieldparams.MaxBytesPerTxLength)
-}
 
 // Uint64Root computes the HashTreeRoot Merkleization of
 // a simple uint64 value according to the Ethereum
@@ -25,24 +18,6 @@ func Uint64Root(val uint64) [32]byte {
 	binary.LittleEndian.PutUint64(buf, val)
 	root := bytesutil.ToBytes32(buf)
 	return root
-}
-
-// ForkRoot computes the HashTreeRoot Merkleization of Fork
-func ForkRoot(fork *ethpb.Fork) ([32]byte, error) {
-	if fork == nil {
-		fieldRoots := make([][32]byte, 3)
-		return BitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	}
-	return fork.HashTreeRoot()
-}
-
-// CheckpointRoot computes the HashTreeRoot Merkleization of Checkpoint
-func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
-	if checkpoint == nil {
-		fieldRoots := make([][32]byte, 2)
-		return BitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	}
-	return checkpoint.HashTreeRoot()
 }
 
 // ByteArrayRootWithLimit computes the HashTreeRoot Merkleization of
@@ -85,33 +60,6 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	return BitwiseMerkleize(slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }
 
-// TransactionsRoot computes the HTR for the Transactions' property of the ExecutionPayload
-func TransactionsRoot(txs [][]byte) ([32]byte, error) {
-	transactions := make([]Transaction, len(txs))
-	for i, tx := range txs {
-		transactions[i] = Transaction(tx)
-	}
-	return SliceRoot(transactions, fieldparams.MaxTxsPerPayloadLength)
-}
-
-// WithdrawalSliceRoot computes the HTR of a slice of withdrawals.
-// The limit parameter is used as input to the bitwise merkleization algorithm.
-func WithdrawalSliceRoot(withdrawals []*enginev1.Withdrawal, limit uint64) ([32]byte, error) {
-	return SliceRoot(withdrawals, limit)
-}
-
-// DepositRequestsSliceRoot computes the HTR of a slice of deposit requests.
-// The limit parameter is used as input to the bitwise merkleization algorithm.
-func DepositRequestsSliceRoot(depositRequests []*enginev1.DepositRequest, limit uint64) ([32]byte, error) {
-	return SliceRoot(depositRequests, limit)
-}
-
-// WithdrawalRequestsSliceRoot computes the HTR of a slice of withdrawal requests from the EL.
-// The limit parameter is used as input to the bitwise merkleization algorithm.
-func WithdrawalRequestsSliceRoot(withdrawalRequests []*enginev1.WithdrawalRequest, limit uint64) ([32]byte, error) {
-	return SliceRoot(withdrawalRequests, limit)
-}
-
 // ByteSliceRoot is a helper func to merkleize an arbitrary List[Byte, N]
 // this func runs Chunkify + MerkleizeVector
 // max length is dividable by 32 ( root length )
@@ -134,10 +82,23 @@ func ByteSliceRoot(slice []byte, maxLength uint64) ([32]byte, error) {
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-func withdrawalRoot(w *enginev1.Withdrawal) ([32]byte, error) {
-	if w == nil {
-		fieldRoots := make([][32]byte, 4)
-		return BitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+// KzgCommitmentsRoot computes the HTR for a list of KZG commitments
+func KzgCommitmentsRoot(commitments [][]byte) ([32]byte, error) {
+	roots := make([][32]byte, len(commitments))
+	for i, commitment := range commitments {
+		chunks, err := PackByChunk([][]byte{commitment})
+		if err != nil {
+			return [32]byte{}, err
+		}
+		roots[i] = htr.VectorizedSha256(chunks)[0]
 	}
-	return w.HashTreeRoot()
+
+	commitmentsRoot, err := BitwiseMerkleize(roots, uint64(len(roots)), fieldparams.MaxBlobCommitmentsPerBlock)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
+	}
+
+	length := make([]byte, 32)
+	binary.LittleEndian.PutUint64(length[:8], uint64(len(roots)))
+	return MixInLength(commitmentsRoot, length), nil
 }

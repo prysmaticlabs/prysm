@@ -21,16 +21,17 @@ import (
 	"errors"
 	"runtime"
 	"testing"
+	"testing/synctest"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 var errInts = errors.New("error in subscribeInts")
 
 func subscribeInts(max, fail int, c chan<- int) Subscription {
 	return NewSubscription(func(quit <-chan struct{}) error {
-		for i := 0; i < max; i++ {
+		for i := range max {
 			if i >= fail {
 				return errInts
 			}
@@ -50,7 +51,7 @@ func TestNewSubscriptionError(t *testing.T) {
 	channel := make(chan int)
 	sub := subscribeInts(10, 2, channel)
 loop:
-	for want := 0; want < 10; want++ {
+	for want := range 10 {
 		select {
 		case got := <-channel:
 			require.Equal(t, want, got)
@@ -72,42 +73,46 @@ loop:
 func TestResubscribe(t *testing.T) {
 	t.Parallel()
 
-	var i int
-	nfails := 6
-	sub := Resubscribe(100*time.Millisecond, func(ctx context.Context) (Subscription, error) {
-		// fmt.Printf("call #%d @ %v\n", i, time.Now())
-		i++
-		if i == 2 {
-			// Delay the second failure a bit to reset the resubscribe interval.
-			time.Sleep(200 * time.Millisecond)
-		}
-		if i < nfails {
-			return nil, errors.New("oops")
-		}
-		sub := NewSubscription(func(unsubscribed <-chan struct{}) error { return nil })
-		return sub, nil
-	})
+	synctest.Test(t, func(t *testing.T) {
+		var i int
+		const nfails = 6
 
-	<-sub.Err()
-	require.Equal(t, nfails, i)
+		sub := Resubscribe(100*time.Millisecond, func(ctx context.Context) (Subscription, error) {
+			i++
+			if i == 2 {
+				// Delay the second failure a bit to reset the resubscribe interval.
+				time.Sleep(200 * time.Millisecond)
+			}
+			if i < nfails {
+				return nil, errors.New("oops")
+			}
+			sub := NewSubscription(func(unsubscribed <-chan struct{}) error { return nil })
+			return sub, nil
+		})
+
+		<-sub.Err()
+		require.Equal(t, nfails, i)
+	})
 }
 
 func TestResubscribeAbort(t *testing.T) {
 	t.Parallel()
 
-	done := make(chan error)
-	sub := Resubscribe(0, func(ctx context.Context) (Subscription, error) {
-		select {
-		case <-ctx.Done():
-			done <- nil
-		case <-time.After(2 * time.Second):
-			done <- errors.New("context given to resubscribe function not canceled within 2s")
-		}
-		return nil, nil
-	})
+	synctest.Test(t, func(t *testing.T) {
+		done := make(chan error)
+		sub := Resubscribe(0, func(ctx context.Context) (Subscription, error) {
+			select {
+			case <-ctx.Done():
+				done <- nil
+			case <-time.After(2 * time.Second):
+				done <- errors.New("context given to resubscribe function not canceled within 2s")
+			}
+			return nil, nil
+		})
 
-	sub.Unsubscribe()
-	require.NoError(t, <-done)
+		sub.Unsubscribe()
+		require.NoError(t, <-done)
+	})
 }
 
 func TestResubscribeNonBlocking(t *testing.T) {

@@ -4,26 +4,26 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	consensusblocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 func init() {
@@ -532,6 +532,22 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 	assert.ErrorContains(t, want, err)
 }
 
+func TestProcessBlock_NoEth1BridgeDepositsFromFulu(t *testing.T) {
+	s, _ := util.DeterministicGenesisStateFulu(t, 1)
+	// The start index is never set from Fulu onward, so the Electra limit would have asked for
+	// one deposit here.
+	require.NoError(t, s.SetEth1DepositIndex(0))
+	require.NoError(t, s.SetDepositRequestsStartIndex(params.BeaconConfig().UnsetDepositRequestsStartIndex))
+
+	b := util.NewBeaconBlockFulu()
+	b.Block.Body.Deposits = []*ethpb.Deposit{{}}
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+
+	_, err = transition.VerifyOperationLengths(t.Context(), s, wsb.Block())
+	assert.ErrorContains(t, "eth1 bridge deposits are not allowed from Fulu", err)
+}
+
 func TestProcessSlots_SameSlotAsParentState(t *testing.T) {
 	slot := primitives.Slot(2)
 	parentState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: slot})
@@ -754,8 +770,7 @@ func BenchmarkProcessSlots_Capella(b *testing.B) {
 
 	var err error
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		st, err = transition.ProcessSlots(b.Context(), st, st.Slot()+1)
 		if err != nil {
 			b.Fatalf("Failed to process slot %v", err)
@@ -768,8 +783,7 @@ func BenchmarkProcessSlots_Deneb(b *testing.B) {
 
 	var err error
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		st, err = transition.ProcessSlots(b.Context(), st, st.Slot()+1)
 		if err != nil {
 			b.Fatalf("Failed to process slot %v", err)
@@ -782,8 +796,7 @@ func BenchmarkProcessSlots_Electra(b *testing.B) {
 
 	var err error
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		st, err = transition.ProcessSlots(b.Context(), st, st.Slot()+1)
 		if err != nil {
 			b.Fatalf("Failed to process slot %v", err)

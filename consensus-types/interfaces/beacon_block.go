@@ -1,13 +1,13 @@
 package interfaces
 
 import (
-	field_params "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	validatorpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/validator-client"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+	field_params "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
 	"github.com/pkg/errors"
-	ssz "github.com/prysmaticlabs/fastssz"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -69,6 +69,10 @@ type ReadOnlyBeaconBlockBody interface {
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
 	BlobKzgCommitments() ([][]byte, error)
 	ExecutionRequests() (*enginev1.ExecutionRequests, error)
+	PayloadAttestations() ([]*ethpb.PayloadAttestation, error)
+	SignedExecutionPayloadBid() (ROSignedExecutionPayloadBid, error)
+	ExecutionPayloadBid() (ROExecutionPayloadBid, error)
+	ParentExecutionRequests() (*enginev1.ExecutionRequestsGloas, error)
 }
 
 type SignedBeaconBlock interface {
@@ -91,6 +95,9 @@ type SignedBeaconBlock interface {
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
 	SetExecutionRequests(er *enginev1.ExecutionRequests) error
+	SetPayloadAttestations(pa []*ethpb.PayloadAttestation) error
+	SetSignedExecutionPayloadBid(bid ROSignedExecutionPayloadBid) error
+	SetParentExecutionRequests(r *enginev1.ExecutionRequestsGloas) error
 	Unblind(e ExecutionData) error
 }
 
@@ -122,4 +129,5 @@ type ExecutionData interface {
 	TransactionsRoot() ([]byte, error)
 	Withdrawals() ([]*enginev1.Withdrawal, error)
 	WithdrawalsRoot() ([]byte, error)
+	BlockAccessList() ([]byte, error)
 }

@@ -10,11 +10,12 @@ go_library(
         "service.go",
         "types.go",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/beacon-chain/operations/slashings",
+    importpath = "github.com/OffchainLabs/prysm/v7/beacon-chain/operations/slashings",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/endtoend:__subpackages__",
         "//testing/slasher/simulator:__pkg__",
+        "//testing/spectest:__subpackages__",
     ],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

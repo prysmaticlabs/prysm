@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/peerdas"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/container/slice"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -21,12 +21,22 @@ import (
 // https:github.com/ethereum/consensus-specs/blob/master/specs/fulu/das-core.md#reconstruction-and-cross-seeding
 func (s *Service) processDataColumnSidecarsFromReconstruction(ctx context.Context, sidecar blocks.VerifiedRODataColumn) error {
 	key := fmt.Sprintf("%#x", sidecar.BlockRoot())
-	if _, err, _ := s.reconstructionSingleFlight.Do(key, func() (interface{}, error) {
+	if _, err, _ := s.reconstructionSingleFlight.Do(key, func() (any, error) {
 		var wg sync.WaitGroup
 
 		root := sidecar.BlockRoot()
 		slot := sidecar.Slot()
-		proposerIndex := sidecar.ProposerIndex()
+		isGloas := sidecar.IsGloas()
+
+		// Gloas sidecars don't carry a proposer index. It is only used downstream for the
+		// pre-Gloas seen-cache key and for logging.
+		var proposerIndex primitives.ValidatorIndex
+		if !isGloas {
+			var err error
+			if proposerIndex, err = sidecar.ProposerIndex(); err != nil {
+				return nil, err
+			}
+		}
 
 		// Return early if reconstruction is not needed.
 		if !s.shouldReconstruct(root) {
@@ -75,6 +85,13 @@ func (s *Service) processDataColumnSidecarsFromReconstruction(ctx context.Contex
 
 			duration := time.Since(startTime)
 			dataColumnReconstructionHistogram.Observe(float64(duration.Milliseconds()))
+			if len(reconstructedSidecars) < len(verifiedSidecars) {
+				log.WithFields(logrus.Fields{
+					"reconstructedSidecars": len(reconstructedSidecars),
+					"verifiedSidecars":      len(verifiedSidecars),
+				}).Error("More verified sidecars than reconstructed sidecars")
+				return
+			}
 			dataColumnReconstructionCounter.Add(float64(len(reconstructedSidecars) - len(verifiedSidecars)))
 
 			// Retrieve indices of data column sidecars to sample.
@@ -84,22 +101,42 @@ func (s *Service) processDataColumnSidecarsFromReconstruction(ctx context.Contex
 				return
 			}
 
-			unseenIndices, err := s.broadcastAndReceiveUnseenDataColumnSidecars(ctx, slot, proposerIndex, columnIndicesToSample, reconstructedSidecars)
+			isPartialEnabled := s.cfg.p2p.PartialColumnBroadcaster() != nil
+
+			if isGloas && isPartialEnabled {
+				commitments, err := s.bidCommitmentsForRoot(ctx, root)
+				if err != nil {
+					log.WithError(err).Error("Failed to get bid commitments for reconstructed Gloas columns; skipping partial broadcast")
+					isPartialEnabled = false
+				} else {
+					for i := range reconstructedSidecars {
+						reconstructedSidecars[i].SetBidCommitments(commitments)
+					}
+				}
+			}
+
+			unseenIndices, err := s.broadcastAndReceiveUnseenDataColumnSidecars(ctx, slot, proposerIndex, columnIndicesToSample, reconstructedSidecars, isPartialEnabled)
 			if err != nil {
 				log.WithError(err).Error("Failed to broadcast and receive unseen data column sidecars")
 				return
 			}
 
-			if len(unseenIndices) > 0 {
-				log.WithFields(logrus.Fields{
-					"root":          fmt.Sprintf("%#x", root),
-					"slot":          slot,
-					"proposerIndex": proposerIndex,
-					"count":         len(unseenIndices),
-					"indices":       helpers.SortedPrettySliceFromMap(unseenIndices),
-					"duration":      duration,
-				}).Debug("Reconstructed data column sidecars")
+			if len(unseenIndices) == 0 {
+				return
 			}
+
+			fields := logrus.Fields{
+				"root":     fmt.Sprintf("%#x", root),
+				"slot":     slot,
+				"count":    len(unseenIndices),
+				"indices":  slice.SortedPrettySliceFromMap(unseenIndices),
+				"duration": duration,
+			}
+			// Gloas sidecars have no proposer index; only log it for pre-Gloas.
+			if !isGloas {
+				fields["proposerIndex"] = proposerIndex
+			}
+			log.WithFields(fields).Debug("Reconstructed data column sidecars")
 		})
 
 		wg.Wait()
@@ -113,15 +150,13 @@ func (s *Service) processDataColumnSidecarsFromReconstruction(ctx context.Contex
 
 // shouldReconstruct returns true if we should attempt to reconstruct the data columns for the given block root.
 func (s *Service) shouldReconstruct(root [fieldparams.RootLength]byte) bool {
-	numberOfColumns := params.BeaconConfig().NumberOfColumns
-
 	// Get the columns we store.
 	storedDataColumns := s.cfg.dataColumnStorage.Summary(root)
 	storedColumnsCount := storedDataColumns.Count()
 
 	// Reconstruct only if we have at least the minimum number of columns to reconstruct, but not all the columns.
 	// (If we have not enough columns, reconstruction is impossible. If we have all the columns, reconstruction is unnecessary.)
-	return storedColumnsCount >= peerdas.MinimumColumnCountToReconstruct() && storedColumnsCount != numberOfColumns
+	return storedColumnsCount >= peerdas.MinimumColumnCountToReconstruct() && storedColumnsCount != fieldparams.NumberOfColumns
 }
 
 // computeRandomDelay computes a random delay duration to wait before reconstructing data column sidecars.

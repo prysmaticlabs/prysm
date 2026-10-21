@@ -3,13 +3,13 @@ package altair
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -24,7 +24,7 @@ func ProcessPreGenesisDeposits(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
-	beaconState, err = blocks.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
+	beaconState, err = helpers.ActivateValidatorWithEffectiveBalance(beaconState, deposits)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,12 @@ func ProcessDeposits(
 	beaconState state.BeaconState,
 	deposits []*ethpb.Deposit,
 ) (state.BeaconState, error) {
-	allSignaturesVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessDeposits")
+	defer span.End()
+
+	span.SetAttributes(trace.Int64Attribute("count", int64(len(deposits))))
+
+	allSignaturesVerified, err := helpers.BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +87,7 @@ func ProcessDeposits(
 //	  signature=deposit.data.signature,
 //	 )
 func ProcessDeposit(beaconState state.BeaconState, deposit *ethpb.Deposit, allSignaturesVerified bool) (state.BeaconState, error) {
-	if err := blocks.VerifyDeposit(beaconState, deposit); err != nil {
+	if err := helpers.VerifyDeposit(beaconState, deposit); err != nil {
 		if deposit == nil || deposit.Data == nil {
 			return nil, err
 		}
@@ -122,7 +127,7 @@ func ApplyDeposit(beaconState state.BeaconState, data *ethpb.Deposit_Data, allSi
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok {
 		if !allSignaturesVerified {
-			valid, err := blocks.IsValidDepositSignature(data)
+			valid, err := helpers.IsValidDepositSignature(data)
 			if err != nil {
 				return nil, err
 			}
@@ -195,10 +200,7 @@ func AddValidatorToRegistry(beaconState state.BeaconState, pubKey []byte, withdr
 //	    withdrawable_epoch=FAR_FUTURE_EPOCH,
 //	)
 func GetValidatorFromDeposit(pubKey []byte, withdrawalCredentials []byte, amount uint64) *ethpb.Validator {
-	effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
-	if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
-		effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-	}
+	effectiveBalance := min(params.BeaconConfig().MaxEffectiveBalance, amount-(amount%params.BeaconConfig().EffectiveBalanceIncrement))
 
 	return &ethpb.Validator{
 		PublicKey:                  pubKey,

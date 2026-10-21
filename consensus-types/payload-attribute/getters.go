@@ -1,9 +1,9 @@
 package payloadattribute
 
 import (
-	consensus_types "github.com/OffchainLabs/prysm/v6/consensus-types"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	consensus_types "github.com/OffchainLabs/prysm/v7/consensus-types"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 )
 
 // Version returns the version of the payload attribute.
@@ -102,6 +102,28 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 		SuggestedFeeRecipient: a.suggestedFeeRecipient,
 		Withdrawals:           a.withdrawals,
 		ParentBeaconBlockRoot: a.parentBeaconBlockRoot,
+	}, nil
+}
+
+// PbV4 returns the payload attribute in version 4 (Amsterdam/Gloas).
+func (a *data) PbV4() (*enginev1.PayloadAttributesV4, error) {
+	if a == nil {
+		return nil, errNilPayloadAttribute
+	}
+	if a.version < version.Gloas {
+		return nil, consensus_types.ErrNotSupported("PbV4", a.version)
+	}
+	if a.timeStamp == 0 && len(a.prevRandao) == 0 && len(a.parentBeaconBlockRoot) == 0 {
+		return nil, nil
+	}
+	return &enginev1.PayloadAttributesV4{
+		Timestamp:             a.timeStamp,
+		PrevRandao:            a.prevRandao,
+		SuggestedFeeRecipient: a.suggestedFeeRecipient,
+		Withdrawals:           a.withdrawals,
+		ParentBeaconBlockRoot: a.parentBeaconBlockRoot,
+		SlotNumber:            a.slotNumber,
+		TargetGasLimit:        a.targetGasLimit,
 	}, nil
 }
 

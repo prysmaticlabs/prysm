@@ -3,11 +3,11 @@ package util
 import (
 	"testing"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	v1 "github.com/OffchainLabs/prysm/v6/proto/eth/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	v1 "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestHydrateAttestation(t *testing.T) {
@@ -55,4 +55,13 @@ func TestGenerateAttestations_EpochBoundary(t *testing.T) {
 	gs, pk := DeterministicGenesisState(t, 32)
 	_, err := GenerateAttestations(gs, pk, 1, params.BeaconConfig().SlotsPerEpoch, false)
 	require.NoError(t, err)
+}
+
+func TestGenerateAttestations_Gloas(t *testing.T) {
+	gs, pk := DeterministicGenesisStateGloas(t, 64)
+	atts, err := GenerateAttestations(gs, pk, 1, 0, false)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(atts))
+	_, ok := atts[0].(*ethpb.AttestationGloas)
+	require.Equal(t, true, ok)
 }

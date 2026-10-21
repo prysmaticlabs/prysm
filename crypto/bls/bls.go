@@ -1,12 +1,14 @@
+//go:build !fake_crypto
+
 // Package bls implements a go-wrapper around a library implementing the
 // BLS12-381 curve and signature scheme. This package exposes a public API for
 // verifying and aggregating BLS signatures used by Ethereum.
 package bls
 
 import (
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/blst"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/common"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls/herumi"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/blst"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/common"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls/herumi"
 )
 
 // Initialize herumi temporarily while we transition to blst for ethdo.

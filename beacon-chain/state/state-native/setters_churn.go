@@ -1,11 +1,13 @@
 package state_native
 
 import (
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native/types"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"context"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native/types"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 // ExitEpochAndUpdateChurn computes the exit epoch and updates the churn. This method mutates the state.
@@ -33,13 +35,13 @@ import (
 //	    state.earliest_exit_epoch = earliest_exit_epoch
 //
 //	    return state.earliest_exit_epoch
-func (b *BeaconState) ExitEpochAndUpdateChurn(exitBalance primitives.Gwei) (primitives.Epoch, error) {
+func (b *BeaconState) ExitEpochAndUpdateChurn(ctx context.Context, exitBalance primitives.Gwei) (primitives.Epoch, error) {
 	if b.version < version.Electra {
 		return 0, errNotSupported("ExitEpochAndUpdateChurn", b.version)
 	}
 
 	// This helper requires access to the RLock and cannot be called from within the write Lock.
-	activeBal, err := helpers.TotalActiveBalance(b)
+	activeBal, err := helpers.TotalActiveBalance(ctx, b)
 	if err != nil {
 		return 0, err
 	}
@@ -64,7 +66,7 @@ func (b *BeaconState) exitEpochAndUpdateChurn(totalActiveBalance primitives.Gwei
 	defer b.lock.Unlock()
 
 	earliestExitEpoch := max(b.earliestExitEpoch, helpers.ActivationExitEpoch(slots.ToEpoch(b.slot)))
-	perEpochChurn := helpers.ActivationExitChurnLimit(totalActiveBalance) // Guaranteed to be non-zero.
+	perEpochChurn := helpers.ExitChurnLimitForVersion(b.version, totalActiveBalance) // Guaranteed to be non-zero.
 
 	// New epoch for exits
 	var exitBalanceToConsume primitives.Gwei
@@ -90,4 +92,34 @@ func (b *BeaconState) exitEpochAndUpdateChurn(totalActiveBalance primitives.Gwei
 	b.markFieldAsDirty(types.EarliestExitEpoch)
 
 	return b.earliestExitEpoch, nil
+}
+
+// SetExitBalanceToConsume sets the exit balance to consume. This method mutates the state.
+func (b *BeaconState) SetExitBalanceToConsume(exitBalanceToConsume primitives.Gwei) error {
+	if b.version < version.Electra {
+		return errNotSupported("SetExitBalanceToConsume", b.version)
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.exitBalanceToConsume = exitBalanceToConsume
+	b.markFieldAsDirty(types.ExitBalanceToConsume)
+
+	return nil
+}
+
+// SetEarliestExitEpoch sets the earliest exit epoch. This method mutates the state.
+func (b *BeaconState) SetEarliestExitEpoch(earliestExitEpoch primitives.Epoch) error {
+	if b.version < version.Electra {
+		return errNotSupported("SetEarliestExitEpoch", b.version)
+	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.earliestExitEpoch = earliestExitEpoch
+	b.markFieldAsDirty(types.EarliestExitEpoch)
+
+	return nil
 }

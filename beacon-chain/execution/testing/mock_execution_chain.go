@@ -9,12 +9,9 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/execution/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/execution/types"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -25,18 +22,14 @@ import (
 
 // Chain defines a properly functioning mock for the powchain service.
 type Chain struct {
-	ChainFeed         *event.Feed
 	LatestBlockNumber *big.Int
 	HashesByHeight    map[int][]byte
 	TimesByHeight     map[int]uint64
 	BlockNumberByTime map[uint64]*big.Int
-	Eth1Data          *ethpb.Eth1Data
 	GenesisEth1Block  *big.Int
-	GenesisState      state.BeaconState
 	CurrEndpoint      string
 	CurrError         error
-	Endpoints         []string
-	Errors            []error
+	NotConnected      bool
 }
 
 // GenesisTime represents a static past date - JAN 01 2000.
@@ -104,23 +97,8 @@ func (m *Chain) BlockByTimestamp(_ context.Context, time uint64) (*types.HeaderI
 	return &types.HeaderInfo{Number: chosenNumber, Time: chosenTime}, nil
 }
 
-// ChainStartEth1Data --
-func (m *Chain) ChainStartEth1Data() *ethpb.Eth1Data {
-	return m.Eth1Data
-}
-
-// PreGenesisState --
-func (m *Chain) PreGenesisState() state.BeaconState {
-	return m.GenesisState
-}
-
-// ClearPreGenesisData --
-func (*Chain) ClearPreGenesisData() {
-	// no-op
-}
-
-func (*Chain) ExecutionClientConnected() bool {
-	return true
+func (m *Chain) ExecutionClientConnected() bool {
+	return !m.NotConnected
 }
 
 func (m *Chain) ExecutionClientEndpoint() string {
@@ -131,14 +109,6 @@ func (m *Chain) ExecutionClientConnectionErr() error {
 	return m.CurrError
 }
 
-func (m *Chain) ETH1Endpoints() []string {
-	return m.Endpoints
-}
-
-func (m *Chain) ETH1ConnectionErrors() []error {
-	return m.Errors
-}
-
 // RPCClient defines the mock rpc client.
 type RPCClient struct {
 	Backend     *simulated.Backend
@@ -147,7 +117,7 @@ type RPCClient struct {
 
 func (*RPCClient) Close() {}
 
-func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName string, args ...interface{}) error {
+func (r *RPCClient) CallContext(ctx context.Context, obj any, methodName string, args ...any) error {
 	if r.BlockNumMap != nil && methodName == "eth_getBlockByNumber" {
 		val, ok := args[0].(string)
 		if !ok {

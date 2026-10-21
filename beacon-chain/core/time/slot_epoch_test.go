@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
 func TestSlotToEpoch_OK(t *testing.T) {
@@ -196,49 +196,50 @@ func TestAltairCompatible(t *testing.T) {
 }
 
 func TestCanUpgradeTo(t *testing.T) {
-	beaconConfig := params.BeaconConfig()
+	cfg := params.BeaconConfig()
 
 	outerTestCases := []struct {
-		name        string
-		forkEpoch   *primitives.Epoch
-		upgradeFunc func(primitives.Slot) bool
+		name      string
+		forkEpoch *primitives.Epoch
 	}{
 		{
-			name:        "Altair",
-			forkEpoch:   &beaconConfig.AltairForkEpoch,
-			upgradeFunc: time.CanUpgradeToAltair,
+			name:      "Altair",
+			forkEpoch: &cfg.AltairForkEpoch,
 		},
 		{
-			name:        "Bellatrix",
-			forkEpoch:   &beaconConfig.BellatrixForkEpoch,
-			upgradeFunc: time.CanUpgradeToBellatrix,
+			name:      "Bellatrix",
+			forkEpoch: &cfg.BellatrixForkEpoch,
 		},
 		{
-			name:        "Capella",
-			forkEpoch:   &beaconConfig.CapellaForkEpoch,
-			upgradeFunc: time.CanUpgradeToCapella,
+			name:      "Capella",
+			forkEpoch: &cfg.CapellaForkEpoch,
 		},
 		{
-			name:        "Deneb",
-			forkEpoch:   &beaconConfig.DenebForkEpoch,
-			upgradeFunc: time.CanUpgradeToDeneb,
+			name:      "Deneb",
+			forkEpoch: &cfg.DenebForkEpoch,
 		},
 		{
-			name:        "Electra",
-			forkEpoch:   &beaconConfig.ElectraForkEpoch,
-			upgradeFunc: time.CanUpgradeToElectra,
+			name:      "Electra",
+			forkEpoch: &cfg.ElectraForkEpoch,
 		},
 		{
-			name:        "Fulu",
-			forkEpoch:   &beaconConfig.FuluForkEpoch,
-			upgradeFunc: time.CanUpgradeToFulu,
+			name:      "Fulu",
+			forkEpoch: &cfg.FuluForkEpoch,
+		},
+		{
+			name:      "Gloas",
+			forkEpoch: &cfg.GloasForkEpoch,
+		},
+		{
+			name:      "Heze",
+			forkEpoch: &cfg.HezeForkEpoch,
 		},
 	}
 
 	for _, otc := range outerTestCases {
 		params.SetupTestConfigCleanup(t)
 		*otc.forkEpoch = 5
-		params.OverrideBeaconConfig(beaconConfig)
+		params.OverrideBeaconConfig(cfg)
 
 		innerTestCases := []struct {
 			name string
@@ -264,8 +265,8 @@ func TestCanUpgradeTo(t *testing.T) {
 
 		for _, itc := range innerTestCases {
 			t.Run(fmt.Sprintf("%s-%s", otc.name, itc.name), func(t *testing.T) {
-				if got := otc.upgradeFunc(itc.slot); got != itc.want {
-					t.Errorf("CanUpgradeTo%s() = %v, want %v", otc.name, got, itc.want)
+				if got := time.CanUpgradeTo(itc.slot, *otc.forkEpoch); got != itc.want {
+					t.Errorf("CanUpgradeTo(%s) = %v, want %v", otc.name, got, itc.want)
 				}
 			})
 		}

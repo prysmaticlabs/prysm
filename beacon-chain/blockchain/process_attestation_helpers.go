@@ -6,39 +6,59 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/async"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	forkchoicetypes "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // The caller of this function must have a lock on forkchoice.
 func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) state.ReadOnlyBeaconState {
 	headEpoch := slots.ToEpoch(s.HeadSlot())
-	if c.Epoch < headEpoch {
+	if c.Epoch+1 < headEpoch || c.Epoch == 0 {
 		return nil
 	}
-	if !s.cfg.ForkChoiceStore.IsCanonical([32]byte(c.Root)) {
+	// Only use head state if the head state is compatible with the target checkpoint.
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
 		return nil
 	}
-	if c.Epoch == headEpoch {
-		st, err := s.HeadStateReadOnly(ctx)
-		if err != nil {
-			return nil
-		}
+	headDependent, err := s.cfg.ForkChoiceStore.DependentRootForEpoch([32]byte(headRoot), c.Epoch-1)
+	if err != nil {
+		return nil
+	}
+	targetDependent, err := s.cfg.ForkChoiceStore.DependentRootForEpoch([32]byte(c.Root), c.Epoch-1)
+	if err != nil {
+		return nil
+	}
+	if targetDependent != headDependent {
+		return nil
+	}
+	st, err := s.HeadStateReadOnly(ctx)
+	if err != nil {
+		return nil
+	}
+	if c.Epoch <= headEpoch {
 		return st
 	}
 	slot, err := slots.EpochStart(c.Epoch)
 	if err != nil {
 		return nil
 	}
-	// Try if we have already set the checkpoint cache
+	if c.Epoch == slots.ToEpoch(st.Slot())+1 && slots.ToForkVersion(slot) == slots.ToForkVersion(st.Slot()) {
+		return st
+	}
+	if bytesutil.ToBytes32(c.Root) != bytesutil.ToBytes32(headRoot) {
+		return nil
+	}
+	// Try if we have already set the checkpoint cache. This will be tried again if we fail here but the check is cheap anyway.
 	epochKey := strconv.FormatUint(uint64(c.Epoch), 10 /* base 10 */)
 	lock := async.NewMultilock(string(c.Root) + epochKey)
 	lock.Lock()
@@ -50,11 +70,8 @@ func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) st
 	if cachedState != nil && !cachedState.IsNil() {
 		return cachedState
 	}
-	st, err := s.HeadState(ctx)
-	if err != nil {
-		return nil
-	}
-	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, c.Root, slot)
+	// If we haven't advanced yet then process the slots from head state.
+	st, err = transition.ProcessSlotsIfNeeded(ctx, st, c.Root, slot)
 	if err != nil {
 		return nil
 	}
@@ -64,7 +81,7 @@ func (s *Service) getRecentPreState(ctx context.Context, c *ethpb.Checkpoint) st
 	return st
 }
 
-// getAttPreState retrieves the att pre state by either from the cache or the DB.
+// getAttPreState returns a state valid for computing c.Epoch's committees and signature domains, its slot may be one epoch behind c.Epoch.
 // The caller of this function must have a lock on forkchoice.
 func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (state.ReadOnlyBeaconState, error) {
 	// If the attestation is recent and canonical we can use the head state to compute the shuffling.
@@ -90,8 +107,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute epoch start")
 	}
-	cachedState = transition.NextSlotState(c.Root, slot)
-	if cachedState != nil && !cachedState.IsNil() {
+	if cachedState := transition.NextSlotState(c.Root, slot); cachedState != nil && !cachedState.IsNil() {
 		if cachedState.Slot() != slot {
 			cachedState, err = transition.ProcessSlots(ctx, cachedState, slot)
 			if err != nil {
@@ -114,6 +130,16 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (stat
 	}
 
 	// Fallback to state regeneration.
+	select {
+	case s.attPreStateRegenSem <- struct{}{}:
+		defer func() { <-s.attPreStateRegenSem }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	log.WithFields(logrus.Fields{"epoch": c.Epoch, "root": fmt.Sprintf("%#x", c.Root)}).Debug("Regenerating attestation pre-state")
 	baseState, err := s.cfg.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for epoch %d", c.Epoch)

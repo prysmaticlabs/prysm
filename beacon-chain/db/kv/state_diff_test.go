@@ -1,0 +1,1682 @@
+package kv
+
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"math/rand"
+	"testing"
+	"time"
+
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/genesis"
+	"github.com/OffchainLabs/prysm/v7/math"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/golang/snappy"
+	"go.etcd.io/bbolt"
+)
+
+func TestStateDiff_LoadOrInitOffset(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	err := setOffsetInDB(db, 10)
+	require.NoError(t, err)
+	offset := db.getOffset()
+	require.Equal(t, uint64(10), offset)
+
+	err = db.setOffset(10)
+	require.ErrorContains(t, "offset already set", err)
+	offset = db.getOffset()
+	require.Equal(t, uint64(10), offset)
+}
+
+func TestStateDiff_LoadOffset(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	_, err := db.loadOffset()
+	require.ErrorContains(t, "offset not found", err)
+
+	err = setOffsetInDB(db, 10)
+	require.NoError(t, err)
+	offset, err := db.loadOffset()
+	require.NoError(t, err)
+	require.Equal(t, uint64(10), offset)
+}
+
+func TestStateDiff_EncodeDecodeExponents(t *testing.T) {
+	t.Run("roundtrip", func(t *testing.T) {
+		exponents := []int{21, 18, 16, 13}
+		encoded, err := encodeStateDiffExponents(exponents)
+		require.NoError(t, err)
+		decoded, err := decodeStateDiffExponents(encoded)
+		require.NoError(t, err)
+		require.DeepEqual(t, exponents, decoded)
+	})
+
+	t.Run("encode-empty", func(t *testing.T) {
+		_, err := encodeStateDiffExponents(nil)
+		require.ErrorContains(t, "cannot be empty", err)
+	})
+
+	t.Run("encode-negative", func(t *testing.T) {
+		_, err := encodeStateDiffExponents([]int{21, -1})
+		require.ErrorContains(t, "out of range", err)
+		require.ErrorContains(t, "between 2 and", err)
+	})
+
+	t.Run("encode-too-large", func(t *testing.T) {
+		_, err := encodeStateDiffExponents([]int{flags.MaxStateDiffExponent + 1})
+		require.ErrorContains(t, "out of range", err)
+		require.ErrorContains(t, "between 2 and", err)
+	})
+
+	t.Run("decode-empty", func(t *testing.T) {
+		_, err := decodeStateDiffExponents(nil)
+		require.ErrorContains(t, "missing length prefix", err)
+	})
+
+	t.Run("decode-zero-length", func(t *testing.T) {
+		_, err := decodeStateDiffExponents([]byte{0})
+		require.ErrorContains(t, "length cannot be zero", err)
+	})
+
+	t.Run("decode-length-mismatch", func(t *testing.T) {
+		_, err := decodeStateDiffExponents([]byte{2, 10})
+		require.ErrorContains(t, "length mismatch", err)
+	})
+
+	t.Run("decode-too-many-exponents", func(t *testing.T) {
+		encoded := make([]byte, 17)
+		encoded[0] = 16
+		_, err := decodeStateDiffExponents(encoded)
+		require.ErrorContains(t, "exceeds max 15", err)
+	})
+
+	t.Run("decode-out-of-range", func(t *testing.T) {
+		_, err := decodeStateDiffExponents([]byte{1, byte(flags.MaxStateDiffExponent + 1)})
+		require.ErrorContains(t, "out of range when decoding", err)
+	})
+
+	t.Run("decode-not-decreasing", func(t *testing.T) {
+		_, err := decodeStateDiffExponents([]byte{2, 10, 10})
+		require.ErrorContains(t, "strictly decreasing", err)
+	})
+
+	t.Run("decode-last-too-small", func(t *testing.T) {
+		_, err := decodeStateDiffExponents([]byte{2, 10, 4})
+		require.ErrorContains(t, "last state diff exponent must be at least 5", err)
+	})
+}
+
+func TestStateDiff_InitializeStoresExponents(t *testing.T) {
+	setDefaultStateDiffExponents()
+	resetCfg := features.InitWithReset(&features.Flags{EnableStateDiff: true})
+	defer resetCfg()
+
+	db := setupDB(t)
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, db.initializeStateDiff(0, st))
+
+	stored, err := db.loadStateDiffExponents()
+	require.NoError(t, err)
+	require.DeepEqual(t, flags.Get().StateDiffExponents, stored)
+}
+
+func TestStateDiff_LoadExponentsMissing(t *testing.T) {
+	db := setupDB(t)
+	_, err := db.loadStateDiffExponents()
+	require.ErrorContains(t, "exponents metadata not found", err)
+}
+
+func TestStateDiff_ComputeLevel(t *testing.T) {
+	db := setupDB(t)
+	setDefaultStateDiffExponents()
+
+	err := setOffsetInDB(db, 0)
+	require.NoError(t, err)
+
+	offset := db.getOffset()
+
+	// should be -1. slot < offset
+	lvl := computeLevel(10, primitives.Slot(9))
+	require.Equal(t, -1, lvl)
+
+	// 2 ** 21
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(21)))
+	require.Equal(t, 0, lvl)
+
+	// 2 ** 21 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(21)*3))
+	require.Equal(t, 0, lvl)
+
+	// 2 ** 18
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(18)))
+	require.Equal(t, 1, lvl)
+
+	// 2 ** 18 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(18)*3))
+	require.Equal(t, 1, lvl)
+
+	// 2 ** 16
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(16)))
+	require.Equal(t, 2, lvl)
+
+	// 2 ** 16 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(16)*3))
+	require.Equal(t, 2, lvl)
+
+	// 2 ** 13
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(13)))
+	require.Equal(t, 3, lvl)
+
+	// 2 ** 13 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(13)*3))
+	require.Equal(t, 3, lvl)
+
+	// 2 ** 11
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(11)))
+	require.Equal(t, 4, lvl)
+
+	// 2 ** 11 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(11)*3))
+	require.Equal(t, 4, lvl)
+
+	// 2 ** 9
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(9)))
+	require.Equal(t, 5, lvl)
+
+	// 2 ** 9 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(9)*3))
+	require.Equal(t, 5, lvl)
+
+	// 2 ** 5
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(5)))
+	require.Equal(t, 6, lvl)
+
+	// 2 ** 5 * 3
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(5)*3))
+	require.Equal(t, 6, lvl)
+
+	// 2 ** 7
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(7)))
+	require.Equal(t, 6, lvl)
+
+	// 2 ** 5 + 1
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(5)+1))
+	require.Equal(t, -1, lvl)
+
+	// 2 ** 5 + 16
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(5)+16))
+	require.Equal(t, -1, lvl)
+
+	// 2 ** 5 + 32
+	lvl = computeLevel(offset, primitives.Slot(math.PowerOf2(5)+32))
+	require.Equal(t, 6, lvl)
+
+}
+
+func TestStateDiff_SaveFullSnapshot(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			// Create state with slot 0
+			st, enc := createState(t, 0, v)
+
+			err := setOffsetInDB(db, 0)
+			require.NoError(t, err)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			err = db.db.View(func(tx *bbolt.Tx) error {
+				bucket := tx.Bucket(stateDiffBucket)
+				if bucket == nil {
+					return bbolt.ErrBucketNotFound
+				}
+				s := bucket.Get(makeKeyForStateDiffTree(0, uint64(0)))
+				if s == nil {
+					return bbolt.ErrIncompatibleValue
+				}
+				s, err = snappy.Decode(nil, s)
+				require.NoError(t, err)
+				require.DeepSSZEqual(t, enc, s)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestStateDiff_StateByDiff_NonZeroOffsetSkipsRedundantLevelDiff(t *testing.T) {
+	setStateDiffExponents([]int{6, 5, 4})
+
+	db := setupDB(t)
+
+	offset := uint64(1000)
+	require.NoError(t, setOffsetInDB(db, offset))
+
+	stOffset, _ := createState(t, primitives.Slot(offset), version.Phase0)
+	require.NoError(t, db.saveStateByDiff(context.Background(), stOffset))
+
+	st32, _ := createState(t, primitives.Slot(offset+32), version.Phase0)
+	require.NoError(t, db.saveStateByDiff(context.Background(), st32))
+
+	st64, _ := createState(t, primitives.Slot(offset+64), version.Phase0)
+	require.NoError(t, db.saveStateByDiff(context.Background(), st64))
+
+	st80, _ := createState(t, primitives.Slot(offset+80), version.Phase0)
+	require.NoError(t, db.saveStateByDiff(context.Background(), st80))
+
+	readSt, err := db.stateByDiff(context.Background(), primitives.Slot(offset+80))
+	require.NoError(t, err)
+
+	stWantSSZ, err := st80.MarshalSSZ()
+	require.NoError(t, err)
+	stGotSSZ, err := readSt.MarshalSSZ()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, stWantSSZ, stGotSSZ)
+}
+
+func TestStateDiff_MissingHistoryAllowsReplay(t *testing.T) {
+	oldFlags := *flags.Get()
+	t.Cleanup(func() { flags.Init(&oldFlags) })
+	setStateDiffExponents([]int{7, 6, 5})
+	reset := features.InitWithReset(&features.Flags{EnableStateDiff: true})
+	t.Cleanup(reset)
+
+	for _, offset := range []uint64{0, 1024} {
+		for _, tc := range []struct {
+			name    string
+			level   int
+			missing uint64
+			target  uint64
+			healthy uint64
+			suffix  string
+			wantErr string
+		}{
+			{"state ancestor", 1, 64, 96, 224, stateSuffix, "state diff not found"},
+			{"validator ancestor", 1, 64, 96, 224, validatorSuffix, "validator diff not found"},
+			{"balances ancestor", 1, 64, 96, 224, balancesSuffix, "balances diff not found"},
+			{"leaf", 2, 96, 96, 224, stateSuffix, "state diff not found"},
+			{"snapshot", 0, 128, 224, 96, "", "full snapshot not found"},
+		} {
+			t.Run(fmt.Sprintf("offset=%d/%s", offset, tc.name), func(t *testing.T) {
+				db := setupDB(t)
+				require.NoError(t, setOffsetInDB(db, offset))
+				for slot := offset; slot <= offset+224; slot += 32 {
+					st, _ := createState(t, primitives.Slot(slot), version.Phase0)
+					require.NoError(t, db.saveStateByDiff(t.Context(), st))
+				}
+				require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+					key := append(makeKeyForStateDiffTree(tc.level, offset+tc.missing), tc.suffix...)
+					return tx.Bucket(stateDiffBucket).Delete(key)
+				}))
+				db.stateDiffCache.clearAnchors()
+
+				root := [32]byte{'A'}
+				require.NoError(t, db.SaveStateSummary(t.Context(), &ethpb.StateSummary{
+					Slot: primitives.Slot(offset + tc.target), Root: root[:],
+				}))
+				got, err := db.StateOrError(t.Context(), root)
+				require.IsNil(t, got)
+				require.ErrorIs(t, err, ErrNotFoundState)
+				require.ErrorContains(t, tc.wantErr, err)
+				require.ErrorContains(t, fmt.Sprintf("slot %d", offset+tc.missing), err)
+				require.ErrorContains(t, fmt.Sprintf("level %d", tc.level), err)
+
+				// An independent branch of the same historical tree still works.
+				got, err = db.stateByDiff(t.Context(), primitives.Slot(offset+tc.healthy))
+				require.NoError(t, err)
+				require.Equal(t, primitives.Slot(offset+tc.healthy), got.Slot())
+			})
+		}
+	}
+}
+
+func TestStateDiff_EmptyLevelDoesNotReturnEarlierState(t *testing.T) {
+	oldFlags := *flags.Get()
+	t.Cleanup(func() { flags.Init(&oldFlags) })
+	setStateDiffExponents([]int{6, 5})
+	db := setupDB(t)
+	require.NoError(t, setOffsetInDB(db, 0))
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, db.saveStateByDiff(t.Context(), st))
+
+	got, err := db.stateByDiff(t.Context(), 32)
+	require.IsNil(t, got)
+	require.ErrorIs(t, err, ErrNotFoundState)
+}
+
+func TestStateDiff_ChecksMissingDiffBeforeSnapshot(t *testing.T) {
+	oldFlags := *flags.Get()
+	t.Cleanup(func() { flags.Init(&oldFlags) })
+	setStateDiffExponents([]int{7, 6, 5})
+	for _, missing := range []struct {
+		level int
+		slot  uint64
+	}{{1, 64}, {2, 96}} {
+		t.Run(fmt.Sprintf("level=%d", missing.level), func(t *testing.T) {
+			db := setupDB(t)
+			require.NoError(t, setOffsetInDB(db, 0))
+			for _, slot := range []primitives.Slot{0, 64, 96} {
+				st, _ := createState(t, slot, version.Phase0)
+				require.NoError(t, db.saveStateByDiff(t.Context(), st))
+			}
+			require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+				bucket := tx.Bucket(stateDiffBucket)
+				if err := bucket.Delete(makeKeyForStateDiffTree(0, 0)); err != nil {
+					return err
+				}
+				return bucket.Delete(append(makeKeyForStateDiffTree(missing.level, missing.slot), stateSuffix...))
+			}))
+			db.stateDiffCache.clearAnchors()
+			_, _, err := db.getBaseAndDiffChain(0, 96)
+			require.ErrorIs(t, err, ErrNotFoundState)
+			require.ErrorContains(t, fmt.Sprintf("level %d slot %d", missing.level, missing.slot), err)
+		})
+	}
+}
+
+func BenchmarkStateDiffMissingHistory(b *testing.B) {
+	oldFlags := *flags.Get()
+	b.Cleanup(func() { flags.Init(&oldFlags) })
+	setStateDiffExponents([]int{7, 6, 5})
+	db := setupDB(b)
+	require.NoError(b, setOffsetInDB(db, 0))
+	st, err := util.NewBeaconState()
+	require.NoError(b, err)
+	validators := make([]*ethpb.Validator, 65536)
+	for i := range validators {
+		pubkey := make([]byte, 48)
+		binary.LittleEndian.PutUint64(pubkey, uint64(i))
+		validators[i] = &ethpb.Validator{PublicKey: pubkey, WithdrawalCredentials: make([]byte, 32)}
+	}
+	require.NoError(b, st.SetValidators(validators))
+	require.NoError(b, db.saveFullSnapshot(st))
+	db.stateDiffCache.clearAnchors()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		_, err := db.stateByDiff(b.Context(), 96)
+		if !errors.Is(err, ErrNotFoundState) {
+			b.Fatalf("expected missing history, got %v", err)
+		}
+	}
+}
+
+func TestStateDiff_CorruptHistoryIsNotMissing(t *testing.T) {
+	oldFlags := *flags.Get()
+	t.Cleanup(func() { flags.Init(&oldFlags) })
+	setStateDiffExponents([]int{6, 5})
+	reset := features.InitWithReset(&features.Flags{EnableStateDiff: true})
+	t.Cleanup(reset)
+
+	for _, suffix := range []string{stateSuffix, validatorSuffix, balancesSuffix} {
+		for _, value := range [][]byte{{}, {0xff}} {
+			t.Run(fmt.Sprintf("%s/%x", suffix, value), func(t *testing.T) {
+				db := setupDB(t)
+				require.NoError(t, setOffsetInDB(db, 0))
+				for _, slot := range []primitives.Slot{0, 32} {
+					st, _ := createState(t, slot, version.Phase0)
+					require.NoError(t, db.saveStateByDiff(t.Context(), st))
+				}
+				require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+					return tx.Bucket(stateDiffBucket).Put(append(makeKeyForStateDiffTree(1, 32), suffix...), value)
+				}))
+				root := [32]byte{'A'}
+				require.NoError(t, db.SaveStateSummary(t.Context(), &ethpb.StateSummary{Slot: 32, Root: root[:]}))
+				got, err := db.StateOrError(t.Context(), root)
+				require.IsNil(t, got)
+				require.NotNil(t, err)
+				require.Equal(t, false, errors.Is(err, ErrNotFoundState))
+			})
+		}
+	}
+}
+
+func TestStateDiff_PopulateStateDiffCacheFromDB(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	_, err := populateStateDiffCacheFromDB(db, 0)
+	require.ErrorContains(t, "offset snapshot", err)
+
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, setOffsetInDB(db, 0))
+	require.NoError(t, db.saveStateByDiff(context.Background(), st))
+
+	err = db.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		key := makeKeyForStateDiffTree(2, math.PowerOf2(16))
+		if err := bucket.Put(append(key, stateSuffix...), []byte{1}); err != nil {
+			return err
+		}
+		if err := bucket.Put(append(key, validatorSuffix...), []byte{1}); err != nil {
+			return err
+		}
+		return bucket.Put(append(key, balancesSuffix...), []byte{1})
+	})
+	require.NoError(t, err)
+
+	cache, err := populateStateDiffCacheFromDB(db, 0)
+	require.NoError(t, err)
+	require.NotNil(t, cache)
+	require.Equal(t, uint64(0), cache.getOffset())
+	require.NotNil(t, cache.getAnchor(0))
+	require.Equal(t, true, cache.levelHasData(0))
+	require.Equal(t, false, cache.levelHasData(1))
+	require.Equal(t, true, cache.levelHasData(2))
+}
+
+func TestStateDiff_PopulateStateDiffCacheFromDB_SingleExponent(t *testing.T) {
+	setStateDiffExponents([]int{5})
+
+	db := setupDB(t)
+	require.NoError(t, setOffsetInDB(db, 0))
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, db.saveStateByDiff(context.Background(), st))
+
+	cache, err := populateStateDiffCacheFromDB(db, 0)
+	require.NoError(t, err)
+	require.NotNil(t, cache)
+	require.Equal(t, 0, len(cache.anchors))
+	require.Equal(t, true, cache.levelHasData(0))
+}
+
+func TestStateDiff_PopulateStateDiffCacheFromDB_AnchorSlot(t *testing.T) {
+	setStateDiffExponents([]int{7, 5})
+	const offset = primitives.Slot(32)
+	db := setupDB(t)
+	require.NoError(t, setOffsetInDB(db, uint64(offset)))
+	st, _ := createState(t, offset, version.Phase0)
+	require.NoError(t, db.saveFullSnapshot(st))
+	db.stateDiffCache = nil
+
+	cache, err := populateStateDiffCacheFromDB(db, uint64(offset))
+	require.NoError(t, err)
+	require.Equal(t, offset, cache.anchors[0].slot)
+	got := cache.getAnchor(0, withExactSlot(offset))
+	require.NotNil(t, got)
+	require.DeepSSZEqual(t, st.ToProto(), got.ToProto())
+	require.IsNil(t, cache.getAnchor(0, withExactSlot(0)))
+	require.IsNil(t, cache.getAnchor(0, withExactSlot(offset+1)))
+}
+
+func TestStateDiff_PopulateStateDiffCacheFromDB_InvalidLevelKey(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, setOffsetInDB(db, 0))
+	require.NoError(t, db.saveStateByDiff(context.Background(), st))
+
+	require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		key := makeKeyForStateDiffTree(2, 1)
+		return bucket.Put(append(key, stateSuffix...), []byte{1})
+	}))
+
+	_, err := populateStateDiffCacheFromDB(db, 0)
+	require.ErrorIs(t, ErrStateDiffCorrupted, err)
+}
+
+func TestStateDiff_PopulateStateDiffCacheFromDB_MissingLevelSuffixes(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, setOffsetInDB(db, 0))
+	require.NoError(t, db.saveStateByDiff(context.Background(), st))
+
+	require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		key := makeKeyForStateDiffTree(2, math.PowerOf2(16))
+		return bucket.Put(append(key, stateSuffix...), []byte{1})
+	}))
+
+	_, err := populateStateDiffCacheFromDB(db, 0)
+	require.ErrorIs(t, ErrStateDiffCorrupted, err)
+}
+
+func TestStateDiff_LatestSlotForLevel(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	require.NoError(t, setOffsetInDB(db, 0))
+
+	// Write entries at level 2 with slots whose little-endian byte order
+	// differs from numerical order. bbolt sorts keys lexicographically,
+	// so the last key in byte order is not necessarily the highest slot.
+	//
+	//   Slot 1:     LE = 01 00 00 00 00 00 00 00  (lex-last)
+	//   Slot 512:   LE = 00 02 00 00 00 00 00 00
+	//   Slot 65536: LE = 00 00 01 00 00 00 00 00  (lex-first)
+	level := 2
+	slots := []uint64{1, 512, 65536}
+
+	require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		for _, slot := range slots {
+			key := makeKeyForStateDiffTree(level, slot)
+			if err := bucket.Put(append(key, stateSuffix...), []byte{1}); err != nil {
+				return err
+			}
+			if err := bucket.Put(append(key, validatorSuffix...), []byte{1}); err != nil {
+				return err
+			}
+			if err := bucket.Put(append(key, balancesSuffix...), []byte{1}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+
+	maxSlot, err := latestSlotForLevel(db, level)
+	require.NoError(t, err)
+	require.Equal(t, uint64(65536), maxSlot)
+}
+
+func TestStateDiff_GetBaseAndDiffChainRejectsMissingAncestorLevel(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+	require.NoError(t, setOffsetInDB(db, 0))
+	st, _ := createState(t, 0, version.Phase0)
+	require.NoError(t, db.saveFullSnapshot(st))
+
+	cache, err := populateStateDiffCacheFromDB(db, 0)
+	require.NoError(t, err)
+	cache.levelsWithData[0] = true
+	cache.levelsWithData[1] = false
+	cache.levelsWithData[2] = true
+	db.stateDiffCache = cache
+
+	slot := primitives.Slot(math.PowerOf2(18) + math.PowerOf2(16))
+	key := makeKeyForStateDiffTree(2, uint64(slot))
+	require.NoError(t, db.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+		if err := bucket.Put(append(key, stateSuffix...), []byte{1}); err != nil {
+			return err
+		}
+		if err := bucket.Put(append(key, validatorSuffix...), []byte{2}); err != nil {
+			return err
+		}
+		return bucket.Put(append(key, balancesSuffix...), []byte{3})
+	}))
+
+	_, diffChain, err := db.getBaseAndDiffChain(0, slot)
+	require.ErrorIs(t, err, ErrNotFoundState)
+	require.ErrorContains(t, "level 1 slot 262144", err)
+	require.IsNil(t, diffChain)
+}
+
+type cancelAfterCheckContext struct {
+	context.Context
+	cancel context.CancelFunc
+}
+
+func (c *cancelAfterCheckContext) Err() error {
+	err := c.Context.Err()
+	c.cancel()
+	return err
+}
+
+func TestStateDiff_StateByDiffCachedAnchorCanceled(t *testing.T) {
+	for _, cached := range []bool{false, true} {
+		t.Run(fmt.Sprintf("cached=%t", cached), func(t *testing.T) {
+			setStateDiffExponents([]int{7, 6, 5})
+			db := setupDB(t)
+			require.NoError(t, setOffsetInDB(db, 0))
+			base, _ := createState(t, 0, version.Phase0)
+			require.NoError(t, db.saveFullSnapshot(base))
+			target := base.Copy()
+			require.NoError(t, target.SetSlot(64))
+			require.NoError(t, db.saveStateByDiff(t.Context(), target))
+			target = target.Copy()
+			require.NoError(t, target.SetSlot(96))
+			require.NoError(t, db.saveStateByDiff(t.Context(), target))
+			if !cached {
+				db.stateDiffCache.clearAnchors()
+			}
+			for _, slot := range []primitives.Slot{0, 64, 96} {
+				t.Run(fmt.Sprintf("slot=%d", slot), func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					cancel()
+					before := db.db.Stats().TxN
+					got, err := db.stateByDiff(ctx, slot)
+					require.ErrorIs(t, err, context.Canceled)
+					require.IsNil(t, got)
+					require.Equal(t, before, db.db.Stats().TxN)
+
+					ctx, cancel = context.WithDeadline(t.Context(), time.Time{})
+					defer cancel()
+					got, err = db.stateByDiff(ctx, slot)
+					require.ErrorIs(t, err, context.DeadlineExceeded)
+					require.IsNil(t, got)
+					require.Equal(t, before, db.db.Stats().TxN)
+
+					// Cancel immediately after the initial check, before reconstruction finishes.
+					ctx, cancel = context.WithCancel(t.Context())
+					defer cancel()
+					got, err = db.stateByDiff(&cancelAfterCheckContext{Context: ctx, cancel: cancel}, slot)
+					require.ErrorIs(t, err, context.Canceled)
+					require.IsNil(t, got)
+				})
+			}
+		})
+	}
+}
+
+func TestStateDiff_SaveAndReadFullSnapshot(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			st, _ := createState(t, 0, v)
+
+			err := setOffsetInDB(db, 0)
+			require.NoError(t, err)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err := db.stateByDiff(context.Background(), 0)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err := st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err := readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+		})
+	}
+}
+
+func TestStateDiff_GetFullSnapshot(t *testing.T) {
+	const snapshotSlot = primitives.Slot(96)
+	for _, tt := range []struct {
+		name       string
+		prepare    func(t *testing.T, db *Store)
+		wantDBRead bool
+	}{
+		{name: "matching cache"},
+		{
+			name: "nil cache",
+			prepare: func(_ *testing.T, db *Store) {
+				db.stateDiffCache = nil
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "empty cache",
+			prepare: func(_ *testing.T, db *Store) {
+				db.stateDiffCache.clearAnchors()
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "older cached snapshot",
+			prepare: func(t *testing.T, db *Store) {
+				st, _ := createState(t, snapshotSlot-64, version.Phase0)
+				require.NoError(t, db.stateDiffCache.setAnchor(0, st))
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "newer cached snapshot",
+			prepare: func(t *testing.T, db *Store) {
+				st, _ := createState(t, snapshotSlot+64, version.Phase0)
+				require.NoError(t, db.saveFullSnapshot(st))
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "corrupt cached snapshot",
+			prepare: func(_ *testing.T, db *Store) {
+				db.stateDiffCache.anchors[0] = anchor{slot: snapshotSlot, data: []byte{0xff}}
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "invalid cached SSZ",
+			prepare: func(_ *testing.T, db *Store) {
+				db.stateDiffCache.anchors[0] = anchor{slot: snapshotSlot, data: snappy.Encode(nil, phase0Key)}
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "single level",
+			prepare: func(_ *testing.T, db *Store) {
+				setStateDiffExponents([]int{6})
+				db.stateDiffCache.clearAnchors()
+			},
+			wantDBRead: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			setStateDiffExponents([]int{6, 5})
+			db := setupDB(t)
+			require.NoError(t, setOffsetInDB(db, 32))
+			st, _ := createState(t, snapshotSlot, version.Phase0)
+			require.NoError(t, db.saveFullSnapshot(st))
+			if tt.prepare != nil {
+				tt.prepare(t, db)
+			}
+
+			before := db.db.Stats().TxN
+			got, err := db.getFullSnapshot(uint64(snapshotSlot))
+			require.NoError(t, err)
+			require.Equal(t, tt.wantDBRead, db.db.Stats().TxN > before)
+			require.DeepSSZEqual(t, st.ToProto(), got.ToProto())
+
+			// Mutating the returned state must not affect subsequent reads.
+			require.NoError(t, got.SetSlot(snapshotSlot+1))
+			got, err = db.getFullSnapshot(uint64(snapshotSlot))
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, st.ToProto(), got.ToProto())
+		})
+	}
+}
+
+func TestStateDiff_GetAnchorState_ExactSlot(t *testing.T) {
+	const offset = primitives.Slot(32)
+	const anchorSlot = offset + 64
+	for _, tt := range []struct {
+		name       string
+		prepare    func(t *testing.T, cache *stateDiffCache)
+		wantDBRead bool
+	}{
+		{name: "matching cache"},
+		{
+			name: "older cached anchor",
+			prepare: func(t *testing.T, cache *stateDiffCache) {
+				st, _ := createState(t, anchorSlot-32, version.Phase0)
+				require.NoError(t, cache.setAnchor(1, st))
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "newer cached anchor",
+			prepare: func(t *testing.T, cache *stateDiffCache) {
+				st, _ := createState(t, anchorSlot+64, version.Phase0)
+				require.NoError(t, cache.setAnchor(1, st))
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "empty cache",
+			prepare: func(_ *testing.T, cache *stateDiffCache) {
+				cache.clearAnchors()
+			},
+			wantDBRead: true,
+		},
+		{
+			name: "corrupt matching anchor",
+			prepare: func(_ *testing.T, cache *stateDiffCache) {
+				cache.anchors[1] = anchor{slot: anchorSlot, data: []byte{0xff}}
+			},
+			wantDBRead: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			setStateDiffExponents([]int{8, 6, 5})
+			db := setupDB(t)
+			require.NoError(t, setOffsetInDB(db, uint64(offset)))
+			base, _ := createState(t, offset, version.Phase0)
+			require.NoError(t, db.saveFullSnapshot(base))
+			st, _ := createState(t, anchorSlot, version.Phase0)
+			require.NoError(t, db.saveStateByDiff(t.Context(), st))
+			if tt.prepare != nil {
+				tt.prepare(t, db.stateDiffCache)
+			}
+
+			before := db.db.Stats().TxN
+			got, err := db.getAnchorState(t.Context(), uint64(offset), 2, anchorSlot+32)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			require.Equal(t, tt.wantDBRead, db.db.Stats().TxN > before)
+			require.DeepSSZEqual(t, st.ToProto(), got.ToProto())
+			require.Equal(t, anchorSlot, db.stateDiffCache.anchors[1].slot)
+
+			before = db.db.Stats().TxN
+			got, err = db.getAnchorState(t.Context(), uint64(offset), 2, anchorSlot+32)
+			require.NoError(t, err)
+			require.Equal(t, before, db.db.Stats().TxN)
+			require.DeepSSZEqual(t, st.ToProto(), got.ToProto())
+		})
+	}
+}
+
+func TestStateDiff_SaveDiff(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			// Create state with slot 2**21
+			slot := primitives.Slot(math.PowerOf2(21))
+			st, enc := createState(t, slot, v)
+
+			err := setOffsetInDB(db, uint64(slot))
+			require.NoError(t, err)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			err = db.db.View(func(tx *bbolt.Tx) error {
+				bucket := tx.Bucket(stateDiffBucket)
+				if bucket == nil {
+					return bbolt.ErrBucketNotFound
+				}
+				s := bucket.Get(makeKeyForStateDiffTree(0, uint64(slot)))
+				if s == nil {
+					return bbolt.ErrIncompatibleValue
+				}
+				s, err = snappy.Decode(nil, s)
+				require.NoError(t, err)
+				require.DeepSSZEqual(t, enc, s)
+				return nil
+			})
+			require.NoError(t, err)
+
+			// create state with slot 2**18 (+2**21)
+			slot = primitives.Slot(math.PowerOf2(18) + math.PowerOf2(21))
+			st, _ = createState(t, slot, v)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			key := makeKeyForStateDiffTree(1, uint64(slot))
+			err = db.db.View(func(tx *bbolt.Tx) error {
+				bucket := tx.Bucket(stateDiffBucket)
+				if bucket == nil {
+					return bbolt.ErrBucketNotFound
+				}
+				buf := append(key, "_s"...)
+				s := bucket.Get(buf)
+				if s == nil {
+					return bbolt.ErrIncompatibleValue
+				}
+				buf = append(key, "_v"...)
+				v := bucket.Get(buf)
+				if v == nil {
+					return bbolt.ErrIncompatibleValue
+				}
+				buf = append(key, "_b"...)
+				b := bucket.Get(buf)
+				if b == nil {
+					return bbolt.ErrIncompatibleValue
+				}
+				return nil
+			})
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestStateDiff_SaveAndReadDiff(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			st, _ := createState(t, 0, v)
+
+			err := setOffsetInDB(db, 0)
+			require.NoError(t, err)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			slot := primitives.Slot(math.PowerOf2(5))
+			st, _ = createState(t, slot, v)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err := db.stateByDiff(context.Background(), slot)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err := st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err := readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+		})
+	}
+}
+
+func TestStateDiff_SaveAndReadDiff_WithRepetitiveAnchorSlots(t *testing.T) {
+	globalFlags := flags.GlobalFlags{
+		StateDiffExponents: []int{20, 14, 10, 7, 5},
+	}
+	flags.Init(&globalFlags)
+
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			err := setOffsetInDB(db, 0)
+
+			st, _ := createState(t, 0, v)
+			require.NoError(t, err)
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			slot := primitives.Slot(math.PowerOf2(11))
+			st, _ = createState(t, slot, v)
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			slot = primitives.Slot(math.PowerOf2(11) + math.PowerOf2(5))
+			st, _ = createState(t, slot, v)
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err := db.stateByDiff(context.Background(), slot)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err := st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err := readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+		})
+	}
+}
+
+func TestStateDiff_SaveAndReadDiff_MultipleLevels(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			st, _ := createState(t, 0, v)
+
+			err := setOffsetInDB(db, 0)
+			require.NoError(t, err)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			slot := primitives.Slot(math.PowerOf2(11))
+			st, _ = createState(t, slot, v)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err := db.stateByDiff(context.Background(), slot)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err := st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err := readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+
+			slot = primitives.Slot(math.PowerOf2(11) + math.PowerOf2(9))
+			st, _ = createState(t, slot, v)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err = db.stateByDiff(context.Background(), slot)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err = st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err = readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+
+			slot = primitives.Slot(math.PowerOf2(11) + math.PowerOf2(9) + math.PowerOf2(5))
+			st, _ = createState(t, slot, v)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err = db.stateByDiff(context.Background(), slot)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err = st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err = readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+		})
+	}
+}
+
+func TestStateDiff_SaveAndReadDiffForkTransition(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for v := range version.All()[:len(version.All())-1] {
+		t.Run(version.String(v), func(t *testing.T) {
+			db := setupDB(t)
+
+			st, _ := createState(t, 0, v)
+
+			err := setOffsetInDB(db, 0)
+			require.NoError(t, err)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			slot := primitives.Slot(math.PowerOf2(5))
+			st, _ = createState(t, slot, v+1)
+
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+
+			readSt, err := db.stateByDiff(context.Background(), slot)
+			require.NoError(t, err)
+			require.NotNil(t, readSt)
+
+			stSSZ, err := st.MarshalSSZ()
+			require.NoError(t, err)
+			readStSSZ, err := readSt.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, stSSZ, readStSSZ)
+		})
+	}
+}
+
+// TestStateDiff_SaveAndReadDiffForkTransitionGloas tests the Fulu→Gloas fork transition
+// explicitly since Gloas is not yet in version.All().
+func TestStateDiff_SaveAndReadDiffForkTransitionGloas(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+
+	st, _ := util.DeterministicGenesisStateFulu(t, 64)
+
+	err := setOffsetInDB(db, 0)
+	require.NoError(t, err)
+
+	err = db.saveStateByDiff(context.Background(), st)
+	require.NoError(t, err)
+
+	slot := primitives.Slot(math.PowerOf2(5))
+	gloasSt, err := gloas.UpgradeToGloas(t.Context(), st.Copy())
+	require.NoError(t, err)
+	require.NoError(t, gloasSt.SetSlot(slot))
+
+	err = db.saveStateByDiff(context.Background(), gloasSt)
+	require.NoError(t, err)
+
+	readSt, err := db.stateByDiff(context.Background(), slot)
+	require.NoError(t, err)
+	require.NotNil(t, readSt)
+
+	stSSZ, err := gloasSt.MarshalSSZ()
+	require.NoError(t, err)
+	readStSSZ, err := readSt.MarshalSSZ()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, stSSZ, readStSSZ)
+}
+
+// TestStateDiff_SaveAndReadSnapshotGloas tests saving and reading a Gloas full snapshot.
+func TestStateDiff_SaveAndReadSnapshotGloas(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	db := setupDB(t)
+
+	err := setOffsetInDB(db, 0)
+	require.NoError(t, err)
+
+	st, _ := createState(t, 0, version.Gloas)
+
+	err = db.saveStateByDiff(context.Background(), st)
+	require.NoError(t, err)
+
+	readSt, err := db.stateByDiff(context.Background(), 0)
+	require.NoError(t, err)
+	require.NotNil(t, readSt)
+
+	stSSZ, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	readStSSZ, err := readSt.MarshalSSZ()
+	require.NoError(t, err)
+	require.DeepSSZEqual(t, stSSZ, readStSSZ)
+}
+
+func TestStateDiff_OffsetCache(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	// test for slot numbers 0 and 1 for every version
+	for slotNum := range 2 {
+		for v := range version.All() {
+			t.Run(fmt.Sprintf("slotNum=%d,%s", slotNum, version.String(v)), func(t *testing.T) {
+				db := setupDB(t)
+
+				slot := primitives.Slot(slotNum)
+				err := setOffsetInDB(db, uint64(slot))
+				require.NoError(t, err)
+				st, _ := createState(t, slot, v)
+				err = db.saveStateByDiff(context.Background(), st)
+				require.NoError(t, err)
+
+				offset := db.stateDiffCache.getOffset()
+				require.Equal(t, uint64(slotNum), offset)
+
+				slot2 := primitives.Slot(uint64(slotNum) + math.PowerOf2(uint64(flags.Get().StateDiffExponents[0])))
+				st2, _ := createState(t, slot2, v)
+				err = db.saveStateByDiff(context.Background(), st2)
+				require.NoError(t, err)
+
+				offset = db.stateDiffCache.getOffset()
+				require.Equal(t, uint64(slot), offset)
+			})
+		}
+	}
+}
+
+type blockingMarshalBeaconState struct {
+	state.ReadOnlyBeaconState
+	started chan struct{}
+	release chan struct{}
+}
+
+func (s *blockingMarshalBeaconState) ToProto() any {
+	close(s.started)
+	<-s.release
+	return s.ReadOnlyBeaconState.ToProto()
+}
+
+func TestStateDiffCache_AnchorAccess(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	t.Run("out of range read", func(t *testing.T) {
+		cache := &stateDiffCache{anchors: make([]anchor, 1)}
+		require.IsNil(t, cache.getAnchor(-1))
+		require.IsNil(t, cache.getAnchor(1))
+		require.IsNil(t, cache.getAnchor(-1, withExactSlot(0)))
+		require.IsNil(t, cache.getAnchor(1, withExactSlot(0)))
+	})
+
+	t.Run("exact slot", func(t *testing.T) {
+		cache := &stateDiffCache{anchors: make([]anchor, 3)}
+		for level, slot := range []primitives.Slot{0, 96} {
+			st, _ := createState(t, slot, version.Phase0)
+			require.NoError(t, cache.setAnchor(level, st))
+			require.Equal(t, slot, cache.anchors[level].slot)
+		}
+		for _, tt := range []struct {
+			name     string
+			level    int
+			opts     []optFunc
+			wantSlot primitives.Slot
+			wantMiss bool
+		}{
+			{name: "unfiltered genesis", level: 0},
+			{name: "exact genesis", level: 0, opts: []optFunc{withExactSlot(0)}},
+			{name: "wrong level", level: 0, opts: []optFunc{withExactSlot(96)}, wantMiss: true},
+			{name: "unfiltered nonzero", level: 1, wantSlot: 96},
+			{name: "exact nonzero", level: 1, opts: []optFunc{withExactSlot(96)}, wantSlot: 96},
+			{name: "zero is not a wildcard", level: 1, opts: []optFunc{withExactSlot(0)}, wantMiss: true},
+			{name: "older slot", level: 1, opts: []optFunc{withExactSlot(95)}, wantMiss: true},
+			{name: "newer slot", level: 1, opts: []optFunc{withExactSlot(97)}, wantMiss: true},
+			{name: "empty unfiltered", level: 2, wantMiss: true},
+			{name: "empty matching metadata", level: 2, opts: []optFunc{withExactSlot(0)}, wantMiss: true},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				got := cache.getAnchor(tt.level, tt.opts...)
+				if tt.wantMiss {
+					require.IsNil(t, got)
+					return
+				}
+				require.NotNil(t, got)
+				require.Equal(t, tt.wantSlot, got.Slot())
+				require.NoError(t, got.SetSlot(tt.wantSlot+1))
+				got = cache.getAnchor(tt.level, tt.opts...)
+				require.NotNil(t, got)
+				require.Equal(t, tt.wantSlot, got.Slot())
+			})
+		}
+	})
+
+	t.Run("slot miss does not materialize the state", func(t *testing.T) {
+		cache := &stateDiffCache{anchors: make([]anchor, 1)}
+		st, _ := createState(t, 96, version.Phase0)
+		require.NoError(t, cache.setAnchor(0, st))
+		opt := withExactSlot(0)
+		allocs := testing.AllocsPerRun(10, func() {
+			if cache.getAnchor(0, opt) != nil {
+				t.Fatal("unexpected anchor for a different slot")
+			}
+		})
+		// Allow option bookkeeping, but not decoding a complete beacon state.
+		if allocs > 2 {
+			t.Fatalf("slot miss allocated %v times, want at most 2", allocs)
+		}
+	})
+
+	t.Run("replacement updates slot and snapshot together", func(t *testing.T) {
+		cache := &stateDiffCache{anchors: make([]anchor, 1)}
+		st, _ := createState(t, 96, version.Phase0)
+		require.NoError(t, cache.setAnchor(0, st))
+		require.NoError(t, st.SetSlot(128))
+		got := cache.getAnchor(0, withExactSlot(96))
+		require.NotNil(t, got)
+		require.Equal(t, primitives.Slot(96), got.Slot())
+		require.IsNil(t, cache.getAnchor(0, withExactSlot(128)))
+
+		require.NoError(t, cache.setAnchor(0, st))
+		require.Equal(t, primitives.Slot(128), cache.anchors[0].slot)
+		require.IsNil(t, cache.getAnchor(0, withExactSlot(96)))
+		got = cache.getAnchor(0, withExactSlot(128))
+		require.NotNil(t, got)
+		require.DeepSSZEqual(t, st.ToProto(), got.ToProto())
+	})
+
+	for _, clear := range []struct {
+		name string
+		run  func(*stateDiffCache)
+	}{
+		{name: "clear", run: (*stateDiffCache).clearAnchors},
+		{name: "reanchor", run: func(cache *stateDiffCache) {
+			cache.reanchor(256, make([]bool, len(flags.Get().StateDiffExponents)))
+		}},
+	} {
+		t.Run(clear.name+" removes slot metadata", func(t *testing.T) {
+			cache := &stateDiffCache{anchors: make([]anchor, len(flags.Get().StateDiffExponents)-1)}
+			st, _ := createState(t, 96, version.Phase0)
+			for level := range cache.anchors {
+				require.NoError(t, cache.setAnchor(level, st))
+			}
+			clear.run(cache)
+			for level := range cache.anchors {
+				require.Equal(t, primitives.Slot(0), cache.anchors[level].slot)
+				require.IsNil(t, cache.anchors[level].data)
+				require.IsNil(t, cache.getAnchor(level, withExactSlot(96)))
+				require.IsNil(t, cache.getAnchor(level, withExactSlot(0)))
+			}
+		})
+	}
+
+	t.Run("reanchor during encoding", func(t *testing.T) {
+		cache := &stateDiffCache{anchors: make([]anchor, len(flags.Get().StateDiffExponents)-1)}
+		anchor, _ := createState(t, 96, version.Phase0)
+		blockingAnchor := &blockingMarshalBeaconState{
+			ReadOnlyBeaconState: anchor,
+			started:             make(chan struct{}),
+			release:             make(chan struct{}),
+		}
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- cache.setAnchor(0, blockingAnchor)
+		}()
+
+		<-blockingAnchor.started
+		cache.reanchor(32, make([]bool, len(flags.Get().StateDiffExponents)))
+		close(blockingAnchor.release)
+
+		require.NoError(t, <-errCh)
+		require.IsNil(t, cache.getAnchor(0))
+		require.IsNil(t, cache.getAnchor(0, withExactSlot(96)))
+		require.IsNil(t, cache.getAnchor(0, withExactSlot(0)))
+		require.Equal(t, primitives.Slot(0), cache.anchors[0].slot)
+		require.IsNil(t, cache.anchors[0].data)
+		require.Equal(t, uint64(32), cache.getOffset())
+	})
+}
+
+func TestStateDiff_AnchorCache(t *testing.T) {
+	setDefaultStateDiffExponents()
+
+	for _, v := range version.AllIncludingUnreleased() {
+		t.Run(version.String(v), func(t *testing.T) {
+			exponents := flags.Get().StateDiffExponents
+			localCache := make([]state.ReadOnlyBeaconState, len(exponents)-1)
+			db := setupDB(t)
+			err := setOffsetInDB(db, 0) // lvl 0
+			require.NoError(t, err)
+
+			// at first the cache should be empty
+			for i := 0; i < len(flags.Get().StateDiffExponents)-1; i++ {
+				anchor := db.stateDiffCache.getAnchor(i)
+				require.IsNil(t, anchor)
+			}
+
+			// add level 0
+			slot := primitives.Slot(0) // offset 0 is already set
+			st, _ := createState(t, slot, v)
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+			localCache[0] = st
+			require.Equal(t, len(db.stateDiffCache.anchors[0].data), cap(db.stateDiffCache.anchors[0].data))
+
+			// level 0 should be the same
+			localSSZ, err := localCache[0].MarshalSSZ()
+			require.NoError(t, err)
+			cachedSSZ, err := db.stateDiffCache.getAnchor(0).MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, localSSZ, cachedSSZ)
+
+			// rest of the cache should be nil
+			for i := 1; i < len(exponents)-1; i++ {
+				require.IsNil(t, db.stateDiffCache.getAnchor(i))
+			}
+
+			// skip last level as it does not get cached
+			for i := len(exponents) - 2; i > 0; i-- {
+				slot = primitives.Slot(math.PowerOf2(uint64(exponents[i])))
+				st, _ := createState(t, slot, v)
+				err = db.saveStateByDiff(context.Background(), st)
+				require.NoError(t, err)
+				localCache[i] = st
+
+				// anchor cache must match local cache
+				for i := 0; i < len(exponents)-1; i++ {
+					if localCache[i] == nil {
+						require.IsNil(t, db.stateDiffCache.getAnchor(i))
+						continue
+					}
+					localSSZ, err := localCache[i].MarshalSSZ()
+					require.NoError(t, err)
+					cached := db.stateDiffCache.getAnchor(i, withExactSlot(localCache[i].Slot()))
+					require.NotNil(t, cached)
+					anchorSSZ, err := cached.MarshalSSZ()
+					require.NoError(t, err)
+					require.DeepSSZEqual(t, localSSZ, anchorSSZ)
+				}
+			}
+
+			// moving to a new tree should invalidate the cache except for level 0
+			twoTo21 := math.PowerOf2(21)
+			slot = primitives.Slot(twoTo21)
+			st, _ = createState(t, slot, v)
+			err = db.saveStateByDiff(context.Background(), st)
+			require.NoError(t, err)
+			localCache = make([]state.ReadOnlyBeaconState, len(exponents)-1)
+			localCache[0] = st
+
+			// level 0 should be the same
+			localSSZ, err = localCache[0].MarshalSSZ()
+			require.NoError(t, err)
+			cachedSSZ, err = db.stateDiffCache.getAnchor(0).MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, localSSZ, cachedSSZ)
+
+			// rest of the cache should be nil
+			for i := 1; i < len(exponents)-1; i++ {
+				require.IsNil(t, db.stateDiffCache.getAnchor(i))
+			}
+		})
+	}
+}
+
+func TestStateDiff_EnsureEmbeddedGenesisKeepsCheckpointSyncedTree(t *testing.T) {
+	testCases := []struct {
+		name             string
+		hasOriginBlkRoot bool
+	}{
+		{
+			name:             "origin checkpoint block root available",
+			hasOriginBlkRoot: true,
+		},
+		{
+			// Pruning ran long enough to delete the origin block, and with it the origin checkpoint
+			// block root. Only the anchor is left to tell that this database was not synced from genesis.
+			name:             "origin checkpoint block root pruned",
+			hasOriginBlkRoot: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetCfg := features.InitWithReset(&features.Flags{EnableStateDiff: true})
+			defer resetCfg()
+
+			setDefaultStateDiffExponents()
+
+			// The genesis state is globally available from the embedded or provider genesis, even for a node
+			// that was synced from a checkpoint and has no genesis data in its database.
+			genesisState, err := util.NewBeaconStateFulu()
+			require.NoError(t, err)
+			genesis.StoreStateDuringTest(t, genesisState)
+
+			db := setupDB(t)
+
+			// A checkpoint-synced node anchors the tree at the origin state's slot, but never stores a
+			// genesis block.
+			const offset = primitives.Slot(14689088)
+			originState, _ := createState(t, offset, version.Fulu)
+			require.NoError(t, db.initializeStateDiff(offset, originState))
+
+			if tc.hasOriginBlkRoot {
+				require.NoError(t, db.SaveOriginCheckpointBlockRoot(t.Context(), [32]byte{1}))
+			} else {
+				_, err := db.OriginCheckpointBlockRoot(t.Context())
+				require.ErrorIs(t, err, ErrNotFoundOriginBlockRoot)
+			}
+
+			// A few epochs worth of diffs accumulate on top of the anchor.
+			for slot := offset + 32; slot <= offset+128; slot += 32 {
+				st, _ := createState(t, slot, version.Fulu)
+				require.NoError(t, db.saveStateByDiff(t.Context(), st))
+			}
+
+			// This runs on every restart, and must leave a checkpoint-synced database alone.
+			require.NoError(t, db.EnsureEmbeddedGenesis(t.Context()))
+
+			gb, err := db.GenesisBlock(t.Context())
+			require.NoError(t, err)
+			require.IsNil(t, gb)
+
+			// The tree must still be anchored where the origin put it, and still be readable.
+			require.Equal(t, uint64(offset), db.getOffset())
+
+			st, err := db.stateByDiff(t.Context(), offset+128)
+			require.NoError(t, err)
+			require.Equal(t, offset+128, st.Slot())
+
+			// And the database must still open on the next restart.
+			storedOffset, err := db.loadOffset()
+			require.NoError(t, err)
+			require.Equal(t, uint64(offset), storedOffset)
+
+			cache, err := populateStateDiffCacheFromDB(db, storedOffset)
+			require.NoError(t, err)
+			require.NoError(t, validateStateDiffCache(t.Context(), db, cache))
+		})
+	}
+}
+
+func TestStateDiff_EncodingAndDecoding(t *testing.T) {
+	for v := range version.All() {
+		t.Run(version.String(v), func(t *testing.T) {
+			st, enc := createState(t, 0, v) // this has addKey called inside
+			stDecoded, err := decodeStateSnapshot(enc)
+			require.NoError(t, err)
+			st1ssz, err := st.MarshalSSZ()
+			require.NoError(t, err)
+			st2ssz, err := stDecoded.MarshalSSZ()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, st1ssz, st2ssz)
+		})
+	}
+}
+
+func createState(t *testing.T, slot primitives.Slot, v int) (state.BeaconState, []byte) {
+	p := params.BeaconConfig()
+	var st state.BeaconState
+	var err error
+	switch v {
+	case version.Phase0:
+		st, err = util.NewBeaconState()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.GenesisForkVersion,
+			CurrentVersion:  p.GenesisForkVersion,
+			Epoch:           0,
+		})
+		require.NoError(t, err)
+	case version.Altair:
+		st, err = util.NewBeaconStateAltair()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.GenesisForkVersion,
+			CurrentVersion:  p.AltairForkVersion,
+			Epoch:           p.AltairForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Bellatrix:
+		st, err = util.NewBeaconStateBellatrix()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.AltairForkVersion,
+			CurrentVersion:  p.BellatrixForkVersion,
+			Epoch:           p.BellatrixForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Capella:
+		st, err = util.NewBeaconStateCapella()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.BellatrixForkVersion,
+			CurrentVersion:  p.CapellaForkVersion,
+			Epoch:           p.CapellaForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Deneb:
+		st, err = util.NewBeaconStateDeneb()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.CapellaForkVersion,
+			CurrentVersion:  p.DenebForkVersion,
+			Epoch:           p.DenebForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Electra:
+		st, err = util.NewBeaconStateElectra()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.DenebForkVersion,
+			CurrentVersion:  p.ElectraForkVersion,
+			Epoch:           p.ElectraForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Fulu:
+		st, err = util.NewBeaconStateFulu()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.ElectraForkVersion,
+			CurrentVersion:  p.FuluForkVersion,
+			Epoch:           p.FuluForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Gloas:
+		st, err = util.NewBeaconStateGloas()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.FuluForkVersion,
+			CurrentVersion:  p.GloasForkVersion,
+			Epoch:           p.GloasForkEpoch,
+		})
+		require.NoError(t, err)
+	case version.Heze:
+		st, err = util.NewBeaconStateHeze()
+		require.NoError(t, err)
+		err = st.SetFork(&ethpb.Fork{
+			PreviousVersion: p.GloasForkVersion,
+			CurrentVersion:  p.HezeForkVersion,
+			Epoch:           p.HezeForkEpoch,
+		})
+		require.NoError(t, err)
+	default:
+		t.Fatalf("unsupported version: %d", v)
+	}
+
+	err = st.SetSlot(slot)
+	require.NoError(t, err)
+	slashings := make([]uint64, 8192)
+	slashings[0] = uint64(rand.Intn(10))
+	err = st.SetSlashings(slashings)
+	require.NoError(t, err)
+	stssz, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	enc, err := addKey(v, stssz)
+	require.NoError(t, err)
+	return st, enc
+}
+
+func setOffsetInDB(s *Store, offset uint64) error {
+	err := s.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket(stateDiffBucket)
+		if bucket == nil {
+			return bbolt.ErrBucketNotFound
+		}
+
+		offsetBytes := bucket.Get(offsetKey)
+		if offsetBytes != nil {
+			return fmt.Errorf("offset already set to %d", binary.LittleEndian.Uint64(offsetBytes))
+		}
+
+		offsetBytes = make([]byte, 8)
+		binary.LittleEndian.PutUint64(offsetBytes, offset)
+		if err := bucket.Put(offsetKey, offsetBytes); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	sdCache, err := newStateDiffCache(s)
+	if err != nil {
+		return err
+	}
+	s.stateDiffCache = sdCache
+	return nil
+}
+
+func setDefaultStateDiffExponents() {
+	setStateDiffExponents([]int{21, 18, 16, 13, 11, 9, 5})
+}
+
+func setStateDiffExponents(exponents []int) {
+	globalFlags := flags.GlobalFlags{StateDiffExponents: exponents}
+	flags.Init(&globalFlags)
+}

@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"testing"
 
-	kzgPrysm "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/kzg"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/utils"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	kzgPrysm "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/kzg"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ghodss/yaml"
 )
@@ -24,9 +24,9 @@ func TestRecoverCellsAndKzgProofs(t *testing.T) {
 		Output [][]string `json:"output"`
 	}
 	require.NoError(t, kzgPrysm.Start())
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "fulu", "kzg/recover_cells_and_kzg_proofs/kzg-mainnet")
+	testFolders, testFolderPath := utils.TestFolders(t, "kzg", "recover_cells_and_kzg_proofs", "")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "fulu", "kzg/recover_cells_and_kzg_proofs/kzg-mainnet")
+		t.Fatalf("No test folders found for kzg/recover_cells_and_kzg_proofs")
 	}
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -69,18 +69,16 @@ func TestRecoverCellsAndKzgProofs(t *testing.T) {
 			}
 
 			// Recover the cells and proofs for the corresponding blob
-			cellsAndProofsForBlob, err := kzgPrysm.RecoverCellsAndKZGProofs(cellIndices, cells)
+			recoveredCells, recoveredProofs, err := kzgPrysm.RecoverCellsAndKZGProofs(cellIndices, cells)
 			if test.Output != nil {
 				require.NoError(t, err)
 				var combined [][]string
-				cs := cellsAndProofsForBlob.Cells
-				csRaw := make([]string, 0, len(cs))
-				for _, c := range cs {
+				csRaw := make([]string, 0, len(recoveredCells))
+				for _, c := range recoveredCells {
 					csRaw = append(csRaw, hexutil.Encode(c[:]))
 				}
-				ps := cellsAndProofsForBlob.Proofs
-				psRaw := make([]string, 0, len(ps))
-				for _, p := range ps {
+				psRaw := make([]string, 0, len(recoveredProofs))
+				for _, p := range recoveredProofs {
 					psRaw = append(psRaw, hexutil.Encode(p[:]))
 				}
 				combined = append(combined, csRaw)

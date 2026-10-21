@@ -4,20 +4,20 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/hash"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestIsActiveValidator_OK(t *testing.T) {
@@ -184,7 +184,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
@@ -241,7 +241,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount/8)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
@@ -270,7 +270,7 @@ func TestComputeProposerIndex_Compatibility(t *testing.T) {
 	helpers.ClearCache()
 
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
@@ -322,7 +322,7 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 
 	c := 1000
 	validators := make([]*ethpb.Validator, c)
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
@@ -357,7 +357,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		helpers.ClearCache()
 
 		validators := make([]*ethpb.Validator, test.validatorCount)
-		for i := 0; i < len(validators); i++ {
+		for i := range validators {
 			validators[i] = &ethpb.Validator{
 				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			}
@@ -853,48 +853,6 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 	}
 }
 
-func TestLastActivatedValidatorIndex_OK(t *testing.T) {
-	helpers.ClearCache()
-
-	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
-	require.NoError(t, err)
-
-	validators := make([]*ethpb.Validator, 4)
-	balances := make([]uint64, len(validators))
-	for i := uint64(0); i < 4; i++ {
-		validators[i] = &ethpb.Validator{
-			PublicKey:             make([]byte, params.BeaconConfig().BLSPubkeyLength),
-			WithdrawalCredentials: make([]byte, 32),
-			EffectiveBalance:      32 * 1e9,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-		}
-		balances[i] = validators[i].EffectiveBalance
-	}
-	require.NoError(t, beaconState.SetValidators(validators))
-	require.NoError(t, beaconState.SetBalances(balances))
-
-	index, err := helpers.LastActivatedValidatorIndex(t.Context(), beaconState)
-	require.NoError(t, err)
-	require.Equal(t, index, primitives.ValidatorIndex(3))
-}
-
-func TestProposerIndexFromCheckpoint(t *testing.T) {
-	helpers.ClearCache()
-
-	e := primitives.Epoch(2)
-	r := [32]byte{'a'}
-	root := [32]byte{'b'}
-	ids := [32]primitives.ValidatorIndex{}
-	slot := primitives.Slot(69) // slot 5 in the Epoch
-	ids[5] = primitives.ValidatorIndex(19)
-	helpers.ProposerIndicesCache().Set(e, r, ids)
-	c := &forkchoicetypes.Checkpoint{Root: root, Epoch: e - 1}
-	helpers.ProposerIndicesCache().SetCheckpoint(*c, r)
-	id, err := helpers.ProposerIndexAtSlotFromCheckpoint(c, slot)
-	require.NoError(t, err)
-	require.Equal(t, ids[5], id)
-}
-
 func TestHasETH1WithdrawalCredentials(t *testing.T) {
 	creds := []byte{0xFA, 0xCC}
 	v := &ethpb.Validator{WithdrawalCredentials: creds}
@@ -1099,39 +1057,6 @@ func TestIsPartiallyWithdrawableValidator(t *testing.T) {
 	}
 }
 
-func TestIsSameWithdrawalCredentials(t *testing.T) {
-	makeWithdrawalCredentials := func(address []byte) []byte {
-		b := make([]byte, 12)
-		return append(b, address...)
-	}
-
-	tests := []struct {
-		name string
-		a    *ethpb.Validator
-		b    *ethpb.Validator
-		want bool
-	}{
-		{
-			"Same credentials",
-			&ethpb.Validator{WithdrawalCredentials: makeWithdrawalCredentials([]byte("same"))},
-			&ethpb.Validator{WithdrawalCredentials: makeWithdrawalCredentials([]byte("same"))},
-			true,
-		},
-		{
-			"Different credentials",
-			&ethpb.Validator{WithdrawalCredentials: makeWithdrawalCredentials([]byte("foo"))},
-			&ethpb.Validator{WithdrawalCredentials: makeWithdrawalCredentials([]byte("bar"))},
-			false,
-		},
-		{"Handles nil case", nil, nil, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, helpers.IsSameWithdrawalCredentials(tt.a, tt.b))
-		})
-	}
-}
-
 func TestValidatorMaxEffectiveBalance(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -1165,7 +1090,7 @@ func TestBeaconProposerIndexAtSlotFulu(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
 	cfg.FuluForkEpoch = 1
 	params.OverrideBeaconConfig(cfg)
-	lookahead := make([]uint64, 64)
+	lookahead := make([]primitives.ValidatorIndex, 64)
 	lookahead[0] = 15
 	lookahead[1] = 16
 	lookahead[34] = 42

@@ -7,14 +7,13 @@ import (
 	"sort"
 	"testing"
 
-	slashertypes "github.com/OffchainLabs/prysm/v6/beacon-chain/slasher/types"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	ssz "github.com/prysmaticlabs/fastssz"
+	slashertypes "github.com/OffchainLabs/prysm/v7/beacon-chain/slasher/types"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
@@ -26,7 +25,7 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 
 	// Defines attestations to save and retrieve.
 	attWrappers := make([]*slashertypes.IndexedAttestationWrapper, attestationsCount)
-	for i := 0; i < attestationsCount; i++ {
+	for i := range attestationsCount {
 		var dataRoot [32]byte
 		binary.LittleEndian.PutUint64(dataRoot[:], uint64(i))
 
@@ -41,7 +40,7 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 		attWrappers[i] = attWrapper
 	}
 	attWrappersElectra := make([]*slashertypes.IndexedAttestationWrapper, attestationsCount)
-	for i := 0; i < attestationsCount; i++ {
+	for i := range attestationsCount {
 		var dataRoot [32]byte
 		binary.LittleEndian.PutUint64(dataRoot[:], uint64(i))
 
@@ -107,13 +106,13 @@ func TestStore_LastEpochWrittenForValidators(t *testing.T) {
 	indices := make([]primitives.ValidatorIndex, validatorsCount)
 	epochs := make([]primitives.Epoch, validatorsCount)
 
-	for i := 0; i < validatorsCount; i++ {
+	for i := range validatorsCount {
 		indices[i] = primitives.ValidatorIndex(i)
 		epochs[i] = primitives.Epoch(i)
 	}
 
 	epochsByValidator := make(map[primitives.ValidatorIndex]primitives.Epoch, validatorsCount)
-	for i := 0; i < validatorsCount; i++ {
+	for i := range validatorsCount {
 		epochsByValidator[indices[i]] = epochs[i]
 	}
 
@@ -215,15 +214,15 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	minChunkKeys := make([][]byte, totalChunks)
 	minChunks := make([][]uint16, totalChunks)
 
-	for i := 0; i < totalChunks; i++ {
+	for i := range totalChunks {
 		// Create chunk key.
-		chunkKey := ssz.MarshalUint64(make([]byte, 0), uint64(i))
+		chunkKey := binary.LittleEndian.AppendUint64(make([]byte, 0), uint64(i))
 		minChunkKeys[i] = chunkKey
 
 		// Create chunk.
 		chunk := make([]uint16, elemsPerChunk)
 
-		for j := 0; j < len(chunk); j++ {
+		for j := range chunk {
 			chunk[j] = uint16(i + j)
 		}
 
@@ -234,15 +233,15 @@ func TestStore_SlasherChunk_SaveRetrieve(t *testing.T) {
 	maxChunkKeys := make([][]byte, totalChunks)
 	maxChunks := make([][]uint16, totalChunks)
 
-	for i := 0; i < totalChunks; i++ {
+	for i := range totalChunks {
 		// Create chunk key.
-		chunkKey := ssz.MarshalUint64(make([]byte, 0), uint64(i+1))
+		chunkKey := binary.LittleEndian.AppendUint64(make([]byte, 0), uint64(i+1))
 		maxChunkKeys[i] = chunkKey
 
 		// Create chunk.
 		chunk := make([]uint16, elemsPerChunk)
 
-		for j := 0; j < len(chunk); j++ {
+		for j := range chunk {
 			chunk[j] = uint16(i + j + 1)
 		}
 
@@ -315,9 +314,9 @@ func TestStore_SlasherChunk_PreventsSavingWrongLength(t *testing.T) {
 	totalChunks := 64
 	chunkKeys := make([][]byte, totalChunks)
 	chunks := make([][]uint16, totalChunks)
-	for i := 0; i < totalChunks; i++ {
+	for i := range totalChunks {
 		chunks[i] = []uint16{}
-		chunkKeys[i] = ssz.MarshalUint64(make([]byte, 0), uint64(i))
+		chunkKeys[i] = binary.LittleEndian.AppendUint64(make([]byte, 0), uint64(i))
 	}
 	// We should get an error if saving empty chunks.
 	err := beaconDB.SaveSlasherChunks(ctx, slashertypes.MinSpan, chunkKeys, chunks)
@@ -456,13 +455,13 @@ func Test_encodeDecodeAttestationRecord(t *testing.T) {
 				t.Fatalf("encodeAttestationRecord() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			decoded, err := decodeAttestationRecord(got)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("decodeAttestationRecord() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				require.NotNil(t, err)
+				return
 			}
-
-			if !tt.wantErr && !reflect.DeepEqual(tt.attWrapper, decoded) {
-				t.Errorf("Did not match got = %v, want %v", tt.attWrapper, decoded)
-			}
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, tt.attWrapper.IndexedAttestation, decoded.IndexedAttestation)
+			require.Equal(t, tt.attWrapper.DataRoot, decoded.DataRoot)
 		})
 	}
 }
@@ -566,11 +565,11 @@ func TestStore_HighestAttestations(t *testing.T) {
 }
 
 func BenchmarkHighestAttestations(b *testing.B) {
-	b.StopTimer()
+
 	count := 10000
 	valsPerAtt := 100
 	indicesPerAtt := make([][]uint64, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		indicesForAtt := make([]uint64, valsPerAtt)
 		for r := i * count; r < valsPerAtt*(i+1); r++ {
 			indicesForAtt[i] = uint64(r)
@@ -578,7 +577,7 @@ func BenchmarkHighestAttestations(b *testing.B) {
 		indicesPerAtt[i] = indicesForAtt
 	}
 	atts := make([]*slashertypes.IndexedAttestationWrapper, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		atts[i] = createAttestationWrapper(version.Phase0, primitives.Epoch(i), primitives.Epoch(i+2), indicesPerAtt[i], []byte{})
 	}
 
@@ -587,27 +586,27 @@ func BenchmarkHighestAttestations(b *testing.B) {
 	require.NoError(b, beaconDB.SaveAttestationRecordsForValidators(ctx, atts))
 
 	allIndices := make([]primitives.ValidatorIndex, 0, valsPerAtt*count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		indicesForAtt := make([]primitives.ValidatorIndex, valsPerAtt)
-		for r := 0; r < valsPerAtt; r++ {
+		for r := range valsPerAtt {
 			indicesForAtt[r] = primitives.ValidatorIndex(atts[i].IndexedAttestation.GetAttestingIndices()[r])
 		}
 		allIndices = append(allIndices, indicesForAtt...)
 	}
 	b.ReportAllocs()
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, err := beaconDB.HighestAttestations(ctx, allIndices)
 		require.NoError(b, err)
 	}
 }
 
 func BenchmarkStore_CheckDoubleBlockProposals(b *testing.B) {
-	b.StopTimer()
+
 	count := 10000
 	valsPerAtt := 100
 	indicesPerAtt := make([][]uint64, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		indicesForAtt := make([]uint64, valsPerAtt)
 		for r := i * count; r < valsPerAtt*(i+1); r++ {
 			indicesForAtt[i] = uint64(r)
@@ -615,7 +614,7 @@ func BenchmarkStore_CheckDoubleBlockProposals(b *testing.B) {
 		indicesPerAtt[i] = indicesForAtt
 	}
 	atts := make([]*slashertypes.IndexedAttestationWrapper, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		atts[i] = createAttestationWrapper(version.Phase0, primitives.Epoch(i), primitives.Epoch(i+2), indicesPerAtt[i], []byte{})
 	}
 
@@ -627,8 +626,8 @@ func BenchmarkStore_CheckDoubleBlockProposals(b *testing.B) {
 	rand.Shuffle(count, func(i, j int) { atts[i], atts[j] = atts[j], atts[i] })
 
 	b.ReportAllocs()
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, err := beaconDB.CheckAttesterDoubleVotes(ctx, atts)
 		require.NoError(b, err)
 	}

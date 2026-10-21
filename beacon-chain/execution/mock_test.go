@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	pb "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	pb "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -15,9 +15,9 @@ import (
 var mockHandlerDefaultName = "__default__"
 
 type jsonError struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 type jsonrpcMessage struct {
@@ -150,16 +150,16 @@ func TestParseRequest(t *testing.T) {
 					}
 					nr = rang[1]
 				}
-				mockWriteResult(t, w, msg, make([]*pb.ExecutionPayloadBody, nr))
+				mockWriteResult(t, w, msg, make([]*pb.ExecutionPayloadBodyV1, nr))
 			})
 
-			result := make([]*pb.ExecutionPayloadBody, 0)
-			var args []interface{}
+			result := make([]*pb.ExecutionPayloadBodyV1, 0)
+			var args []any
 			if len(c.byteArgs) > 0 {
-				args = []interface{}{c.byteArgs}
+				args = []any{c.byteArgs}
 			}
 			if len(c.hexArgs) > 0 {
-				args = make([]interface{}, len(c.hexArgs))
+				args = make([]any, len(c.hexArgs))
 				for i := range c.hexArgs {
 					args[i] = c.hexArgs[i]
 				}

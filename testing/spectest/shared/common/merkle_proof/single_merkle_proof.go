@@ -6,16 +6,17 @@ import (
 	"path"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	consensus_blocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/container/trie"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/shared/common/ssz_static"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/utils"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
 	"github.com/golang/snappy"
-	fssz "github.com/prysmaticlabs/fastssz"
+
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	consensus_blocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/container/trie"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/shared/common/ssz_static"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 )
 
 // SingleMerkleProof is the format used to read spectest Merkle Proof test data.
@@ -57,7 +58,7 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 				require.NoError(t, err, "Failed to decompress")
 				object, err := unmarshaller(t, serializedSSZ, folder.Name())
 				require.NoError(t, err, "Could not unmarshall serialized SSZ")
-				sszObj, ok := object.(fssz.HashRoot)
+				sszObj, ok := object.(ssz.HashRoot)
 				require.Equal(t, true, ok)
 				root, err := sszObj.HashTreeRoot()
 				require.NoError(t, err)

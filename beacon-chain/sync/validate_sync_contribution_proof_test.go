@@ -6,39 +6,39 @@ import (
 	"testing"
 	"time"
 
-	mockChain "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	opfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	testingdb "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	doublylinkedtree "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/encoder"
-	mockp2p "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	mockSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/go-bitfield"
+	mockChain "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	opfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	testingdb "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	doublylinkedtree "github.com/OffchainLabs/prysm/v7/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/encoder"
+	mockp2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/golang/snappy"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 func TestService_ValidateSyncContributionAndProof(t *testing.T) {
@@ -855,7 +855,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			var clock *startup.Clock
 			svc, clock = tt.setupSvc(svc, tt.args.msg)
 			require.NoError(t, cw.SetClock(clock))
-			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen)
+			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen, chainService)
 			markInitSyncComplete(t, svc)
 			go svc.Start()
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
@@ -872,7 +872,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			// a lot happens in the chain service after SetClock is called,
 			// give it a moment before calling internal methods that would typically
 			// only execute after waitFor
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				if !svc.chainIsStarted() {
 					time.Sleep(100 * time.Millisecond)
 				}
@@ -1102,6 +1102,16 @@ func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
 		AggregationBits: b2,
 	})
 	require.NoError(t, err)
+	require.Equal(t, false, has)
+
+	// A superset of a cached entry is stored and then seen.
+	require.NoError(t, s.setSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b2,
+	}))
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b2,
+	})
+	require.NoError(t, err)
 	require.Equal(t, true, has)
 
 	// Make sure set doesn't contain existing overlaps
@@ -1172,4 +1182,47 @@ func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
+}
+
+func TestService_ignoreSeenSyncContribution(t *testing.T) {
+	bits := func(idx ...uint64) bitfield.Bitvector128 {
+		b := bitfield.NewBitvector128()
+		for _, i := range idx {
+			b.SetBitAt(i, true)
+		}
+		return b
+	}
+	tests := []struct {
+		name       string
+		seenBits   bitfield.Bitvector128
+		seenAggIdx primitives.ValidatorIndex
+		bits       bitfield.Bitvector128
+		want       pubsub.ValidationResult
+	}{
+		{name: "superset of seen bits", seenBits: bits(0), seenAggIdx: 1, bits: bits(0, 1), want: pubsub.ValidationAccept},
+		{name: "subset of seen bits", seenBits: bits(0, 1), seenAggIdx: 1, bits: bits(0), want: pubsub.ValidationIgnore},
+		{name: "equal to seen bits", seenBits: bits(0), seenAggIdx: 1, bits: bits(0), want: pubsub.ValidationIgnore},
+		{name: "disjoint from seen bits", seenBits: bits(2, 3), seenAggIdx: 1, bits: bits(0, 1), want: pubsub.ValidationAccept},
+		{name: "aggregator already seen", seenBits: bits(2), seenAggIdx: 2, bits: bits(0, 1), want: pubsub.ValidationIgnore},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewService(t.Context(), WithP2P(mockp2p.NewTestP2P(t)))
+			s.initCaches()
+			root := bytesutil.PadTo([]byte{'A'}, 32)
+			require.NoError(t, s.setSyncContributionBits(&ethpb.SyncCommitteeContribution{
+				Slot: 1, SubcommitteeIndex: 2, BlockRoot: root, AggregationBits: tt.seenBits,
+			}))
+			s.setSyncContributionIndexSlotSeen(1, tt.seenAggIdx, 2)
+			m := &ethpb.SignedContributionAndProof{Message: &ethpb.ContributionAndProof{
+				AggregatorIndex: 2,
+				Contribution: &ethpb.SyncCommitteeContribution{
+					Slot: 1, SubcommitteeIndex: 2, BlockRoot: root, AggregationBits: tt.bits,
+				},
+			}}
+			got, err := s.ignoreSeenSyncContribution(m)(t.Context())
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

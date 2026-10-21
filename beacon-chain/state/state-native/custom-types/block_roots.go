@@ -3,24 +3,25 @@ package customtypes
 import (
 	"fmt"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	fssz "github.com/prysmaticlabs/fastssz"
+	"github.com/OffchainLabs/methodical-ssz/ssz"
+
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
 )
 
-var _ fssz.HashRoot = (BlockRoots)([][32]byte{})
-var _ fssz.Marshaler = (*BlockRoots)(nil)
-var _ fssz.Unmarshaler = (*BlockRoots)(nil)
+var _ ssz.HashRoot = (BlockRoots)([][32]byte{})
+var _ ssz.Marshaler = (*BlockRoots)(nil)
+var _ ssz.Unmarshaler = (*BlockRoots)(nil)
 
 // BlockRoots represents block roots of the beacon state.
 type BlockRoots [][32]byte
 
 // HashTreeRoot returns calculated hash root.
 func (r BlockRoots) HashTreeRoot() ([32]byte, error) {
-	return fssz.HashWithDefaultHasher(r)
+	return ssz.HashWithDefaultHasher(r)
 }
 
 // HashTreeRootWith hashes a BlockRoots object with a Hasher from the default HasherPool.
-func (r BlockRoots) HashTreeRootWith(hh *fssz.Hasher) error {
+func (r BlockRoots) HashTreeRootWith(hh *ssz.Hasher) error {
 	index := hh.Index()
 	for _, sRoot := range r {
 		hh.Append(sRoot[:])
@@ -56,9 +57,7 @@ func (r BlockRoots) MarshalSSZTo(dst []byte) ([]byte, error) {
 func (r BlockRoots) MarshalSSZ() ([]byte, error) {
 	marshalled := make([]byte, fieldparams.BlockRootsLength*32)
 	for i, r32 := range r {
-		for j, rr := range r32 {
-			marshalled[i*32+j] = rr
-		}
+		copy(marshalled[i*32:(i+1)*32], r32[:])
 	}
 	return marshalled, nil
 }

@@ -4,13 +4,12 @@ import (
 	"testing"
 	"time"
 
-	buildertesting "github.com/OffchainLabs/prysm/v6/api/client/builder/testing"
-	blockchainTesting "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	dbtesting "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	buildertesting "github.com/OffchainLabs/prysm/v7/api/client/builder/testing"
+	blockchainTesting "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func Test_NewServiceWithBuilder(t *testing.T) {
@@ -27,27 +26,15 @@ func Test_NewServiceWithoutBuilder(t *testing.T) {
 
 func Test_RegisterValidator(t *testing.T) {
 	ctx := t.Context()
-	db := dbtesting.SetupDB(t)
 	headFetcher := &blockchainTesting.ChainService{}
 	builder := buildertesting.NewClient()
-	s, err := NewService(ctx, WithDatabase(db), WithHeadFetcher(headFetcher), WithBuilderClient(&builder))
-	require.NoError(t, err)
-	pubkey := bytesutil.ToBytes48([]byte("pubkey"))
-	var feeRecipient [20]byte
-	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], FeeRecipient: feeRecipient[:]}}}))
-	assert.Equal(t, true, builder.RegisteredVals[pubkey])
-}
-
-func Test_RegisterValidator_WithCache(t *testing.T) {
-	ctx := t.Context()
-	headFetcher := &blockchainTesting.ChainService{}
-	builder := buildertesting.NewClient()
-	s, err := NewService(ctx, WithRegistrationCache(), WithHeadFetcher(headFetcher), WithBuilderClient(&builder))
+	s, err := NewService(ctx, WithHeadFetcher(headFetcher), WithBuilderClient(&builder))
 	require.NoError(t, err)
 	pubkey := bytesutil.ToBytes48([]byte("pubkey"))
 	var feeRecipient [20]byte
 	reg := &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], Timestamp: uint64(time.Now().UTC().Unix()), FeeRecipient: feeRecipient[:]}
 	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: reg}}))
+	assert.Equal(t, true, builder.RegisteredVals[pubkey])
 	registration, err := s.registrationCache.RegistrationByIndex(0)
 	require.NoError(t, err)
 	require.DeepEqual(t, reg, registration)
@@ -65,5 +52,13 @@ func Test_BuilderMethodsWithouClient(t *testing.T) {
 	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 
 	err = s.RegisterValidator(t.Context(), nil)
+	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
+
+	// With no signed auths there's nothing to query; multiplex returns no bids and no error.
+	bids, err := s.GetExecutionPayloadBid(t.Context(), 0, [32]byte{}, [32]byte{}, [48]byte{}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 0, len(bids))
+
+	err = s.SubmitSignedBeaconBlock(t.Context(), "", nil)
 	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 }

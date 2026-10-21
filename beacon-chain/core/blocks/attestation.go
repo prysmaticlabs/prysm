@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -27,10 +27,16 @@ func ProcessAttestationsNoVerifySignature(
 	beaconState state.BeaconState,
 	b interfaces.ReadOnlyBeaconBlock,
 ) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "blocks.ProcessAttestationsNoVerifySignature")
+	defer span.End()
+
 	if b == nil || b.IsNil() {
 		return nil, blocks.ErrNilBeaconBlock
 	}
+
 	body := b.Body()
+	span.SetAttributes(trace.Int64Attribute("count", int64(len(body.Attestations()))))
+
 	var err error
 	for idx, att := range body.Attestations() {
 		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, att)
@@ -111,10 +117,21 @@ func VerifyAttestationNoVerifySignature(
 	var indexedAtt ethpb.IndexedAtt
 
 	if att.Version() >= version.Electra {
-		if att.GetData().CommitteeIndex != 0 {
-			return errors.New("committee index must be 0 post-Electra")
+		ci := att.GetData().CommitteeIndex
+		// Spec v1.7.0-alpha pseudocode:
+		//
+		//	# [Modified in Gloas:EIP7732]
+		//	assert data.index < 2
+		//
+		if beaconState.Version() >= version.Gloas {
+			if ci >= 2 {
+				return fmt.Errorf("incorrect committee index %d", ci)
+			}
+		} else {
+			if ci != 0 {
+				return errors.New("committee index must be 0 between Electra and Gloas forks")
+			}
 		}
-
 		aggBits := att.GetAggregationBits()
 		committeeIndices := att.CommitteeBitsVal().BitIndices()
 		committees := make([][]primitives.ValidatorIndex, len(committeeIndices))
@@ -257,7 +274,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBea
 	}
 	indices := indexedAtt.GetAttestingIndices()
 	var pubkeys []bls.PublicKey
-	for i := 0; i < len(indices); i++ {
+	for i := range indices {
 		pubkeyAtIdx := beaconState.PubkeyAtIndex(primitives.ValidatorIndex(indices[i]))
 		pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 		if err != nil {

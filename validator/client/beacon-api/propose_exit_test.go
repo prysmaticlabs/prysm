@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/validator/client/beacon-api/mock"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/validator/client/beacon-api/mock"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"go.uber.org/mock/gomock"
@@ -36,8 +36,8 @@ func TestProposeExit_Valid(t *testing.T) {
 
 	ctx := t.Context()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().Post(
+	handler := mock.NewMockHandler(ctrl)
+	handler.EXPECT().Post(
 		gomock.Any(),
 		proposeExitTestEndpoint,
 		nil,
@@ -61,7 +61,7 @@ func TestProposeExit_Valid(t *testing.T) {
 	expectedExitRoot, err := protoSignedVoluntaryExit.Exit.HashTreeRoot()
 	require.NoError(t, err)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{handler: handler}
 	exitResponse, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedExitRoot[:], exitResponse.ExitRoot)
@@ -85,8 +85,8 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	ctx := t.Context()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().Post(
+	handler := mock.NewMockHandler(ctrl)
+	handler.EXPECT().Post(
 		gomock.Any(),
 		proposeExitTestEndpoint,
 		nil,
@@ -104,7 +104,7 @@ func TestProposeExit_BadRequest(t *testing.T) {
 		Signature: []byte{3},
 	}
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{handler: handler}
 	_, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
 	assert.ErrorContains(t, "foo error", err)
 }

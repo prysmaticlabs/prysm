@@ -3,36 +3,40 @@ package sync
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	beaconState "github.com/OffchainLabs/prysm/v6/beacon-chain/state"
+	beaconState "github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 
-	"github.com/OffchainLabs/prysm/v6/async/abool"
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/kv"
-	testingDB "github.com/OffchainLabs/prysm/v6/beacon-chain/db/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/peers"
-	p2ptest "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/startup"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	mockSync "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/verification"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	consensusblocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/wrapper"
-	leakybucket "github.com/OffchainLabs/prysm/v6/container/leaky-bucket"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
-	prysmTime "github.com/OffchainLabs/prysm/v6/time"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/kv"
+	dbTest "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	testingDB "github.com/OffchainLabs/prysm/v7/beacon-chain/db/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/peers"
+	p2ptest "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	mockSync "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/verification"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/wrapper"
+	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/proto/dbval"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
+	prysmTime "github.com/OffchainLabs/prysm/v7/time"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -159,8 +163,7 @@ func TestStatusRPCHandler_ConnectsOnGenesis(t *testing.T) {
 
 	stream1, err := p1.BHost.NewStream(ctx, p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	digest, err := r.currentForkDigest()
-	require.NoError(t, err)
+	digest := r.currentForkDigest()
 
 	err = r.statusRPCHandler(ctx, &ethpb.Status{ForkDigest: digest[:], FinalizedRoot: params.BeaconConfig().ZeroHash[:]}, stream1)
 	assert.NoError(t, err)
@@ -228,8 +231,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
-	digest, err := r.currentForkDigest()
-	require.NoError(t, err)
+	digest := r.currentForkDigest()
 
 	// Setup streams
 	pcl := protocol.ID(p2p.RPCStatusTopicV1)
@@ -324,17 +326,18 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 			stateNotifier: chain.StateNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
-		rateLimiter:  newRateLimiter(p1),
-		clockWaiter:  cw,
-		chainStarted: abool.New(),
-		subHandler:   newSubTopicHandler(),
+		rateLimiter:                     newRateLimiter(p1),
+		clockWaiter:                     cw,
+		chainStarted:                    &atomic.Bool{},
+		subHandler:                      newSubTopicHandler(),
+		proposerPreferencesCache:        cache.NewProposerPreferencesCache(),
+		highestExecutionPayloadBidCache: cache.NewHighestExecutionPayloadBidCache(),
 	}
 	markInitSyncComplete(t, r)
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
-	p1.Digest, err = r.currentForkDigest()
-	require.NoError(t, err)
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen, chain)
+	p1.Digest = r.currentForkDigest()
 
 	chain2 := &mock.ChainService{
 		FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: finalizedRoot[:]},
@@ -354,10 +357,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	markInitSyncComplete(t, r2)
 	clock = startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	r2.verifierWaiter = verification.NewInitializerWaiter(clock, chain2.ForkChoiceStore, r2.cfg.stateGen)
+	r2.verifierWaiter = verification.NewInitializerWaiter(clock, chain2.ForkChoiceStore, r2.cfg.stateGen, chain2)
 
-	p2.Digest, err = r.currentForkDigest()
-	require.NoError(t, err)
+	p2.Digest = r.currentForkDigest()
 
 	go r.Start()
 
@@ -372,7 +374,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		out := &ethpb.Status{}
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		log.WithField("status", out).Warn("received status")
-		resp := &ethpb.Status{HeadSlot: 100, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
+		resp := &ethpb.Status{HeadSlot: 0, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
 			FinalizedRoot: finalizedRoot[:], FinalizedEpoch: 0}
 		_, err := stream.Write([]byte{responseCodeSuccess})
 		assert.NoError(t, err)
@@ -445,7 +447,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		custodyGroupCount     = uint64(4)
 	)
 
-	beaconConfig := params.BeaconConfig()
+	cfg := params.BeaconConfig()
 	ctx := t.Context()
 
 	testCases := []struct {
@@ -456,14 +458,13 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	}{
 		{
 			name:          "before fulu",
-			fuluForkEpoch: beaconConfig.FarFutureEpoch,
+			fuluForkEpoch: cfg.FarFutureEpoch,
 			topic:         "/eth2/beacon_chain/req/status/1/ssz_snappy",
 			streamHandler: func(service *Service, stream network.Stream, genesisState beaconState.BeaconState, beaconRoot, headRoot, finalizedRoot []byte) {
 				out := &ethpb.Status{}
 				require.NoError(t, service.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 
-				digest, err := service.currentForkDigest()
-				require.NoError(t, err)
+				digest := service.currentForkDigest()
 
 				expected := &ethpb.Status{
 					ForkDigest:     digest[:],
@@ -477,7 +478,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 					t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
 				}
 
-				err = service.respondWithStatus(ctx, stream)
+				err := service.respondWithStatus(ctx, stream)
 				require.NoError(t, err)
 			},
 		},
@@ -489,8 +490,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 				out := &ethpb.StatusV2{}
 				assert.NoError(t, service.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 
-				digest, err := service.currentForkDigest()
-				assert.NoError(t, err)
+				digest := service.currentForkDigest()
 
 				expected := &ethpb.StatusV2{
 					ForkDigest:            digest[:],
@@ -505,7 +505,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 					t.Errorf("Did not receive expected message. Got %+v wanted %+v", out, expected)
 				}
 
-				err = service.respondWithStatus(ctx, stream)
+				err := service.respondWithStatus(ctx, stream)
 				require.NoError(t, err)
 			},
 		},
@@ -557,7 +557,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 					PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 					CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 				},
-				Genesis:        time.Now(),
+				Genesis:        time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot)*150, 0),
 				ValidatorsRoot: [32]byte{'A'},
 			}
 
@@ -874,8 +874,11 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(1, 1, time.Second, false)
 		var wg sync.WaitGroup
 		wg.Add(1)
+		// The stream handler may be invoked more than once (e.g. a duplicate
+		// stream on the connection).
+		var done sync.Once
 		p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
-			defer wg.Done()
+			defer done.Do(wg.Done)
 			out := &ethpb.Status{}
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 			assert.Equal(t, tt.expectError, r2.validateStatusMessage(ctx, out) != nil)
@@ -934,21 +937,24 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	r := &Service{
 		cfg: &config{
 			p2p:           p1,
+			beaconDB:      dbTest.SetupDB(t),
 			chain:         chain,
 			stateNotifier: chain.StateNotifier(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 		},
 
-		ctx:          ctx,
-		rateLimiter:  newRateLimiter(p1),
-		clockWaiter:  cw,
-		chainStarted: abool.New(),
-		subHandler:   newSubTopicHandler(),
+		ctx:                             ctx,
+		rateLimiter:                     newRateLimiter(p1),
+		clockWaiter:                     cw,
+		chainStarted:                    &atomic.Bool{},
+		subHandler:                      newSubTopicHandler(),
+		proposerPreferencesCache:        cache.NewProposerPreferencesCache(),
+		highestExecutionPayloadBidCache: cache.NewHighestExecutionPayloadBidCache(),
 	}
 	markInitSyncComplete(t, r)
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen, chain)
 
 	go r.Start()
 
@@ -1033,8 +1039,7 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		},
 		ctx: ctx,
 	}
-	digest, err := r.currentForkDigest()
-	require.NoError(t, err)
+	digest := r.currentForkDigest()
 	// There should be no error for a status message
 	// with a genesis checkpoint.
 	err = r.validateStatusMessage(r.ctx, &ethpb.Status{
@@ -1042,9 +1047,46 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
 		FinalizedEpoch: 0,
 		HeadRoot:       headRoot[:],
-		HeadSlot:       111,
+		HeadSlot:       0,
 	})
 	require.NoError(t, err)
+}
+
+func TestStatusRPC_RejectsFutureHeadSlot(t *testing.T) {
+	ctx := t.Context()
+	chain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	r := &Service{
+		cfg: &config{
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			stateNotifier: chain.StateNotifier(),
+		},
+		ctx: ctx,
+	}
+	digest := r.currentForkDigest()
+
+	status := func(headSlot primitives.Slot) *ethpb.Status {
+		return &ethpb.Status{
+			ForkDigest:     digest[:],
+			FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
+			FinalizedEpoch: 0,
+			HeadRoot:       make([]byte, 32),
+			HeadSlot:       headSlot,
+		}
+	}
+
+	// within the allowance
+	require.NoError(t, r.validateStatusMessage(r.ctx, status(1)))
+	// beyond the allowance
+	require.ErrorContains(t, p2ptypes.ErrInvalidRequest.Error(), r.validateStatusMessage(r.ctx, status(100)))
 }
 
 func TestShouldResync(t *testing.T) {
@@ -1138,4 +1180,54 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.R
 		require.NoError(t, err)
 	}
 	return ifaceBlocks
+}
+
+func TestStatusRPC_PeerFinalizedBelowOrigin(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	ctx := t.Context()
+
+	originSlot, err := slots.EpochStart(100)
+	require.NoError(t, err)
+
+	beaconDB := dbTest.SetupDB(t)
+	require.NoError(t, beaconDB.SaveBackfillStatus(ctx, &dbval.BackfillStatus{
+		LowSlot:    uint64(originSlot),
+		OriginSlot: uint64(originSlot),
+	}))
+
+	chain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100, Root: bytesutil.PadTo([]byte("origin"), 32)},
+		Fork: &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+		Genesis:        time.Now().Add(-params.SlotsDuration(originSlot+params.BeaconConfig().SlotsPerEpoch*2, params.BeaconConfig())),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	r := &Service{
+		cfg: &config{
+			chain:       chain,
+			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			beaconDB:    beaconDB,
+			p2p:         p2ptest.NewTestP2P(t),
+			initialSync: &mockSync.Sync{IsSyncing: false},
+		},
+		ctx: ctx,
+	}
+	digest := r.currentForkDigest()
+
+	msg := func(epoch primitives.Epoch) *ethpb.Status {
+		return &ethpb.Status{
+			ForkDigest:     digest[:],
+			FinalizedRoot:  bytesutil.PadTo([]byte("peer-finalized"), 32),
+			FinalizedEpoch: epoch,
+			HeadRoot:       make([]byte, 32),
+			HeadSlot:       originSlot,
+		}
+	}
+
+	// The peer's checkpoint predates our origin, so we cannot judge it and must not punish it.
+	require.NoError(t, r.validateStatusMessage(r.ctx, msg(50)))
+	// A checkpoint we should have been able to resolve is still rejected.
+	require.ErrorIs(t, r.validateStatusMessage(r.ctx, msg(100)), p2ptypes.ErrInvalidFinalizedRoot)
 }

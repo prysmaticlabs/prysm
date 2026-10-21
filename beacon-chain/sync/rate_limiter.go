@@ -11,10 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/cmd/beacon-chain/flags"
-	leakybucket "github.com/OffchainLabs/prysm/v6/container/leaky-bucket"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/cmd/beacon-chain/flags"
+	leakybucket "github.com/OffchainLabs/prysm/v7/container/leaky-bucket"
 )
 
 const defaultBurstLimit = 5
@@ -101,8 +101,14 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// DataColumnSidecarsByRangeV1
 	topicMap[addEncoding(p2p.RPCDataColumnSidecarsByRangeTopicV1)] = dataColumnSidecars
 
+	// ExecutionPayloadEnvelopesByRootV1
+	// Envelopes are 1:1 with blocks (one per slot), so block-level rate parameters apply.
+	envelopeCollector := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, blockBucketPeriod, false)
+	topicMap[addEncoding(p2p.RPCExecutionPayloadEnvelopesByRootTopicV1)] = envelopeCollector
+	topicMap[addEncoding(p2p.RPCExecutionPayloadEnvelopesByRangeTopicV1)] = envelopeCollector
+
 	// General topic for all rpc requests.
-	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(5, defaultBurstLimit*2, leakyBucketPeriod, false /* deleteEmptyBuckets */)
+	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(10, defaultBurstLimit*4, leakyBucketPeriod, false /* deleteEmptyBuckets */)
 
 	return &limiter{limiterMap: topicMap, p2p: p2pProvider}
 }
@@ -214,6 +220,17 @@ func (l *limiter) free() {
 		// Remove from map
 		delete(l.limiterMap, t)
 		tempMap[ptr] = true
+	}
+}
+
+// removePeer reclaims the per-peer leaky buckets on disconnect
+func (l *limiter) removePeer(pid peer.ID) {
+	l.Lock()
+	defer l.Unlock()
+
+	key := pid.String()
+	for _, collector := range l.limiterMap {
+		collector.Remove(key)
 	}
 }
 

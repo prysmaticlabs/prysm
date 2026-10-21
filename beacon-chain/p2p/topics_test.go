@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestAllTopics(t *testing.T) {
@@ -38,6 +38,11 @@ func TestAllTopics(t *testing.T) {
 	for _, f := range forks {
 		digest := params.ForkDigest(f)
 		expected = append(expected, "/eth2/"+hex.EncodeToString(digest[:])+"/beacon_block/ssz_snappy")
+	}
+	if cfg.GloasForkEpoch < cfg.FarFutureEpoch {
+		gloasDigest := params.ForkDigest(cfg.GloasForkEpoch)
+		expected = append(expected, "/eth2/"+hex.EncodeToString(gloasDigest[:])+"/execution_payload_bid/ssz_snappy")
+		expected = append(expected, "/eth2/"+hex.EncodeToString(gloasDigest[:])+"/proposer_preferences/ssz_snappy")
 	}
 	for _, e := range expected {
 		_, ok := tops[e]

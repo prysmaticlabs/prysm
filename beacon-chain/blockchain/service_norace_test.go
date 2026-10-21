@@ -4,9 +4,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,7 +21,7 @@ func TestChainService_SaveHead_DataRace(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 1)
 	require.NoError(t, err)
 	go func() {
-		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st))
+		require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st, false))
 	}()
-	require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st))
+	require.NoError(t, s.saveHead(t.Context(), [32]byte{}, b, st, false))
 }

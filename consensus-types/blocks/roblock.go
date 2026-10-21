@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"sort"
 
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 )
 
 // ROBlock is a value that embeds a ReadOnlySignedBeaconBlock along with its block root ([32]byte).
@@ -18,6 +18,15 @@ type ROBlock struct {
 // Root returns the block hash_tree_root for the embedded ReadOnlySignedBeaconBlock.Block().
 func (b ROBlock) Root() [32]byte {
 	return b.root
+}
+
+// ParentHash returns the parent hash of a beacon block post-Gloas
+func (b ROBlock) ParentHash() ([32]byte, error) {
+	bid, err := b.Block().Body().ExecutionPayloadBid()
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return bid.ParentBlockHash(), nil
 }
 
 // RootSlice returns a slice of the value returned by Root(). This is convenient because slicing the result of a func

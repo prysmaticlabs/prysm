@@ -2,25 +2,25 @@ package beacon
 
 import (
 	"fmt"
+	"iter"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/shared"
-	statenative "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/validator"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/eth/v1"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/validator"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 )
 
-// GetValidatorCount is a HTTP handler that serves the GET /eth/v1/beacon/states/{state_id}/validator_count endpoint.
+// GetValidatorCount is a HTTP handler that serves the GET /prysm/v1/beacon/states/{state_id}/validator_count endpoint.
 // It returns the total validator count according to the given statuses provided as a query parameter.
 //
 // The state ID is expected to be a valid Beacon Chain state identifier.
@@ -30,7 +30,7 @@ import (
 //
 // Example usage:
 //
-//	GET /eth/v1/beacon/states/12345/validator_count?status=active&status=pending
+//	GET /prysm/v1/beacon/states/12345/validator_count?status=active&status=pending
 //
 // The above request will return a JSON response like:
 //
@@ -66,10 +66,10 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	blockRoot, err := helpers.BlockRootFromState(ctx, st)
 	if err != nil {
 		errJson := &httputil.DefaultJsonError{
-			Message: fmt.Sprintf("could not calculate root of latest block header: %v", err),
+			Message: fmt.Sprintf("could not calculate block root: %v", err),
 			Code:    http.StatusInternalServerError,
 		}
 		httputil.WriteError(w, errJson)
@@ -101,7 +101,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	epoch := slots.ToEpoch(st.Slot())
-	valCount, err := validatorCountByStatus(st.Validators(), statusVals, epoch)
+	valCount, err := validatorCountByStatus(st.ValidatorsReadOnlySeq(), statusVals, epoch)
 	if err != nil {
 		errJson := &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("could not get validator count: %v", err),
@@ -121,18 +121,14 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 }
 
 // validatorCountByStatus returns a slice of validator count for each status in the given epoch.
-func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]*structs.ValidatorCount, error) {
+func validatorCountByStatus(validators iter.Seq2[primitives.ValidatorIndex, state.ReadOnlyValidator], statuses []validator.Status, epoch primitives.Epoch) ([]*structs.ValidatorCount, error) {
 	countByStatus := make(map[validator.Status]uint64)
 	for _, val := range validators {
-		readOnlyVal, err := statenative.NewValidator(val)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert validator: %w", err)
-		}
-		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
+		valStatus, err := helpers.ValidatorStatus(val, epoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get validator status: %w", err)
 		}
-		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
+		valSubStatus, err := helpers.ValidatorSubStatus(val, epoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not get validator sub status: %w", err)
 		}

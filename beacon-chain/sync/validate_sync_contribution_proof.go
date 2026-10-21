@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	opfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	p2ptypes "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/types"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	opfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	p2ptypes "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/types"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -331,7 +331,7 @@ func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) er
 	if !ok {
 		return errors.New("could not convert cached value to []bitfield.Bitvector")
 	}
-	has, err := bitListOverlaps(bitsList, c.AggregationBits)
+	has, err := bitListContains(bitsList, c.AggregationBits)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) er
 	return nil
 }
 
-// Check sync contribution bits don't have an overlap with one's in cache.
+// Check whether a cached sync contribution already has every bit of this one.
 func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution) (bool, error) {
 	s.syncContributionBitsOverlapLock.RLock()
 	defer s.syncContributionBitsOverlapLock.RUnlock()
@@ -356,21 +356,21 @@ func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution
 	if !ok {
 		return false, errors.New("could not convert cached value to []bitfield.Bitvector128")
 	}
-	return bitListOverlaps(bitsList, c.AggregationBits.Bytes())
+	return bitListContains(bitsList, c.AggregationBits.Bytes())
 }
 
-// bitListOverlaps returns true if there's an overlap between two bitlists.
-func bitListOverlaps(bitLists [][]byte, b []byte) (bool, error) {
+// bitListContains returns true if any bitlist in bitLists has every bit set in b.
+func bitListContains(bitLists [][]byte, b []byte) (bool, error) {
 	for _, bitList := range bitLists {
 		if bitList == nil {
 			return false, errors.New("nil bitfield")
 		}
 		bl := ethpb.ConvertToSyncContributionBitVector(bitList)
-		overlaps, err := bl.Overlaps(ethpb.ConvertToSyncContributionBitVector(b))
+		contains, err := bl.Contains(ethpb.ConvertToSyncContributionBitVector(b))
 		if err != nil {
 			return false, err
 		}
-		if overlaps {
+		if contains {
 			return true, nil
 		}
 	}

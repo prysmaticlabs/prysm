@@ -2,24 +2,22 @@ package beacon
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/altair"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/shared"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/lookup"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	ethpbalpha "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	ethpbalpha "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -40,13 +38,7 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stateRoot, err := s.Stater.StateRoot(ctx, []byte(stateId))
-	if err != nil {
-		var rootNotFoundErr *lookup.StateRootNotFoundError
-		if errors.As(err, &rootNotFoundErr) {
-			httputil.HandleError(w, "State root not found: "+rootNotFoundErr.Error(), http.StatusNotFound)
-			return
-		}
-		httputil.HandleError(w, "Could not get state root: "+err.Error(), http.StatusInternalServerError)
+	if !shared.WriteStateRootFetchError(w, err) {
 		return
 	}
 	st, err := s.Stater.State(ctx, []byte(stateId))
@@ -59,9 +51,9 @@ func (s *Server) GetStateRoot(w http.ResponseWriter, r *http.Request) {
 		helpers.HandleIsOptimisticError(w, err)
 		return
 	}
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	blockRoot, err := helpers.BlockRootFromState(ctx, st)
 	if err != nil {
-		httputil.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not calculate block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
@@ -129,9 +121,9 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	blockRoot, err := helpers.BlockRootFromState(ctx, st)
 	if err != nil {
-		httputil.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not calculate block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
@@ -231,9 +223,9 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	blockRoot, err := helpers.BlockRootFromState(ctx, st)
 	if err != nil {
-		httputil.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not calculate block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
@@ -289,7 +281,7 @@ func nextCommitteeIndicesFromState(st state.BeaconState) ([]string, *ethpbalpha.
 func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCommittee) ([][]string, error) {
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	subcommittees := make([][]string, subcommitteeCount)
-	for i := uint64(0); i < subcommitteeCount; i++ {
+	for i := range subcommitteeCount {
 		pubkeys, err := altair.SyncSubCommitteePubkeys(committee, primitives.CommitteeIndex(i))
 		if err != nil {
 			return nil, fmt.Errorf(

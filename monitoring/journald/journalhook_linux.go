@@ -12,7 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type JournalHook struct{}
+type JournalHook struct {
+	level logrus.Level
+}
 
 var (
 	severityMap = map[logrus.Level]journal.Priority{
@@ -49,7 +51,7 @@ func stringifyKey(key string) string {
 }
 
 // Journal wants strings but logrus takes anything.
-func stringifyEntries(data map[string]interface{}) map[string]string {
+func stringifyEntries(data map[string]any) map[string]string {
 	entries := make(map[string]string)
 	for k, v := range data {
 		key := stringifyKey(k)
@@ -65,12 +67,5 @@ func (hook *JournalHook) Fire(entry *logrus.Entry) error {
 
 // Levels returns a slice of `Levels` the hook is fired for.
 func (hook *JournalHook) Levels() []logrus.Level {
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-		logrus.DebugLevel,
-	}
+	return logrus.AllLevels[:hook.level+1]
 }

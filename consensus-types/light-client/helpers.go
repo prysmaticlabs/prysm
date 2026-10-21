@@ -3,12 +3,12 @@ package light_client
 import (
 	"fmt"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 )
 
 type branchConstraint interface {
-	[4][fieldparams.RootLength]byte | [5][fieldparams.RootLength]byte | [6][fieldparams.RootLength]byte | [7][fieldparams.RootLength]byte
+	[4][fieldparams.RootLength]byte | [5][fieldparams.RootLength]byte | [6][fieldparams.RootLength]byte | [7][fieldparams.RootLength]byte | [9][fieldparams.RootLength]byte | [11][fieldparams.RootLength]byte
 }
 
 func createBranch[T branchConstraint](name string, input [][]byte, depth int) (T, error) {

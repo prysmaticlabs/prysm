@@ -5,20 +5,19 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
-	"github.com/OffchainLabs/prysm/v6/api"
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/core"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/eth/shared"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/options"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/core"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/eth/shared"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/options"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 )
@@ -35,10 +34,9 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	segments := strings.Split(r.URL.Path, "/")
-	blockId := segments[len(segments)-1]
+	blockId := r.PathValue("block_id")
 
-	verifiedBlobs, rpcErr := s.Blocker.Blobs(ctx, blockId, options.WithIndices(indices))
+	verifiedBlobs, rpcErr := s.Blocker.BlobSidecars(ctx, blockId, options.WithIndices(indices))
 	if rpcErr != nil {
 		code := core.ErrorReasonToHTTP(rpcErr.Reason)
 		switch code {
@@ -131,11 +129,7 @@ func (s *Server) GetBlobs(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlobs")
 	defer span.End()
 
-	segments := strings.Split(r.URL.Path, "/")
-	blockId := segments[len(segments)-1]
-
-	var verifiedBlobs []*blocks.VerifiedROBlob
-	var rpcErr *core.RpcError
+	blockId := r.PathValue("block_id")
 
 	// Check if versioned_hashes parameter is provided
 	versionedHashesStr := r.URL.Query()["versioned_hashes"]
@@ -149,7 +143,7 @@ func (s *Server) GetBlobs(w http.ResponseWriter, r *http.Request) {
 			versionedHashes[i] = hash
 		}
 	}
-	verifiedBlobs, rpcErr = s.Blocker.Blobs(ctx, blockId, options.WithVersionedHashes(versionedHashes))
+	blobsData, rpcErr := s.Blocker.Blobs(ctx, blockId, options.WithVersionedHashes(versionedHashes))
 	if rpcErr != nil {
 		code := core.ErrorReasonToHTTP(rpcErr.Reason)
 		switch code {
@@ -175,9 +169,9 @@ func (s *Server) GetBlobs(w http.ResponseWriter, r *http.Request) {
 
 	if httputil.RespondWithSsz(r) {
 		sszLen := fieldparams.BlobSize
-		sszData := make([]byte, len(verifiedBlobs)*sszLen)
-		for i := range verifiedBlobs {
-			copy(sszData[i*sszLen:(i+1)*sszLen], verifiedBlobs[i].Blob)
+		sszData := make([]byte, len(blobsData)*sszLen)
+		for i := range blobsData {
+			copy(sszData[i*sszLen:(i+1)*sszLen], blobsData[i])
 		}
 
 		w.Header().Set(api.VersionHeader, version.String(blk.Version()))
@@ -196,9 +190,9 @@ func (s *Server) GetBlobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := make([]string, len(verifiedBlobs))
-	for i, v := range verifiedBlobs {
-		data[i] = hexutil.Encode(v.Blob)
+	data := make([]string, len(blobsData))
+	for i, blob := range blobsData {
+		data[i] = hexutil.Encode(blob)
 	}
 	resp := &structs.GetBlobsResponse{
 		Data:                data,

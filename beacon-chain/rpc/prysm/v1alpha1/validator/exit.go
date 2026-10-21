@@ -3,11 +3,11 @@ package validator
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	opfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	opfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -30,6 +30,11 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		return nil, status.Error(codes.InvalidArgument, "invalid signature provided")
 	}
 
+	// [Modified in Gloas:EIP8282] Builder exits are no longer carried as voluntary
+	// exits; builders exit via BuilderExitRequest on the execution layer.
+	if req.Exit.ValidatorIndex.IsBuilderIndex() {
+		return nil, status.Error(codes.InvalidArgument, "builder voluntary exits are not supported")
+	}
 	// Confirm the validator is eligible to exit with the parameters provided.
 	val, err := s.ValidatorAtIndexReadOnly(req.Exit.ValidatorIndex)
 	if err != nil {

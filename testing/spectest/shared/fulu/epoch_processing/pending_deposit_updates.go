@@ -5,12 +5,12 @@ import (
 	"path"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/electra"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/spectest/utils"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/electra"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/spectest/utils"
 )
 
 func RunPendingDepositsTests(t *testing.T, config string) {
@@ -29,7 +29,7 @@ func processPendingDeposits(t *testing.T, st state.BeaconState) (state.BeaconSta
 	// The caller of this method would normally have the precompute balance values for total
 	// active balance for this epoch. For ease of test setup, we will compute total active
 	// balance from the given state.
-	tab, err := helpers.TotalActiveBalance(st)
+	tab, err := helpers.TotalActiveBalance(t.Context(), st)
 	require.NoError(t, err)
 	return st, electra.ProcessPendingDeposits(context.TODO(), st, primitives.Gwei(tab))
 }

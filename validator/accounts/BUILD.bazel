@@ -17,7 +17,7 @@ go_library(
         "wallet_create.go",
         "wallet_recover.go",
     ],
-    importpath = "github.com/OffchainLabs/prysm/v6/validator/accounts",
+    importpath = "github.com/OffchainLabs/prysm/v7/validator/accounts",
     visibility = [
         "//cmd/validator:__subpackages__",
         "//validator:__pkg__",
@@ -25,6 +25,7 @@ go_library(
     ],
     deps = [
         "//api/grpc:go_default_library",
+        "//api/rest:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//cmd/validator/flags:go_default_library",
         "//config/fieldparams:go_default_library",
@@ -40,8 +41,6 @@ go_library(
         "//validator/client:go_default_library",
         "//validator/client/beacon-api:go_default_library",
         "//validator/client/iface:go_default_library",
-        "//validator/client/node-client-factory:go_default_library",
-        "//validator/client/validator-client-factory:go_default_library",
         "//validator/helpers:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",

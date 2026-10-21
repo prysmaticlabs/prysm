@@ -3,11 +3,11 @@ package validator
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	v "github.com/OffchainLabs/prysm/v6/beacon-chain/core/validators"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	v "github.com/OffchainLabs/prysm/v7/beacon-chain/core/validators"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 )
 
 func (vs *Server) getSlashings(ctx context.Context, head state.BeaconState) ([]*ethpb.ProposerSlashing, []ethpb.AttSlashing) {
@@ -21,7 +21,7 @@ func (vs *Server) getSlashings(ctx context.Context, head state.BeaconState) ([]*
 	}
 	// ExitInformation is expensive to compute, only do it if we need it.
 	exitInfo := v.ExitInformation(head)
-	if err := helpers.UpdateTotalActiveBalanceCache(head, exitInfo.TotalActiveBalance); err != nil {
+	if err := helpers.UpdateTotalActiveBalanceCache(ctx, head, exitInfo.TotalActiveBalance); err != nil {
 		log.WithError(err).Warn("Could not update total active balance cache")
 	}
 	for _, slashing := range proposerSlashings {

@@ -9,26 +9,27 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	mockp2p "github.com/OffchainLabs/prysm/v6/beacon-chain/p2p/testing"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/rpc/testutil"
-	syncmock "github.com/OffchainLabs/prysm/v6/beacon-chain/sync/initial-sync/testing"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/wrapper"
-	"github.com/OffchainLabs/prysm/v6/network/httputil"
-	pb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	mockengine "github.com/OffchainLabs/prysm/v7/beacon-chain/execution/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	mockp2p "github.com/OffchainLabs/prysm/v7/beacon-chain/p2p/testing"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/rpc/testutil"
+	syncmock "github.com/OffchainLabs/prysm/v7/beacon-chain/sync/initial-sync/testing"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/wrapper"
+	"github.com/OffchainLabs/prysm/v7/network/httputil"
+	pb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
+	"github.com/OffchainLabs/prysm/v7/testing/util"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 type dummyIdentity enode.ID
@@ -73,6 +74,7 @@ func TestSyncStatus(t *testing.T) {
 
 func TestGetVersion(t *testing.T) {
 	semVer := version.SemanticVersion()
+	commit := version.GitCommit()[:7]
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 
@@ -86,8 +88,78 @@ func TestGetVersion(t *testing.T) {
 	resp := &structs.GetVersionResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.StringContains(t, semVer, resp.Data.Version)
+	assert.StringContains(t, commit, resp.Data.Version)
 	assert.StringContains(t, os, resp.Data.Version)
 	assert.StringContains(t, arch, resp.Data.Version)
+}
+
+func TestGetVersionV2(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/node/version", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s := &Server{
+			ExecutionEngineCaller: &mockengine.EngineClient{
+				ClientVersion: []*structs.ClientVersionV1{{
+					Code:    "EL",
+					Name:    "ExecutionClient",
+					Version: "v1.0.0",
+					Commit:  "abcdef12",
+				}},
+			},
+		}
+		s.GetVersionV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+
+		resp := &structs.GetVersionV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.BeaconNode)
+		require.NotNil(t, resp.Data.ExecutionClient)
+		require.Equal(t, "EL", resp.Data.ExecutionClient.Code)
+		require.Equal(t, "ExecutionClient", resp.Data.ExecutionClient.Name)
+		require.Equal(t, "v1.0.0", resp.Data.ExecutionClient.Version)
+		require.Equal(t, "abcdef12", resp.Data.ExecutionClient.Commit)
+		require.Equal(t, "PM", resp.Data.BeaconNode.Code)
+		require.Equal(t, "Prysm", resp.Data.BeaconNode.Name)
+		require.Equal(t, version.SemanticVersion(), resp.Data.BeaconNode.Version)
+		require.Equal(t, true, len(resp.Data.BeaconNode.Commit) <= 8)
+	})
+
+	t.Run("unhappy path", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/node/version", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s := &Server{
+			ExecutionEngineCaller: &mockengine.EngineClient{
+				ClientVersion:      nil,
+				ErrorClientVersion: fmt.Errorf("error"),
+			},
+		}
+		s.GetVersionV2(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+
+		resp := &structs.GetVersionV2Response{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.BeaconNode)
+		require.Equal(t, true, resp.Data.ExecutionClient == nil)
+
+		// make sure there is no 'execution_client' field
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &payload))
+		data, ok := payload["data"].(map[string]any)
+		require.Equal(t, true, ok)
+		_, found := data["beacon_node"]
+		require.Equal(t, true, found)
+		_, found = data["execution_client"]
+		require.Equal(t, false, found)
+	})
+
 }
 
 func TestGetHealth(t *testing.T) {

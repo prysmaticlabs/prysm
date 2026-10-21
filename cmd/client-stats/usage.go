@@ -5,20 +5,21 @@ import (
 	"io"
 	"sort"
 
-	"github.com/OffchainLabs/prysm/v6/cmd"
-	"github.com/OffchainLabs/prysm/v6/cmd/client-stats/flags"
+	"github.com/OffchainLabs/prysm/v7/cmd"
+	"github.com/OffchainLabs/prysm/v7/cmd/client-stats/flags"
 	"github.com/urfave/cli/v2"
 )
 
 var appHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
-USAGE:
-   {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
    {{if .App.Version}}
+VERSION:
+   {{.App.Version}}
+   {{end}}{{if len .App.Authors}}
 AUTHOR:
    {{range .App.Authors}}{{ . }}{{end}}
    {{end}}{{if .App.Commands}}
-GLOBAL OPTIONS:
+COMMANDS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{end}}{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
@@ -27,9 +28,6 @@ GLOBAL OPTIONS:
 {{end}}{{end}}{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
-VERSION:
-   {{.App.Version}}
-   {{end}}{{if len .App.Authors}}
    {{end}}
 `
 
@@ -61,15 +59,17 @@ var appHelpFlagGroups = []flagGroup{
 
 func init() {
 	cli.AppHelpTemplate = appHelpTemplate
+	cmd.EnableHelpColors()
+	coloredAppHelpTemplate := cli.AppHelpTemplate
 
 	type helpData struct {
-		App        interface{}
+		App        any
 		FlagGroups []flagGroup
 	}
 
 	originalHelpPrinter := cli.HelpPrinter
-	cli.HelpPrinter = func(w io.Writer, tmpl string, data interface{}) {
-		if tmpl == appHelpTemplate {
+	cli.HelpPrinter = func(w io.Writer, tmpl string, data any) {
+		if tmpl == coloredAppHelpTemplate {
 			for _, group := range appHelpFlagGroups {
 				sort.Sort(cli.FlagsByName(group.Flags))
 			}

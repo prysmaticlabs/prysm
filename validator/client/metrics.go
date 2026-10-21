@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
-	"github.com/OffchainLabs/prysm/v6/validator/client/iface"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
+	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -64,6 +64,16 @@ var (
 		prometheus.CounterOpts{
 			Namespace: "validator",
 			Name:      "failed_proposals",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorProposeEnvelopeFailVec used to count failed self-build envelope submissions.
+	ValidatorProposeEnvelopeFailVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "failed_envelope_submissions",
 		},
 		[]string{
 			"pubkey",
@@ -205,6 +215,30 @@ var (
 			"pubkey",
 		},
 	)
+	validatorPayloadAttestationSubmissionTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "payload_attestation_submission_total",
+			Help:      "The number of payload attestation submissions by result in the validator client.",
+		},
+		[]string{"result"},
+	)
+	validatorPayloadAttestationRetryTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "payload_attestation_data_retry_total",
+			Help:      "The number of payload attestation data requests retried at the PTC deadline, by outcome.",
+		},
+		[]string{"outcome"},
+	)
+	validatorSelfBuildEnvelopeSubmissionTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "self_build_envelope_submission_total",
+			Help:      "The number of self-build execution payload envelope submissions by result.",
+		},
+		[]string{"result"},
+	)
 )
 
 // LogValidatorGainsAndLosses logs important metrics related to this validator client's
@@ -231,7 +265,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	req := &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: pubKeys,
 	}
-	resp, err := v.prysmChainClient.ValidatorPerformance(ctx, req)
+	resp, err := v.chainClient.ValidatorPerformance(ctx, req)
 	if err != nil {
 		if errors.Is(err, iface.ErrNotSupported) {
 			log.WithError(err).Debug("Skipping validator performance metric for non-Prysm beacon node")
@@ -313,27 +347,27 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
 	if v.prevEpochBalances[pubKeyBytes] > 0 {
 		newBalance := float64(balAfterEpoch) / gweiPerEth
-		prevBalance := float64(balBeforeEpoch) / gweiPerEth
-		startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
-		percentNet := (newBalance - prevBalance) / prevBalance
-		percentSinceStart := (newBalance - startBalance) / startBalance
+		diffGwei := float64(balAfterEpoch) - float64(balBeforeEpoch)
 
 		previousEpochSummaryFields := logrus.Fields{
-			"pubkey":                  truncatedKey,
-			"epoch":                   prevEpoch,
-			"correctlyVotedSource":    correctlyVotedSource,
-			"correctlyVotedTarget":    correctlyVotedTarget,
-			"correctlyVotedHead":      correctlyVotedHead,
-			"startBalance":            startBalance,
-			"oldBalance":              prevBalance,
-			"newBalance":              newBalance,
-			"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
-			"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
+			"pubkey":               truncatedKey,
+			"epoch":                prevEpoch,
+			"correctlyVotedSource": correctlyVotedSource,
+			"correctlyVotedTarget": correctlyVotedTarget,
+			"correctlyVotedHead":   correctlyVotedHead,
+			"diffGwei":             diffGwei,
+			"balanceEth":           fmt.Sprintf("%.9f", newBalance),
+		}
+
+		if votedSlot, ok := v.attestedSlot(prevEpoch, pubKeyBytes); ok {
+			previousEpochSummaryFields["slot"] = votedSlot
 		}
 
 		if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
 			if index < len(resp.InactivityScores) {
-				previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[index]
+				if inactivityScore := resp.InactivityScores[index]; inactivityScore != 0 {
+					previousEpochSummaryFields["inactivityScore"] = inactivityScore
+				}
 			} else {
 				log.WithField("pubkey", truncatedKey).Warn("Missing inactivity score")
 			}

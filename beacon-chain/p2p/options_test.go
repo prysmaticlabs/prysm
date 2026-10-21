@@ -8,12 +8,12 @@ import (
 	"path"
 	"testing"
 
-	mock "github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain/testing"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	ecdsaprysm "github.com/OffchainLabs/prysm/v6/crypto/ecdsa"
-	"github.com/OffchainLabs/prysm/v6/network"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	mock "github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain/testing"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	ecdsaprysm "github.com/OffchainLabs/prysm/v7/crypto/ecdsa"
+	"github.com/OffchainLabs/prysm/v7/network"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	gethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -239,4 +239,38 @@ func TestMultiAddressBuilderWithID(t *testing.T) {
 			require.Equal(t, tt.expectedMultiaddrStr, actualMultiaddrStr)
 		})
 	}
+}
+
+func TestBuildOptions_InvalidLocalIPReturnsError(t *testing.T) {
+	p2pCfg := &Config{
+		UDPPort:       2000,
+		TCPPort:       3000,
+		QUICPort:      3000,
+		LocalIP:       "not-an-ip",
+		StateNotifier: &mock.MockStateNotifier{},
+	}
+	svc := &Service{cfg: p2pCfg}
+	var err error
+	svc.privKey, err = privKey(svc.cfg)
+	require.NoError(t, err)
+
+	_, err = svc.buildOptions(network.IPAddr(), svc.privKey)
+	require.ErrorContains(t, "invalid local ip", err)
+}
+
+func TestBuildOptions_InvalidHostAddressReturnsError(t *testing.T) {
+	p2pCfg := &Config{
+		UDPPort:       2000,
+		TCPPort:       3000,
+		QUICPort:      3000,
+		HostAddress:   "not-an-ip",
+		StateNotifier: &mock.MockStateNotifier{},
+	}
+	svc := &Service{cfg: p2pCfg}
+	var err error
+	svc.privKey, err = privKey(svc.cfg)
+	require.NoError(t, err)
+
+	_, err = svc.buildOptions(network.IPAddr(), svc.privKey)
+	require.ErrorContains(t, "invalid host address", err)
 }

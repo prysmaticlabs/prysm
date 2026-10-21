@@ -3,12 +3,12 @@ package precompute_test
 import (
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/epoch/precompute"
-	state_native "github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch/precompute"
+	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestNew(t *testing.T) {
@@ -30,26 +30,26 @@ func TestNew(t *testing.T) {
 	e := params.BeaconConfig().FarFutureSlot
 	v, b, err := precompute.New(t.Context(), s)
 	require.NoError(t, err)
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, precompute.Validator{
 		IsSlashed:                    true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[0], "Incorrect validator 0 status")
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, precompute.Validator{
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[1], "Incorrect validator 1 status")
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, precompute.Validator{
 		IsActiveCurrentEpoch:         true,
 		IsActivePrevEpoch:            true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[2], "Incorrect validator 2 status")
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, precompute.Validator{
 		IsActivePrevEpoch:            true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,

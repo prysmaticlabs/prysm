@@ -3,19 +3,19 @@ package monitor
 import (
 	"context"
 	"errors"
-	"sort"
+	"slices"
 	"sync"
 
-	"github.com/OffchainLabs/prysm/v6/async/event"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	statefeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stategen"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/async/event"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	statefeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stategen"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -108,7 +108,7 @@ func (s *Service) Start() {
 	for idx := range s.TrackedValidators {
 		tracked = append(tracked, idx)
 	}
-	sort.Slice(tracked, func(i, j int) bool { return tracked[i] < tracked[j] })
+	slices.Sort(tracked)
 
 	log.WithFields(logrus.Fields{
 		"validatorIndices": tracked,
@@ -277,7 +277,7 @@ func (s *Service) trackedIndex(idx primitives.ValidatorIndex) bool {
 
 // updateSyncCommitteeTrackedVals updates the sync committee assignments of our
 // tracked validators. It gets called when we sync a block after the Sync Period changes.
-func (s *Service) updateSyncCommitteeTrackedVals(state state.BeaconState) {
+func (s *Service) updateSyncCommitteeTrackedVals(state state.ReadOnlyBeaconState) {
 	s.Lock()
 	defer s.Unlock()
 	for idx := range s.TrackedValidators {

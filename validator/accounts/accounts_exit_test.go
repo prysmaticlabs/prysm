@@ -6,15 +6,15 @@ import (
 	"path"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	"github.com/OffchainLabs/prysm/v6/build/bazel"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -37,6 +37,19 @@ func TestDisplayExitInfo_NoKeys(t *testing.T) {
 	logHook := test.NewGlobal()
 	displayExitInfo([][]byte{}, []string{})
 	assert.LogsContain(t, logHook, "No successful voluntary exits")
+}
+
+func TestDisplayExitJSONInfo(t *testing.T) {
+	logHook := test.NewGlobal()
+	displayExitJSONInfo([]string{"0x123456"}, "/tmp/exits")
+	assert.LogsContain(t, logHook, "No exits were broadcast to the network")
+	assert.LogsContain(t, logHook, "/tmp/exits")
+}
+
+func TestDisplayExitJSONInfo_NoKeys(t *testing.T) {
+	logHook := test.NewGlobal()
+	displayExitJSONInfo([]string{}, "/tmp/exits")
+	assert.LogsContain(t, logHook, "No signed voluntary exit files were written")
 }
 
 func TestPrepareAllKeys(t *testing.T) {

@@ -7,28 +7,28 @@ import (
 	"sync"
 	"time"
 
-	builderapi "github.com/OffchainLabs/prysm/v6/api/client/builder"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/builder"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	blockfeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/block"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/peerdas"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/kv"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/api"
+	builderapi "github.com/OffchainLabs/prysm/v7/api/client/builder"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	blockfeed "github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/block"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/peerdas"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
@@ -36,6 +36,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -62,7 +63,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 
 	log := log.WithField("slot", req.Slot)
-	log.WithField("sinceSlotStartTime", time.Since(t)).Info("Begin building block")
+	log.WithField("sinceSlotStartTime", time.Since(t)).Info("Building block")
 
 	// A syncing validator should not produce a block.
 	if vs.SyncChecker.Syncing() {
@@ -77,7 +78,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
-	head, parentRoot, err := vs.getParentState(ctx, req.Slot)
+	head, parentRoot, full, err := vs.getParentState(ctx, req.Slot)
 	if err != nil {
 		log.WithError(err).Error("Fail to build block: could not get parent state")
 		return nil, err
@@ -89,7 +90,13 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
-	sBlk.SetGraffiti(req.Graffiti)
+	// Generate graffiti with client version info using flexible standard
+	if vs.GraffitiInfo != nil {
+		graffiti := vs.GraffitiInfo.GenerateGraffiti(req.Graffiti)
+		sBlk.SetGraffiti(graffiti[:])
+	} else {
+		sBlk.SetGraffiti(req.Graffiti)
+	}
 	sBlk.SetRandaoReveal(req.RandaoReveal)
 	sBlk.SetParentRoot(parentRoot[:])
 
@@ -105,28 +112,26 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		builderBoostFactor = primitives.Gwei(req.BuilderBoostFactor.Value)
 	}
 
-	resp, err := vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor)
-	log = log.WithFields(logrus.Fields{
+	resp, err := vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor, full, req.EagerPayloadStateRoot, req.BuilderConfig)
+	l := log.WithFields(logrus.Fields{
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	})
 
 	if err != nil {
-		log.WithError(err).Error("Finished building block")
+		l.WithError(err).Error("Could not build block")
 		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
 
-	log.Info("Finished building block")
+	l.Info("Finished building block")
 	return resp, nil
 }
 
-func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, _ [32]byte) (state.BeaconState, error) {
-	// Try to get the state from the NSC
+func (vs *Server) handleSuccesfulReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot [32]byte) (state.BeaconState, error) {
 	head := transition.NextSlotState(parentRoot[:], slot)
 	if head != nil {
 		return head, nil
 	}
-	// cache miss
 	head, err := vs.StateGen.StateByRoot(ctx, parentRoot)
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "could not obtain head state")
@@ -144,7 +149,6 @@ func logFailedReorgAttempt(slot primitives.Slot, oldHeadRoot, headRoot [32]byte)
 }
 
 func (vs *Server) getHeadNoReorg(ctx context.Context, slot primitives.Slot, parentRoot [32]byte) (state.BeaconState, error) {
-	// Try to get the state from the NSC
 	head := transition.NextSlotState(parentRoot[:], slot)
 	if head != nil {
 		return head, nil
@@ -158,7 +162,7 @@ func (vs *Server) getHeadNoReorg(ctx context.Context, slot primitives.Slot, pare
 
 func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitives.Slot, oldHeadRoot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
 	if parentRoot != headRoot {
-		head, err = vs.handleSuccesfulReorgAttempt(ctx, slot, parentRoot, headRoot)
+		head, err = vs.handleSuccesfulReorgAttempt(ctx, slot, parentRoot)
 	} else {
 		if oldHeadRoot != headRoot {
 			logFailedReorgAttempt(slot, oldHeadRoot, headRoot)
@@ -178,67 +182,78 @@ func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitiv
 	return head, nil
 }
 
-func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (state.BeaconState, [32]byte, error) {
+func (vs *Server) parentFull(parentRoot [32]byte) bool {
+	if parentSlot, err := vs.ForkchoiceFetcher.RecentBlockSlot(parentRoot); err == nil && slots.ToEpoch(parentSlot) < params.BeaconConfig().GloasForkEpoch {
+		return true
+	}
+	root, full := vs.HeadFetcher.HeadRootAndFull()
+	if root == parentRoot {
+		return full
+	}
+	return vs.ForkchoiceFetcher.FullBeatsEmpty(parentRoot)
+}
+
+func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (state.BeaconState, [32]byte, bool, error) {
 	// process attestations and update head in forkchoice
 	oldHeadRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
 	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	head, err := vs.getParentStateFromReorgData(ctx, slot, oldHeadRoot, parentRoot, headRoot)
-	return head, parentRoot, err
+	return head, parentRoot, vs.parentFull(parentRoot), err
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor primitives.Gwei) (*ethpb.GenericBeaconBlock, error) {
-	// Build consensus fields in background
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor primitives.Gwei, parentFull, eagerPayloadStateRoot bool, builderConfig *ethpb.BuilderConfig) (*ethpb.GenericBeaconBlock, error) {
+	if sBlk.Version() >= version.Gloas {
+		return vs.buildBlockGloas(ctx, sBlk, head, skipMevBoost, parentFull, eagerPayloadStateRoot, builderConfig)
+	}
+	return vs.buildBlockFulu(ctx, sBlk, head, skipMevBoost, builderBoostFactor, parentFull)
+}
+
+// setPreGloasConsensusFields fills the consensus body fields introduced before Gloas, shared by both build paths.
+func (vs *Server) setPreGloasConsensusFields(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) {
+	eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
+	if err != nil {
+		eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
+		log.WithError(err).Error("Could not get eth1data")
+	}
+	sBlk.SetEth1Data(eth1Data)
+
+	deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, sBlk.Block().Slot(), eth1Data) // TODO: split attestations and deposits
+	if err != nil {
+		sBlk.SetDeposits([]*ethpb.Deposit{})
+		if err := sBlk.SetAttestations([]ethpb.Att{}); err != nil {
+			log.WithError(err).Error("Could not set attestations on block")
+		}
+		log.WithError(err).Error("Could not pack deposits and attestations")
+	} else {
+		sBlk.SetDeposits(deposits)
+		if err := sBlk.SetAttestations(atts); err != nil {
+			log.WithError(err).Error("Could not set attestations on block")
+		}
+	}
+
+	validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
+	sBlk.SetProposerSlashings(validProposerSlashings)
+	if err := sBlk.SetAttesterSlashings(validAttSlashings); err != nil {
+		log.WithError(err).Error("Could not set attester slashings on block")
+	}
+
+	sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
+	vs.setSyncAggregate(ctx, sBlk, head) // no-op pre-Altair
+	vs.setBlsToExecData(sBlk, head)      // no-op pre-Capella
+}
+
+// buildBlockFulu builds a pre-Gloas block (phase0 through Fulu), whose body embeds the
+// execution payload itself or a blinded builder header.
+func (vs *Server) buildBlockFulu(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor primitives.Gwei, parentFull bool) (*ethpb.GenericBeaconBlock, error) {
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		// Set eth1 data.
-		eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
-		if err != nil {
-			eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
-			log.WithError(err).Error("Could not get eth1data")
-		}
-		sBlk.SetEth1Data(eth1Data)
-
-		// Set deposit and attestation.
-		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, sBlk.Block().Slot(), eth1Data) // TODO: split attestations and deposits
-		if err != nil {
-			sBlk.SetDeposits([]*ethpb.Deposit{})
-			if err := sBlk.SetAttestations([]ethpb.Att{}); err != nil {
-				log.WithError(err).Error("Could not set attestations on block")
-			}
-			log.WithError(err).Error("Could not pack deposits and attestations")
-		} else {
-			sBlk.SetDeposits(deposits)
-			if err := sBlk.SetAttestations(atts); err != nil {
-				log.WithError(err).Error("Could not set attestations on block")
-			}
-		}
-
-		// Set slashings.
-		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
-		sBlk.SetProposerSlashings(validProposerSlashings)
-		if err := sBlk.SetAttesterSlashings(validAttSlashings); err != nil {
-			log.WithError(err).Error("Could not set attester slashings on block")
-		}
-
-		// Set exits.
-		sBlk.SetVoluntaryExits(vs.getExits(head, sBlk.Block().Slot()))
-
-		// Set sync aggregate. New in Altair.
-		vs.setSyncAggregate(ctx, sBlk)
-
-		// Set bls to execution change. New in Capella.
-		vs.setBlsToExecData(sBlk, head)
-	}()
+	wg.Go(func() { vs.setPreGloasConsensusFields(ctx, sBlk, head) })
 
 	winningBid := primitives.ZeroWei()
 	var bundle enginev1.BlobsBundler
 	if sBlk.Version() >= version.Bellatrix {
-		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
+		local, err := vs.getLocalPayload(ctx, sBlk.Block(), head, parentFull)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 		}
@@ -266,13 +281,26 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 	wg.Wait()
 
-	sr, err := vs.computeStateRoot(ctx, sBlk)
+	sr, _, err := vs.computePostBlockStateAndRoot(ctx, sBlk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	sBlk.SetStateRoot(sr)
 
 	return vs.constructGenericBeaconBlock(sBlk, bundle, winningBid)
+}
+
+// builderUrlFromContext returns the winning builder url echoed by the validator
+// client as request metadata (the Eth-Builder-Url header on the REST API).
+func builderUrlFromContext(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	if vals := md.Get(api.BuilderUrlHeader); len(vals) > 0 {
+		return vals[0]
+	}
+	return ""
 }
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
@@ -282,6 +310,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	var (
 		blobSidecars       []*ethpb.BlobSidecar
 		dataColumnSidecars []blocks.RODataColumn
+		partialColumns     []blocks.PartialDataColumn
 	)
 
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
@@ -312,8 +341,12 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	rob, err := blocks.NewROBlockWithRoot(block, root)
 	if block.IsBlinded() {
 		block, blobSidecars, err = vs.handleBlindedBlock(ctx, block)
-	} else if block.Version() >= version.Deneb {
-		blobSidecars, dataColumnSidecars, err = vs.handleUnblindedBlock(rob, req)
+		if errors.Is(err, builderapi.ErrBadGateway) {
+			log.WithError(err).Info("Optimistically proposed block - builder relay temporarily unavailable, block may arrive over P2P")
+			return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
+		}
+	} else if block.Version() >= version.Deneb && block.Version() < version.Gloas {
+		blobSidecars, dataColumnSidecars, partialColumns, err = vs.handleUnblindedBlock(rob, req)
 	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%s: %v", "handle block failed", err)
@@ -333,9 +366,16 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	wg.Wait()
 
-	if err := vs.broadcastAndReceiveSidecars(ctx, block, root, blobSidecars, dataColumnSidecars); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive sidecars: %v", err)
+	if block.Version() < version.Gloas {
+		if err := vs.broadcastAndReceiveSidecars(ctx, block, root, blobSidecars, dataColumnSidecars, partialColumns); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not broadcast/receive sidecars: %v", err)
+		}
 	}
+
+	if builderURL := builderUrlFromContext(ctx); block.Version() >= version.Gloas && builderURL != "" {
+		go vs.submitBlockToBuilder(block, builderURL)
+	}
+
 	if err := <-errChan; err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive block: %v", err)
 	}
@@ -350,9 +390,10 @@ func (vs *Server) broadcastAndReceiveSidecars(
 	root [fieldparams.RootLength]byte,
 	blobSidecars []*ethpb.BlobSidecar,
 	dataColumnSidecars []blocks.RODataColumn,
+	partialColumns []blocks.PartialDataColumn,
 ) error {
 	if block.Version() >= version.Fulu {
-		if err := vs.broadcastAndReceiveDataColumns(ctx, dataColumnSidecars); err != nil {
+		if err := vs.broadcastAndReceiveDataColumns(ctx, dataColumnSidecars, partialColumns); err != nil {
 			return errors.Wrap(err, "broadcast and receive data columns")
 		}
 		return nil
@@ -401,34 +442,53 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 func (vs *Server) handleUnblindedBlock(
 	block blocks.ROBlock,
 	req *ethpb.GenericSignedBeaconBlock,
-) ([]*ethpb.BlobSidecar, []blocks.RODataColumn, error) {
+) ([]*ethpb.BlobSidecar, []blocks.RODataColumn, []blocks.PartialDataColumn, error) {
 	rawBlobs, proofs, err := blobsAndProofs(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, errors.Wrap(err, "blobs and proofs")
 	}
 
 	if block.Version() >= version.Fulu {
 		// Compute cells and proofs from the blobs and cell proofs.
-		cellsAndProofs, err := peerdas.ComputeCellsAndProofsFromFlat(rawBlobs, proofs)
+		cellsPerBlob, proofsPerBlob, err := peerdas.ComputeCellsAndProofsFromFlat(rawBlobs, proofs)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "compute cells and proofs")
+			return nil, nil, nil, errors.Wrap(err, "compute cells and proofs")
 		}
+
+		source := peerdas.PopulateFromBlock(block)
 
 		// Construct data column sidecars from the signed block and cells and proofs.
-		roDataColumnSidecars, err := peerdas.DataColumnSidecars(cellsAndProofs, peerdas.PopulateFromBlock(block))
+		roDataColumnSidecars, err := peerdas.DataColumnSidecars(cellsPerBlob, proofsPerBlob, source)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "data column sidcars")
+			return nil, nil, nil, errors.Wrap(err, "data column sidecars")
 		}
 
-		return nil, roDataColumnSidecars, nil
+		if len(cellsPerBlob) == 0 {
+			return nil, roDataColumnSidecars, nil, nil
+		}
+
+		var partialColumns []blocks.PartialDataColumn
+		if vs.ExecutionEngineCaller.PartialColumnsSupported() {
+			// We built this block ourselves, so we can upgrade the read only data column sidecar into a verified one.
+			for _, sidecar := range roDataColumnSidecars {
+				verifiedSidecar := blocks.NewVerifiedRODataColumn(sidecar)
+				pc, err := blocks.NewPartialDataColumnFromVerifiedRODataColumn(verifiedSidecar)
+				if err != nil {
+					return nil, nil, nil, errors.Wrap(err, "partial column from verified ro data column")
+				}
+				partialColumns = append(partialColumns, pc)
+			}
+		}
+
+		return nil, roDataColumnSidecars, partialColumns, nil
 	}
 
 	blobSidecars, err := BuildBlobSidecars(block, rawBlobs, proofs)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "build blob sidecars")
+		return nil, nil, nil, errors.Wrap(err, "build blob sidecars")
 	}
 
-	return blobSidecars, nil, nil
+	return blobSidecars, nil, nil, nil
 }
 
 // broadcastReceiveBlock broadcasts a block and handles its reception.
@@ -495,7 +555,7 @@ func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethp
 }
 
 // broadcastAndReceiveDataColumns handles the broadcasting and reception of data columns sidecars.
-func (vs *Server) broadcastAndReceiveDataColumns(ctx context.Context, roSidecars []blocks.RODataColumn) error {
+func (vs *Server) broadcastAndReceiveDataColumns(ctx context.Context, roSidecars []blocks.RODataColumn, partialColumns []blocks.PartialDataColumn) error {
 	// We built this block ourselves, so we can upgrade the read only data column sidecar into a verified one.
 	verifiedSidecars := make([]blocks.VerifiedRODataColumn, 0, len(roSidecars))
 	for _, sidecar := range roSidecars {
@@ -504,7 +564,7 @@ func (vs *Server) broadcastAndReceiveDataColumns(ctx context.Context, roSidecars
 	}
 
 	// Broadcast sidecars (non blocking).
-	if err := vs.P2P.BroadcastDataColumnSidecars(ctx, verifiedSidecars); err != nil {
+	if err := vs.P2P.BroadcastDataColumnSidecars(ctx, verifiedSidecars, partialColumns); err != nil {
 		return errors.Wrap(err, "broadcast data column sidecars")
 	}
 
@@ -518,44 +578,44 @@ func (vs *Server) broadcastAndReceiveDataColumns(ctx context.Context, roSidecars
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
 //
-// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
+// PrepareBeaconProposer caches a per-validator fee-recipient default. Post-Gloas
+// SignedProposerPreferences replaces this endpoint; requests are accepted as a no-op.
 func (vs *Server) PrepareBeaconProposer(
 	_ context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	var validatorIndices []primitives.ValidatorIndex
-
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) >= params.BeaconConfig().GloasForkEpoch {
+		log.Warn("PrepareBeaconProposer is deprecated post-Gloas; use SignedProposerPreferences. Request accepted as a no-op.")
+		return &emptypb.Empty{}, nil
+	}
 	for _, r := range request.Recipients {
 		recipient := hexutil.Encode(r.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, "Invalid fee recipient address: %v", recipient)
 		}
-		// Use default address if the burn address is return
-		feeRecipient := primitives.ExecutionAddress(r.FeeRecipient)
-		if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
-			feeRecipient = primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
-			if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
-				log.WithField("validatorIndex", r.ValidatorIndex).Warn("Fee recipient is the burn address")
-			}
+		feeRecipient := r.FeeRecipient
+		if common.BytesToAddress(feeRecipient) == (common.Address{}) {
+			feeRecipient = params.BeaconConfig().DefaultFeeRecipient.Bytes()
 		}
-		val := cache.TrackedValidator{
-			Active:       true, // TODO: either check or add the field in the request
-			Index:        r.ValidatorIndex,
-			FeeRecipient: feeRecipient,
-		}
-		vs.TrackedValidatorsCache.Set(val)
-		validatorIndices = append(validatorIndices, r.ValidatorIndex)
+		vs.ProposerPreferencesCache.SetDefault(cache.ProposerPreference{
+			ValidatorIndex: r.ValidatorIndex,
+			FeeRecipient:   bytesutil.ToBytes20(feeRecipient),
+		})
+		// Pre-Gloas only (we return early above otherwise): track the validator
+		// here so old VCs that don't populate validator_indices in
+		// SubscribeCommitteeSubnets still keep the BN's attached-set up to date
+		// for CGC and validating(). Old VCs are unsupported post-Gloas.
+		vs.SubscribedValidatorsCache.Add(r.ValidatorIndex)
 	}
-	if len(validatorIndices) != 0 {
-		log.WithFields(logrus.Fields{
-			"validatorCount": len(validatorIndices),
-		}).Debug("Updated fee recipient addresses for validator indices")
+	if len(request.Recipients) > 0 {
+		log.WithField("validatorCount", len(request.Recipients)).Debug("Updated fee recipient addresses")
 	}
 	return &emptypb.Empty{}, nil
 }
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
 //
-// GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or db based on a given public key
+// GetFeeRecipientByPubKey returns a fee recipient from the beacon node's settings or the proposer
+// preferences cache based on a given public key.
 func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetFeeRecipientByPublicKey")
 	defer span.End()
@@ -574,40 +634,110 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 			return nil, err
 		}
 	}
-	address, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, resp.GetIndex())
-	if err != nil {
-		if errors.Is(err, kv.ErrNotFoundFeeRecipient) {
-			return &ethpb.FeeRecipientByPubKeyResponse{
-				FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
-			}, nil
-		} else {
-			log.WithError(err).Error("An error occurred while retrieving fee recipient from db")
-			return nil, status.Errorf(codes.Internal, "error=%s", err)
-		}
-	}
+	// Only the default set by PrepareBeaconProposer. Post-Gloas, per-slot preferences arrive by
+	// gossip keyed by (dependentRoot, slot), which this request has no way to name; the endpoint
+	// is deprecated alongside PrepareBeaconProposer itself.
+	pref, _ := vs.ProposerPreferencesCache.DefaultFor(resp.GetIndex())
+	feeRecipient := pref.FeeRecipientOrDefault()
 	return &ethpb.FeeRecipientByPubKeyResponse{
-		FeeRecipient: address.Bytes(),
+		FeeRecipient: feeRecipient[:],
 	}, nil
 }
 
-// computeStateRoot computes the state root after a block has been processed through a state transition and
-// returns it to the validator client.
-func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
-	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
+// computePostBlockStateAndRoot computes the state root after a block has been processed through a state transition and
+// returns both the state root bytes and the full post-block state.
+func (vs *Server) computePostBlockStateAndRoot(ctx context.Context, block interfaces.SignedBeaconBlock) ([]byte, state.BeaconState, error) {
+	st, err := vs.computePostBlockState(ctx, block)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve beacon state")
+		return nil, nil, err
 	}
-	root, err := transition.CalculateStateRoot(
-		ctx,
-		beaconState,
-		block,
-	)
+	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot())
+		return nil, nil, errors.Wrap(err, "could not compute state root")
+	}
+	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
+	return root[:], st, nil
+}
+
+// computePostBlockState computes the post-block state by running the state transition.
+// It uses the same logic as CalculateStateRoot (Copy, feature flags, slot processing)
+// but returns the full state instead of just its hash.
+func (vs *Server) computePostBlockState(ctx context.Context, block interfaces.SignedBeaconBlock) (state.BeaconState, error) {
+	roblock, err := blocks.NewROBlockWithRoot(block, [32]byte{}) // root is not used
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create ROBlock")
 	}
 
-	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
-	return root[:], nil
+	beaconState, err := vs.StateGen.StateByRoot(ctx, roblock.Block().ParentRoot())
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", roblock.Block().Slot())
+	}
+	st, err := transition.CalculatePostState(ctx, beaconState, block)
+	if err != nil {
+		return vs.handlePostBlockStateError(ctx, block, err)
+	}
+	return st, nil
+}
+
+type computeStateRootAttemptsKeyType string
+
+const (
+	computeStateRootAttemptsKey = computeStateRootAttemptsKeyType("compute-state-root-attempts")
+	maxComputeStateRootAttempts = 3
+)
+
+// handlePostBlockStateError retries block construction in some error cases.
+func (vs *Server) handlePostBlockStateError(ctx context.Context, block interfaces.SignedBeaconBlock, err error) (state.BeaconState, error) {
+	if ctx.Err() != nil {
+		return nil, status.Errorf(codes.Canceled, "context error: %v", ctx.Err())
+	}
+	switch {
+	case errors.Is(err, transition.ErrAttestationsSignatureInvalid),
+		errors.Is(err, transition.ErrProcessAttestationsFailed):
+		log.WithError(err).Warn("Retrying block construction without attestations")
+		if err := block.SetAttestations([]ethpb.Att{}); err != nil {
+			return nil, errors.Wrap(err, "could not set attestations")
+		}
+	case errors.Is(err, transition.ErrProcessBLSChangesFailed), errors.Is(err, transition.ErrBLSToExecutionChangesSignatureInvalid):
+		log.WithError(err).Warn("Retrying block construction without BLS to execution changes")
+		if err := block.SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange{}); err != nil {
+			return nil, errors.Wrap(err, "could not set BLS to execution changes")
+		}
+	case errors.Is(err, transition.ErrProcessProposerSlashingsFailed):
+		log.WithError(err).Warn("Retrying block construction without proposer slashings")
+		block.SetProposerSlashings([]*ethpb.ProposerSlashing{})
+	case errors.Is(err, transition.ErrProcessAttesterSlashingsFailed):
+		log.WithError(err).Warn("Retrying block construction without attester slashings")
+		if err := block.SetAttesterSlashings([]ethpb.AttSlashing{}); err != nil {
+			return nil, errors.Wrap(err, "could not set attester slashings")
+		}
+	case errors.Is(err, transition.ErrProcessVoluntaryExitsFailed):
+		log.WithError(err).Warn("Retrying block construction without voluntary exits")
+		block.SetVoluntaryExits([]*ethpb.SignedVoluntaryExit{})
+	case errors.Is(err, transition.ErrProcessSyncAggregateFailed):
+		log.WithError(err).Warn("Retrying block construction without sync aggregate")
+		emptySig := [96]byte{0xC0}
+		emptyAggregate := &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, params.BeaconConfig().SyncCommitteeSize/8),
+			SyncCommitteeSignature: emptySig[:],
+		}
+		if err := block.SetSyncAggregate(emptyAggregate); err != nil {
+			log.WithError(err).Error("Could not set sync aggregate")
+		}
+
+	default:
+		return nil, errors.Wrap(err, "could not compute state root")
+	}
+	// prevent deep recursion by limiting max attempts.
+	if v, ok := ctx.Value(computeStateRootAttemptsKey).(int); !ok {
+		ctx = context.WithValue(ctx, computeStateRootAttemptsKey, int(1))
+	} else if v >= maxComputeStateRootAttempts {
+		return nil, fmt.Errorf("attempted max compute state root attempts %d", maxComputeStateRootAttempts)
+	} else {
+		ctx = context.WithValue(ctx, computeStateRootAttemptsKey, v+1)
+	}
+	// recursive call to compute post-block state again
+	return vs.computePostBlockState(ctx, block)
 }
 
 // Deprecated: The gRPC API will remain the default and fully supported through v8 (expected in 2026) but will be eventually removed in favor of REST API.
@@ -615,7 +745,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnl
 // SubmitValidatorRegistrations submits validator registrations.
 func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", builder.ErrNoBuilder)
+		return &emptypb.Empty{}, status.Errorf(codes.FailedPrecondition, "Could not register block builder: not configured")
 	}
 
 	if err := vs.BlockBuilder.RegisterValidator(ctx, reg.Messages); err != nil {

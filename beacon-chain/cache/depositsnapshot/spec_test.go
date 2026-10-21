@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/container/trie"
-	"github.com/OffchainLabs/prysm/v6/crypto/hash"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/io/file"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/OffchainLabs/prysm/v7/build/bazel"
+	"github.com/OffchainLabs/prysm/v7/build/externaldata"
+	"github.com/OffchainLabs/prysm/v7/container/trie"
+	"github.com/OffchainLabs/prysm/v7/crypto/hash"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/io/file"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -161,13 +163,20 @@ func (sd *snapshot) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func readTestCases() ([]testCase, error) {
+// readTestCases loads the EIP-4881 spec fixture with memoization.
+var readTestCases = sync.OnceValues(func() ([]testCase, error) {
+	if !bazel.BuiltWithBazel() {
+		if err := externaldata.Fetch(externaldata.EIP4881SpecTests); err != nil {
+			return nil, fmt.Errorf("fetch: %w", err)
+		}
+	}
+
 	testFolders, err := bazel.ListRunfiles()
 	if err != nil {
 		return nil, err
 	}
 	for _, ff := range testFolders {
-		if strings.Contains(ff.ShortPath, "eip4881_spec_tests") &&
+		if strings.Contains(ff.ShortPath, externaldata.EIP4881SpecTests) &&
 			strings.Contains(ff.ShortPath, "eip-4881/test_cases.yaml") {
 			enc, err := file.ReadFileAsBytes(ff.Path)
 			if err != nil {
@@ -185,7 +194,7 @@ func readTestCases() ([]testCase, error) {
 		}
 	}
 	return nil, errors.New("spec test file not found")
-}
+})
 
 func TestRead(t *testing.T) {
 	_, err := readTestCases()

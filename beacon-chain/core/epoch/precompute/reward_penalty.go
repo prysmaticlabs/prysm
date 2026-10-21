@@ -1,24 +1,24 @@
 package precompute
 
 import (
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/math"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/math"
 	"github.com/pkg/errors"
 )
 
-type attesterRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, []uint64, error)
-type proposerRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []*Validator) ([]uint64, error)
+type attesterRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []Validator) ([]uint64, []uint64, error)
+type proposerRewardsFunc func(state.ReadOnlyBeaconState, *Balance, []Validator) ([]uint64, error)
 
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
 	state state.BeaconState,
 	pBal *Balance,
-	vp []*Validator,
+	vp []Validator,
 	attRewardsFunc attesterRewardsFunc,
 	proRewardsFunc proposerRewardsFunc,
 ) (state.BeaconState, error) {
@@ -42,7 +42,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return nil, errors.Wrap(err, "could not get proposer attestation delta")
 	}
 	validatorBals := state.Balances()
-	for i := 0; i < numOfVals; i++ {
+	for i := range numOfVals {
 		vp[i].BeforeEpochTransitionBalance = validatorBals[i]
 
 		// Compute the post balance of the validator after accounting for the
@@ -65,7 +65,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // AttestationsDelta computes and returns the rewards and penalties differences for individual validators based on the
 // voting records.
-func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, []uint64, error) {
+func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []Validator) ([]uint64, []uint64, error) {
 	numOfVals := state.NumValidators()
 	rewards := make([]uint64, numOfVals)
 	penalties := make([]uint64, numOfVals)
@@ -73,8 +73,8 @@ func AttestationsDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Val
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 
 	sqrtActiveCurrentEpoch := math.CachedSquareRoot(pBal.ActiveCurrentEpoch)
-	for i, v := range vp {
-		rewards[i], penalties[i] = attestationDelta(pBal, sqrtActiveCurrentEpoch, v, prevEpoch, finalizedEpoch)
+	for i := range vp {
+		rewards[i], penalties[i] = attestationDelta(pBal, sqrtActiveCurrentEpoch, &vp[i], prevEpoch, finalizedEpoch)
 	}
 	return rewards, penalties, nil
 }
@@ -155,7 +155,7 @@ func attestationDelta(pBal *Balance, sqrtActiveCurrentEpoch uint64, v *Validator
 
 // ProposersDelta computes and returns the rewards and penalties differences for individual validators based on the
 // proposer inclusion records.
-func ProposersDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Validator) ([]uint64, error) {
+func ProposersDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []Validator) ([]uint64, error) {
 	numofVals := state.NumValidators()
 	rewards := make([]uint64, numofVals)
 
@@ -169,7 +169,8 @@ func ProposersDelta(state state.ReadOnlyBeaconState, pBal *Balance, vp []*Valida
 	baseRewardFactor := params.BeaconConfig().BaseRewardFactor
 	baseRewardsPerEpoch := params.BeaconConfig().BaseRewardsPerEpoch
 	proposerRewardQuotient := params.BeaconConfig().ProposerRewardQuotient
-	for _, v := range vp {
+	for i := range vp {
+		v := &vp[i]
 		if uint64(v.ProposerIndex) >= uint64(len(rewards)) {
 			// This should never happen with a valid state / validator.
 			return nil, errors.New("proposer index out of range")

@@ -6,27 +6,30 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/async"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/signing"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/config/proposer"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/crypto/bls"
-	"github.com/OffchainLabs/prysm/v6/crypto/rand"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	validatorpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/validator-client"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
-	"github.com/OffchainLabs/prysm/v6/validator/client/iface"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/async"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/signing"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/config/proposer"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/crypto/bls"
+	"github.com/OffchainLabs/prysm/v7/crypto/rand"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/io/logs"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	validatorpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/validator-client"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
+	"github.com/OffchainLabs/prysm/v7/validator/client/iface"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -50,7 +53,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 
-	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
+	lock := async.NewMultilock(fmt.Sprint(roleProposer), string(pubKey[:]))
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -77,11 +80,22 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		log.WithError(err).Warn("Could not get graffiti")
 	}
 
+	ctx, err = v.withHeadHint(ctx, slot, attestationDueComponent(slot))
+	if err != nil {
+		log.WithField("slot", slot).WithError(err).Error("Could not attach freshness hint")
+		if v.emitAccountMetrics {
+			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
+
+		return
+	}
+
 	// Request block from beacon node
 	b, err := v.validatorClient.BeaconBlock(ctx, &ethpb.BlockRequest{
-		Slot:         slot,
-		RandaoReveal: randaoReveal,
-		Graffiti:     g,
+		Slot:          slot,
+		RandaoReveal:  randaoReveal,
+		Graffiti:      g,
+		BuilderConfig: v.builderConfigForSlot(ctx, pubKey, slot),
 	})
 	if err != nil {
 		log.WithField("slot", slot).WithError(err).Error("Failed to request block from beacon node")
@@ -128,7 +142,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
 	// Special handling for Deneb blocks and later version because of blob side cars.
-	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
+	// Gloas blocks are handled differently - no blobs in block, execution payload is separate.
+	if blk.Version() >= version.Deneb && blk.Version() < version.Gloas && !blk.IsBlinded() {
 		pb, err := blk.Proto()
 		if err != nil {
 			log.WithError(err).Error("Failed to get deneb block")
@@ -155,6 +170,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 			}
 		default:
 			log.Errorf("Unsupported block version %s", version.String(blk.Version()))
+			if v.emitAccountMetrics {
+				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
@@ -167,13 +186,27 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		}
 	}
 
-	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, genericSignedBlock)
+	// The winning builder url travels as request metadata so any beacon node can forward the block.
+	proposeCtx := ctx
+	if b.BuilderUrl != "" {
+		proposeCtx = metadata.AppendToOutgoingContext(ctx, api.BuilderUrlHeader, b.BuilderUrl)
+	}
+
+	blkResp, err := v.validatorClient.ProposeBeaconBlock(proposeCtx, genericSignedBlock)
 	if err != nil {
 		log.WithField("slot", slot).WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
+	}
+
+	// The block was already accepted: a failed reveal must not skip the proposal logging and metrics.
+	if err := v.proposeSelfBuildEnvelope(ctx, slot, pubKey, blk); err != nil {
+		log.WithField("slot", slot).WithError(err).Error("Failed to propose self-build envelope")
+		if v.emitAccountMetrics {
+			ValidatorProposeEnvelopeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 	}
 
 	span.SetAttributes(
@@ -192,7 +225,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 }
 
 func logProposedBlock(log *logrus.Entry, blk interfaces.SignedBeaconBlock, blkRoot []byte) error {
-	if blk.Version() >= version.Bellatrix {
+	if blk.Version() >= version.Bellatrix && blk.Version() < version.Gloas {
 		p, err := blk.Block().Body().Execution()
 		if err != nil {
 			return errors.Wrap(err, "failed to get execution payload")
@@ -227,6 +260,28 @@ func logProposedBlock(log *logrus.Entry, blk interfaces.SignedBeaconBlock, blkRo
 				log = log.WithField("kzgCommitmentCount", len(kzgs))
 			}
 		}
+	}
+	if blk.Version() >= version.Gloas {
+		bid, err := blk.Block().Body().ExecutionPayloadBid()
+		if err != nil {
+			return errors.Wrap(err, "failed to get execution payload bid")
+		}
+		blockHash, parentHash := bid.BlockHash(), bid.ParentBlockHash()
+		log = log.WithFields(logrus.Fields{
+			"builderIndex": logs.BuilderIndexLabel(bid.BuilderIndex()),
+			"bidValue":     bid.Value(),
+			"blockHash":    fmt.Sprintf("%#x", bytesutil.Trunc(blockHash[:])),
+			"parentHash":   fmt.Sprintf("%#x", bytesutil.Trunc(parentHash[:])),
+			"gasLimit":     bid.GasLimit(),
+		})
+		if n := bid.BlobKzgCommitmentCount(); n != 0 {
+			log = log.WithField("kzgCommitmentCount", n)
+		}
+		payloadAtts, err := blk.Block().Body().PayloadAttestations()
+		if err != nil {
+			return errors.Wrap(err, "failed to get payload attestations")
+		}
+		log = log.WithField("payloadAttestationCount", len(payloadAtts))
 	}
 
 	br := fmt.Sprintf("%#x", bytesutil.Trunc(blkRoot))
@@ -296,7 +351,7 @@ func buildGenericSignedBlockFuluWithBlobs(pb proto.Message, b *ethpb.GenericBeac
 func ProposeExit(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
-	signer iface.SigningFunc,
+	signer signingFunc,
 	pubKey []byte,
 	epoch primitives.Epoch,
 ) error {
@@ -327,7 +382,7 @@ func CurrentEpoch(genesisTime *timestamp.Timestamp) (primitives.Epoch, error) {
 func CreateSignedVoluntaryExit(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
-	signer iface.SigningFunc,
+	signer signingFunc,
 	pubKey []byte,
 	epoch primitives.Epoch,
 ) (*ethpb.SignedVoluntaryExit, error) {
@@ -422,7 +477,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 func signVoluntaryExit(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
-	signer iface.SigningFunc,
+	signer signingFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
 	slot primitives.Slot,
@@ -466,18 +521,19 @@ func (v *validator) Graffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyL
 	ctx, span := trace.StartSpan(ctx, "validator.Graffiti")
 	defer span.End()
 
-	if v.proposerSettings != nil {
+	proposerSettings := v.ProposerSettings()
+	if proposerSettings != nil {
 		// Check proposer settings for specific key first
-		if v.proposerSettings.ProposeConfig != nil {
-			option, ok := v.proposerSettings.ProposeConfig[pubKey]
+		if proposerSettings.ProposeConfig != nil {
+			option, ok := proposerSettings.ProposeConfig[pubKey]
 			if ok && option.GraffitiConfig != nil {
 				return []byte(option.GraffitiConfig.Graffiti), nil
 			}
 		}
 		// Check proposer settings for default settings second
-		if v.proposerSettings.DefaultConfig != nil {
-			if v.proposerSettings.DefaultConfig.GraffitiConfig != nil {
-				return []byte(v.proposerSettings.DefaultConfig.GraffitiConfig.Graffiti), nil
+		if proposerSettings.DefaultConfig != nil {
+			if proposerSettings.DefaultConfig.GraffitiConfig != nil {
+				return []byte(proposerSettings.DefaultConfig.GraffitiConfig.Graffiti), nil
 			}
 		}
 	}
@@ -535,41 +591,31 @@ func (v *validator) SetGraffiti(ctx context.Context, pubkey [fieldparams.BLSPubk
 	if graffiti == nil {
 		return nil
 	}
-	settings := &proposer.Settings{}
-	if v.proposerSettings != nil {
-		settings = v.proposerSettings.Clone()
-	}
-	if settings.ProposeConfig == nil {
-		settings.ProposeConfig = map[[48]byte]*proposer.Option{pubkey: {GraffitiConfig: &proposer.GraffitiConfig{Graffiti: string(graffiti)}}}
-		return v.SetProposerSettings(ctx, settings)
-	}
-	option, ok := settings.ProposeConfig[pubkey]
-	if !ok || option == nil {
-		settings.ProposeConfig[pubkey] = &proposer.Option{GraffitiConfig: &proposer.GraffitiConfig{
-			Graffiti: string(graffiti),
-		}}
-	} else {
-		option.GraffitiConfig = &proposer.GraffitiConfig{
-			Graffiti: string(graffiti),
+	return v.UpdateProposerSettings(ctx, func(settings *proposer.Settings) (*proposer.Settings, error) {
+		if settings == nil {
+			// API-created settings carry no v1 content: v2 once gloas is scheduled.
+			settings = &proposer.Settings{Version: proposer.FreshSettingsVersion()}
 		}
-	}
-	return v.SetProposerSettings(ctx, settings) // save the proposer settings
+		settings.UpsertProposeOption(pubkey).GraffitiConfig = &proposer.GraffitiConfig{Graffiti: string(graffiti)}
+		return settings, nil
+	})
 }
 
 func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.DeleteGraffiti")
 	defer span.End()
 
-	if v.proposerSettings == nil || v.proposerSettings.ProposeConfig == nil {
-		return errors.New("attempted to delete graffiti without proposer settings, graffiti will default to flag options")
-	}
-	ps := v.proposerSettings.Clone()
-	option, ok := ps.ProposeConfig[pubKey]
-	if !ok || option == nil {
-		return fmt.Errorf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:]))
-	}
-	option.GraffitiConfig = nil
-	return v.SetProposerSettings(ctx, ps) // save the proposer settings
+	return v.UpdateProposerSettings(ctx, func(ps *proposer.Settings) (*proposer.Settings, error) {
+		if ps == nil || ps.ProposeConfig == nil {
+			return nil, errors.New("attempted to delete graffiti without proposer settings, graffiti will default to flag options")
+		}
+		option, ok := ps.ProposeConfig[pubKey]
+		if !ok || option == nil {
+			return nil, fmt.Errorf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:]))
+		}
+		option.GraffitiConfig = nil
+		return ps, nil
+	})
 }
 
 func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk interfaces.ReadOnlyBeaconBlock, sig []byte) logrus.Fields {

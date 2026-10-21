@@ -3,16 +3,19 @@ package fulu
 import (
 	"context"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/electra"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/electra"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 )
 
 func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "fulu.ProcessEpoch")
+	defer span.End()
+
 	if err := electra.ProcessEpoch(ctx, state); err != nil {
 		return errors.Wrap(err, "could not process epoch in fulu transition")
 	}
@@ -20,7 +23,7 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) error {
 }
 
 func ProcessProposerLookahead(ctx context.Context, state state.BeaconState) error {
-	_, span := trace.StartSpan(ctx, "fulu.processProposerLookahead")
+	ctx, span := trace.StartSpan(ctx, "fulu.processProposerLookahead")
 	defer span.End()
 
 	if state == nil || state.IsNil() {

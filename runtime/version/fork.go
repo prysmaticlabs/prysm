@@ -14,6 +14,8 @@ const (
 	Deneb
 	Electra
 	Fulu
+	Gloas
+	Heze
 )
 
 var versionToString = map[int]string{
@@ -24,11 +26,21 @@ var versionToString = map[int]string{
 	Deneb:     "deneb",
 	Electra:   "electra",
 	Fulu:      "fulu",
+	Gloas:     "gloas",
+	Heze:      "heze",
 }
 
 // stringToVersion and allVersions are populated in init()
 var stringToVersion = map[string]int{}
 var allVersions []int
+var supportedVersions []int
+
+// unsupportedVersions contains fork versions that exist in the enums but are not yet
+// enabled on any supported network. These versions are removed from All().
+var unsupportedVersions = map[int]struct{}{
+	Gloas: {},
+	Heze:  {},
+}
 
 // ErrUnrecognizedVersionName means a string does not match the list of canonical version names.
 var ErrUnrecognizedVersionName = errors.New("version name doesn't map to a known value in the enum")
@@ -52,9 +64,26 @@ func String(version int) string {
 	return name
 }
 
-// All returns a list of all known fork versions.
+// All returns a list of all supported fork versions.
 func All() []int {
+	return supportedVersions
+}
+
+// AllIncludingUnreleased returns a list of all fork versions, including unreleased ones.
+func AllIncludingUnreleased() []int {
 	return allVersions
+}
+
+// Before returns all supported fork versions strictly earlier than the provided version.
+func Before(version int) []int {
+	end := sort.SearchInts(supportedVersions, version)
+	return supportedVersions[:end:end]
+}
+
+// IsUnsupported reports whether the provided version is currently gate-kept.
+func IsUnsupported(version int) bool {
+	_, ok := unsupportedVersions[version]
+	return ok
 }
 
 func init() {
@@ -66,4 +95,12 @@ func init() {
 		i++
 	}
 	sort.Ints(allVersions)
+
+	supportedVersions = make([]int, 0, len(allVersions))
+	for _, v := range allVersions {
+		if _, skip := unsupportedVersions[v]; skip {
+			continue
+		}
+		supportedVersions = append(supportedVersions, v)
+	}
 }

@@ -22,7 +22,7 @@ import "google/protobuf/timestamp.proto";
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.v1alpha1";
-option go_package = "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "NodeProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -130,7 +130,7 @@ message SyncStatus {
 message Genesis {
   option deprecated = true;
 
-  // UTC time specified in the chain start event in the deposit contract.
+  // UTC time of the beacon chain genesis.
   google.protobuf.Timestamp genesis_time = 1;
 
   // Address of the deposit contract in the Ethereum 1 chain.

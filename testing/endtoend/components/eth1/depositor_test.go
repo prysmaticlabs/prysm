@@ -2,11 +2,12 @@ package eth1
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestComputeDeposits(t *testing.T) {
@@ -91,4 +92,12 @@ func TestComputeDeposits(t *testing.T) {
 			require.Equal(t, c.len, len(d))
 		})
 	}
+}
+
+func TestDepositGasPriceUsesFloor(t *testing.T) {
+	require.Equal(t, "1000000000000", depositGasPrice(big.NewInt(1e11)).String())
+}
+
+func TestDepositGasPriceBumpsSuggestedPrice(t *testing.T) {
+	require.Equal(t, "3000000000000", depositGasPrice(big.NewInt(3e11)).String())
 }

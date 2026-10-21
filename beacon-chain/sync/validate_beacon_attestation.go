@@ -5,24 +5,26 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
-	"strings"
+	"slices"
+	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/slasher/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing"
-	"github.com/OffchainLabs/prysm/v6/monitoring/tracing/trace"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1/attestation"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/blockchain"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/feed/operation"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/p2p"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/slasher/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing"
+	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
@@ -39,6 +41,11 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 	pid peer.ID,
 	msg *pubsub.Message,
 ) (pubsub.ValidationResult, error) {
+	start := time.Now()
+	defer func() {
+		attestationVerificationGossipSummary.Observe(float64(time.Since(start).Milliseconds()))
+	}()
+
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
@@ -66,7 +73,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 		return pubsub.ValidationReject, errWrongMessage
 	}
 	if err := helpers.ValidateNilAttestation(att); err != nil {
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationReject, wrapAttestationError(err, att)
 	}
 
 	data := att.GetData()
@@ -83,7 +90,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 		return pubsub.ValidationIgnore, err
 	}
 	if err := helpers.ValidateSlotTargetEpoch(data); err != nil {
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationReject, wrapAttestationError(err, att)
 	}
 
 	committeeIndex := att.GetCommitteeIndex()
@@ -96,7 +103,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 	}
 
 	if !s.slasherEnabled {
-		// Verify this the first attestation received for the participating validator for the slot.
+		// Verify this the first attestation received for the participating validator for the slot. This verification is here to return early if we've already seen this attestation.
+		// This verification is carried again later after all other validations to avoid TOCTOU issues.
 		if s.hasSeenUnaggregatedAtt(attKey) {
 			return pubsub.ValidationIgnore, nil
 		}
@@ -105,15 +113,19 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 			s.hasBadBlock(bytesutil.ToBytes32(data.Target.Root)) ||
 			s.hasBadBlock(bytesutil.ToBytes32(data.Source.Root)) {
 			attBadBlockCount.Inc()
-			return pubsub.ValidationReject, errors.New("attestation data references bad block root")
+			return pubsub.ValidationReject, wrapAttestationError(errors.New("attestation data references bad block root"), att)
 		}
 	}
 
 	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
 	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
 	if !s.hasBlockAndState(ctx, blockRoot) {
+		// Block not yet available - save attestation to pending queue for later processing
+		// when the block arrives. Return ValidationIgnore so gossip doesn't potentially penalize the peer.
 		s.savePendingAtt(att)
+		return pubsub.ValidationIgnore, nil
 	}
+	// Block exists - verify it's in forkchoice (i.e., it's a descendant of the finalized checkpoint)
 	if !s.cfg.chain.InForkchoice(blockRoot) {
 		tracing.AnnotateError(span, blockchain.ErrNotDescendantOfFinalized)
 		return pubsub.ValidationIgnore, blockchain.ErrNotDescendantOfFinalized
@@ -121,7 +133,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 	if err = s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
 		attBadLmdConsistencyCount.Inc()
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationReject, wrapAttestationError(err, att)
 	}
 
 	preState, err := s.cfg.chain.AttestationTargetState(ctx, data.Target)
@@ -132,7 +144,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 
 	validationRes, err := s.validateUnaggregatedAttTopic(ctx, att, preState, *msg.Topic)
 	if validationRes != pubsub.ValidationAccept {
-		return validationRes, err
+		return validationRes, wrapAttestationError(err, att)
 	}
 
 	committee, err := helpers.BeaconCommitteeFromState(ctx, preState, data.Slot, committeeIndex)
@@ -143,14 +155,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 
 	validationRes, err = validateAttesterData(ctx, att, committee)
 	if validationRes != pubsub.ValidationAccept {
-		return validationRes, err
+		return validationRes, wrapAttestationError(err, att)
 	}
 
 	// Consolidated handling of Electra SingleAttestation vs Phase0 unaggregated attestation
 	var (
 		attForValidation eth.Att // what we'll pass to further validation
 		eventType        feed.EventType
-		eventData        interface{}
+		eventData        any
 	)
 
 	if att.Version() >= version.Electra {
@@ -178,7 +190,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 
 	validationRes, err = s.validateUnaggregatedAttWithState(ctx, attForValidation, preState)
 	if validationRes != pubsub.ValidationAccept {
-		return validationRes, err
+		return validationRes, wrapAttestationError(err, att)
 	}
 
 	if s.slasherEnabled {
@@ -216,7 +228,10 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 		Data: eventData,
 	})
 
-	s.setSeenUnaggregatedAtt(attKey)
+	if first := s.setSeenUnaggregatedAtt(attKey); !first {
+		// Another concurrent validation processed the same attestation meanwhile
+		return pubsub.ValidationIgnore, nil
+	}
 
 	// Attach final validated attestation to the message for further pipeline use
 	msg.ValidatorData = attForValidation
@@ -234,13 +249,10 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a eth.Att, b
 		return result, err
 	}
 	subnet := helpers.ComputeSubnetForAttestation(valCount, a)
-	format := p2p.GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]
-	digest, err := s.currentForkDigest()
-	if err != nil {
-		tracing.AnnotateError(span, err)
-		return pubsub.ValidationIgnore, err
-	}
-	if !strings.HasPrefix(t, fmt.Sprintf(format, digest, subnet)) {
+	format := p2p.GossipTypeMapping[reflect.TypeFor[*eth.Attestation]()]
+	digest := s.currentForkDigest()
+	expected := fmt.Sprintf(format, digest, subnet) + s.cfg.p2p.Encoding().ProtocolSuffix()
+	if t != expected {
 		return pubsub.ValidationReject, errors.New("attestation's subnet does not match with pubsub topic")
 	}
 
@@ -252,10 +264,23 @@ func (s *Service) validateCommitteeIndexAndCount(
 	a eth.Att,
 	bs state.ReadOnlyBeaconState,
 ) (primitives.CommitteeIndex, uint64, pubsub.ValidationResult, error) {
-	// - [REJECT] attestation.data.index == 0
-	if a.Version() >= version.Electra && a.GetData().CommitteeIndex != 0 {
-		return 0, 0, pubsub.ValidationReject, errors.New("attestation data's committee index must be 0")
+	// Validate committee index based on fork.
+	if a.Version() >= version.Electra {
+		data := a.GetData()
+		attEpoch := slots.ToEpoch(data.Slot)
+		postGloas := attEpoch >= params.BeaconConfig().GloasForkEpoch
+		if postGloas {
+			if result, err := s.validateGloasCommitteeIndex(data); result != pubsub.ValidationAccept {
+				return 0, 0, result, err
+			}
+		} else {
+			// [REJECT] attestation.data.index == 0 (New in Electra, removed in Gloas)
+			if data.CommitteeIndex != 0 {
+				return 0, 0, pubsub.ValidationReject, errors.New("attestation data's committee index must be 0")
+			}
+		}
 	}
+
 	valCount, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.GetData().Slot))
 	if err != nil {
 		return 0, 0, pubsub.ValidationIgnore, err
@@ -274,8 +299,8 @@ func (s *Service) validateCommitteeIndexAndCount(
 	} else {
 		ci = a.GetCommitteeIndex()
 	}
-	if uint64(ci) > count {
-		return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index %d > %d", ci, count)
+	if uint64(ci) >= count {
+		return 0, 0, pubsub.ValidationReject, fmt.Errorf("committee index %d >= %d", ci, count)
 	}
 	return ci, valCount, pubsub.ValidationAccept, nil
 }
@@ -332,15 +357,42 @@ func validateAttestingIndex(
 
 	// _[REJECT]_ The attester is a member of the committee -- i.e.
 	//  `attestation.attester_index in get_beacon_committee(state, attestation.data.slot, index)`.
-	inCommittee := false
-	for _, ix := range committee {
-		if attestingIndex == ix {
-			inCommittee = true
-			break
-		}
-	}
+	inCommittee := slices.Contains(committee, attestingIndex)
 	if !inCommittee {
-		return pubsub.ValidationReject, errors.New("attester is not a member of the committee")
+		return pubsub.ValidationReject, errors.Errorf("attester %d is not a member of the committee", attestingIndex)
+	}
+
+	return pubsub.ValidationAccept, nil
+}
+
+// validateGloasCommitteeIndex validates committee index rules for Gloas fork.
+// [REJECT] attestation.data.index < 2. (New in Gloas)
+// [REJECT] attestation.data.index == 0 if block.slot == attestation.data.slot. (New in Gloas)
+// [REJECT] If attestation.data.index == 1, the execution payload for the block passes validation. (New in Gloas)
+// [IGNORE] When attestation.data.index == 1, the execution payload for the block has been seen. (New in Gloas)
+func (s *Service) validateGloasCommitteeIndex(data *eth.AttestationData) (pubsub.ValidationResult, error) {
+	if data.CommitteeIndex >= 2 {
+		return pubsub.ValidationReject, errors.New("attestation data's committee index must be < 2")
+	}
+
+	// Same-slot attestations must use committee index 0
+	if data.CommitteeIndex != 0 {
+		blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
+		slot, err := s.cfg.chain.RecentBlockSlot(blockRoot)
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		if slot == data.Slot {
+			return pubsub.ValidationReject, errors.New("same slot attestations must use committee index 0")
+		}
+		// [REJECT] If index == 1, the execution payload for the block must not be invalid.
+		if s.hasBadPayload(blockRoot) {
+			return pubsub.ValidationReject, errors.New("execution payload for attested block is invalid")
+		}
+		// [IGNORE] If index == 1, the execution payload for the block must have been seen.
+		if !s.cfg.chain.HasFullNode(blockRoot) {
+			return pubsub.ValidationIgnore, errors.New("execution payload for attested block has not been seen")
+		}
 	}
 
 	return pubsub.ValidationAccept, nil
@@ -379,11 +431,16 @@ func (s *Service) hasSeenUnaggregatedAtt(key string) bool {
 }
 
 // Set an incoming attestation as seen for the participating validator for the slot.
-func (s *Service) setSeenUnaggregatedAtt(key string) {
+// Returns false if the attestation was already seen.
+func (s *Service) setSeenUnaggregatedAtt(key string) bool {
 	s.seenUnAggregatedAttestationLock.Lock()
 	defer s.seenUnAggregatedAttestationLock.Unlock()
-
+	_, seen := s.seenUnAggregatedAttestationCache.Get(key)
+	if seen {
+		return false
+	}
 	s.seenUnAggregatedAttestationCache.Add(key, true)
+	return true
 }
 
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
@@ -392,4 +449,25 @@ func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool
 	hasStateSummary := s.cfg.beaconDB.HasStateSummary(ctx, blockRoot)
 	hasState := hasStateSummary || s.cfg.beaconDB.HasState(ctx, blockRoot)
 	return hasState && s.cfg.chain.HasBlock(ctx, blockRoot)
+}
+
+func wrapAttestationError(err error, att eth.Att) error {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	committeeIndex := att.GetCommitteeIndex()
+
+	attData := att.GetData()
+	slot := attData.Slot
+	slotInEpoch := slot % slotsPerEpoch
+	oldCommitteeIndex := attData.CommitteeIndex
+	blockRoot := fmt.Sprintf("%#x", attData.BeaconBlockRoot)
+	sourceRoot := fmt.Sprintf("%#x", attData.Source.Root)
+	sourceEpoch := attData.Source.Epoch
+	targetEpoch := attData.Target.Epoch
+	targetRoot := fmt.Sprintf("%#x", attData.Target.Root)
+
+	return errors.Wrapf(
+		err,
+		"attSlot: %d, attSlotInEpoch: %d, attOldCommitteeIndex: %d, attCommitteeIndex: %d, attBlockRoot: %s, attSource: {root: %s, epoch: %d}, attTarget: {root: %s, epoch: %d}",
+		slot, slotInEpoch, oldCommitteeIndex, committeeIndex, blockRoot, sourceRoot, sourceEpoch, targetRoot, targetEpoch,
+	)
 }

@@ -3,17 +3,17 @@ package util
 import (
 	"testing"
 
-	coreBlock "github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/transition/stateutils"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpbv1 "github.com/OffchainLabs/prysm/v6/proto/eth/v1"
-	ethpbalpha "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	coreBlock "github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/transition/stateutils"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpbv1 "github.com/OffchainLabs/prysm/v7/proto/eth/v1"
+	ethpbalpha "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
@@ -347,4 +347,84 @@ func Test_PostDenebPbGenericBlock_ErrorsForPlainBlock(t *testing.T) {
 		_, err = b.PbGenericBlock()
 		require.ErrorContains(t, "PbGenericBlock() only supports block content type but got", err)
 	})
+}
+
+func TestHydrateSignedBeaconBlockGloas_NoError(t *testing.T) {
+	b := &ethpbalpha.SignedBeaconBlockGloas{}
+	b = HydrateSignedBeaconBlockGloas(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydratePayloadAttestation_NoError(t *testing.T) {
+	p := &ethpbalpha.PayloadAttestation{}
+	p = HydratePayloadAttestation(p)
+	_, err := p.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = p.Data.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestGenerateTestPayloadAttestations(t *testing.T) {
+	slot := primitives.Slot(123)
+	attestations := GenerateTestPayloadAttestations(3, slot)
+
+	require.Equal(t, 3, len(attestations))
+	for i, att := range attestations {
+		// Verify non-nil fields
+		require.NotNil(t, att.AggregationBits)
+		require.NotNil(t, att.Signature)
+		require.NotNil(t, att.Data)
+		require.NotNil(t, att.Data.BeaconBlockRoot)
+
+		// Verify slot is set correctly
+		require.Equal(t, slot, att.Data.Slot)
+
+		// Verify PayloadPresent and BlobDataAvailable are set
+		require.Equal(t, true, att.Data.PayloadPresent)
+		require.Equal(t, true, att.Data.BlobDataAvailable)
+
+		// Verify unique values
+		require.Equal(t, byte(i+1), att.Signature[0])
+		require.Equal(t, byte(i+1), att.Data.BeaconBlockRoot[0])
+
+		// Verify HashTreeRoot works
+		_, err := att.HashTreeRoot()
+		require.NoError(t, err)
+	}
+}
+
+func TestGenerateTestSignedExecutionPayloadBid(t *testing.T) {
+	slot := primitives.Slot(456)
+	bid := GenerateTestSignedExecutionPayloadBid(slot)
+
+	require.NotNil(t, bid)
+	require.NotNil(t, bid.Message)
+	require.NotNil(t, bid.Signature)
+
+	// Verify slot is set correctly
+	require.Equal(t, slot, bid.Message.Slot)
+
+	// Verify non-zero test values
+	require.Equal(t, primitives.BuilderIndex(1), bid.Message.BuilderIndex)
+	require.Equal(t, uint64(30000000), bid.Message.GasLimit)
+	require.Equal(t, primitives.Gwei(1000000), bid.Message.Value)
+	require.Equal(t, primitives.Gwei(2000000), bid.Message.ExecutionPayment)
+
+	// Verify fields are populated
+	require.NotNil(t, bid.Message.ParentBlockHash)
+	require.NotNil(t, bid.Message.ParentBlockRoot)
+	require.NotNil(t, bid.Message.BlockHash)
+	require.NotNil(t, bid.Message.PrevRandao)
+	require.NotNil(t, bid.Message.FeeRecipient)
+	require.NotNil(t, bid.Message.BlobKzgCommitments)
+	require.Equal(t, 1, len(bid.Message.BlobKzgCommitments))
+
+	// Verify HashTreeRoot works
+	_, err := bid.HashTreeRoot()
+	require.NoError(t, err)
 }

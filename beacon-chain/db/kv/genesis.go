@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/blocks"
-	dbIface "github.com/OffchainLabs/prysm/v6/beacon-chain/db/iface"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/encoding/ssz/detect"
-	"github.com/OffchainLabs/prysm/v6/genesis"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
+	dbIface "github.com/OffchainLabs/prysm/v7/beacon-chain/db/iface"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/config/features"
+	"github.com/OffchainLabs/prysm/v7/encoding/ssz/detect"
+	"github.com/OffchainLabs/prysm/v7/genesis"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/pkg/errors"
 )
 
@@ -26,9 +27,17 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err := s.SaveBlock(ctx, wsb); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
+
+	if features.Get().EnableStateDiff {
+		if err := s.initializeStateDiff(0, genesisState); err != nil {
+			return errors.Wrap(err, "failed to initialize state diff for genesis")
+		}
+	} else {
+		if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+			return errors.Wrap(err, "could not save genesis state")
+		}
 	}
+
 	if err := s.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: 0,
 		Root: genesisBlkRoot[:],
@@ -42,6 +51,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err := s.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis block root")
 	}
+
 	return nil
 }
 
@@ -94,6 +104,22 @@ func (s *Store) EnsureEmbeddedGenesis(ctx context.Context) error {
 	if gb != nil && !gb.IsNil() {
 		return nil
 	}
+
+	if _, err := s.OriginCheckpointBlockRoot(ctx); err == nil {
+		return nil
+	} else if !errors.Is(err, ErrNotFoundOriginBlockRoot) {
+		return fmt.Errorf("could not read the origin checkpoint block root: %w", err)
+	}
+
+	anchoredAfterGenesis, err := s.stateDiffAnchoredAfterGenesis()
+	if err != nil {
+		return fmt.Errorf("state diff anchored after genesis: %w", err)
+	}
+
+	if anchoredAfterGenesis {
+		return nil
+	}
+
 	gs, err := s.GenesisState(ctx)
 	if err != nil {
 		return err

@@ -2,19 +2,18 @@ package pruner
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/db/iface"
-	"github.com/OffchainLabs/prysm/v6/config/params"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/time/slots"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/db/iface"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/startup"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/time/slots"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("prefix", "db-pruner")
 
 const (
 	// defaultPrunableBatchSize is the number of slots that can be pruned at once.
@@ -23,7 +22,15 @@ const (
 	defaultPruningWindow = time.Second * 3
 	// defaultNumBatchesToPrune is the number of batches to prune in one pruning window.
 	defaultNumBatchesToPrune = 15
+	// defaultPrunableStateDiffEntries is the number of state-diff tree entries deleted at once.
+	defaultPrunableStateDiffEntries = 512
 )
+
+// custodyUpdater is a tiny interface that p2p service implements; kept here to avoid
+// importing the p2p package and creating a cycle.
+type custodyUpdater interface {
+	UpdateEarliestAvailableSlot(earliestAvailableSlot primitives.Slot) error
+}
 
 type ServiceOption func(*Service)
 
@@ -31,11 +38,12 @@ type ServiceOption func(*Service)
 // The retention period is specified in epochs, and must be >= MIN_EPOCHS_FOR_BLOCK_REQUESTS.
 func WithRetentionPeriod(retentionEpochs primitives.Epoch) ServiceOption {
 	return func(s *Service) {
-		defaultRetentionEpochs := helpers.MinEpochsForBlockRequests() + 1
+		defaultRetentionEpochs := primitives.Epoch(params.BeaconConfig().MinEpochsForBlockRequests) + 1
 		if retentionEpochs < defaultRetentionEpochs {
 			log.WithField("userEpochs", retentionEpochs).
 				WithField("minRequired", defaultRetentionEpochs).
-				Warn("Retention period too low, using minimum required value")
+				Warn("Retention period too low, ignoring and using minimum required value")
+			retentionEpochs = defaultRetentionEpochs
 		}
 
 		s.ps = pruneStartSlotFunc(retentionEpochs)
@@ -55,20 +63,27 @@ type Service struct {
 	ps             func(current primitives.Slot) primitives.Slot
 	prunedUpto     primitives.Slot
 	done           chan struct{}
+	clockWaiter    startup.ClockWaiter
 	slotTicker     slots.Ticker
 	backfillWaiter func() error
 	initSyncWaiter func() error
+	custody        custodyUpdater
 }
 
-func New(ctx context.Context, db iface.Database, genesisTime time.Time, initSyncWaiter, backfillWaiter func() error, opts ...ServiceOption) (*Service, error) {
+func New(ctx context.Context, db iface.Database, clockWaiter startup.ClockWaiter, initSyncWaiter, backfillWaiter func() error, custody custodyUpdater, opts ...ServiceOption) (*Service, error) {
+	if custody == nil {
+		return nil, errors.New("custody updater is required for pruner but was not provided")
+	}
+
 	p := &Service{
 		ctx:            ctx,
 		db:             db,
-		ps:             pruneStartSlotFunc(helpers.MinEpochsForBlockRequests() + 1), // Default retention epochs is MIN_EPOCHS_FOR_BLOCK_REQUESTS + 1 from the current slot.
+		ps:             pruneStartSlotFunc(primitives.Epoch(params.BeaconConfig().MinEpochsForBlockRequests) + 1), // Default retention epochs is MIN_EPOCHS_FOR_BLOCK_REQUESTS + 1 from the current slot.
 		done:           make(chan struct{}),
-		slotTicker:     slots.NewSlotTicker(slots.UnsafeStartTime(genesisTime, 0), params.BeaconConfig().SecondsPerSlot),
+		clockWaiter:    clockWaiter,
 		initSyncWaiter: initSyncWaiter,
 		backfillWaiter: backfillWaiter,
+		custody:        custody,
 	}
 
 	for _, o := range opts {
@@ -94,6 +109,16 @@ func (p *Service) Status() error {
 }
 
 func (p *Service) run() {
+	if p.slotTicker == nil {
+		clock, err := p.clockWaiter.WaitForClock(p.ctx)
+		if err != nil {
+			log.WithError(err).Error("Failed to start database pruner, error waiting for the clock")
+			return
+		}
+
+		p.slotTicker = slots.NewSlotTicker(clock.GenesisTime(), params.BeaconConfig().SlotDuration())
+	}
+
 	if p.initSyncWaiter != nil {
 		log.Info("Waiting for initial sync service to complete before starting pruner")
 		if err := p.initSyncWaiter(); err != nil {
@@ -142,6 +167,16 @@ func (p *Service) prune(slot primitives.Slot) error {
 		return nil
 	}
 
+	pruneUpto, err := p.db.LastStateDiffBoundary(pruneUpto)
+	if err != nil {
+		return errors.Wrap(err, "last state diff boundary")
+	}
+
+	// Can't prune beyond genesis.
+	if pruneUpto == 0 {
+		return nil
+	}
+
 	// Skip if already pruned up to this slot.
 	if pruneUpto <= p.prunedUpto {
 		return nil
@@ -152,21 +187,86 @@ func (p *Service) prune(slot primitives.Slot) error {
 	}).Debug("Pruning chain data")
 
 	tt := time.Now()
-	numBatches, err := p.pruneBatches(pruneUpto)
+	numBatches, err := p.pruneBatches(pruneUpto - 1)
 	if err != nil {
 		return errors.Wrap(err, "failed to prune batches")
 	}
 
-	log.WithFields(logrus.Fields{
-		"prunedUpto":  pruneUpto,
-		"duration":    time.Since(tt),
-		"currentSlot": slot,
-		"batchSize":   defaultPrunableBatchSize,
-		"numBatches":  numBatches,
-	}).Debug("Successfully pruned chain data")
+	earliestAvailableSlot := pruneUpto
 
 	// Update pruning checkpoint.
 	p.prunedUpto = pruneUpto
+
+	// Update the earliest available slot after pruning
+	if err := p.updateEarliestAvailableSlot(earliestAvailableSlot, slot); err != nil {
+		return errors.Wrap(err, "update earliest available slot")
+	}
+
+	deletedStateDiffKeys, err := p.pruneStateDiff(pruneUpto)
+	if err != nil {
+		return fmt.Errorf("prune state diff: %w", err)
+	}
+
+	log.WithFields(logrus.Fields{
+		"prunedUpto":            pruneUpto,
+		"earliestAvailableSlot": earliestAvailableSlot,
+		"duration":              time.Since(tt),
+		"currentSlot":           slot,
+		"batchSize":             defaultPrunableBatchSize,
+		"numBatches":            numBatches,
+		"stateDiffKeys":         deletedStateDiffKeys,
+	}).Debug("Successfully pruned chain data")
+
+	return nil
+}
+
+// pruneStateDiff deletes the state-diff entries up to pruneUpto.
+// The work is spread over batches, and over as many pruning runs as needed.
+func (p *Service) pruneStateDiff(pruneUpto primitives.Slot) (int, error) {
+	ctx, cancel := context.WithTimeout(p.ctx, defaultPruningWindow)
+	defer cancel()
+
+	deleted := 0
+	for {
+		select {
+		case <-ctx.Done():
+			return deleted, nil
+		default:
+			batch, err := p.db.DeleteStateDiffBeforeSlot(ctx, pruneUpto, defaultPrunableStateDiffEntries)
+			if err != nil {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					return deleted, nil
+				}
+
+				return deleted, err
+			}
+
+			// Nothing left to delete.
+			if batch == 0 {
+				return deleted, nil
+			}
+
+			deleted += batch
+		}
+	}
+}
+
+// updateEarliestAvailableSlot updates the earliest available slot via the injected custody updater
+// and also persists it to the database.
+func (p *Service) updateEarliestAvailableSlot(earliestAvailableSlot, currentSlot primitives.Slot) error {
+	if !params.FuluEnabled() {
+		return nil
+	}
+
+	// Update the p2p in-memory state
+	if err := p.custody.UpdateEarliestAvailableSlot(earliestAvailableSlot); err != nil {
+		return errors.Wrapf(err, "update earliest available slot after pruning to %d", earliestAvailableSlot)
+	}
+
+	// Persist to database to ensure it survives restarts
+	if err := p.db.UpdateEarliestAvailableSlot(p.ctx, earliestAvailableSlot, currentSlot); err != nil {
+		return errors.Wrapf(err, "update earliest available slot in database for slot %d", earliestAvailableSlot)
+	}
 
 	return nil
 }
@@ -181,7 +281,7 @@ func (p *Service) pruneBatches(pruneUpto primitives.Slot) (int, error) {
 		case <-ctx.Done():
 			return numBatches, nil
 		default:
-			for i := 0; i < defaultNumBatchesToPrune; i++ {
+			for range defaultNumBatchesToPrune {
 				slotsDeleted, err := p.db.DeleteHistoricalDataBeforeSlot(ctx, pruneUpto, defaultPrunableBatchSize)
 				if err != nil {
 					return 0, errors.Wrapf(err, "could not delete upto slot %d", pruneUpto)
@@ -208,6 +308,7 @@ func pruneStartSlotFunc(retentionEpochs primitives.Epoch) func(primitives.Slot) 
 		if offset >= current {
 			return 0
 		}
-		return current - offset
+
+		return slots.UnsafeEpochStart(slots.ToEpoch(current - offset))
 	}
 }

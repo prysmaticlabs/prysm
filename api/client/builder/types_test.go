@@ -11,18 +11,19 @@ import (
 	"os"
 	"testing"
 
-	"github.com/OffchainLabs/prysm/v6/api/server/structs"
-	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
-	consensusblocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
-	"github.com/OffchainLabs/prysm/v6/math"
-	v1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
-	eth "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
-	"github.com/OffchainLabs/prysm/v6/testing/assert"
-	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/api"
+	"github.com/OffchainLabs/prysm/v7/api/server/structs"
+	fieldparams "github.com/OffchainLabs/prysm/v7/config/fieldparams"
+	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/math"
+	v1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
+	eth "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/testing/assert"
+	"github.com/OffchainLabs/prysm/v7/testing/require"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 )
 
 func ezDecode(t *testing.T, s string) []byte {
@@ -1774,17 +1775,66 @@ func TestErrorMessage_unexpectedStatusErr(t *testing.T) {
 					Body:       io.NopCloser(bytes.NewReader(r)),
 				}
 			}(),
-			wantMessage: "did not receive 200 response from API",
+			wantMessage: "unexpected status 205, expected [200]",
+		},
+		{
+			name: "415 plain-text body",
+			args: &http.Response{
+				Request:    mockRequest,
+				StatusCode: http.StatusUnsupportedMediaType,
+				Body:       io.NopCloser(bytes.NewReader([]byte("Expected request with `Content-Type: " + api.JsonMediaType + "`"))),
+			},
+			wantMessage: "unsupported",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := unexpectedStatusErr(tt.args, http.StatusOK)
+			err := unexpectedStatusErr(tt.args, []int{http.StatusOK})
 			if err != nil && tt.wantMessage != "" {
 				require.ErrorContains(t, tt.wantMessage, err)
 			}
 		})
 	}
+}
+
+// isSSZRejection keys off the HTTP status, independent of the error body format, so a builder
+// returning plain text (Commit Boost) is detected the same as a spec-compliant JSON body.
+func TestUnexpectedStatusErr_SSZRejectionByStatus(t *testing.T) {
+	req := &http.Request{URL: &url.URL{Path: "example.com"}}
+	jsonBody, err := json.Marshal(ErrorMessage{Code: 415, Message: "send json"})
+	require.NoError(t, err)
+	bodies := map[string][]byte{
+		"json ErrorMessage": jsonBody,
+		"plain text":        []byte("Expected request with `Content-Type: application/json`"),
+		"empty":             nil,
+	}
+	rejections := map[int]error{
+		http.StatusUnsupportedMediaType: ErrUnsupportedMediaType,
+		http.StatusNotAcceptable:        ErrNotAcceptable,
+	}
+	for status, sentinel := range rejections {
+		for name, body := range bodies {
+			resp := &http.Response{Request: req, StatusCode: status, Body: io.NopCloser(bytes.NewReader(body))}
+			err := unexpectedStatusErr(resp, []int{http.StatusOK})
+			require.Equal(t, true, isSSZRejection(err), "status %d body %q", status, name)
+			require.ErrorIs(t, err, sentinel) // sentinel still reachable for errors.Is callers
+		}
+	}
+	// Other error statuses are never SSZ rejections, even with a non-JSON body.
+	for _, status := range []int{http.StatusBadRequest, http.StatusInternalServerError, http.StatusBadGateway} {
+		resp := &http.Response{Request: req, StatusCode: status, Body: io.NopCloser(bytes.NewReader([]byte("plain text")))}
+		require.Equal(t, false, isSSZRejection(unexpectedStatusErr(resp, []int{http.StatusOK})))
+	}
+}
+
+// errorMessageOrBody prefers the spec's JSON ErrorMessage.message, falling back to raw text.
+func TestErrorMessageOrBody(t *testing.T) {
+	jsonBody, err := json.Marshal(ErrorMessage{Code: 415, Message: "send json"})
+	require.NoError(t, err)
+	require.Equal(t, "send json", errorMessageOrBody(jsonBody))                // spec JSON path
+	require.Equal(t, "only json", errorMessageOrBody([]byte("  only json  "))) // non-JSON fallback, trimmed
+	require.Equal(t, "{}", errorMessageOrBody([]byte("{}")))                   // JSON without message -> raw
+	require.Equal(t, "", errorMessageOrBody(nil))                              // empty body
 }
 
 func TestEmptyResponseBody(t *testing.T) {

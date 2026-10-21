@@ -1,13 +1,13 @@
 package state_native
 
 import (
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/state-native/types"
-	"github.com/OffchainLabs/prysm/v6/beacon-chain/state/stateutil"
-	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
-	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
-	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
-	"github.com/OffchainLabs/prysm/v6/runtime/version"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native/types"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/state/stateutil"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/pkg/errors"
 )
 
@@ -32,42 +32,45 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val state.ReadOnlyValidator) (*ethpb.Validator, error)) error {
 	var changedVals []uint64
+	defer func() {
+		if len(changedVals) == 0 {
+			return
+		}
+		b.lock.Lock()
+		defer b.lock.Unlock()
+		b.markFieldAsDirty(types.Validators)
+		b.addDirtyIndices(types.Validators, changedVals)
+	}()
+
 	l := b.validatorsMultiValue.Len(b)
-	for i := 0; i < l; i++ {
+	ro := new(readOnlyValidator)
+	for i := range l {
 		v, err := b.validatorsMultiValue.At(b, uint64(i))
 		if err != nil {
 			return err
 		}
-		ro, err := NewValidator(v)
-		if err != nil {
-			return err
-		}
+		ro.validator = v
 		newVal, err := f(i, ro)
 		if err != nil {
 			return err
 		}
 		if newVal != nil {
-			changedVals = append(changedVals, uint64(i))
-			if err = b.validatorsMultiValue.UpdateAt(b, uint64(i), newVal); err != nil {
+			compactValidator := stateutil.CompactValidatorFromProto(newVal)
+			if err := b.validatorsMultiValue.UpdateAt(b, uint64(i), compactValidator); err != nil {
 				return errors.Wrapf(err, "could not update validator at index %d", i)
 			}
+			changedVals = append(changedVals, uint64(i))
 		}
 	}
 
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	if len(changedVals) > 0 {
-		b.markFieldAsDirty(types.Validators)
-		b.addDirtyIndices(types.Validators, changedVals)
-	}
 	return nil
 }
 
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val *ethpb.Validator) error {
-	if err := b.validatorsMultiValue.UpdateAt(b, uint64(idx), val); err != nil {
+	compactValidator := stateutil.CompactValidatorFromProto(val)
+	if err := b.validatorsMultiValue.UpdateAt(b, uint64(idx), compactValidator); err != nil {
 		return errors.Wrap(err, "could not update validator")
 	}
 
@@ -151,7 +154,8 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 // AppendValidator for the beacon state. Appends the new value
 // to the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
-	b.validatorsMultiValue.Append(b, val)
+	compactValidator := stateutil.CompactValidatorFromProto(val)
+	b.validatorsMultiValue.Append(b, compactValidator)
 	valIdx := primitives.ValidatorIndex(b.validatorsMultiValue.Len(b) - 1)
 
 	b.lock.Lock()
