@@ -11,7 +11,7 @@ import (
 
 // UpgradeToHeze upgrades a Gloas state to a Heze state with the Heze fork version.
 func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
-	pre, err := state_native.ProtobufBeaconStateGloas(beaconState.ToProto())
+	pre, err := state_native.ContainerFrom[*ethpb.BeaconStateGloas](beaconState.ToProto())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert state to Gloas protobuf")
 	}
@@ -67,5 +67,5 @@ func UpgradeToHeze(beaconState state.BeaconState) (state.BeaconState, error) {
 		PayloadExpectedWithdrawals:    pre.PayloadExpectedWithdrawals,
 		PtcWindow:                     pre.PtcWindow,
 	}
-	return state_native.InitializeFromProtoUnsafeHeze(s)
+	return state_native.NewUnsafe(s)
 }
