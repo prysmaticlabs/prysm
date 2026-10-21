@@ -1367,8 +1367,18 @@ func TestRetrieveMultiAddrsFromNode_IPv6Ports(t *testing.T) {
 	}{
 		{
 			name:    "ipv6-only peer uses tcp6 and quic6",
-			entries: []enr.Entry{ip6, enr.TCP6(30324), enr.WithEntry("quic6", uint16(30325))},
+			entries: []enr.Entry{ip6, enr.TCP6(30324), enr.QUIC6(30325)},
 			want:    []string{"/ip6/2001:db8::2/udp/30325/quic-v1/", "/ip6/2001:db8::2/tcp/30324/"},
+		},
+		{
+			name:    "ipv6 peer falls back to quic when quic6 is absent",
+			entries: []enr.Entry{ip6, enr.TCP6(30324), enr.QUIC(30305)},
+			want:    []string{"/ip6/2001:db8::2/udp/30305/quic-v1/", "/ip6/2001:db8::2/tcp/30324/"},
+		},
+		{
+			name:    "ipv6 peer falls back to tcp and quic when tcp6 and quic6 are malformed",
+			entries: []enr.Entry{ip6, enr.TCP(30304), enr.QUIC(30305), enr.WithEntry("tcp6", "malformed"), enr.WithEntry("quic6", "malformed")},
+			want:    []string{"/ip6/2001:db8::2/udp/30305/quic-v1/", "/ip6/2001:db8::2/tcp/30304/"},
 		},
 		{
 			name:    "dual-stack peer with global ipv6 prefers tcp6 over tcp",

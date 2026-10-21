@@ -49,9 +49,6 @@ type (
 		LocalNode() *enode.LocalNode
 	}
 
-	quicProtocol  uint16
-	quic6Protocol uint16
-
 	listenerWrapper struct {
 		mu              sync.RWMutex
 		listener        *discover.UDPv5
@@ -62,8 +59,6 @@ type (
 	udpVersion            int
 )
 
-const quickProtocolEnrKey = "quic"
-
 const (
 	udp4 udpVersion = iota
 	udp6
@@ -73,12 +68,6 @@ const (
 	inbound connectivityDirection = iota
 	all
 )
-
-// quicProtocol is the "quic" key, which holds the QUIC port of the node.
-func (quicProtocol) ENRKey() string { return quickProtocolEnrKey }
-
-// quic6Protocol is the "quic6" key, which holds the IPv6-specific QUIC port of the node.
-func (quic6Protocol) ENRKey() string { return "quic6" }
 
 func newListener(listenerCreator func() (*discover.UDPv5, error)) (*listenerWrapper, error) {
 	rawListener, err := listenerCreator()
@@ -590,7 +579,7 @@ func (s *Service) createLocalNode(
 	localNode.Set(tcpEntry)
 
 	if features.Get().EnableQUIC {
-		quicEntry := quicProtocol(quicPort)
+		quicEntry := enr.QUIC(quicPort)
 		localNode.Set(quicEntry)
 	}
 
@@ -644,11 +633,10 @@ func (s *Service) createLocalNode(
 		}
 	}
 
-	// Strict ENR readers (e.g. Lighthouse, Teku) only use "tcp6"/"quic6" with an IPv6 address.
 	if advertiseIPv6 {
 		localNode.Set(enr.TCP6(tcpPort))
 		if features.Get().EnableQUIC {
-			localNode.Set(quic6Protocol(quicPort))
+			localNode.Set(enr.QUIC6(quicPort))
 		}
 	}
 
@@ -946,46 +934,42 @@ func retrieveMultiAddrsFromNode(node *enode.Node) ([]ma.Multiaddr, error) {
 // indicating whether the port was found, and an error.
 // IPv6 endpoints prefer the "tcp6"/"udp6"/"quic6" keys and fall back to the IPv4 keys, as go-ethereum does.
 func getPort(node *enode.Node, protocol internetProtocol) (uint, bool, error) {
-	var (
-		port uint16
-		err  error
-	)
+	var port uint
 
 	switch protocol {
 	case tcp:
-		err = loadPort(node, (*enr.TCP)(&port), (*enr.TCP6)(&port))
+		port = uint(node.TCP())
 	case udp:
-		err = loadPort(node, (*enr.UDP)(&port), (*enr.UDP6)(&port))
+		port = uint(node.UDP())
 	case quic:
-		err = loadPort(node, (*quicProtocol)(&port), (*quic6Protocol)(&port))
+		port = nodeQUICPort(node)
 	default:
 		return 0, false, errors.Errorf("invalid protocol: %v", protocol)
 	}
 
-	if enr.IsNotFound(err) {
-		return uint(port), false, nil
-	}
-
-	if err != nil {
-		return 0, false, errors.Wrap(err, "could not get port")
-	}
-
 	// A zero port is not a usable endpoint; treat it as absent so callers do not build /tcp/0 dial addresses.
 	if port == 0 {
-		return uint(port), false, nil
+		return 0, false, nil
 	}
 
-	return uint(port), true, nil
+	return port, true, nil
 }
 
-// loadPort loads entry6 for nodes whose selected IP is IPv6, falling back to entry when entry6 is absent.
-func loadPort(node *enode.Node, entry, entry6 enr.Entry) error {
-	if ip := node.IP(); ip != nil && ip.To4() == nil {
-		if err := node.Load(entry6); !enr.IsNotFound(err) {
-			return err
+// nodeQUICPort prefers "quic6" for IPv6 endpoints and falls back to "quic", as go-ethereum does for tcp6/udp6.
+func nodeQUICPort(node *enode.Node) uint {
+	if ip := node.IPAddr(); ip.Is6() && !ip.Is4In6() {
+		var port6 enr.QUIC6
+		if err := node.Load(&port6); err == nil {
+			return uint(port6)
 		}
 	}
-	return node.Load(entry)
+
+	var port enr.QUIC
+	if err := node.Load(&port); err != nil {
+		return 0
+	}
+
+	return uint(port)
 }
 
 func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
