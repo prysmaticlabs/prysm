@@ -9,6 +9,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v7/config/params"
 	consensusblocks "github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/crypto/bls/common"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
@@ -73,8 +74,7 @@ func TestSetSelfBuildExecutionPayloadBid(t *testing.T) {
 	require.Equal(t, bidSourceSelfBuild, src)
 
 	// Verify the signed bid was set on the block.
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.NotNil(t, signedBid)
 	require.NotNil(t, signedBid.Message)
 
@@ -140,8 +140,7 @@ func TestSetSelfBuildExecutionPayloadBid_BlobCommitments(t *testing.T) {
 	_, err = vs.setExecutionPayloadBid(t.Context(), sBlk, nil, local, nil, nil, true)
 	require.NoError(t, err)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.NotNil(t, signedBid.Message)
 
 	// Verify blob KZG commitments are set on the bid (not empty).
@@ -231,8 +230,7 @@ func TestSetExecutionPayloadBid_PrefersP2PBid(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceP2P, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.NotNil(t, signedBid)
 
 	// Should use the P2P bid, not the self-build bid.
@@ -305,8 +303,7 @@ func TestSetExecutionPayloadBid_IgnoresBlacklistedP2PBid(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.Equal(t, params.BeaconConfig().BuilderIndexSelfBuild, signedBid.Message.BuilderIndex)
 }
 
@@ -374,8 +371,7 @@ func TestSetExecutionPayloadBid_PrefersLocalWhenHigherValue(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.NotNil(t, signedBid)
 
 	// Local value is higher, so self-build should be used.
@@ -447,8 +443,7 @@ func TestSetExecutionPayloadBid_SelfBuildOnlyIgnoresCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.NotNil(t, signedBid)
 
 	// selfBuildOnly forces self-build even when P2P bid is higher.
@@ -499,12 +494,20 @@ func TestSetExecutionPayloadBid_FallsBackToSelfBuildWhenNoCachedBid(t *testing.T
 	require.NoError(t, err)
 	require.Equal(t, bidSourceSelfBuild, src)
 
-	signedBid, err := sBlk.Block().Body().SignedExecutionPayloadBid()
-	require.NoError(t, err)
+	signedBid := signedBidProto(t, sBlk)
 	require.NotNil(t, signedBid)
 
 	// Should fall back to self-build.
 	require.Equal(t, params.BeaconConfig().BuilderIndexSelfBuild, signedBid.Message.BuilderIndex)
 	require.Equal(t, primitives.Gwei(0), signedBid.Message.Value)
 	require.DeepEqual(t, common.InfiniteSignature[:], signedBid.Signature)
+}
+
+// signedBidProto returns the signed execution payload bid protobuf of a Gloas block.
+func signedBidProto(t *testing.T, blk interfaces.ReadOnlySignedBeaconBlock) *ethpb.SignedExecutionPayloadBid {
+	pb, err := blk.Block().Body().Proto()
+	require.NoError(t, err)
+	body, ok := pb.(*ethpb.BeaconBlockBodyGloas)
+	require.Equal(t, true, ok)
+	return body.SignedExecutionPayloadBid
 }
