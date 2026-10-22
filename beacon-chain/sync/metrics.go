@@ -186,6 +186,18 @@ var (
 		Name: "gossip_pending_attestations_total",
 		Help: "increased when receiving a new pending attestation",
 	})
+	pendingAttBlockRequestCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_pending_attestation_block_requests_total",
+		Help: "Block requests sent to peers that sent attestations for a block we do not have",
+	})
+	pendingAttBlockRequestsHedgedCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_pending_attestation_block_requests_hedged_total",
+		Help: "Block requests sent to a further sender because the previous one did not answer in time",
+	})
+	pendingAttBlockRequestsDroppedCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "gossip_pending_attestation_block_requests_dropped_total",
+		Help: "Pending attestation roots not requested because the in-flight request ceiling was reached",
+	})
 
 	// Sync committee verification performance.
 	syncMessagesForUnknownBlocks = promauto.NewCounter(

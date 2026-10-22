@@ -147,6 +147,8 @@ type Service struct {
 	slotToPendingBlocks                  *gcache.Cache
 	seenPendingBlocks                    map[[32]byte]bool
 	blkRootToPendingAtts                 map[[32]byte][]any
+	pendingAttSenders                    map[[32]byte][]peer.ID
+	pendingAttRequests                   map[[32]byte]struct{}
 	subHandler                           *subTopicHandler
 	pendingAttsLock                      sync.RWMutex
 	pendingQueueLock                     sync.RWMutex
@@ -440,6 +442,8 @@ func (s *Service) initCaches() {
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
 	s.badBlockCache = lruwrpr.New(badBlockSize)
 	s.badPayloadCache = lruwrpr.New(badBlockSize)
+	s.pendingAttSenders = make(map[[32]byte][]peer.ID)
+	s.pendingAttRequests = make(map[[32]byte]struct{})
 }
 
 func (s *Service) waitForChainStart() {
