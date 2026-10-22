@@ -3,6 +3,7 @@ package heze_test
 import (
 	"testing"
 
+	"github.com/OffchainLabs/go-bitfield"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/heze"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/time"
 	state_native "github.com/OffchainLabs/prysm/v7/beacon-chain/state/state-native"
@@ -21,6 +22,7 @@ func TestUpgradeToHeze(t *testing.T) {
 			s.Eth1DepositIndex = 7
 			s.LatestExecutionPayloadBid.BlockHash[0] = 0xaa
 			s.LatestExecutionPayloadBid.Value = 9
+			s.LatestExecutionPayloadBid.ExecutionPayment = 13
 			s.LatestBlockHash[0] = 0xbb
 			return nil
 		})
@@ -45,7 +47,22 @@ func TestUpgradeToHeze(t *testing.T) {
 		require.DeepEqual(t, container.LatestBlockHash, got.LatestBlockHash)
 		require.DeepEqual(t, container.PtcWindow, got.PtcWindow)
 
-		require.DeepEqual(t, container.LatestExecutionPayloadBid, got.LatestExecutionPayloadBid)
+		preBid := container.LatestExecutionPayloadBid
+		require.DeepEqual(t, &ethpb.ExecutionPayloadBidHeze{
+			ParentBlockHash:       preBid.ParentBlockHash,
+			ParentBlockRoot:       preBid.ParentBlockRoot,
+			BlockHash:             preBid.BlockHash,
+			PrevRandao:            preBid.PrevRandao,
+			FeeRecipient:          preBid.FeeRecipient,
+			GasLimit:              preBid.GasLimit,
+			BuilderIndex:          preBid.BuilderIndex,
+			Slot:                  preBid.Slot,
+			Value:                 preBid.Value,
+			ExecutionPayment:      preBid.ExecutionPayment,
+			BlobKzgCommitments:    preBid.BlobKzgCommitments,
+			ExecutionRequestsRoot: preBid.ExecutionRequestsRoot,
+			InclusionListBits:     bitfield.NewBitvector16(),
+		}, got.LatestExecutionPayloadBid)
 
 		// The upgraded state must hash like the generated SSZ of the same Heze state.
 		wantRoot, err := got.HashTreeRoot()
@@ -55,4 +72,13 @@ func TestUpgradeToHeze(t *testing.T) {
 		require.Equal(t, wantRoot, gotRoot)
 	})
 
+	t.Run("rejects a nil latest execution payload bid", func(t *testing.T) {
+		pre, err := util.NewBeaconStateGloas(func(s *ethpb.BeaconStateGloas) error {
+			s.LatestExecutionPayloadBid = nil
+			return nil
+		})
+		require.NoError(t, err)
+		_, err = heze.UpgradeToHeze(pre)
+		require.ErrorContains(t, "nil latest execution payload bid", err)
+	})
 }
