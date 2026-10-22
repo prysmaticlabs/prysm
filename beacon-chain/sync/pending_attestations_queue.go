@@ -25,6 +25,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/runtime/version"
 	"github.com/OffchainLabs/prysm/v7/time/slots"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -84,15 +85,27 @@ func (s *Service) processPendingAttsForBlock(ctx context.Context, bRoot [32]byte
 
 		available := make([]peer.ID, 0, len(senders))
 		for sender := range senders {
+			if s.cfg.p2p.Host().Network().Connectedness(sender) != network.Connected {
+				delete(senders, sender)
+				continue
+			}
+
 			if !s.pendingAttRequestPeers[sender] && uint64(len(requests[sender])) < maxRoots {
 				available = append(available, sender)
 			}
 		}
 
-		if len(available) > 0 {
-			sender := available[randGen.Intn(len(available))]
-			requests[sender] = append(requests[sender], root)
+		if len(senders) == 0 {
+			delete(s.pendingAttSenders, root)
+			continue
 		}
+
+		if len(available) == 0 {
+			continue
+		}
+
+		sender := available[randGen.Intn(len(available))]
+		requests[sender] = append(requests[sender], root)
 	}
 
 	s.pendingQueueLock.RUnlock()

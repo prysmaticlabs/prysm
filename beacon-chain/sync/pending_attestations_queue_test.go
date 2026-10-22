@@ -263,6 +263,71 @@ func TestProcessPendingAtts_OneRequestInFlightPerPeer(t *testing.T) {
 	})
 }
 
+func TestProcessPendingAtts_SkipsDisconnectedSender(t *testing.T) {
+	t.Run("sole sender disconnected", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		gone := p2ptest.NewTestP2P(t)
+		p1.Connect(gone)
+		goneRoots := blocksByRootRecorder(gone)
+
+		r, rootA := pendingAttService(t, p1)
+		rootB := [32]byte{'B'}
+		r.savePendingAtt(gone.PeerID(), pendingAttFor(rootB, 1))
+		require.NoError(t, p1.BHost.Network().ClosePeer(gone.PeerID()))
+
+		require.NoError(t, r.processPendingAttsForBlock(r.ctx, rootA))
+		select {
+		case got := <-goneRoots:
+			t.Fatalf("block %#x was requested from a disconnected peer", got)
+		case <-time.After(200 * time.Millisecond):
+		}
+
+		r.pendingAttsLock.RLock()
+		defer r.pendingAttsLock.RUnlock()
+		require.Equal(t, 0, len(r.pendingAttSenders))
+		require.Equal(t, 0, len(r.pendingAttRequestPeers))
+
+		// The disconnected peer is not downscored.
+		count, err := p1.Peers().Scorers().BadResponsesScorer().Count(gone.PeerID())
+		if err == nil {
+			require.Equal(t, 0, count)
+		}
+	})
+
+	t.Run("connected sender asked instead", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		gone := p2ptest.NewTestP2P(t)
+		connected := p2ptest.NewTestP2P(t)
+		p1.Connect(gone)
+		p1.Connect(connected)
+		goneRoots := blocksByRootRecorder(gone)
+		connectedRoots := blocksByRootRecorder(connected)
+
+		r, rootA := pendingAttService(t, p1)
+		rootB := [32]byte{'B'}
+		r.savePendingAtt(gone.PeerID(), pendingAttFor(rootB, 1))
+		r.savePendingAtt(connected.PeerID(), pendingAttFor(rootB, 2))
+		require.NoError(t, p1.BHost.Network().ClosePeer(gone.PeerID()))
+
+		require.NoError(t, r.processPendingAttsForBlock(r.ctx, rootA))
+		select {
+		case got := <-connectedRoots:
+			require.Equal(t, rootB, got)
+		case <-time.After(5 * time.Second):
+			t.Fatal("block was not requested from the connected sender")
+		}
+		select {
+		case got := <-goneRoots:
+			t.Fatalf("block %#x was requested from a disconnected peer", got)
+		case <-time.After(200 * time.Millisecond):
+		}
+
+		r.pendingAttsLock.RLock()
+		defer r.pendingAttsLock.RUnlock()
+		require.Equal(t, false, r.pendingAttSenders[rootB][gone.PeerID()])
+	})
+}
+
 func TestProcessPendingAtts_DownscoresSenderNotServingBlock(t *testing.T) {
 	setup := func(t *testing.T) (*Service, *p2ptest.TestP2P, *p2ptest.TestP2P, [32]byte) {
 		p1 := p2ptest.NewTestP2P(t)
