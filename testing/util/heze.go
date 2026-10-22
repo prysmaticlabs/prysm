@@ -84,7 +84,7 @@ func NewBeaconStateHeze(options ...func(state *ethpb.BeaconStateHeze) error) (st
 		}
 	}
 
-	return state_native.InitializeFromProtoUnsafeHeze(seed)
+	return state_native.NewUnsafe(seed)
 }
 
 // NewBeaconBlockHeze creates a beacon block with minimum marshalable fields.

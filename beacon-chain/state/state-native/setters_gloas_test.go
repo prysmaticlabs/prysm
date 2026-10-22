@@ -385,11 +385,11 @@ func TestRotateBuilderPendingPayments(t *testing.T) {
 		}
 	}
 
-	statePb, err := InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
+	beaconState, err := NewUnsafe(&ethpb.BeaconStateGloas{
 		BuilderPendingPayments: payments,
 	})
 	require.NoError(t, err)
-	st, ok := statePb.(*BeaconState)
+	st, ok := beaconState.(*BeaconState)
 	require.Equal(t, true, ok)
 
 	oldPayments, err := st.BuilderPendingPayments()
@@ -653,12 +653,12 @@ func TestAppendBuilderPendingWithdrawal_CopyOnWrite(t *testing.T) {
 		Amount:       1,
 		BuilderIndex: 2,
 	}
-	statePb, err := InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
+	beaconState, err := NewUnsafe(&ethpb.BeaconStateGloas{
 		BuilderPendingWithdrawals: []*ethpb.BuilderPendingWithdrawal{wd},
 	})
 	require.NoError(t, err)
 
-	st, ok := statePb.(*BeaconState)
+	st, ok := beaconState.(*BeaconState)
 	require.Equal(t, true, ok)
 
 	copied := st.Copy().(*BeaconState)
@@ -785,7 +785,7 @@ func buildGloasStateForPaymentWeightTest(
 
 	execPayloadAvailability := make([]byte, cfg.SlotsPerHistoricalRoot/8)
 
-	stProto := &ethpb.BeaconStateGloas{
+	container := &ethpb.BeaconStateGloas{
 		Slot:                         stateSlot,
 		GenesisValidatorsRoot:        bytes.Repeat([]byte{0x33}, 32),
 		BlockRoots:                   blockRoots,
@@ -804,15 +804,15 @@ func buildGloasStateForPaymentWeightTest(
 		},
 	}
 
-	statePb, err := InitializeFromProtoGloas(stProto)
+	st, err := New(container)
 	require.NoError(t, err)
-	return statePb.(*BeaconState)
+	return st.(*BeaconState)
 }
 
 func newGloasStateWithAvailability(t *testing.T, availability []byte) *BeaconState {
 	t.Helper()
 
-	st, err := InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
+	st, err := NewUnsafe(&ethpb.BeaconStateGloas{
 		ExecutionPayloadAvailability: availability,
 	})
 	require.NoError(t, err)
@@ -937,12 +937,12 @@ func TestIncreaseBuilderBalance(t *testing.T) {
 
 func TestIncreaseBuilderBalance_CopyOnWrite(t *testing.T) {
 	orig := &ethpb.Builder{Balance: 10}
-	statePb, err := InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
+	beaconState, err := NewUnsafe(&ethpb.BeaconStateGloas{
 		Builders: []*ethpb.Builder{orig},
 	})
 	require.NoError(t, err)
 
-	st, ok := statePb.(*BeaconState)
+	st, ok := beaconState.(*BeaconState)
 	require.Equal(t, true, ok)
 
 	copied := st.Copy().(*BeaconState)
@@ -1036,7 +1036,7 @@ func TestAddBuilderFromDeposit_CopyOnWrite(t *testing.T) {
 	copy(wc[:], bytes.Repeat([]byte{0xBB}, 32))
 	wc[0] = 0x42 // version byte
 
-	statePb, err := InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
+	beaconState, err := NewUnsafe(&ethpb.BeaconStateGloas{
 		Slot: 0,
 		Builders: []*ethpb.Builder{
 			{
@@ -1047,7 +1047,7 @@ func TestAddBuilderFromDeposit_CopyOnWrite(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	st, ok := statePb.(*BeaconState)
+	st, ok := beaconState.(*BeaconState)
 	require.Equal(t, true, ok)
 
 	copied := st.Copy().(*BeaconState)
@@ -1206,7 +1206,7 @@ func newGloasState(
 	slot primitives.Slot,
 ) *BeaconState {
 	t.Helper()
-	statePb, err := InitializeFromProtoUnsafeGloas(&ethpb.BeaconStateGloas{
+	beaconState, err := NewUnsafe(&ethpb.BeaconStateGloas{
 		Slot:            slot,
 		Validators:      validators,
 		Builders:        builders,
@@ -1214,7 +1214,7 @@ func newGloasState(
 	})
 	require.NoError(t, err)
 
-	st, ok := statePb.(*BeaconState)
+	st, ok := beaconState.(*BeaconState)
 	require.Equal(t, true, ok)
 	return st
 }
