@@ -2953,8 +2953,8 @@ def prysm_deps():
             "gazelle:exclude tools.go",
         ],
         importpath = "github.com/quic-go/quic-go",
-        sum = "h1:ZHDjCk5OacATwGvs8PWE97CTvX7AqZiVoW7++ZOXTf8=",
-        version = "v0.62.0",
+        sum = "h1:BCNTP+6x6++OPKrGST2FR3f1tycx8O3QOA3QQv09g70=",
+        version = "v0.64.1",
     )
     go_repository(
         name = "com_github_quic_go_webtransport_go",

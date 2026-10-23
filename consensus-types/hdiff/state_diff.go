@@ -144,6 +144,9 @@ type stateDiff struct {
 	latestBlockHash                [fieldparams.RootLength]byte      // override.
 	payloadExpectedWithdrawals     []*enginev1.Withdrawal            // override.
 	ptcWindow                      []*ethpb.PTCs                     // override.
+
+	// Heze
+	latestExecutionPayloadBidHeze *ethpb.ExecutionPayloadBidHeze // override, replaces latestExecutionPayloadBid from Heze.
 }
 
 type hdiff struct {
