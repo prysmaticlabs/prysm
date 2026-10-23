@@ -15,7 +15,7 @@ import (
 )
 
 func TestAddConnectionHandler_RecentlyDisconnectedOutboundPeer(t *testing.T) {
-	const closeDelay = 500 * time.Millisecond
+	const closeDelay = 100 * time.Millisecond
 	previousDelay := untrackedConnCloseDelay
 	untrackedConnCloseDelay = closeDelay
 	t.Cleanup(func() { untrackedConnCloseDelay = previousDelay })
