@@ -22,12 +22,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // PerformExitCfg for account voluntary exits.
 type PerformExitCfg struct {
 	ValidatorClient  iface.ValidatorClient
-	NodeClient       iface.NodeClient
+	GenesisTime      *timestamppb.Timestamp
 	Keymanager       keymanager.IKeymanager
 	RawPubKeys       [][]byte
 	FormattedPubKeys []string
@@ -66,7 +67,7 @@ func (acm *CLIManager) Exit(ctx context.Context) error {
 
 	cfg := PerformExitCfg{
 		validatorClient,
-		nodeClient,
+		genesisResponse.GenesisTime,
 		acm.keymanager,
 		acm.rawPubKeys,
 		acm.formattedPubKeys,
@@ -90,17 +91,13 @@ func PerformVoluntaryExit(
 	ctx context.Context, cfg PerformExitCfg,
 ) (rawExitedKeys [][]byte, formattedExitedKeys []string, err error) {
 	var rawNotExitedKeys [][]byte
-	genesisResponse, err := cfg.NodeClient.Genesis(ctx, &emptypb.Empty{})
+	epoch, err := client.CurrentEpoch(cfg.GenesisTime)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not get genesis: %w", err)
+		return nil, nil, fmt.Errorf("could not get current epoch: %w", err)
 	}
 	for i, key := range cfg.RawPubKeys {
 		// When output directory is present, only create the signed exit, but do not propose it.
 		// Otherwise, propose the exit immediately.
-		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
-		if err != nil {
-			log.WithError(err).Error("Voluntary exit failed")
-		}
 		if len(cfg.OutputDirectory) > 0 {
 			sve, err := client.CreateSignedVoluntaryExit(ctx, cfg.ValidatorClient, cfg.Keymanager.Sign, key, epoch)
 			if err != nil {
