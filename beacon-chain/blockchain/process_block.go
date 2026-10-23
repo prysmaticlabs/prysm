@@ -135,9 +135,9 @@ func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionD
 	var preStateHeader interfaces.ExecutionData
 	var err error
 	preStateVersion := st.Version()
-	switch preStateVersion {
-	case version.Phase0, version.Altair, version.Gloas:
-	default:
+
+	// Only Bellatrix through Fulu states carry a latest execution payload header.
+	if preStateVersion >= version.Bellatrix && preStateVersion < version.Gloas {
 		preStateHeader, err = st.LatestExecutionPayloadHeader()
 		if err != nil {
 			return 0, nil, err
@@ -261,11 +261,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			return invalidBlock{error: err}
 		}
 		if b.Version() >= version.Gloas {
-			sbid, err := b.Block().Body().SignedExecutionPayloadBid()
+			bid, err := b.Block().Body().ExecutionPayloadBid()
 			if err != nil {
 				return err
 			}
-			if idx := sbid.Message.BuilderIndex; idx != params.BeaconConfig().BuilderIndexSelfBuild {
+			if idx := bid.BuilderIndex(); idx != params.BeaconConfig().BuilderIndexSelfBuild {
 				pk, err := preState.BuilderPubkey(idx)
 				if err != nil {
 					return err
