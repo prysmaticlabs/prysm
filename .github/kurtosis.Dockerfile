@@ -12,7 +12,7 @@
 #   - CA bundle copied from the build stage.
 #
 # Usage (from the repo root):
-#   docker build -f .github/kurtosis-smoke.Dockerfile --build-arg BIN=beacon-chain|validator -t <name> .
+#   docker build -f .github/kurtosis.Dockerfile --build-arg BIN=beacon-chain|validator -t <name> .
 
 FROM golang:1.26-bookworm AS build
 ARG BIN=beacon-chain

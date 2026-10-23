@@ -22,8 +22,8 @@ jobs:
 
       - name: Build Prysm images
         run: |
-          docker build --build-arg BIN=beacon-chain --build-arg TAG="${GITHUB_SHA::8}" -t prysm-beacon-chain:ci -f .github/kurtosis-smoke.Dockerfile .
-          docker build --build-arg BIN=validator --build-arg TAG="${GITHUB_SHA::8}" -t prysm-validator:ci -f .github/kurtosis-smoke.Dockerfile .
+          docker build --build-arg BIN=beacon-chain --build-arg TAG="${GITHUB_SHA::8}" -t prysm-beacon-chain:ci -f .github/kurtosis.Dockerfile .
+          docker build --build-arg BIN=validator --build-arg TAG="${GITHUB_SHA::8}" -t prysm-validator:ci -f .github/kurtosis.Dockerfile .
 
       # Runs the network and Assertoor, then uploads an enclave dump as an artifact.
       - id: kurtosis
