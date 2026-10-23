@@ -92,7 +92,17 @@ jobs:
           sha256sum -c --ignore-missing checksums.txt
           sudo tar -xzf kurtosis-cli_*_linux_amd64.tar.gz -C /usr/local/bin kurtosis
           kurtosis version
-          kurtosis analytics disable
+          # The run does not use the default OpenTelemetry and ClickHouse side containers, so use vector.
+          config=$(kurtosis config path)
+          mkdir -p "$(dirname "$config")"
+          cat > "$config" <<'EOF'
+          config-version: 9
+          should-send-metrics: false
+          kurtosis-clusters:
+            docker:
+              type: docker
+              backend-log-collector: vector
+          EOF
 
       - name: Run
         env:
