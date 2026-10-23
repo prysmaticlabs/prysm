@@ -6,6 +6,10 @@ name: Kurtosis PR
 on:
   issue_comment:
     types: [created]
+  # TEMP: drop before merge. issue_comment runs only the develop workflow, so this reruns
+  # the PR author's latest `/kurtosis` comment on push to test the branch.
+  pull_request:
+    types: [synchronize]
 
 permissions: {}
 
@@ -13,10 +17,11 @@ jobs:
   start:
     # Trigger gate: Only run for PR comments starting with `/kurtosis` from the PR author who is a member, owner, or collaborator.
     if: >-
-      github.event.issue.pull_request
+      (github.event.issue.pull_request
       && startsWith(github.event.comment.body, '/kurtosis')
       && github.event.comment.user.login == github.event.issue.user.login
-      && contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association)
+      && contains(fromJSON('["MEMBER","OWNER","COLLABORATOR"]'), github.event.comment.author_association))
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -33,14 +38,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          PR: ${{ github.event.issue.number }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
           COMMENT_ID: ${{ github.event.comment.id }}
-          AUTHOR: ${{ github.event.issue.user.login }}
+          AUTHOR: ${{ github.event.issue.user.login || github.event.pull_request.user.login }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           LATEST=$(gh api --paginate "repos/$REPO/issues/$PR/comments" |
             jq -rs --arg a "$AUTHOR" '[add[] | select(.user.login == $a and (.body | startswith("/kurtosis")))] | last | .id // empty')
           [ -n "$LATEST" ] || { echo "No /kurtosis comment from $AUTHOR"; exit 0; }
+          COMMENT_ID=${COMMENT_ID:-$LATEST}
 
           # Comments can arrive out of order. Drop a command that a newer one supersedes, before it takes the concurrency group.
           [ "$COMMENT_ID" = "$LATEST" ] || { echo "Comment $COMMENT_ID is superseded by $LATEST"; exit 0; }
