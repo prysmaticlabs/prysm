@@ -23,6 +23,7 @@ go_library(
         "//beacon-chain/core/capella:go_default_library",
         "//beacon-chain/core/decoupled:go_default_library",
         "//beacon-chain/core/deneb:go_default_library",
+        "//beacon-chain/core/eip8453:go_default_library",
         "//beacon-chain/core/electra:go_default_library",
         "//beacon-chain/core/epoch:go_default_library",
         "//beacon-chain/core/epoch/precompute:go_default_library",

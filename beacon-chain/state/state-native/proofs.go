@@ -208,7 +208,7 @@ func (b *BeaconState) validateFieldIndex(f types.FieldIndex) error {
 		if f.RealPosition() > params.BeaconConfig().BeaconStateFuluFieldCount-1 {
 			return errNotSupported(f.String(), b.version)
 		}
-	case version.Gloas, version.Decoupled:
+	case version.Gloas, version.Decoupled, version.EIP8453:
 		schema, ok := ProgressiveStateSchemaForVersion(b.version)
 		if !ok {
 			return fmt.Errorf("progressive state schema not found for version %v", b.version)

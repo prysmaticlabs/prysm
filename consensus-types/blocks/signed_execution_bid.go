@@ -7,6 +7,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v7/encoding/bytesutil"
 	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/runtime/version"
 )
 
 // signedExecutionPayloadBid wraps the protobuf signed execution payload bid
@@ -158,4 +159,82 @@ func (h executionPayloadBidGloas) ExecutionRequestsRoot() [32]byte {
 		return [32]byte{}
 	}
 	return [32]byte(h.payload.ExecutionRequestsRoot)
+}
+
+type signedExecutionPayloadBidHeze struct {
+	bid *ethpb.SignedExecutionPayloadBidHeze
+}
+
+// executionPayloadBidHeze reads the Gloas fields through the Gloas wrapper and adds the inclusion list bits.
+type executionPayloadBidHeze struct {
+	executionPayloadBidGloas
+	inclusionListBits []byte
+}
+
+// WrappedROSignedExecutionPayloadBidHeze creates a read-only wrapper for a signed Heze bid.
+func WrappedROSignedExecutionPayloadBidHeze(pb *ethpb.SignedExecutionPayloadBidHeze) (interfaces.ROSignedExecutionPayloadBid, error) {
+	wrapper := signedExecutionPayloadBidHeze{bid: pb}
+	if wrapper.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return wrapper, nil
+}
+
+// WrappedROExecutionPayloadBidHeze creates a read-only wrapper for a Heze bid.
+func WrappedROExecutionPayloadBidHeze(pb *ethpb.ExecutionPayloadBidHeze) (interfaces.ROExecutionPayloadBid, error) {
+	wrapper := executionPayloadBidHeze{
+		executionPayloadBidGloas: executionPayloadBidGloas{payload: pb.Gloas()},
+		inclusionListBits:        pb.GetInclusionListBits(),
+	}
+	if wrapper.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return wrapper, nil
+}
+
+// IsNil checks if the signed bid is nil or invalid.
+func (s signedExecutionPayloadBidHeze) IsNil() bool {
+	if s.bid == nil {
+		return true
+	}
+	if _, err := WrappedROExecutionPayloadBidHeze(s.bid.Message); err != nil {
+		return true
+	}
+	return len(s.bid.Signature) != 96
+}
+
+// Bid returns the Heze bid as a read-only interface.
+func (s signedExecutionPayloadBidHeze) Bid() (interfaces.ROExecutionPayloadBid, error) {
+	return WrappedROExecutionPayloadBidHeze(s.bid.Message)
+}
+
+// SigningRoot computes the signing root of the Heze bid, which covers the inclusion list bits.
+func (s signedExecutionPayloadBidHeze) SigningRoot(domain []byte) ([32]byte, error) {
+	return signing.ComputeSigningRoot(s.bid.Message, domain)
+}
+
+// Signature returns the BLS signature as a 96-byte array.
+func (s signedExecutionPayloadBidHeze) Signature() [96]byte {
+	return [96]byte(s.bid.Signature)
+}
+
+// InclusionListBits returns the inclusion list committee bits.
+func (h executionPayloadBidHeze) InclusionListBits() []byte {
+	return bytesutil.SafeCopyBytes(h.inclusionListBits)
+}
+
+// SignedExecutionPayloadBidFromBody wraps the body's signed bid, a Heze bid from EIP-8453 on.
+func SignedExecutionPayloadBidFromBody(body interfaces.ReadOnlyBeaconBlockBody) (interfaces.ROSignedExecutionPayloadBid, error) {
+	if body.Version() >= version.EIP8453 {
+		bid, err := body.SignedExecutionPayloadBidHeze()
+		if err != nil {
+			return nil, err
+		}
+		return WrappedROSignedExecutionPayloadBidHeze(bid)
+	}
+	bid, err := body.SignedExecutionPayloadBid()
+	if err != nil {
+		return nil, err
+	}
+	return WrappedROSignedExecutionPayloadBid(bid)
 }

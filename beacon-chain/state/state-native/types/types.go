@@ -150,6 +150,26 @@ func (f FieldIndex) String() string {
 		return "finalized"
 	case PendingFinality:
 		return "pendingFinality"
+	case TargetCheckpoint:
+		return "targetCheckpoint"
+	case JustifiedCheckpointEIP8453:
+		return "justifiedCheckpointEIP8453"
+	case FinalizedCheckpointEIP8453:
+		return "finalizedCheckpointEIP8453"
+	case TargetSlot:
+		return "targetSlot"
+	case FinalizedSlot:
+		return "finalizedSlot"
+	case TargetParticipationEIP8453:
+		return "targetParticipationEIP8453"
+	case ProgressParticipation:
+		return "progressParticipation"
+	case RoundParticipation:
+		return "roundParticipation"
+	case PendingFinalities:
+		return "pendingFinalities"
+	case HeadVoteParticipation:
+		return "headVoteParticipation"
 	default:
 		return fmt.Sprintf("unknown field index number: %d", f)
 	}
@@ -269,6 +289,26 @@ func (f FieldIndex) RealPosition() int {
 		return 53
 	case PendingFinality:
 		return 54
+	case TargetCheckpoint:
+		return 46
+	case JustifiedCheckpointEIP8453:
+		return 47
+	case FinalizedCheckpointEIP8453:
+		return 48
+	case TargetSlot:
+		return 49
+	case FinalizedSlot:
+		return 50
+	case TargetParticipationEIP8453:
+		return 51
+	case ProgressParticipation:
+		return 52
+	case RoundParticipation:
+		return 53
+	case PendingFinalities:
+		return 54
+	case HeadVoteParticipation:
+		return 55
 	default:
 		return -1
 	}
@@ -352,6 +392,16 @@ const (
 	FinalizedHeight               // Decoupled
 	Finalized                     // Decoupled
 	PendingFinality               // Decoupled
+	TargetCheckpoint              // EIP-8453
+	JustifiedCheckpointEIP8453    // EIP-8453
+	FinalizedCheckpointEIP8453    // EIP-8453
+	TargetSlot                    // EIP-8453
+	FinalizedSlot                 // EIP-8453
+	TargetParticipationEIP8453    // EIP-8453
+	ProgressParticipation         // EIP-8453
+	RoundParticipation            // EIP-8453
+	PendingFinalities             // EIP-8453
+	HeadVoteParticipation         // EIP-8453
 )
 
 // Enumerator keeps track of the number of states created since the node's start.

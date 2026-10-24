@@ -76,6 +76,12 @@ type ReadOnlyBeaconBlockBody interface {
 	AttestationsDecoupled() ([]*ethpb.IndexedAttestationDecoupled, error)
 	AvailableAttestations() ([]*ethpb.AvailableAttestation, error)
 	SupportVotes() (bitfield.Bitlist, error)
+	AttestationsEIP8453() ([]*ethpb.AttestationEIP8453, error)
+	AttesterSlashingsEIP8453() ([]*ethpb.AttesterSlashingEIP8453, error)
+	LegacyAttesterSlashings() ([]*ethpb.AttesterSlashingGloas, error)
+	HeadVotes() ([]*ethpb.HeadVote, error)
+	HeadVoteSupportBits() (bitfield.Bitlist, error)
+	SignedExecutionPayloadBidHeze() (*ethpb.SignedExecutionPayloadBidHeze, error)
 }
 
 type SignedBeaconBlock interface {

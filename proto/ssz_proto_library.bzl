@@ -38,6 +38,8 @@ mainnet = {
     "ptc.size": "64",  # Gloas: Payload Timeliness Committee aggregation bits (PTC_SIZE = 512)
     "ptc.type": "github.com/OffchainLabs/go-bitfield.Bitvector512",
     "payload_attestation.size": "4",  # Gloas: MAX_PAYLOAD_ATTESTATIONS defined in block body
+    "head_vote_committee_bytes.size": "128",  # EIP-8453: HEAD_VOTE_COMMITTEE_SIZE (1024) bits
+    "attestation_committee_bytes.size": "256",  # EIP-8453: ATTESTATION_COMMITTEES_PER_ROUND (2048) bits
 }
 
 minimal = {
@@ -72,6 +74,8 @@ minimal = {
     "ptc.size": "2",  # Gloas: Payload Timeliness Committee aggregation bits (PTC_SIZE = 16)
     "ptc.type": "github.com/OffchainLabs/go-bitfield.Bitvector16",
     "payload_attestation.size": "4",  # Gloas: MAX_PAYLOAD_ATTESTATIONS defined in block body
+    "head_vote_committee_bytes.size": "2",  # EIP-8453: HEAD_VOTE_COMMITTEE_SIZE (16) bits
+    "attestation_committee_bytes.size": "1",  # EIP-8453: ATTESTATION_COMMITTEES_PER_ROUND (8) bits
 }
 
 ###### Rules definitions #######

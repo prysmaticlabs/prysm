@@ -16,6 +16,7 @@ const (
 	Fulu
 	Gloas
 	Decoupled
+	EIP8453
 )
 
 var versionToString = map[int]string{
@@ -28,6 +29,7 @@ var versionToString = map[int]string{
 	Fulu:      "fulu",
 	Gloas:     "gloas",
 	Decoupled: "decoupled",
+	EIP8453:   "eip8453",
 }
 
 // stringToVersion and allVersions are populated in init()
@@ -40,6 +42,7 @@ var supportedVersions []int
 var unsupportedVersions = map[int]struct{}{
 	Gloas:     {},
 	Decoupled: {},
+	EIP8453:   {},
 }
 
 // ErrUnrecognizedVersionName means a string does not match the list of canonical version names.

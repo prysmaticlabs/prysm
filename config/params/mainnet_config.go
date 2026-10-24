@@ -206,6 +206,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainBuilderDeposit:              bytesutil.Uint32ToBytes4(0x0E000000),
 	DomainAvailableAttestation:        bytesutil.Uint32ToBytes4(0x0F000000),
 	DomainFinalityAttestation:         bytesutil.Uint32ToBytes4(0x10000000),
+	DomainHeadVote:                    bytesutil.Uint32ToBytes4(0x12000000),
+	DomainHeadVoteCommittee:           bytesutil.Uint32ToBytes4(0x13000000),
+	DomainFinalityAttester:            bytesutil.Uint32ToBytes4(0x14000000),
 
 	// Prysm constants.
 	GenesisValidatorsRoot:          [32]byte{75, 54, 61, 185, 78, 40, 97, 32, 215, 110, 185, 5, 52, 15, 221, 78, 84, 191, 233, 240, 107, 243, 63, 246, 207, 90, 210, 127, 81, 27, 254, 149},
@@ -232,6 +235,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateFuluFieldCount:      38,
 	BeaconStateGloasFieldCount:     46,
 	BeaconStateDecoupledFieldCount: 55,
+	BeaconStateEIP8453FieldCount:   46,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -263,6 +267,17 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DecoupledTimeoutDelay:  4,
 	DecoupledLockStreak:    2,
 	DecoupledSlotsPerRound: 4,
+
+	// EIP-8453 values.
+	PendingFinalityWindow:         4,
+	SlotsPerRound:                 8,
+	AttestationCommitteesPerRound: 2048,
+	MaxValidatorsPerAggregate:     131072,
+	HeadVoteCommitteeSize:         1024,
+	RoundRewardFactor:             16,
+	MinRoundsToInactivityLeak:     16,
+	EjectionInactivityScore:       65536,
+	MaxHeadVotes:                  8,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

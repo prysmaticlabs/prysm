@@ -302,6 +302,30 @@ func (b *BeaconBlockBody) SupportVotes() (bitfield.Bitlist, error) {
 	panic("implement me")
 }
 
+func (b *BeaconBlockBody) AttestationsEIP8453() ([]*eth.AttestationEIP8453, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) AttesterSlashingsEIP8453() ([]*eth.AttesterSlashingEIP8453, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) LegacyAttesterSlashings() ([]*eth.AttesterSlashingGloas, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) HeadVotes() ([]*eth.HeadVote, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) HeadVoteSupportBits() (bitfield.Bitlist, error) {
+	panic("implement me")
+}
+
+func (b *BeaconBlockBody) SignedExecutionPayloadBidHeze() (*eth.SignedExecutionPayloadBidHeze, error) {
+	panic("implement me")
+}
+
 func (b *BeaconBlockBody) Attestations() []eth.Att {
 	panic("implement me")
 }

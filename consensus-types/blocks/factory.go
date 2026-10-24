@@ -90,6 +90,8 @@ func NewSignedBeaconBlock(i any) (interfaces.SignedBeaconBlock, error) {
 		return initSignedBlockFromProtoGloas(b)
 	case *eth.SignedBeaconBlockDecoupled:
 		return initSignedBlockFromProtoDecoupled(b)
+	case *eth.SignedBeaconBlockEIP8453:
+		return initSignedBlockFromProtoEIP8453(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -154,6 +156,8 @@ func NewBeaconBlock(i any) (interfaces.ReadOnlyBeaconBlock, error) {
 		return initBlockFromProtoGloas(b)
 	case *eth.BeaconBlockDecoupled:
 		return initBlockFromProtoDecoupled(b)
+	case *eth.BeaconBlockEIP8453:
+		return initBlockFromProtoEIP8453(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -188,6 +192,8 @@ func NewBeaconBlockBody(i any) (interfaces.ReadOnlyBeaconBlockBody, error) {
 		return initBlockBodyFromProtoGloas(b)
 	case *eth.BeaconBlockBodyDecoupled:
 		return initBlockBodyFromProtoDecoupled(b)
+	case *eth.BeaconBlockBodyEIP8453:
+		return initBlockBodyFromProtoEIP8453(b)
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}
@@ -292,6 +298,12 @@ func BuildSignedBeaconBlock(blk interfaces.ReadOnlyBeaconBlock, signature []byte
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockDecoupled{Block: pb, Signature: signature})
+	case version.EIP8453:
+		pb, ok := pb.(*eth.BeaconBlockEIP8453)
+		if !ok {
+			return nil, errIncorrectBlockVersion
+		}
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockEIP8453{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
@@ -665,6 +677,8 @@ func BuildSignedBeaconBlockFromExecutionPayload(blk interfaces.ReadOnlySignedBea
 		return nil, errors.Wrap(errUnsupportedBeaconBlock, "gloas blocks are not supported in this function")
 	case version.Decoupled:
 		return nil, errors.Wrap(errUnsupportedBeaconBlock, "decoupled blocks are not supported in this function")
+	case version.EIP8453:
+		return nil, errors.Wrap(errUnsupportedBeaconBlock, "eip8453 blocks are not supported in this function")
 	default:
 		return nil, errors.New("Block not of known type")
 	}

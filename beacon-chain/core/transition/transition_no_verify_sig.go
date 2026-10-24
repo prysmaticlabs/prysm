@@ -8,6 +8,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/altair"
 	b "github.com/OffchainLabs/prysm/v7/beacon-chain/core/blocks"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/decoupled"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/eip8453"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/gloas"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/helpers"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/validators"
@@ -324,7 +325,7 @@ func ProcessBlockNoVerifyAnySig(
 		}
 		set.BLSChangeSignatures = cSet
 	}
-	if blk.Version() >= version.Decoupled {
+	if blk.Version() == version.Decoupled {
 		dSet, err := decoupled.SignatureBatch(st, signed.Block().Body())
 		if err != nil {
 			return set, nil, errors.Wrap(err, "could not get decoupled attestation signatures")
@@ -386,7 +387,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, fmt.Errorf("gloas operations: %w", err)
 		}
-		if blockVersion >= version.Decoupled {
+		if blockVersion == version.Decoupled {
 			votes, err := beaconBlock.Body().AvailableAttestations()
 			if err != nil {
 				return nil, err
@@ -465,6 +466,10 @@ func ProcessBlockForStateRoot(
 
 	blk := signed.Block()
 	body := blk.Body()
+
+	if state.Version() >= version.EIP8453 {
+		return eip8453.ProcessBlock(ctx, state, blk)
+	}
 
 	parentSlot := state.LatestBlockHeader().Slot
 

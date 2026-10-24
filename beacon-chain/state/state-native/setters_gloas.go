@@ -121,6 +121,12 @@ func (b *BeaconState) SetExecutionPayloadBid(h interfaces.ROExecutionPayloadBid)
 		FeeRecipient:          feeRecipient[:],
 		ExecutionRequestsRoot: executionRequestsRoot[:],
 	}
+	if b.version >= version.EIP8453 {
+		b.inclusionListBits = nil
+		if heze, ok := h.(interface{ InclusionListBits() []byte }); ok {
+			b.inclusionListBits = heze.InclusionListBits()
+		}
+	}
 	b.markFieldAsDirty(types.LatestExecutionPayloadBid)
 
 	return nil

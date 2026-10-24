@@ -113,6 +113,13 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DecoupledForkVersion = []byte{16, 0, 0, 1}
 	minimalConfig.DecoupledForkEpoch = 3 // DEVNET ONLY, do not commit
 
+	minimalConfig.SlotsPerRound = 4
+	minimalConfig.AttestationCommitteesPerRound = 8
+	minimalConfig.MaxValidatorsPerAggregate = 512
+	minimalConfig.HeadVoteCommitteeSize = 16
+	minimalConfig.RoundRewardFactor = 32
+	minimalConfig.MinRoundsToInactivityLeak = 8
+
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8

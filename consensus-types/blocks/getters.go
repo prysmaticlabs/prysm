@@ -87,6 +87,8 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 		return initSignedBlockFromProtoGloas(eth.CopySignedBeaconBlockGloas(pb.(*eth.SignedBeaconBlockGloas)))
 	case version.Decoupled:
 		return initSignedBlockFromProtoDecoupled(eth.CopySignedBeaconBlockDecoupled(pb.(*eth.SignedBeaconBlockDecoupled)))
+	case version.EIP8453:
+		return initSignedBlockFromProtoEIP8453(eth.CopySignedBeaconBlockEIP8453(pb.(*eth.SignedBeaconBlockEIP8453)))
 	default:
 		return nil, errIncorrectBlockVersion
 	}
@@ -456,6 +458,8 @@ func (b *SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 		return pb.(*eth.SignedBeaconBlockGloas).MarshalSSZ()
 	case version.Decoupled:
 		return pb.(*eth.SignedBeaconBlockDecoupled).MarshalSSZ()
+	case version.EIP8453:
+		return pb.(*eth.SignedBeaconBlockEIP8453).MarshalSSZ()
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -502,6 +506,8 @@ func (b *SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 		return pb.(*eth.SignedBeaconBlockGloas).MarshalSSZTo(dst)
 	case version.Decoupled:
 		return pb.(*eth.SignedBeaconBlockDecoupled).MarshalSSZTo(dst)
+	case version.EIP8453:
+		return pb.(*eth.SignedBeaconBlockEIP8453).MarshalSSZTo(dst)
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -553,6 +559,8 @@ func (b *SignedBeaconBlock) SizeSSZ() int {
 		return pb.(*eth.SignedBeaconBlockGloas).SizeSSZ()
 	case version.Decoupled:
 		return pb.(*eth.SignedBeaconBlockDecoupled).SizeSSZ()
+	case version.EIP8453:
+		return pb.(*eth.SignedBeaconBlockEIP8453).SizeSSZ()
 	default:
 		panic(incorrectBlockVersion)
 	}
@@ -713,6 +721,16 @@ func (b *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 		if err != nil {
 			return err
 		}
+	case version.EIP8453:
+		pb := &eth.SignedBeaconBlockEIP8453{}
+		err := pb.UnmarshalSSZ(buf)
+		if err != nil {
+			return err
+		}
+		newBlock, err = initSignedBlockFromProtoEIP8453(pb)
+		if err != nil {
+			return err
+		}
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -802,6 +820,9 @@ func (b *BeaconBlock) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	case version.Decoupled:
 		return pb.(*eth.BeaconBlockDecoupled).HashTreeRoot()
 
+	case version.EIP8453:
+		return pb.(*eth.BeaconBlockEIP8453).HashTreeRoot()
+
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBlockVersion
 	}
@@ -847,6 +868,8 @@ func (b *BeaconBlock) HashTreeRootWith(h *ssz.Hasher) error {
 		return pb.(*eth.BeaconBlockGloas).HashTreeRootWith(h)
 	case version.Decoupled:
 		return pb.(*eth.BeaconBlockDecoupled).HashTreeRootWith(h)
+	case version.EIP8453:
+		return pb.(*eth.BeaconBlockEIP8453).HashTreeRootWith(h)
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -893,6 +916,8 @@ func (b *BeaconBlock) MarshalSSZ() ([]byte, error) {
 		return pb.(*eth.BeaconBlockGloas).MarshalSSZ()
 	case version.Decoupled:
 		return pb.(*eth.BeaconBlockDecoupled).MarshalSSZ()
+	case version.EIP8453:
+		return pb.(*eth.BeaconBlockEIP8453).MarshalSSZ()
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -939,6 +964,8 @@ func (b *BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 		return pb.(*eth.BeaconBlockGloas).MarshalSSZTo(dst)
 	case version.Decoupled:
 		return pb.(*eth.BeaconBlockDecoupled).MarshalSSZTo(dst)
+	case version.EIP8453:
+		return pb.(*eth.BeaconBlockEIP8453).MarshalSSZTo(dst)
 	default:
 		return []byte{}, errIncorrectBlockVersion
 	}
@@ -990,6 +1017,8 @@ func (b *BeaconBlock) SizeSSZ() int {
 		return pb.(*eth.BeaconBlockGloas).SizeSSZ()
 	case version.Decoupled:
 		return pb.(*eth.BeaconBlockDecoupled).SizeSSZ()
+	case version.EIP8453:
+		return pb.(*eth.BeaconBlockEIP8453).SizeSSZ()
 	default:
 		panic(incorrectBodyVersion)
 	}
@@ -1150,6 +1179,16 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 		if err != nil {
 			return err
 		}
+	case version.EIP8453:
+		pb := &eth.BeaconBlockEIP8453{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		var err error
+		newBlock, err = initBlockFromProtoEIP8453(pb)
+		if err != nil {
+			return err
+		}
 	default:
 		return errIncorrectBlockVersion
 	}
@@ -1231,6 +1270,9 @@ func (b *BeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 func (b *BeaconBlockBody) AttesterSlashings() []eth.AttSlashing {
 	var slashings []eth.AttSlashing
 
+	if b.version >= version.EIP8453 {
+		return nil
+	}
 	if b.version >= version.Gloas {
 		if b.attesterSlashingsGloas == nil {
 			return nil
@@ -1331,6 +1373,12 @@ func (b *BeaconBlockBody) BLSToExecutionChanges() ([]*eth.SignedBLSToExecutionCh
 
 // BlobKzgCommitments returns the blob kzg commitments in the block.
 func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
+	if b.version >= version.EIP8453 {
+		if b.signedExecutionPayloadBidHeze == nil || b.signedExecutionPayloadBidHeze.Message == nil {
+			return nil, errors.New("nil execution payload bid or bid message")
+		}
+		return b.signedExecutionPayloadBidHeze.Message.BlobKzgCommitments, nil
+	}
 	if b.version >= version.Gloas {
 		signedBid, err := b.SignedExecutionPayloadBid()
 		if err != nil {
@@ -1368,7 +1416,7 @@ func (b *BeaconBlockBody) PayloadAttestations() ([]*eth.PayloadAttestation, erro
 
 // SignedExecutionPayloadBid returns the signed execution payload header in the block.
 func (b *BeaconBlockBody) SignedExecutionPayloadBid() (*eth.SignedExecutionPayloadBid, error) {
-	if b.version >= version.Gloas {
+	if b.version >= version.Gloas && b.version < version.EIP8453 {
 		return b.signedExecutionPayloadBid, nil
 	}
 	return nil, consensus_types.ErrNotSupported("SignedExecutionPayloadBid", b.version)
@@ -1404,6 +1452,54 @@ func (b *BeaconBlockBody) SupportVotes() (bitfield.Bitlist, error) {
 		return b.supportVotes, nil
 	}
 	return nil, consensus_types.ErrNotSupported("SupportVotes", b.version)
+}
+
+// AttestationsEIP8453 returns the finality gadget aggregates.
+func (b *BeaconBlockBody) AttestationsEIP8453() ([]*eth.AttestationEIP8453, error) {
+	if b.version >= version.EIP8453 {
+		return b.attestationsEIP8453, nil
+	}
+	return nil, consensus_types.ErrNotSupported("AttestationsEIP8453", b.version)
+}
+
+// AttesterSlashingsEIP8453 returns the slashings of finality gadget attestations.
+func (b *BeaconBlockBody) AttesterSlashingsEIP8453() ([]*eth.AttesterSlashingEIP8453, error) {
+	if b.version >= version.EIP8453 {
+		return b.attesterSlashingsEIP8453, nil
+	}
+	return nil, consensus_types.ErrNotSupported("AttesterSlashingsEIP8453", b.version)
+}
+
+// LegacyAttesterSlashings returns the slashings of attestations made before EIP-8453.
+func (b *BeaconBlockBody) LegacyAttesterSlashings() ([]*eth.AttesterSlashingGloas, error) {
+	if b.version >= version.EIP8453 {
+		return b.legacyAttesterSlashings, nil
+	}
+	return nil, consensus_types.ErrNotSupported("LegacyAttesterSlashings", b.version)
+}
+
+// HeadVotes returns the head vote aggregates.
+func (b *BeaconBlockBody) HeadVotes() ([]*eth.HeadVote, error) {
+	if b.version >= version.EIP8453 {
+		return b.headVotes, nil
+	}
+	return nil, consensus_types.ErrNotSupported("HeadVotes", b.version)
+}
+
+// HeadVoteSupportBits returns one bit per head vote, set when the proposer counted it as support.
+func (b *BeaconBlockBody) HeadVoteSupportBits() (bitfield.Bitlist, error) {
+	if b.version >= version.EIP8453 {
+		return b.headVoteSupportBits, nil
+	}
+	return nil, consensus_types.ErrNotSupported("HeadVoteSupportBits", b.version)
+}
+
+// SignedExecutionPayloadBidHeze returns the signed bid with inclusion list bits.
+func (b *BeaconBlockBody) SignedExecutionPayloadBidHeze() (*eth.SignedExecutionPayloadBidHeze, error) {
+	if b.version >= version.EIP8453 {
+		return b.signedExecutionPayloadBidHeze, nil
+	}
+	return nil, consensus_types.ErrNotSupported("SignedExecutionPayloadBidHeze", b.version)
 }
 
 // Version returns the version of the beacon block body
@@ -1451,6 +1547,8 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 		return pb.(*eth.BeaconBlockBodyGloas).HashTreeRoot()
 	case version.Decoupled:
 		return pb.(*eth.BeaconBlockBodyDecoupled).HashTreeRoot()
+	case version.EIP8453:
+		return pb.(*eth.BeaconBlockBodyEIP8453).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}

@@ -127,10 +127,39 @@ var (
 		types.PendingFinality,
 	}
 
+	eip8453AdditionalFields = []types.FieldIndex{
+		types.TargetCheckpoint,
+		types.JustifiedCheckpointEIP8453,
+		types.FinalizedCheckpointEIP8453,
+		types.TargetSlot,
+		types.FinalizedSlot,
+		types.TargetParticipationEIP8453,
+		types.ProgressParticipation,
+		types.RoundParticipation,
+		types.PendingFinalities,
+		types.HeadVoteParticipation,
+	}
+
+	// Removed fields keep their positions as gaps so later fields keep their generalized indices.
+	eip8453InactiveFields = []types.FieldIndex{
+		types.Eth1Data,
+		types.Eth1DataVotes,
+		types.Eth1DepositIndex,
+		types.PreviousEpochParticipationBits,
+		types.CurrentEpochParticipationBits,
+		types.JustificationBits,
+		types.PreviousJustifiedCheckpoint,
+		types.CurrentJustifiedCheckpoint,
+		types.FinalizedCheckpoint,
+		types.DepositRequestsStartIndex,
+	}
+
 	gloasProgressiveSchema     *ProgressiveStateSchema
 	gloasFields                []types.FieldIndex
 	decoupledProgressiveSchema *ProgressiveStateSchema
 	decoupledFields            []types.FieldIndex
+	eip8453ProgressiveSchema   *ProgressiveStateSchema
+	eip8453Fields              []types.FieldIndex
 )
 
 func init() {
@@ -169,6 +198,24 @@ func init() {
 		panic(err)
 	}
 	decoupledFields = decoupledProgressiveSchema.fields
+
+	eip8453ProgressiveSchema, err = newProgressiveStateFieldsSchema(
+		slices.Concat(
+			altairFields,
+			[]types.FieldIndex{types.LatestBlockHash},
+			withdrawalAndHistoricalSummaryFields,
+			electraAdditionalFields,
+			[]types.FieldIndex{types.ProposerLookahead},
+			gloasAdditionalFields,
+			eip8453AdditionalFields,
+		),
+		eip8453InactiveFields,
+		params.BeaconConfig().BeaconStateEIP8453FieldCount,
+	)
+	if err != nil {
+		panic(err)
+	}
+	eip8453Fields = eip8453ProgressiveSchema.fields
 }
 
 func ProgressiveStateSchemaForVersion(v int) (*ProgressiveStateSchema, bool) {
@@ -177,6 +224,8 @@ func ProgressiveStateSchemaForVersion(v int) (*ProgressiveStateSchema, bool) {
 		return gloasProgressiveSchema, true
 	case version.Decoupled:
 		return decoupledProgressiveSchema, true
+	case version.EIP8453:
+		return eip8453ProgressiveSchema, true
 	default:
 		return nil, false
 	}
@@ -186,9 +235,8 @@ type ProgressiveStateSchema struct {
 	// activeFields uses stable, append-only field positions and retains false
 	// entries for fields removed in later forks.
 	activeFields []bool
-	// fields and fieldIndex describe the dense, active field roots used by the
-	// progressive Merkle tree for this fork.
-	fields     []types.FieldIndex
+	fields       []types.FieldIndex
+	// Positions count the inactive fields, so each is the field's leaf in the progressive Merkle tree.
 	fieldIndex map[types.FieldIndex]int
 }
 
@@ -229,7 +277,7 @@ func newProgressiveStateFieldsSchema(allFields []types.FieldIndex, inactiveField
 			continue
 		}
 		fields = append(fields, field)
-		fieldIndex[field] = len(fields) - 1
+		fieldIndex[field] = len(activeFields)
 		activeFields = append(activeFields, true)
 	}
 

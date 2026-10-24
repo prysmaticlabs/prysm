@@ -13,6 +13,7 @@ import (
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/capella"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/decoupled"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/deneb"
+	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/eip8453"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/electra"
 	e "github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/core/epoch/precompute"
@@ -145,7 +146,12 @@ func ProcessSlot(ctx context.Context, state state.BeaconState) (state.BeaconStat
 	); err != nil {
 		return nil, err
 	}
-	if state.Version() >= version.Decoupled {
+	switch {
+	case state.Version() >= version.EIP8453:
+		if err := eip8453.FillTargetRoot(state, prevBlockRoot); err != nil {
+			return nil, err
+		}
+	case state.Version() == version.Decoupled:
 		if err := decoupled.FillEntryRoot(state, prevBlockRoot); err != nil {
 			return nil, err
 		}
@@ -312,6 +318,14 @@ func ProcessSlotsCore(ctx context.Context, span trace.Span, state state.BeaconSt
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 
+		// Rounds settle before the epoch when both end on this slot.
+		if state.Version() >= version.EIP8453 && (state.Slot()+1)%params.BeaconConfig().SlotsPerRound == 0 {
+			if err := eip8453.ProcessRound(ctx, state); err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process round")
+			}
+		}
+
 		state, err = ProcessEpoch(ctx, state)
 		if err != nil {
 			tracing.AnnotateError(span, err)
@@ -341,7 +355,11 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 
 	var err error
 	if time.CanProcessEpoch(state) {
-		if state.Version() >= version.Decoupled {
+		if state.Version() >= version.EIP8453 {
+			if err = eip8453.ProcessEpoch(ctx, state); err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
+			}
+		} else if state.Version() >= version.Decoupled {
 			if err = decoupled.ProcessEpoch(ctx, state); err != nil {
 				return nil, errors.Wrap(err, fmt.Sprintf("could not process %s epoch", version.String(state.Version())))
 			}
@@ -375,6 +393,10 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 func UpgradeState(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := prysmTrace.StartSpan(ctx, "core.state.UpgradeState")
 	defer span.End()
+
+	if state.Version() >= version.EIP8453 {
+		return state, nil
+	}
 
 	var err error
 

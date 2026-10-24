@@ -76,8 +76,8 @@ func TestNewProgressiveStateFieldsSchema(t *testing.T) {
 			{field: types.GenesisTime, index: 0, found: true},
 			{field: types.Slot, index: 0, found: false},
 			{field: types.Validators, index: 0, found: false},
-			{field: types.Balances, index: 1, found: true},
-			{field: types.PTCWindow, index: 2, found: true},
+			{field: types.Balances, index: 3, found: true},
+			{field: types.PTCWindow, index: 4, found: true},
 		}
 		for _, tt := range tests {
 			t.Run(tt.field.String(), func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestNewProgressiveStateFieldsSchema(t *testing.T) {
 }
 
 func TestProgressiveStateSchemaForVersion_Unsupported(t *testing.T) {
-	schema, ok := ProgressiveStateSchemaForVersion(version.Decoupled + 1)
+	schema, ok := ProgressiveStateSchemaForVersion(version.EIP8453 + 1)
 	require.Equal(t, false, ok)
 	require.IsNil(t, schema)
 }

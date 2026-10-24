@@ -1,12 +1,12 @@
 package gloas
 
 import (
-	"bytes"
 	"context"
 
 	requests "github.com/OffchainLabs/prysm/v7/beacon-chain/core/requests"
 	"github.com/OffchainLabs/prysm/v7/beacon-chain/state"
 	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v7/consensus-types/interfaces"
 	"github.com/OffchainLabs/prysm/v7/monitoring/tracing/trace"
 	enginev1 "github.com/OffchainLabs/prysm/v7/proto/engine/v1"
@@ -22,11 +22,14 @@ func ProcessParentExecutionPayload(ctx context.Context, st state.BeaconState, bl
 	defer span.End()
 
 	body := blk.Body()
-	signedBid, err := body.SignedExecutionPayloadBid()
+	signedBid, err := blocks.SignedExecutionPayloadBidFromBody(body)
 	if err != nil {
 		return errors.Wrap(err, "could not get signed execution payload bid")
 	}
-	bid := signedBid.Message
+	bid, err := signedBid.Bid()
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload bid")
+	}
 
 	parentBid, err := st.LatestExecutionPayloadBid()
 	if err != nil {
@@ -38,8 +41,7 @@ func ProcessParentExecutionPayload(ctx context.Context, st state.BeaconState, bl
 		return errors.Wrap(err, "could not get parent execution requests")
 	}
 
-	parentBidBlockHash := parentBid.BlockHash()
-	isParentFull := bytes.Equal(bid.ParentBlockHash, parentBidBlockHash[:])
+	isParentFull := bid.ParentBlockHash() == parentBid.BlockHash()
 
 	if !isParentFull {
 		if !IsEmptyExecutionRequests(parentExecutionRequests) {

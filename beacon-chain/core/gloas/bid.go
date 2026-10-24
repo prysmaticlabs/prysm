@@ -75,14 +75,9 @@ import (
 //	    state.latest_execution_payload_bid = bid
 //	</spec>
 func ProcessExecutionPayloadBid(st state.BeaconState, block interfaces.ReadOnlyBeaconBlock) error {
-	signedBid, err := block.Body().SignedExecutionPayloadBid()
+	wrappedBid, err := blocks.SignedExecutionPayloadBidFromBody(block.Body())
 	if err != nil {
 		return errors.Wrap(err, "failed to get signed execution payload bid")
-	}
-
-	wrappedBid, err := blocks.WrappedROSignedExecutionPayloadBid(signedBid)
-	if err != nil {
-		return errors.Wrap(err, "failed to wrap signed bid")
 	}
 
 	bid, err := wrappedBid.Bid()

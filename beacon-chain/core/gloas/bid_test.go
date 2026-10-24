@@ -68,6 +68,24 @@ func (s stubBlockBody) AvailableAttestations() ([]*ethpb.AvailableAttestation, e
 func (s stubBlockBody) SupportVotes() (bitfield.Bitlist, error) {
 	return nil, nil
 }
+func (s stubBlockBody) AttestationsEIP8453() ([]*ethpb.AttestationEIP8453, error) {
+	return nil, nil
+}
+func (s stubBlockBody) AttesterSlashingsEIP8453() ([]*ethpb.AttesterSlashingEIP8453, error) {
+	return nil, nil
+}
+func (s stubBlockBody) LegacyAttesterSlashings() ([]*ethpb.AttesterSlashingGloas, error) {
+	return nil, nil
+}
+func (s stubBlockBody) HeadVotes() ([]*ethpb.HeadVote, error) {
+	return nil, nil
+}
+func (s stubBlockBody) HeadVoteSupportBits() (bitfield.Bitlist, error) {
+	return nil, nil
+}
+func (s stubBlockBody) SignedExecutionPayloadBidHeze() (*ethpb.SignedExecutionPayloadBidHeze, error) {
+	return nil, nil
+}
 func (s stubBlockBody) MarshalSSZ() ([]byte, error)         { return nil, nil }
 func (s stubBlockBody) MarshalSSZTo([]byte) ([]byte, error) { return nil, nil }
 func (s stubBlockBody) UnmarshalSSZ([]byte) error           { return nil }

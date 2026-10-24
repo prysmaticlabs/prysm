@@ -94,6 +94,19 @@ type BeaconState struct {
 	finalized           *ethpb.CheckpointDecoupled
 	pendingFinality     []*ethpb.PendingFinality
 
+	// EIP-8453 fields
+	inclusionListBits          []byte
+	targetCheckpoint           *ethpb.HeightCheckpoint
+	justifiedCheckpointEIP8453 *ethpb.HeightCheckpoint
+	finalizedCheckpointEIP8453 *ethpb.HeightCheckpoint
+	targetSlot                 primitives.Slot
+	finalizedSlot              primitives.Slot
+	targetParticipationEIP8453 []byte
+	progressParticipation      []byte
+	roundParticipation         []byte
+	pendingFinalities          []*ethpb.PendingFinalityEIP8453
+	headVoteParticipation      [][]byte
+
 	id                    uint64
 	lock                  sync.RWMutex
 	dirtyFields           map[types.FieldIndex]bool
@@ -168,6 +181,17 @@ type beaconStateMarshalable struct {
 	FinalizedHeight                     primitives.Height                       `json:"finalized_height" yaml:"finalized_height"`
 	Finalized                           *ethpb.CheckpointDecoupled              `json:"finalized" yaml:"finalized"`
 	PendingFinality                     []*ethpb.PendingFinality                `json:"pending_finality" yaml:"pending_finality"`
+	InclusionListBits                   []byte                                  `json:"inclusion_list_bits" yaml:"inclusion_list_bits"`
+	TargetCheckpoint                    *ethpb.HeightCheckpoint                 `json:"target_checkpoint" yaml:"target_checkpoint"`
+	JustifiedCheckpointEIP8453          *ethpb.HeightCheckpoint                 `json:"justified_checkpoint_eip8453" yaml:"justified_checkpoint_eip8453"`
+	FinalizedCheckpointEIP8453          *ethpb.HeightCheckpoint                 `json:"finalized_checkpoint_eip8453" yaml:"finalized_checkpoint_eip8453"`
+	TargetSlot                          primitives.Slot                         `json:"target_slot" yaml:"target_slot"`
+	FinalizedSlot                       primitives.Slot                         `json:"finalized_slot" yaml:"finalized_slot"`
+	TargetParticipationEIP8453          []byte                                  `json:"target_participation_eip8453" yaml:"target_participation_eip8453"`
+	ProgressParticipation               []byte                                  `json:"progress_participation" yaml:"progress_participation"`
+	RoundParticipation                  []byte                                  `json:"round_participation" yaml:"round_participation"`
+	PendingFinalities                   []*ethpb.PendingFinalityEIP8453         `json:"pending_finalities" yaml:"pending_finalities"`
+	HeadVoteParticipation               [][]byte                                `json:"head_vote_participation" yaml:"head_vote_participation"`
 }
 
 func (b *BeaconState) MarshalJSON() ([]byte, error) {
@@ -240,6 +264,17 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		FinalizedHeight:                     b.finalizedHeight,
 		Finalized:                           b.finalized,
 		PendingFinality:                     b.pendingFinality,
+		InclusionListBits:                   b.inclusionListBits,
+		TargetCheckpoint:                    b.targetCheckpoint,
+		JustifiedCheckpointEIP8453:          b.justifiedCheckpointEIP8453,
+		FinalizedCheckpointEIP8453:          b.finalizedCheckpointEIP8453,
+		TargetSlot:                          b.targetSlot,
+		FinalizedSlot:                       b.finalizedSlot,
+		TargetParticipationEIP8453:          b.targetParticipationEIP8453,
+		ProgressParticipation:               b.progressParticipation,
+		RoundParticipation:                  b.roundParticipation,
+		PendingFinalities:                   b.pendingFinalities,
+		HeadVoteParticipation:               b.headVoteParticipation,
 	}
 	return json.Marshal(marshalable)
 }

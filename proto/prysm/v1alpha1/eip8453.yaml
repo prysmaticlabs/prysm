@@ -1,0 +1,55 @@
+package: "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+types:
+  - name: "HeightCheckpoint"
+  - name: "PendingFinalityEIP8453"
+    fields:
+      Participation: {type: "ProgressiveList"}
+  - name: "HeadVoteData"
+  - name: "HeadVote"
+    progressive: {}
+  - name: "AttestationDataEIP8453"
+  - name: "AttestationEIP8453"
+    progressive: {}
+    fields:
+      AggregationBits: {type: "ProgressiveBitlist"}
+  - name: "IndexedAttestationEIP8453"
+    progressive: {}
+    fields:
+      AttestingIndices: {type: "ProgressiveList"}
+  - name: "AttesterSlashingEIP8453"
+  - name: "ExecutionPayloadBidHeze"
+    progressive: {}
+    fields:
+      BlobKzgCommitments: {type: "ProgressiveList"}
+  - name: "SignedExecutionPayloadBidHeze"
+  - name: "BeaconStateEIP8453"
+    progressive:
+      inactive_indices: [8, 9, 10, 15, 16, 17, 18, 19, 20, 28]
+    fields:
+      Validators:                 {type: "ProgressiveList"}
+      Balances:                   {type: "ProgressiveList"}
+      InactivityScores:           {type: "ProgressiveList"}
+      PendingDeposits:            {type: "ProgressiveList"}
+      PendingPartialWithdrawals:  {type: "ProgressiveList"}
+      PendingConsolidations:      {type: "ProgressiveList"}
+      Builders:                   {type: "ProgressiveList"}
+      BuilderPendingWithdrawals:  {type: "ProgressiveList"}
+      PayloadExpectedWithdrawals: {type: "ProgressiveList"}
+      TargetParticipation:        {type: "ProgressiveList"}
+      ProgressParticipation:      {type: "ProgressiveList"}
+      RoundParticipation:         {type: "ProgressiveList"}
+  - name: "BeaconBlockBodyEIP8453"
+    progressive:
+      inactive_indices: [1, 6]
+    fields:
+      ProposerSlashings:       {type: "ProgressiveList"}
+      AttesterSlashings:       {type: "ProgressiveList"}
+      Attestations:            {type: "ProgressiveList"}
+      VoluntaryExits:          {type: "ProgressiveList"}
+      BlsToExecutionChanges:   {type: "ProgressiveList"}
+      PayloadAttestations:     {type: "ProgressiveList"}
+      HeadVotes:               {type: "ProgressiveList"}
+      HeadVoteSupportBits:     {type: "ProgressiveBitlist"}
+      LegacyAttesterSlashings: {type: "ProgressiveList"}
+  - name: "BeaconBlockEIP8453"
+  - name: "SignedBeaconBlockEIP8453"

@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "proto/engine/v1/gloas.proto";
+import "proto/eth/ext/options.proto";
+import "proto/prysm/v1alpha1/beacon_core_types.proto";
+import "proto/prysm/v1alpha1/gloas.proto";
+import "proto/prysm/v1alpha1/withdrawals.proto";
+
+option go_package = "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1;eth";
+
+// HeightCheckpoint names a block at a finality gadget height. The zero value stands for an absent finality pair.
+message HeightCheckpoint {
+  uint64 height = 1 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Height"
+  ];
+  bytes root = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
+}
+
+// PendingFinalityEIP8453 is a justification the chain has not finalized yet, with one byte per validator for its finality votes.
+message PendingFinalityEIP8453 {
+  HeightCheckpoint checkpoint = 1;
+  uint64 slot = 2 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  bytes participation = 3 [ (ethereum.eth.ext.ssz_max) = "1099511627776" ];
+}
+
+// HeadVoteData is the slot and block a head vote names.
+message HeadVoteData {
+  uint64 slot = 1 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  bytes beacon_block_root = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
+}
+
+// HeadVote aggregates head votes of one slot's head vote committee, one bit per seat.
+message HeadVote {
+  bytes aggregation_bits = 1
+      [ (ethereum.eth.ext.ssz_size) = "head_vote_committee_bytes.size" ];
+  HeadVoteData data = 2;
+  bytes signature = 3 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}
+
+// AttestationDataEIP8453 is a target vote, or a timeout when timeout is set, plus an optional finality pair.
+message AttestationDataEIP8453 {
+  HeightCheckpoint target = 1;
+  bool timeout = 2;
+  HeightCheckpoint finality = 3;
+}
+
+// AttestationEIP8453 aggregates finality gadget attestations of the committees marked in committee_bits for epoch.
+message AttestationEIP8453 {
+  bytes aggregation_bits = 1 [
+    (ethereum.eth.ext.ssz_max) = "0",
+    (ethereum.eth.ext.cast_type) = "github.com/OffchainLabs/go-bitfield.Bitlist"
+  ];
+  AttestationDataEIP8453 data = 2;
+  bytes signature = 3 [ (ethereum.eth.ext.ssz_size) = "96" ];
+  bytes committee_bits = 4
+      [ (ethereum.eth.ext.ssz_size) = "attestation_committee_bytes.size" ];
+  uint64 epoch = 5 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Epoch"
+  ];
+}
+
+// IndexedAttestationEIP8453 is an attestation with its sorted attesting indices.
+message IndexedAttestationEIP8453 {
+  repeated uint64 attesting_indices = 1 [ (ethereum.eth.ext.ssz_max) = "0" ];
+  AttestationDataEIP8453 data = 2;
+  bytes signature = 3 [ (ethereum.eth.ext.ssz_size) = "96" ];
+  uint64 epoch = 4 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Epoch"
+  ];
+}
+
+// AttesterSlashingEIP8453 holds two conflicting finality gadget attestations.
+message AttesterSlashingEIP8453 {
+  IndexedAttestationEIP8453 attestation_1 = 1;
+  IndexedAttestationEIP8453 attestation_2 = 2;
+}
+
+// ExecutionPayloadBidHeze is the Gloas bid plus the inclusion list committee bits.
+message ExecutionPayloadBidHeze {
+  bytes parent_block_hash = 1 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes parent_block_root = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes block_hash = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes prev_randao = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes fee_recipient = 5 [ (ethereum.eth.ext.ssz_size) = "20" ];
+  uint64 gas_limit = 6;
+  uint64 builder_index = 7 [ (ethereum.eth.ext.cast_type) =
+                                 "github.com/OffchainLabs/prysm/v7/"
+                                 "consensus-types/primitives.BuilderIndex" ];
+  uint64 slot = 8 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  uint64 value = 9 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  uint64 execution_payment = 10 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Gwei"
+  ];
+  repeated bytes blob_kzg_commitments = 11 [
+    (ethereum.eth.ext.ssz_size) = "?,48",
+    (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"
+  ];
+  bytes execution_requests_root = 12 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes inclusion_list_bits = 13 [ (ethereum.eth.ext.ssz_size) = "2" ];
+}
+
+// SignedExecutionPayloadBidHeze wraps a Heze bid with the builder's signature.
+message SignedExecutionPayloadBidHeze {
+  ExecutionPayloadBidHeze message = 1;
+  bytes signature = 2 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}
+
+// BeaconBlockBodyEIP8453 drops the eth1 data and deposits and adds head votes, their support bits and legacy attester slashings.
+message BeaconBlockBodyEIP8453 {
+  bytes randao_reveal = 1 [ (ethereum.eth.ext.ssz_size) = "96" ];
+  bytes graffiti = 2 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  repeated ProposerSlashing proposer_slashings = 3
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+  repeated AttesterSlashingEIP8453 attester_slashings = 4
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+  repeated AttestationEIP8453 attestations = 5
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+  repeated SignedVoluntaryExit voluntary_exits = 6
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+  SyncAggregate sync_aggregate = 7;
+  repeated SignedBLSToExecutionChange bls_to_execution_changes = 8
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+  SignedExecutionPayloadBidHeze signed_execution_payload_bid = 9;
+  repeated PayloadAttestation payload_attestations = 10
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+  ethereum.engine.v1.ExecutionRequestsGloas parent_execution_requests = 11;
+  repeated HeadVote head_votes = 12 [ (ethereum.eth.ext.ssz_max) = "0" ];
+  bytes head_vote_support_bits = 13 [
+    (ethereum.eth.ext.ssz_max) = "0",
+    (ethereum.eth.ext.cast_type) = "github.com/OffchainLabs/go-bitfield.Bitlist"
+  ];
+  repeated AttesterSlashingGloas legacy_attester_slashings = 14
+      [ (ethereum.eth.ext.ssz_max) = "0" ];
+}
+
+// BeaconBlockEIP8453 is a beacon block with an EIP-8453 body.
+message BeaconBlockEIP8453 {
+  uint64 slot = 1 [
+    (ethereum.eth.ext.cast_type) =
+        "github.com/OffchainLabs/prysm/v7/consensus-types/primitives.Slot"
+  ];
+  uint64 proposer_index = 2 [ (ethereum.eth.ext.cast_type) =
+                                  "github.com/OffchainLabs/prysm/v7/"
+                                  "consensus-types/primitives.ValidatorIndex" ];
+  bytes parent_root = 3 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes state_root = 4 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  BeaconBlockBodyEIP8453 body = 5;
+}
+
+// SignedBeaconBlockEIP8453 is an EIP-8453 block with the proposer's signature.
+message SignedBeaconBlockEIP8453 {
+  BeaconBlockEIP8453 block = 1;
+  bytes signature = 2 [ (ethereum.eth.ext.ssz_size) = "96" ];
+}

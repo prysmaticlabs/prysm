@@ -132,7 +132,12 @@ func (b *BeaconState) IsActiveBuilder(builderIndex primitives.BuilderIndex) (boo
 		return false, err
 	}
 
-	finalizedEpoch := b.finalizedCheckpoint.Epoch
+	var finalizedEpoch primitives.Epoch
+	if b.version >= version.EIP8453 {
+		finalizedEpoch = slots.ToEpoch(b.finalizedSlot)
+	} else {
+		finalizedEpoch = b.finalizedCheckpoint.Epoch
+	}
 	return builder.DepositEpoch < finalizedEpoch && builder.WithdrawableEpoch == params.BeaconConfig().FarFutureEpoch, nil
 }
 

@@ -168,6 +168,9 @@ type BeaconChainConfig struct {
 	DomainBuilderDeposit              [4]byte `yaml:"DOMAIN_BUILDER_DEPOSIT" spec:"true"`                // DomainBuilderDeposit defines the BLS signature domain for builder deposit requests (EIP-8282).
 	DomainAvailableAttestation        [4]byte `yaml:"DOMAIN_AVAILABLE_ATTESTATION" spec:"true"`          // DomainAvailableAttestation defines the BLS signature domain for Decoupled AC votes.
 	DomainFinalityAttestation         [4]byte `yaml:"DOMAIN_FINALITY_ATTESTATION" spec:"true"`           // DomainFinalityAttestation is the BLS domain for FG attestations, pinned to the fork version.
+	DomainHeadVote                    [4]byte `yaml:"DOMAIN_HEAD_VOTE" spec:"true"`                      // DomainHeadVote defines the BLS signature domain for EIP-8453 head votes.
+	DomainHeadVoteCommittee           [4]byte `yaml:"DOMAIN_HEAD_VOTE_COMMITTEE" spec:"true"`            // DomainHeadVoteCommittee seeds the EIP-8453 head vote committee selection.
+	DomainFinalityAttester            [4]byte `yaml:"DOMAIN_FINALITY_ATTESTER" spec:"true"`              // DomainFinalityAttester defines the BLS signature domain for EIP-8453 finality gadget attestations.
 
 	// Prysm constants.
 	GenesisValidatorsRoot          [32]byte        // GenesisValidatorsRoot is the root hash of the genesis validators.
@@ -192,6 +195,7 @@ type BeaconChainConfig struct {
 	BeaconStateFuluFieldCount      int             // BeaconStateFuluFieldCount defines how many fields are in beacon state post upgrade to Fulu.
 	BeaconStateGloasFieldCount     int             // BeaconStateGloasFieldCount defines how many fields are in beacon state post upgrade to Gloas.
 	BeaconStateDecoupledFieldCount int             // BeaconStateDecoupledFieldCount defines how many fields are in beacon state post upgrade to Decoupled.
+	BeaconStateEIP8453FieldCount   int             // BeaconStateEIP8453FieldCount defines how many active fields are in the EIP-8453 beacon state.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    primitives.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -221,6 +225,17 @@ type BeaconChainConfig struct {
 	DecoupledTimeoutDelay  primitives.Slot  `yaml:"DECOUPLED_TIMEOUT_DELAY" spec:"true"`   // DecoupledTimeoutDelay is how many slots after the entry a progress quorum alone advances the height.
 	DecoupledLockStreak    uint64           `yaml:"DECOUPLED_LOCK_STREAK" spec:"true"`     // DecoupledLockStreak is the consecutive confirmations for a slow lock and the lock lifetime in slots.
 	DecoupledSlotsPerRound uint64           `yaml:"DECOUPLED_SLOTS_PER_ROUND" spec:"true"` // DecoupledSlotsPerRound is the round length in slots.
+
+	// EIP-8453 values.
+	PendingFinalityWindow         uint64          `yaml:"PENDING_FINALITY_WINDOW" spec:"true"`          // PendingFinalityWindow is how many justifications awaiting finality the state keeps.
+	SlotsPerRound                 primitives.Slot `yaml:"SLOTS_PER_ROUND" spec:"true"`                  // SlotsPerRound is the length of a finality gadget round in slots.
+	AttestationCommitteesPerRound uint64          `yaml:"ATTESTATION_COMMITTEES_PER_ROUND" spec:"true"` // AttestationCommitteesPerRound is how many attestation committees split the active validators each epoch.
+	MaxValidatorsPerAggregate     uint64          `yaml:"MAX_VALIDATORS_PER_AGGREGATE" spec:"true"`     // MaxValidatorsPerAggregate bounds the attesters of one finality gadget aggregate.
+	HeadVoteCommitteeSize         uint64          `yaml:"HEAD_VOTE_COMMITTEE_SIZE" spec:"true"`         // HeadVoteCommitteeSize is the number of seats in a slot's head vote committee.
+	RoundRewardFactor             uint64          `yaml:"ROUND_REWARD_FACTOR" spec:"true"`              // RoundRewardFactor scales the per round base reward.
+	MinRoundsToInactivityLeak     uint64          `yaml:"MIN_ROUNDS_TO_INACTIVITY_LEAK" spec:"true"`    // MinRoundsToInactivityLeak is the finality delay in rounds after which rewards stop.
+	EjectionInactivityScore       uint64          `yaml:"EJECTION_INACTIVITY_SCORE" spec:"true"`        // EjectionInactivityScore is the inactivity score at which a validator's weight reaches zero.
+	MaxHeadVotes                  uint64          `yaml:"MAX_HEAD_VOTES" spec:"true"`                   // MaxHeadVotes is the most head votes a block can carry.
 
 	ForkVersionSchedule map[[fieldparams.VersionLength]byte]primitives.Epoch // Schedule of fork epochs by version.
 	ForkVersionNames    map[[fieldparams.VersionLength]byte]string           // Human-readable names of fork versions.

@@ -351,3 +351,53 @@ type BeaconStateDecoupled struct {
 	Finalized                     *CheckpointDecoupled
 	PendingFinality               []*PendingFinality `ssz-max:"8"`
 }
+
+// BeaconStateEIP8453 is the Heze state without the Casper FFG fields, plus the finality gadget and head vote fields.
+type BeaconStateEIP8453 struct {
+	GenesisTime                   uint64
+	GenesisValidatorsRoot         []byte `ssz-size:"32"`
+	Slot                          primitives.Slot
+	Fork                          *Fork
+	LatestBlockHeader             *BeaconBlockHeader
+	BlockRoots                    [][]byte     `ssz-size:"8192,32"`
+	StateRoots                    [][]byte     `ssz-size:"8192,32"`
+	HistoricalRoots               [][]byte     `ssz-max:"16777216" ssz-size:"?,32"`
+	Validators                    []*Validator `ssz-max:"1099511627776"`
+	Balances                      []uint64     `ssz-max:"1099511627776"`
+	RandaoMixes                   [][]byte     `ssz-size:"65536,32"`
+	Slashings                     []uint64     `ssz-size:"8192"`
+	InactivityScores              []uint64     `ssz-max:"1099511627776"`
+	CurrentSyncCommittee          *SyncCommittee
+	NextSyncCommittee             *SyncCommittee
+	LatestBlockHash               []byte `ssz-size:"32"`
+	NextWithdrawalIndex           uint64
+	NextWithdrawalValidatorIndex  primitives.ValidatorIndex
+	HistoricalSummaries           []*HistoricalSummary `ssz-max:"16777216"`
+	DepositBalanceToConsume       primitives.Gwei
+	ExitBalanceToConsume          primitives.Gwei
+	EarliestExitEpoch             primitives.Epoch
+	ConsolidationBalanceToConsume primitives.Gwei
+	EarliestConsolidationEpoch    primitives.Epoch
+	PendingDeposits               []*PendingDeposit           `ssz-max:"134217728"`
+	PendingPartialWithdrawals     []*PendingPartialWithdrawal `ssz-max:"134217728"`
+	PendingConsolidations         []*PendingConsolidation     `ssz-max:"262144"`
+	ProposerLookahead             []primitives.ValidatorIndex `ssz-size:"64"`
+	Builders                      []*Builder                  `ssz-max:"1099511627776"`
+	NextWithdrawalBuilderIndex    primitives.BuilderIndex
+	ExecutionPayloadAvailability  []byte                      `ssz-size:"1024"`
+	BuilderPendingPayments        []*BuilderPendingPayment    `ssz-size:"64"`
+	BuilderPendingWithdrawals     []*BuilderPendingWithdrawal `ssz-max:"1048576"`
+	LatestExecutionPayloadBid     *ExecutionPayloadBidHeze
+	PayloadExpectedWithdrawals    []*enginev1.Withdrawal `ssz-max:"16"`
+	PtcWindow                     []*PTCs                `ssz-size:"96"`
+	TargetCheckpoint              *HeightCheckpoint
+	JustifiedCheckpoint           *HeightCheckpoint
+	FinalizedCheckpoint           *HeightCheckpoint
+	TargetSlot                    primitives.Slot
+	FinalizedSlot                 primitives.Slot
+	TargetParticipation           []byte                    `ssz-max:"1099511627776"`
+	ProgressParticipation         []byte                    `ssz-max:"1099511627776"`
+	RoundParticipation            []byte                    `ssz-max:"1099511627776"`
+	PendingFinality               []*PendingFinalityEIP8453 `ssz-max:"4"`
+	HeadVoteParticipation         [][]byte                  `ssz-size:"64,128"`
+}

@@ -14,6 +14,7 @@ go_library(
         "field_root_eth1.go",
         "field_root_validator.go",
         "field_root_vector.go",
+        "head_vote_participation_root.go",
         "historical_summaries_root.go",
         "log.go",
         "participation_bit_root.go",
