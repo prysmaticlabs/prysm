@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("C+y-:A\x80\U00056e95\xa8|\xa8\xce\xf1")
